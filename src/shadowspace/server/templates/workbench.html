@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shadowspace Workbench</title>
+  <meta name="description" content="Shadowspace probability-space exploration workbench — PCA tour viewer with integrity diagnostics." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       TOP BAR
+  ═══════════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      <svg class="brand-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" opacity="0.3"/>
+        <circle cx="12" cy="12" r="4" fill="currentColor" opacity="0.8"/>
+        <line x1="12" y1="2" x2="12" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="12" y1="16" x2="12" y2="22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="2" y1="12" x2="8" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="16" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="brand-name">Shadowspace</span>
+      <span class="brand-sprint">Sprint 3b</span>
+    </div>
+    <div class="topbar-status" id="topbar-status">
+      <span class="status-dot loading"></span>
+      <span class="status-label">Loading fixture…</span>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MAIN LAYOUT
+  ═══════════════════════════════════════════════════════════════ -->
+  <main class="workbench-layout">
+
+    <!-- LEFT SIDEBAR — controls -->
+    <aside class="sidebar" id="sidebar-controls">
+      <div class="sidebar-section">
+        <h2 class="sidebar-title">Representation</h2>
+        <div class="control-group" id="rep-selector">
+          <label class="radio-card active" id="rep-probability">
+            <input type="radio" name="representation" value="probability" checked />
+            <span class="radio-label">Probability</span>
+            <span class="radio-hint">Raw simplex <em>P</em></span>
+          </label>
+          <label class="radio-card" id="rep-sqrt_probability">
+            <input type="radio" name="representation" value="sqrt_probability" />
+            <span class="radio-label">√ Probability</span>
+            <span class="radio-hint">Fisher-Rao geometry</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <h2 class="sidebar-title">PCA Variance</h2>
+        <div class="variance-bar-wrap" id="variance-display">
+          <div class="variance-row">
+            <span class="variance-axis">PC1</span>
+            <div class="variance-track"><div class="variance-fill" id="var-pc1" style="width:0%"></div></div>
+            <span class="variance-pct" id="var-pc1-label">—</span>
+          </div>
+          <div class="variance-row">
+            <span class="variance-axis">PC2</span>
+            <div class="variance-track"><div class="variance-fill" id="var-pc2" style="width:0%"></div></div>
+            <span class="variance-pct" id="var-pc2-label">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <h2 class="sidebar-title">Legend</h2>
+        <ul class="legend-list" id="legend-list">
+          <li><span class="legend-dot" style="background:#6ee7b7"></span>Simplex corner</li>
+          <li><span class="legend-dot" style="background:#93c5fd"></span>Edge midpoint</li>
+          <li><span class="legend-dot" style="background:#fbbf24"></span>Uniform center</li>
+          <li><span class="legend-dot" style="background:#c4b5fd"></span>Interior point</li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- CENTRE — scatter canvas -->
+    <section class="scatter-panel" id="scatter-panel">
+      <div class="scatter-header">
+        <h1 class="scatter-title">PCA Tour — Calibration Fixture</h1>
+        <span class="scatter-subtitle" id="scatter-subtitle">15 objects · 3 features</span>
+      </div>
+      <div class="canvas-wrap" id="canvas-wrap">
+        <canvas id="scatter-canvas" width="600" height="600"></canvas>
+        <div class="canvas-tooltip hidden" id="canvas-tooltip"></div>
+      </div>
+    </section>
+
+    <!-- RIGHT SIDEBAR — panels -->
+    <aside class="sidebar sidebar-right" id="sidebar-panels">
+
+      <!-- Panel 1: Integrity Overlay -->
+      <section class="panel" id="panel-integrity-overlay">
+        <div class="panel-header">
+          <span class="panel-badge badge-placeholder">Placeholder</span>
+          <h3 class="panel-title">Integrity Overlay</h3>
+        </div>
+        <div class="panel-body">
+          <p class="panel-placeholder-text">Sprint 4 — local integrity diagnostics will render here.</p>
+          <div class="placeholder-slots">
+            <div class="placeholder-slot"></div>
+            <div class="placeholder-slot"></div>
+            <div class="placeholder-slot short"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Panel 2: Semantic Badge -->
+      <section class="panel" id="panel-semantic-badge">
+        <div class="panel-header">
+          <span class="panel-badge badge-placeholder">Placeholder</span>
+          <h3 class="panel-title">Semantic Badge</h3>
+        </div>
+        <div class="panel-body">
+          <p class="panel-placeholder-text">Sprint 5 — path validity and representation badges will render here.</p>
+          <div class="placeholder-slots">
+            <div class="placeholder-slot short"></div>
+            <div class="placeholder-slot short"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Panel 3: Source Inspector -->
+      <section class="panel" id="panel-source-inspector">
+        <div class="panel-header">
+          <span class="panel-badge badge-active">Active</span>
+          <h3 class="panel-title">Source Inspector</h3>
+        </div>
+        <div class="panel-body">
+          <p class="panel-hint">Click a point to inspect it.</p>
+          <dl class="inspector-list" id="inspector-list">
+            <dt>Object ID</dt><dd id="insp-id">—</dd>
+            <dt>class_0</dt><dd id="insp-p0">—</dd>
+            <dt>class_1</dt><dd id="insp-p1">—</dd>
+            <dt>class_2</dt><dd id="insp-p2">—</dd>
+            <dt>PC1</dt><dd id="insp-pc1">—</dd>
+            <dt>PC2</dt><dd id="insp-pc2">—</dd>
+          </dl>
+        </div>
+      </section>
+
+      <!-- Panel 4: Saved-View Atlas -->
+      <section class="panel" id="panel-saved-view-atlas">
+        <div class="panel-header">
+          <span class="panel-badge badge-placeholder">Placeholder</span>
+          <h3 class="panel-title">Saved-View Atlas</h3>
+        </div>
+        <div class="panel-body">
+          <p class="panel-placeholder-text">Sprint 5 — saved views and path playback will render here.</p>
+          <div class="placeholder-slots">
+            <div class="placeholder-slot"></div>
+            <div class="placeholder-slot"></div>
+          </div>
+        </div>
+      </section>
+
+    </aside>
+  </main>
+
+  <script src="/static/main.js"></script>
+</body>
+</html>
