@@ -991,3 +991,27 @@ body.reduced-motion *::after {
   font-size: 11px;
 }
 
+/* ── Subspace Optimizer Styles ───────────────── */
+.optimizer-btn-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.btn-opt {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 10px;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.badge-morph {
+  border-color: #fbbf24 !important;
+  color: #fbbf24 !important;
+  background: rgba(251, 191, 36, 0.12) !important;
+}
+

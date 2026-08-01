@@ -41,6 +41,17 @@ let savedZoom        = 1.0;  // saved before tour, restored on pause
 let savedPanX        = 0;
 let savedPanY        = 0;
 
+// Multi-Selection Marquee Box State
+let selectedIndices  = [];     // array of selected point indices
+let isBoxSelecting   = false;  // active Shift+Drag box selection
+let boxStartX        = 0;
+let boxStartY        = 0;
+let boxCurX          = 0;
+let boxCurY          = 0;
+
+// Representation Morph State
+let isMorphing       = false;  // true during representation morph animation
+
 const POINT_RADIUS        = 7;
 const POINT_RADIUS_HOVER  = 10;
 const POINT_RADIUS_SELECT = 10;
@@ -86,10 +97,11 @@ async function boot() {
   initImportModal();
   initReportExport();
   initStressHeatmapToggle();
+  initTourControls();
+  initOptimizerControls();
   initAccessibility();
   initKeyboardShortcuts();
   initCanvasInteraction();
-  initTourControls();
   await loadDataset(currentDataset);
   await fetchSavedViews();
 }
@@ -214,6 +226,7 @@ function initRepSelector() {
 }
 
 function setRepresentation(repId) {
+  const oldRep = currentRep;
   currentRep = repId;
   document.querySelectorAll(".radio-card").forEach(card => {
     const radio = card.querySelector("input");
@@ -225,8 +238,25 @@ function setRepresentation(repId) {
   hoveredIdx = null;
   updateMetricOptions();
   updateVarianceBars();
+
+  if (oldRep !== repId) {
+    triggerRepresentationMorph(oldRep, repId);
+  } else {
+    updateSemanticBadge();
+    fetchDiagnostics();
+  }
+}
+
+async function triggerRepresentationMorph(fromRep, toRep) {
+  isMorphing = true;
   updateSemanticBadge();
-  fetchDiagnostics();
+  await loadTourPath();
+  playTour();
+  setTimeout(() => {
+    isMorphing = false;
+    updateSemanticBadge();
+    fetchDiagnostics();
+  }, 3500);
 }
 
 // ─── Metric & k selectors ─────────────────────────────────────────────────────
@@ -632,6 +662,14 @@ function updateSemanticBadge() {
   const badgeDesc   = document.getElementById("semantic-desc");
   const badgeStatus = document.getElementById("semantic-status-badge");
 
+  if (isMorphing) {
+    badgeTag.textContent = "representation_morph";
+    badgeStatus.textContent = "Intermediate Morph";
+    badgeStatus.className = "panel-badge badge-morph";
+    badgeDesc.textContent = "Procrustes-aligned transition between geometric representations. Intermediate frames are semantically invalid projections.";
+    return;
+  }
+
   const catEntry = fixtureData && fixtureData.catalog ? fixtureData.catalog[currentViewId] : null;
 
   if (catEntry && catEntry.is_misleading) {
@@ -856,12 +894,73 @@ function initTourControls() {
   if (speedSelect) speedSelect.addEventListener("change", (e) => { tourSpeed = parseFloat(e.target.value) || 1.0; });
 }
 
+function initOptimizerControls() {
+  const btnLda = document.getElementById("btn-opt-lda");
+  const btnIntegrity = document.getElementById("btn-opt-integrity");
+  if (btnLda)       btnLda.addEventListener("click", () => optimizeSubspaceView("class_separation"));
+  if (btnIntegrity) btnIntegrity.addEventListener("click", () => optimizeSubspaceView("neighborhood_integrity"));
+}
+
+async function optimizeSubspaceView(criterion) {
+  if (!fixtureData) return;
+  const targetId = (fixtureData.object_ids && fixtureData.object_ids[selectedIdx]) || (fixtureData.object_ids && fixtureData.object_ids[0]) || "target_0";
+  try {
+    setStatus("loading", "Optimizing projection subspace...");
+    const url = `/api/optimize-view?dataset=${encodeURIComponent(currentDataset)}&representation=${encodeURIComponent(currentRep)}&criterion=${encodeURIComponent(criterion)}&target_id=${encodeURIComponent(targetId)}&n_frames=60`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Optimization failed");
+    const data = await res.json();
+    tourFrames = data.frames;
+    tourBases = data.bases;
+    tourFrameIdx = 0;
+    tourGlobalBounds = { minX: -1.1, maxX: 1.1, minY: -1.1, maxY: 1.1 };
+    const scrubber = document.getElementById("tour-scrubber");
+    if (scrubber) {
+      scrubber.max = Math.max(0, tourFrames.length - 1);
+      scrubber.value = 0;
+    }
+    updateTourFrameLabel();
+    setStatus("ready", `Subspace optimized (${criterion})`);
+    playTour();
+  } catch (err) {
+    console.error("Error optimizing subspace:", err);
+    setStatus("error", "Subspace optimization failed");
+  }
+}
+
+function updateMultiInspector(indices) {
+  const multiPanel = document.getElementById("panel-multi-selection");
+  if (!multiPanel) return;
+  if (!indices || indices.length < 2) {
+    multiPanel.classList.add("hidden");
+    return;
+  }
+  multiPanel.classList.remove("hidden");
+
+  document.getElementById("multi-count").textContent = indices.length;
+
+  let totalConf = 0;
+  const classesSet = new Set();
+  indices.forEach(idx => {
+    const meta = getPointMeta(idx);
+    if (meta) {
+      totalConf += meta.confidence;
+      classesSet.add(meta.predClassName);
+    }
+  });
+
+  const avgConf = (totalConf / indices.length * 100).toFixed(0) + "%";
+  document.getElementById("multi-avg-conf").textContent = avgConf;
+  document.getElementById("multi-classes").textContent = Array.from(classesSet).join(", ");
+}
+
 function toggleTourPlayback() {
   if (isTourPlaying) pauseTour(); else playTour();
 }
 
 function playTour() {
   if (!tourFrames || tourFrames.length === 0) return;
+  if (tourAnimHandle) { cancelAnimationFrame(tourAnimHandle); tourAnimHandle = null; }
   savedZoom  = zoomLevel;  savedPanX = panOffsetX;  savedPanY = panOffsetY;
   zoomLevel  = 1.0;        panOffsetX = 0;           panOffsetY = 0;
   isTourPlaying = true;
@@ -1050,7 +1149,7 @@ function renderScatter() {
 
     if (sx < -20 || sx > W + 20 || sy < -20 || sy > H + 20) continue;
 
-    const isSelected = i === selectedIdx;
+    const isSelected = i === selectedIdx || selectedIndices.includes(i);
     const isHovered  = i === hoveredIdx;
     const r    = isSelected ? POINT_RADIUS_SELECT : (isHovered ? POINT_RADIUS_HOVER : POINT_RADIUS);
     const col  = colors[i];
@@ -1087,6 +1186,20 @@ function renderScatter() {
     ctx.textAlign = "center";
     const labelY = sy - POINT_RADIUS_HOVER - 6;
     ctx.fillText(labelText, sx, labelY);
+  }
+
+  // Draw Shift+Drag Marquee Selection Box
+  if (isBoxSelecting) {
+    const bx = Math.min(boxStartX, boxCurX), bw = Math.abs(boxCurX - boxStartX);
+    const by = Math.min(boxStartY, boxCurY), bh = Math.abs(boxCurY - boxStartY);
+    ctx.save();
+    ctx.fillStyle = "rgba(52, 211, 153, 0.12)";
+    ctx.strokeStyle = "#34d399";
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeRect(bx, by, bw, bh);
+    ctx.restore();
   }
 
   // Active Feature Loadings HUD during Grand Tour
@@ -1239,8 +1352,10 @@ function initCanvasInteraction() {
   canvas.addEventListener("mousemove", onMouseMove);
   canvas.addEventListener("mouseleave", () => {
     isPanning = false;
+    isBoxSelecting = false;
     hoveredIdx = null;
     tooltip.classList.add("hidden");
+    canvas.style.cursor = "crosshair";
     renderScatter();
   });
   canvas.addEventListener("mousedown", onMouseDown);
@@ -1250,8 +1365,22 @@ function initCanvasInteraction() {
 }
 
 function onMouseDown(e) {
+  const rect = canvas.getBoundingClientRect();
+  const mx   = e.clientX - rect.left;
+  const my   = e.clientY - rect.top;
+
+  if (e.shiftKey) {
+    isBoxSelecting = true;
+    boxStartX = mx;
+    boxStartY = my;
+    boxCurX = mx;
+    boxCurY = my;
+    canvas.style.cursor = "crosshair";
+    return;
+  }
+
   const idx = getHitIndex(e.clientX, e.clientY);
-  if (idx === null || e.shiftKey || e.button === 1) {
+  if (idx === null || e.button === 1) {
     isPanning  = true;
     startPanX  = e.clientX - panOffsetX;
     startPanY  = e.clientY - panOffsetY;
@@ -1259,7 +1388,27 @@ function onMouseDown(e) {
   }
 }
 
-function onMouseUp() {
+function onMouseUp(e) {
+  if (isBoxSelecting) {
+    isBoxSelecting = false;
+    const minX = Math.min(boxStartX, boxCurX), maxX = Math.max(boxStartX, boxCurX);
+    const minY = Math.min(boxStartY, boxCurY), maxY = Math.max(boxStartY, boxCurY);
+    const coords = getCoords();
+    const sc = computeScale(coords);
+
+    selectedIndices = [];
+    for (let i = 0; i < coords.length; i++) {
+      const [sx, sy] = sc.toScreen(coords[i][0], coords[i][1]);
+      if (sx >= minX && sx <= maxX && sy >= minY && sy <= maxY) {
+        selectedIndices.push(i);
+      }
+    }
+    updateMultiInspector(selectedIndices);
+    renderScatter();
+    canvas.style.cursor = "crosshair";
+    return;
+  }
+
   if (isPanning) {
     isPanning = false;
     canvas.style.cursor = "crosshair";
@@ -1284,6 +1433,17 @@ function getHitIndex(clientX, clientY) {
 }
 
 function onMouseMove(e) {
+  const rect = canvas.getBoundingClientRect();
+  const mx   = e.clientX - rect.left;
+  const my   = e.clientY - rect.top;
+
+  if (isBoxSelecting) {
+    boxCurX = mx;
+    boxCurY = my;
+    renderScatter();
+    return;
+  }
+
   if (isPanning) {
     panOffsetX = e.clientX - startPanX;
     panOffsetY = e.clientY - startPanY;

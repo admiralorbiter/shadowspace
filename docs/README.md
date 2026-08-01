@@ -85,7 +85,10 @@ Shadowspace records path metadata for full reproducibility:
 - interpolation method (`geodesic_algorithm: "GLERP"`);
 - pacing metric (geodesic L2 norm of principal angles);
 - global coordinate normalization ($\mathbf{X} \to [-1, 1]$) & fixed client viewport;
-- dynamic Feature Loadings HUD showing real-time subspace contributions $\|V_i\| = \sqrt{V_{i,1}^2 + V_{i,2}^2}$.
+- dynamic Feature Loadings HUD showing real-time subspace contributions $\|V_i\| = \sqrt{V_{i,1}^2 + V_{i,2}^2}$;
+- **Guided Subspace Optimization (`/api/optimize-view`)**: Fisher LDA class separability & local covariance integrity solvers that trigger smooth GLERP geodesic transitions;
+- **Canvas Marquee Multi-Selection**: Shift+Drag box selection for group confidence & class distribution inspection;
+- **Representation Morphing**: Smooth 60-frame transitions between geometric representations with automatic amber semantic validity warning badge (`intermediate_frames_semantically_valid: false`).
 
 `dtour` is still a strong rendering and interaction foundation, with Python and JavaScript interfaces and separated `@dtour/viewer` and `@dtour/scatter` packages.
 

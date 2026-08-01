@@ -19,7 +19,12 @@ from shadowspace.projection.pca import (
     fit_representation_pca,
     validate_view_compatibility,
 )
-from shadowspace.projection.subspace import grassmannian_distance, principal_angles
+from shadowspace.projection.subspace import (
+    find_discriminative_basis,
+    find_integrity_optimal_basis,
+    grassmannian_distance,
+    principal_angles,
+)
 
 __all__ = [
     "CatalogView",
@@ -33,6 +38,8 @@ __all__ = [
     "create_linear_projection_path",
     "create_representation_morph_path",
     "create_sequential_embedding_path",
+    "find_discriminative_basis",
+    "find_integrity_optimal_basis",
     "fit_representation_pca",
     "grassmannian_distance",
     "principal_angles",

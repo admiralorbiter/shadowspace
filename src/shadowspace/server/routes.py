@@ -38,13 +38,18 @@ from shadowspace.math.metrics import pairwise_euclidean
 from shadowspace.math.registry import MetricRegistry
 from shadowspace.math.transforms import sqrt_transform
 from shadowspace.models.investigation import InvestigationRecord, SavedView
-from shadowspace.projection.basis import project
+from shadowspace.projection.basis import project, validate_orthonormal_basis
 from shadowspace.projection.catalog import build_projection_catalog
-from shadowspace.projection.paths import generate_grand_tour_path
+from shadowspace.projection.paths import generate_grand_tour_path, grassmann_geodesic
 from shadowspace.projection.pca import (
     compute_feature_schema_hash,
     compute_object_id_hash,
     fit_representation_pca,
+)
+from shadowspace.projection.subspace import (
+    find_discriminative_basis,
+    find_integrity_optimal_basis,
+    grassmannian_distance,
 )
 
 workbench_bp = Blueprint("workbench", __name__)
@@ -840,6 +845,126 @@ def api_tour_path() -> Response:
     payload = {
         "dataset": dataset_key,
         "representation": rep_id,
+        "n_frames": len(frames_coords),
+        "frames": frames_coords,
+        "bases": bases_matrices,
+        "semantically_valid": True,
+        "kind": "linear_projection",
+        "geodesic_algorithm": "GLERP",
+    }
+
+    return Response(json.dumps(payload), mimetype="application/json")
+
+
+@workbench_bp.route("/api/optimize-view")
+def api_optimize_view() -> Response:
+    """Compute an optimal 2D projection basis (class separation or integrity optimal) and return a GLERP geodesic transition."""
+    dataset_key = request.args.get("dataset", "calibration_3class")
+    rep_id = request.args.get("representation", "probability")
+    criterion = request.args.get("criterion", "class_separation")  # "class_separation" | "neighborhood_integrity"
+    target_id = request.args.get("target_id", None)
+
+    try:
+        n_frames = max(2, min(360, int(request.args.get("n_frames", 60))))
+    except (TypeError, ValueError):
+        n_frames = 60
+
+    ds_data = _get_dataset(dataset_key)
+    if ds_data is None:
+        return Response(
+            json.dumps({"error": f"Unknown dataset '{dataset_key}'"}),
+            status=404,
+            mimetype="application/json",
+        )
+
+    raw_matrix = np.array(ds_data["raw_matrix"], dtype=np.float64)
+    if rep_id == "sqrt_probability":
+        rep_matrix = sqrt_transform(raw_matrix)
+    else:
+        rep_matrix = raw_matrix
+
+    # Z-score normalize matrix before projection
+    mat_centered = rep_matrix - rep_matrix.mean(axis=0)
+    stds = mat_centered.std(axis=0)
+    stds[stds < 1e-8] = 1.0
+    mat_norm = mat_centered / stds
+
+    # Default start basis: 2D PCA basis of rep_matrix
+    mat_centered_pca = rep_matrix - rep_matrix.mean(axis=0)
+    _, _, vh_start = np.linalg.svd(mat_centered_pca, full_matrices=False)
+    start_basis = validate_orthonormal_basis(vh_start[:2, :].T)
+
+    object_ids = ds_data["object_ids"]
+    objects_meta = ds_data.get("objects_meta", [])
+
+    if criterion == "class_separation":
+        # Extract finest class/component labels from metadata
+        labels = []
+        for i in range(len(raw_matrix)):
+            meta = objects_meta[i] if (isinstance(objects_meta, list) and i < len(objects_meta)) else None
+            if isinstance(meta, dict) and "generator_component" in meta and meta["generator_component"]:
+                labels.append(meta["generator_component"])
+            elif isinstance(meta, dict) and "pred_class_name" in meta and meta["pred_class_name"]:
+                labels.append(meta["pred_class_name"])
+            elif isinstance(meta, dict) and "true_label" in meta and meta["true_label"]:
+                labels.append(meta["true_label"])
+            elif isinstance(meta, dict) and "predicted_label" in meta and meta["predicted_label"]:
+                labels.append(meta["predicted_label"])
+            else:
+                labels.append(int(np.argmax(raw_matrix[i])))
+        target_basis = find_discriminative_basis(rep_matrix, labels)
+
+        # If target_basis coincides with start_basis (Grassmannian distance < 0.08 rad),
+        # rotate to minor discriminant / orthogonal components so the tour always moves
+        if grassmannian_distance(start_basis, target_basis) < 0.08:
+            _, _, vh_all = np.linalg.svd(mat_centered_pca, full_matrices=True)
+            if vh_all.shape[0] >= 4:
+                target_basis = validate_orthonormal_basis(vh_all[[2, 3], :].T)
+            elif vh_all.shape[0] >= 3:
+                target_basis = validate_orthonormal_basis(vh_all[[1, 2], :].T)
+    else:  # "neighborhood_integrity"
+        target_indices = []
+        if target_id and target_id in object_ids:
+            t_idx = object_ids.index(target_id)
+            target_indices = [t_idx]
+            # Add top k neighbors in raw space
+            dists = np.linalg.norm(rep_matrix - rep_matrix[t_idx], axis=1)
+            neighbor_indices = np.argsort(dists)[:6].tolist()
+            target_indices = neighbor_indices
+        target_basis = find_integrity_optimal_basis(rep_matrix, target_indices)
+
+        if grassmannian_distance(start_basis, target_basis) < 0.08:
+            _, _, vh_all = np.linalg.svd(mat_centered_pca, full_matrices=True)
+            if vh_all.shape[0] >= 3:
+                target_basis = validate_orthonormal_basis(vh_all[[1, 2], :].T)
+
+    # Generate smooth GLERP geodesic transition from start_basis to target_basis
+    raw_frames = []
+    bases_matrices = []
+    for step in range(n_frames):
+        tau = step / float(max(1, n_frames - 1))
+        b_interp = grassmann_geodesic(start_basis, target_basis, tau)
+        coords_2d = project(mat_norm, b_interp)
+        raw_frames.append(coords_2d)
+        bases_matrices.append(b_interp.tolist())
+
+    # Global normalise across transition frames -> [-1, 1]
+    all_coords = np.concatenate(raw_frames, axis=0)
+    global_min = all_coords.min(axis=0)
+    global_max = all_coords.max(axis=0)
+    global_range = global_max - global_min
+    global_range[global_range < 1e-8] = 1.0
+
+    frames_coords = []
+    for frame in raw_frames:
+        normed = (frame - global_min) / global_range * 2.0 - 1.0
+        frames_coords.append(normed.tolist())
+
+    payload = {
+        "dataset": dataset_key,
+        "representation": rep_id,
+        "criterion": criterion,
+        "target_basis": target_basis.tolist(),
         "n_frames": len(frames_coords),
         "frames": frames_coords,
         "bases": bases_matrices,

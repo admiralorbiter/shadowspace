@@ -302,14 +302,21 @@ Represent projection planes correctly, generate useful tours, and enforce the se
   - Web client uses a fixed \([-1.1, 1.1]\) viewport to guarantee zero scale jitter and prevent point clipping.
 - Real-time Feature Loadings HUD:
   - Computes top feature subspace contributions \(\|V_i\| = \sqrt{V_{i,1}^2 + V_{i,2}^2}\) dynamically per frame.
-- Path metadata (`geodesic_algorithm: "GLERP"`) and semantic badge.
+- Guided Subspace Optimization (`/api/optimize-view`):
+  - Fisher Linear Discriminant Analysis (`find_discriminative_basis`) for maximum class separability.
+  - Local covariance optimization (`find_integrity_optimal_basis`) for local neighborhood preservation.
+  - Coincident basis guard that automatically sweeps to minor discriminant components ($v_3, v_4$) when top components coincide with PCA.
+- Canvas Marquee Multi-Selection:
+  - Shift+Drag box marquee selection for selecting subsets of objects on the 2D canvas.
+  - Subset Summary inspector panel computing object counts, average confidence, and distinct class breakdown.
+- Path metadata (`geodesic_algorithm: "GLERP"`) and dynamic semantic badge (`representation_morph`).
 - `DtourAdapter` accepting a representation matrix, keyframe bases, IDs, and selections.
 - `representation_morph` path kind for animated transitions between separately fitted representation layouts:
   - Procrustes alignment may be applied for visual smoothness;
   - intermediate frames are **not** valid projections in either representation;
-  - `intermediate_frames_semantically_valid=false` by default.
+  - `intermediate_frames_semantically_valid=false` enforced in UI with amber warning badge.
 - Initial saved-view object containing basis, representation, metric, labels, and provenance.
-- Intrinsic geodesic interpolation (GLERP) active as default Grand Tour generator.
+- Intrinsic geodesic interpolation (GLERP) active as default Grand Tour and Subspace Optimization trajectory generator.
 
 ### Automated tests
 

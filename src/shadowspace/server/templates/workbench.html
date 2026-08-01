@@ -95,6 +95,14 @@
       </div>
 
       <div class="sidebar-section">
+        <h2 class="sidebar-title">Subspace Optimizer</h2>
+        <div class="optimizer-btn-group">
+          <button id="btn-opt-lda" class="btn-secondary btn-opt" title="GLERP transition to max class separability basis (Fisher LDA)">🎯 Max Class Separation</button>
+          <button id="btn-opt-integrity" class="btn-secondary btn-opt" title="GLERP transition to max local integrity basis for selected point">⚡ Max Local Integrity</button>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
         <h2 class="sidebar-title">PCA Variance</h2>
         <div class="variance-bar-wrap" id="variance-display">
           <div class="variance-row">
@@ -222,6 +230,32 @@
           <label class="toggle-label" style="margin-top:12px; display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-muted); cursor:pointer">
             <input type="checkbox" id="toggle-stress-heatmap" /> Show Distortion Heatmap
           </label>
+        </div>
+      </section>
+
+      <!-- Panel 1b: Multi-Selection Subset Summary -->
+      <section class="panel hidden" id="panel-multi-selection">
+        <div class="panel-header">
+          <span class="panel-badge badge-active" id="multi-select-badge">Subset</span>
+          <h3 class="panel-title">Selected Subset</h3>
+        </div>
+        <div class="panel-body">
+          <div class="diag-metrics-grid">
+            <div class="diag-card">
+              <span class="diag-value" id="multi-count">0</span>
+              <span class="diag-label">Objects</span>
+            </div>
+            <div class="diag-card">
+              <span class="diag-value" id="multi-avg-conf">—</span>
+              <span class="diag-label">Avg Conf</span>
+            </div>
+          </div>
+          <div class="diag-breakdown" style="margin-top:10px;">
+            <div class="breakdown-row">
+              <span>Classes Present</span>
+              <strong id="multi-classes" style="font-size:11px; color:#34d399">—</strong>
+            </div>
+          </div>
         </div>
       </section>
 
