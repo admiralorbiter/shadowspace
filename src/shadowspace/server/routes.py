@@ -14,6 +14,7 @@ import hashlib
 import json
 import tempfile
 import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -188,8 +189,27 @@ def _build_dataset_entry(
             "warning_note": cat_view.warning_note,
         }
 
+    payload_bytes: dict[str, bytes] = {}
+    clean_objects_meta: list[dict[str, Any]] = []
+
+    if objects_meta:
+        for meta in objects_meta:
+            m_copy = dict(meta)
+            img_b = m_copy.pop("payload_image_bytes", None)
+            if img_b is not None:
+                if isinstance(img_b, bytes):
+                    payload_bytes[m_copy["object_id"]] = img_b
+                elif isinstance(img_b, str):
+                    import base64
+
+                    try:
+                        payload_bytes[m_copy["object_id"]] = base64.b64decode(img_b)
+                    except Exception:
+                        pass
+            clean_objects_meta.append(m_copy)
+
     if color_fn in (None, _point_color_generic):
-        colors = _compute_class_colors(matrix, feature_names, objects_meta)
+        colors = _compute_class_colors(matrix, feature_names, clean_objects_meta)
     else:
         colors = [color_fn(oid) for oid in object_ids]
 
@@ -201,7 +221,9 @@ def _build_dataset_entry(
         "raw_matrix": matrix.tolist(),
         "representations": rep_data,
         "catalog": catalog_payload,
-        "objects_meta": objects_meta or [],
+        "objects_meta": clean_objects_meta,
+        "payload_bytes": payload_bytes,
+        "has_payloads": len(payload_bytes) > 0,
         "source_type": source_type,
         "n_objects": len(object_ids),
         "n_classes": len(feature_names),
@@ -360,8 +382,9 @@ def api_fixture() -> Response:
             mimetype="application/json",
         )
 
+    fixture_payload = {k: v for k, v in ds_data.items() if k != "payload_bytes"}
     return Response(
-        json.dumps(ds_data, separators=(",", ":")),
+        json.dumps(fixture_payload, separators=(",", ":")),
         mimetype="application/json",
     )
 
@@ -579,6 +602,98 @@ def api_diagnostics() -> Response:
     }
 
     return Response(json.dumps(payload), mimetype="application/json")
+
+
+@workbench_bp.route("/api/object-payload")
+def api_object_payload() -> Response:
+    """Return raw object payload image or JSON metadata for target object."""
+    dataset_key = request.args.get("dataset", "calibration_3class")
+    target_id = request.args.get("target_id", "")
+
+    ds_data = _get_dataset(dataset_key)
+    if ds_data is None or not target_id:
+        return Response(
+            json.dumps({"error": "Dataset or target_id not found"}),
+            status=404,
+            mimetype="application/json",
+        )
+
+    payload_map = ds_data.get("payload_bytes", {})
+    if target_id in payload_map:
+        return Response(payload_map[target_id], mimetype="image/png")
+
+    return Response(
+        json.dumps({"object_id": target_id, "has_image": False}),
+        status=200,
+        mimetype="application/json",
+    )
+
+
+@workbench_bp.route("/api/export-report", methods=["POST"])
+def api_export_report() -> Response:
+    """Generate and return a downloadable Markdown investigation report."""
+    data = request.get_json(silent=True) or {}
+    dataset_key = data.get("dataset", "calibration_3class")
+    target_id = data.get("target_id", "none")
+    rep_id = data.get("representation", "probability")
+    metric_id = data.get("metric", "euclidean")
+    view_id = data.get("view_id", "pca_corners")
+    k = data.get("k", 3)
+    saved_views = data.get("saved_views", [])
+
+    ds_data = _get_dataset(dataset_key)
+    display_name = ds_data["display_name"] if ds_data else dataset_key
+
+    timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+    report_lines = [
+        "# Shadowspace Investigation Record",
+        f"**Dataset**: {display_name} (`{dataset_key}`)",
+        f"**Generated**: {timestamp}",
+        f"**Active Representation**: `{rep_id}`",
+        f"**Active Metric**: `{metric_id}`",
+        f"**Active Catalog View**: `{view_id}`",
+        f"**Neighborhood Size (k)**: {k}",
+        f"**Selected Target ID**: `{target_id}`",
+        "",
+        "---",
+        "## Session Configuration & Diagnostics",
+        f"- Target Point: `{target_id}`",
+        f"- View ID: `{view_id}`",
+        f"- Metric Space: `{metric_id}` under `{rep_id}`",
+        "",
+        "---",
+        "## Saved View Atlas Snapshots",
+    ]
+
+    if saved_views:
+        report_lines.append("| Name | Representation | Metric | k | Target ID | Note |")
+        report_lines.append("| --- | --- | --- | --- | --- | --- |")
+        for sv in saved_views:
+            report_lines.append(
+                f"| {sv.get('name', 'Untitled')} | {sv.get('representation_id')} | {sv.get('metric_id')} | {sv.get('k')} | {sv.get('target_id')} | {sv.get('note', '')} |"
+            )
+    else:
+        report_lines.append("_No saved views recorded during this session._")
+
+    report_lines.extend(
+        [
+            "",
+            "---",
+            "## System Provenance & Data Contract",
+            "- **Shadowspace Version**: Sprint 9 (Belief Space Payload & Transition Engine)",
+            "- **Reproducibility Guarantee**: Canonical distance metrics and basis projections preserved.",
+        ]
+    )
+
+    report_content = "\n".join(report_lines)
+    return Response(
+        report_content,
+        mimetype="text/markdown",
+        headers={
+            "Content-Disposition": f"attachment; filename=shadowspace-investigation-{dataset_key}.md"
+        },
+    )
 
 
 # ---------------------------------------------------------------------------

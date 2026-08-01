@@ -910,3 +910,31 @@ body.reduced-motion *::after {
   line-height: 1.4;
 }
 
+/* ── Sprint 9 Payload Thumbnail Container ───────────────── */
+.payload-container {
+  margin-top: 12px;
+  padding: 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.payload-container img {
+  width: 96px;
+  height: 96px;
+  image-rendering: pixelated;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.payload-label {
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-muted);
+}
+

@@ -25,23 +25,9 @@ def import_csv_bundle(
     normalize: bool = False,
     dataset_name: str = "imported_dataset",
     description: str = "Imported dataset bundle",
+    payload_image_bytes: Sequence[bytes | None] | None = None,
 ) -> Path:
-    """Imports a CSV file containing model predictions/probabilities into a Shadowspace bundle.
-
-    Args:
-        csv_path: Path to the input CSV file.
-        output_dir: Directory where the generated bundle will be stored.
-        id_column: Name of the column containing object IDs. If None, auto-generated IDs are used.
-        label_column: Optional name of column containing ground truth labels.
-        feature_columns: Names of columns containing probabilities/logits. If None, auto-detected.
-        n_classes: Expected number of classes K.
-        normalize: If True, applies softmax row-wise to feature_columns (for raw logits).
-        dataset_name: Bundle identifier string.
-        description: Description of the dataset.
-
-    Returns:
-        Path: Path to manifest.json of the generated bundle.
-    """
+    """Imports a CSV file containing model predictions/probabilities into a Shadowspace bundle."""
     csv_p = Path(csv_path)
     df = pl.read_csv(csv_p)
     return _create_bundle_from_dataframe(
@@ -54,6 +40,7 @@ def import_csv_bundle(
         normalize=normalize,
         dataset_name=dataset_name,
         description=description,
+        payload_image_bytes=payload_image_bytes,
     )
 
 
@@ -67,6 +54,7 @@ def import_parquet_bundle(
     normalize: bool = False,
     dataset_name: str = "imported_dataset",
     description: str = "Imported dataset bundle",
+    payload_image_bytes: Sequence[bytes | None] | None = None,
 ) -> Path:
     """Imports a Parquet file containing model predictions/probabilities into a Shadowspace bundle."""
     parquet_p = Path(parquet_path)
@@ -81,6 +69,7 @@ def import_parquet_bundle(
         normalize=normalize,
         dataset_name=dataset_name,
         description=description,
+        payload_image_bytes=payload_image_bytes,
     )
 
 
@@ -94,6 +83,7 @@ def _create_bundle_from_dataframe(
     normalize: bool,
     dataset_name: str,
     description: str,
+    payload_image_bytes: Sequence[bytes | None] | None = None,
 ) -> Path:
     """Internal helper to convert a Polars DataFrame into a validated bundle."""
     # 1. Resolve object_ids
@@ -139,6 +129,8 @@ def _create_bundle_from_dataframe(
     entropy = -np.sum(np.where(prob_matrix > 0, prob_matrix * np.log2(safe_p), 0.0), axis=1)
     confidence = np.max(prob_matrix, axis=1)
 
+    img_bytes_list = list(payload_image_bytes) if payload_image_bytes else [None] * n_rows
+
     # Build objects DataFrame with optional payload_image_bytes schema hook
     objects_df = pl.DataFrame(
         {
@@ -149,7 +141,7 @@ def _create_bundle_from_dataframe(
             "correct": correct,
             "confidence": confidence.tolist(),
             "entropy": entropy.tolist(),
-            "payload_image_bytes": [None] * n_rows,  # Schema hook for Sprint 9+ thumbnails
+            "payload_image_bytes": img_bytes_list,
         }
     )
 

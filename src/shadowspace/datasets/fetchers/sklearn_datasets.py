@@ -1,5 +1,6 @@
 """scikit-learn dataset fetchers for Shadowspace benchmark bundle generation."""
 
+import io
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
@@ -7,6 +8,7 @@ from pathlib import Path
 import numpy as np
 import polars as pl
 from numpy.typing import NDArray
+from PIL import Image
 
 from shadowspace.datasets.classifier import fit_baseline_classifier
 from shadowspace.datasets.registry import REGISTRY, DatasetSpec
@@ -20,6 +22,7 @@ def _build_and_export_bundle(
     target_names: list[str],
     output_dir: Path,
     seed: int,
+    payload_images: list[bytes | None] | None = None,
 ) -> Path:
     """Fit baseline model on x_mat, y and export Shadowspace bundle to output_dir/key."""
     _clf, proba_matrix = fit_baseline_classifier(x_mat, y, seed=seed)
@@ -59,6 +62,7 @@ def _build_and_export_bundle(
             normalize=False,
             dataset_name=spec.key,
             description=spec.description,
+            payload_image_bytes=payload_images,
         )
     finally:
         if tmp_csv_path.exists():
@@ -89,6 +93,16 @@ def fetch_digits(output_dir: Path, seed: int = 20260801) -> Path:
 
     data = load_digits()
     target_names = [f"digit_{name}" for name in data.target_names]
+
+    # Generate 8x8 PNG byte blobs for digit thumbnails
+    payload_images: list[bytes | None] = []
+    for img_arr in data.images:
+        scaled = np.clip(img_arr * (255.0 / 16.0), 0, 255).astype(np.uint8)
+        pil_img = Image.fromarray(scaled, mode="L")
+        buf = io.BytesIO()
+        pil_img.save(buf, format="PNG")
+        payload_images.append(buf.getvalue())
+
     return _build_and_export_bundle(
         REGISTRY["digits_10class"],
         data.data,
@@ -96,6 +110,7 @@ def fetch_digits(output_dir: Path, seed: int = 20260801) -> Path:
         target_names,
         output_dir,
         seed,
+        payload_images=payload_images,
     )
 
 

@@ -204,6 +204,10 @@
               <strong id="count-false">0</strong>
             </div>
           </div>
+
+          <label class="toggle-label" style="margin-top:12px; display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-muted); cursor:pointer">
+            <input type="checkbox" id="toggle-stress-heatmap" /> Show Distortion Heatmap
+          </label>
         </div>
       </section>
 
@@ -234,6 +238,7 @@
           <dl class="inspector-list" id="inspector-list">
             <dt>Object ID</dt><dd id="insp-id">—</dd>
           </dl>
+          <div id="inspector-payload-container" class="payload-container hidden"></div>
         </div>
       </section>
 
@@ -255,9 +260,9 @@
           </div>
 
           <div class="atlas-actions">
-            <a href="/api/export-record" target="_blank" download="investigation_record.json" class="btn btn-secondary btn-export">
+            <button id="btn-export-record" class="btn btn-secondary btn-export">
               ↓ Export Investigation Record
-            </a>
+            </button>
           </div>
         </div>
       </section>

@@ -71,6 +71,8 @@ async function boot() {
   initZoomControls();
   initHelpModal();
   initImportModal();
+  initReportExport();
+  initStressHeatmapToggle();
   initAccessibility();
   initKeyboardShortcuts();
   initCanvasInteraction();
@@ -1166,6 +1168,90 @@ function updateInspector(idx) {
   }
 
   dl.innerHTML = html;
+
+  // Fetch payload image thumbnail if available
+  fetchPayloadImage(pMeta.id);
+}
+
+async function fetchPayloadImage(targetId) {
+  const container = document.getElementById("inspector-payload-container");
+  if (!container) return;
+
+  if (!fixtureData || !fixtureData.has_payloads) {
+    container.classList.add("hidden");
+    container.innerHTML = "";
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/object-payload?dataset=${encodeURIComponent(currentDataset)}&target_id=${encodeURIComponent(targetId)}`);
+    if (res.ok && res.headers.get("content-type")?.includes("image/png")) {
+      const blob = await res.blob();
+      const imgUrl = URL.createObjectURL(blob);
+      container.innerHTML = `<img src="${imgUrl}" alt="${escapeHtml(targetId)}" /><span class="payload-label">Raw Sample Image (8x8)</span>`;
+      container.classList.remove("hidden");
+    } else {
+      container.classList.add("hidden");
+      container.innerHTML = "";
+    }
+  } catch (err) {
+    container.classList.add("hidden");
+    container.innerHTML = "";
+  }
+}
+
+function initReportExport() {
+  const btn = document.getElementById("btn-export-record");
+  if (!btn) return;
+
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    btn.textContent = "Generating Report…";
+    try {
+      const targetId = (fixtureData && selectedIdx !== null) ? fixtureData.object_ids[selectedIdx] : "";
+      const payload = {
+        dataset: currentDataset,
+        target_id: targetId,
+        representation: currentRep,
+        metric: currentMetric,
+        view_id: currentViewId,
+        k: currentK,
+        saved_views: savedViews,
+      };
+
+      const res = await fetch("/api/export-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `shadowspace-investigation-${currentDataset}.md`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Export report error:", err);
+      alert("Failed to generate investigation report.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "↓ Export Investigation Record";
+    }
+  });
+}
+
+function initStressHeatmapToggle() {
+  const toggle = document.getElementById("toggle-stress-heatmap");
+  if (!toggle) return;
+  toggle.addEventListener("change", () => {
+    renderScatter();
+  });
 }
 
 // ─── Go ───────────────────────────────────────────────────────────────────────
