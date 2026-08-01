@@ -4,6 +4,7 @@ Sprint 3b: Full workbench with PCA scatter, integrity panels, and saved-view atl
 Sprint 4: Local integrity diagnostics API endpoint.
 Sprint 5: Saved-View Atlas and Investigation Record export.
 Sprint 6: Four-Class Validation, Dataset Switcher, and Projection Catalog.
+Sprint 7: Fashion-MNIST 10-Class Prediction Belief Space & Metadata Inspector.
 """
 
 from __future__ import annotations
@@ -26,6 +27,7 @@ from shadowspace.diagnostics.trustworthiness import (
     compute_view_continuity,
     compute_view_trustworthiness,
 )
+from shadowspace.generators.fashion_mnist import FASHION_CLASSES, generate_fashion_mnist_bundle
 from shadowspace.generators.synthetic import generate_synthetic_bundle
 from shadowspace.math.metrics import pairwise_euclidean
 from shadowspace.math.registry import MetricRegistry
@@ -44,7 +46,7 @@ _METRIC_REGISTRY = MetricRegistry()
 _SAVED_VIEWS: dict[str, SavedView] = {}
 
 # ---------------------------------------------------------------------------
-# Fixture and Synthetic Data Pre-Computation (Sprint 6)
+# Fixture and Synthetic Data Pre-Computation (Sprint 7)
 # ---------------------------------------------------------------------------
 
 _POINT_COLORS_3CLASS = {
@@ -53,6 +55,19 @@ _POINT_COLORS_3CLASS = {
     "center": "#fbbf24",
     "interior": "#c4b5fd",
 }
+
+_FASHION_COLOR_PALETTE = [
+    "#6ee7b7",  # 0: T-shirt/top
+    "#93c5fd",  # 1: Trouser
+    "#c4b5fd",  # 2: Pullover
+    "#f472b6",  # 3: Dress
+    "#fbbf24",  # 4: Coat
+    "#a7f3d0",  # 5: Sandal
+    "#f87171",  # 6: Shirt
+    "#60a5fa",  # 7: Sneaker
+    "#e879f9",  # 8: Bag
+    "#38bdf8",  # 9: Ankle boot
+]
 
 
 def _point_color_3class(object_id: str) -> str:
@@ -74,12 +89,22 @@ def _point_color_4class(object_id: str) -> str:
     return "#93c5fd"
 
 
+def _point_color_fashion(object_id: str) -> str:
+    try:
+        idx = int(object_id.split("_")[-1])
+        c = (idx // 20) % 10
+        return _FASHION_COLOR_PALETTE[c]
+    except Exception:
+        return "#6ee7b7"
+
+
 def _build_dataset_entry(
     matrix: NDArray[np.float64],
     object_ids: list[str],
     feature_names: list[str],
     display_name: str,
     color_fn: Any,
+    objects_meta: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Build dataset dictionary with pre-computed representations and catalog."""
     representations: dict[str, NDArray[np.float64]] = {
@@ -133,11 +158,12 @@ def _build_dataset_entry(
         "raw_matrix": matrix.tolist(),
         "representations": rep_data,
         "catalog": catalog_payload,
+        "objects_meta": objects_meta or [],
     }
 
 
 def _initialize_datasets() -> dict[str, dict[str, Any]]:
-    """Initialize 3-class calibration and 4-class synthetic datasets."""
+    """Initialize 3-class, 4-class synthetic, and Fashion-MNIST 10-class datasets."""
     # 1. 3-Class Calibration Fixture
     m3, ids3 = calibration_fixture()
     ds3 = _build_dataset_entry(
@@ -151,8 +177,8 @@ def _initialize_datasets() -> dict[str, dict[str, Any]]:
     # 2. 4-Class Synthetic World
     with tempfile.TemporaryDirectory() as tmpdir:
         generate_synthetic_bundle(output_dir=tmpdir, seed=42, n_samples=100)
-        reader = BundleReader(tmpdir)
-        m4, ids4 = reader.get_representation_matrix("probability")
+        reader4 = BundleReader(tmpdir)
+        m4, ids4 = reader4.get_representation_matrix("probability")
 
     ds4 = _build_dataset_entry(
         matrix=m4,
@@ -162,9 +188,26 @@ def _initialize_datasets() -> dict[str, dict[str, Any]]:
         color_fn=_point_color_4class,
     )
 
+    # 3. Fashion-MNIST 10-Class Belief Space
+    with tempfile.TemporaryDirectory() as tmpdir:
+        generate_fashion_mnist_bundle(output_dir=tmpdir, seed=20260801, n_samples=200)
+        reader_f = BundleReader(tmpdir)
+        mf, idsf = reader_f.get_representation_matrix("probability")
+        objects_meta = reader_f.get_objects().to_dicts()
+
+    dsf = _build_dataset_entry(
+        matrix=mf,
+        object_ids=idsf,
+        feature_names=FASHION_CLASSES,
+        display_name="Fashion-MNIST Predictions (10-class, 200 pts)",
+        color_fn=_point_color_fashion,
+        objects_meta=objects_meta,
+    )
+
     return {
         "calibration_3class": ds3,
         "synthetic_4class": ds4,
+        "fashion_mnist_10class": dsf,
     }
 
 
@@ -199,7 +242,7 @@ def api_fixture() -> Response:
 def api_health() -> Response:
     """Health check endpoint."""
     return Response(
-        json.dumps({"status": "ok", "sprint": "6"}),
+        json.dumps({"status": "ok", "sprint": "7"}),
         mimetype="application/json",
     )
 
@@ -241,7 +284,6 @@ def api_diagnostics() -> Response:
     except (KeyError, ValueError) as err:
         return Response(json.dumps({"error": str(err)}), status=400, mimetype="application/json")
 
-    # Select 2D projected coordinates: catalog view basis if requested, else PCA basis
     if view_id in ds_data.get("catalog", {}):
         coords_2d = np.array(ds_data["catalog"][view_id]["coords"], dtype=np.float64)
     else:
@@ -351,7 +393,7 @@ def api_export_record() -> Response:
             "object_ids_fit_hash": object_hash,
             "feature_schema_hash": feature_hash,
         },
-        summary_note="Investigation record exported from Shadowspace Sprint 6 workbench shell.",
+        summary_note="Investigation record exported from Shadowspace Sprint 7 workbench shell.",
     )
     headers = {"Content-Disposition": "attachment; filename=investigation_record.json"}
     return Response(

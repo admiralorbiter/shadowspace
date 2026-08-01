@@ -1,8 +1,8 @@
 /**
- * Shadowspace Workbench — Sprint 6 Four-Class Validation & Projection Catalog
+ * Shadowspace Workbench — Sprint 7 Fashion-MNIST Belief Space & UX Polish
  * main.js — Multi-dataset switching, Projection Catalog view selection,
- * interactive zoom/pan canvas navigation, local integrity diagnostics,
- * saved-view atlas, and reproducible exports.
+ * interactive zoom/pan camera navigation, local integrity diagnostics,
+ * rich metadata inspection, saved-view atlas, and reproducible exports.
  */
 
 "use strict";
@@ -101,6 +101,7 @@ async function loadDataset(datasetKey) {
     setStatus("ready", `${fixtureData.display_name} loaded`);
     updateVarianceBars();
     updateSemanticBadge();
+    updateLegendList();
     selectPoint(0);
   } catch (err) {
     setStatus("error", "Failed to load dataset");
@@ -212,8 +213,58 @@ function resetZoom() {
   renderScatter();
 }
 
-function zoomBy(factor) {
-  zoomLevel = Math.max(0.8, Math.min(25.0, zoomLevel * factor));
+function zoomBy(factor, pivotScreenX, pivotScreenY) {
+  if (!fixtureData) return;
+  const coords = getCoords();
+  if (!coords || coords.length === 0) return;
+
+  const oldZoom = zoomLevel;
+  const newZoom = Math.max(0.8, Math.min(25.0, oldZoom * factor));
+  if (newZoom === oldZoom) return;
+
+  const xs = coords.map(c => c[0]);
+  const ys = coords.map(c => c[1]);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const rangeX = maxX - minX || 1;
+  const rangeY = maxY - minY || 1;
+  const pad = AXIS_PADDING;
+  const w = canvas.width - pad * 2;
+  const h = canvas.height - pad * 2;
+  const midX = (minX + maxX) / 2;
+  const midY = (minY + maxY) / 2;
+
+  const baseScale = Math.min(w / rangeX, h / rangeY) * 0.82;
+  const oldScale  = baseScale * oldZoom;
+
+  let px, py, dataX, dataY;
+
+  if (pivotScreenX !== undefined && pivotScreenY !== undefined) {
+    // Pivot at specified screen coordinate (e.g. mouse position)
+    px = pivotScreenX;
+    py = pivotScreenY;
+    dataX = (px - (pad + w / 2) - panOffsetX) / oldScale + midX;
+    dataY = midY - (py - (pad + h / 2) - panOffsetY) / oldScale;
+  } else if (selectedIdx !== null && selectedIdx < coords.length) {
+    // Pivot at selected node's data position
+    dataX = coords[selectedIdx][0];
+    dataY = coords[selectedIdx][1];
+    px = (pad + w / 2) + (dataX - midX) * oldScale + panOffsetX;
+    py = (pad + h / 2) - (dataY - midY) * oldScale + panOffsetY;
+  } else {
+    // Pivot at screen center
+    px = pad + w / 2;
+    py = pad + h / 2;
+    dataX = midX;
+    dataY = midY;
+  }
+
+  zoomLevel = newZoom;
+  const newScale = baseScale * newZoom;
+
+  panOffsetX = px - (pad + w / 2) - (dataX - midX) * newScale;
+  panOffsetY = py - (pad + h / 2) + (dataY - midY) * newScale;
+
   renderScatter();
 }
 
@@ -223,7 +274,6 @@ function focusNeighborhood() {
   const targetId = fixtureData.object_ids[selectedIdx];
   const idToIdx = new Map(fixtureData.object_ids.map((id, idx) => [id, idx]));
 
-  // Collect target point and all neighbor IDs
   const activeIds = [targetId];
   if (diagResult) {
     activeIds.push(...diagResult.preserved, ...diagResult.torn, ...diagResult.false_neighbors);
@@ -241,24 +291,20 @@ function focusNeighborhood() {
   const minX = Math.min(...xs), maxX = Math.max(...xs);
   const minY = Math.min(...ys), maxY = Math.max(...ys);
 
-  // Compute 2D bounding box center and span
   const cx = (minX + maxX) / 2;
   const cy = (minY + maxY) / 2;
   const dx = Math.max(0.08, maxX - minX);
   const dy = Math.max(0.08, maxY - minY);
 
-  // Full dataset bounds
   const allXs = coords.map(c => c[0]), allYs = coords.map(c => c[1]);
   const fullRangeX = Math.max(...allXs) - Math.min(...allXs) || 1;
   const fullRangeY = Math.max(...allYs) - Math.min(...allYs) || 1;
   const fullCx = (Math.min(...allXs) + Math.max(...allXs)) / 2;
   const fullCy = (Math.min(...allYs) + Math.max(...allYs)) / 2;
 
-  // Fit zoom level
   const targetZoom = Math.min(15.0, Math.max(1.5, 0.7 / Math.max(dx / fullRangeX, dy / fullRangeY)));
   zoomLevel = targetZoom;
 
-  // Compute pan offsets in pixel space
   const baseScale = Math.min(canvas.width / fullRangeX, canvas.height / fullRangeY) * 0.82;
   const scale = baseScale * zoomLevel;
   panOffsetX = (cx - fullCx) * scale;
@@ -273,11 +319,18 @@ function initZoomControls() {
   if (btnZoomFocus) btnZoomFocus.addEventListener("click", () => focusNeighborhood());
   if (btnZoomReset) btnZoomReset.addEventListener("click", () => resetZoom());
 
-  // Mouse Wheel Zoom
   canvas.addEventListener("wheel", (e) => {
     e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
     const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
-    zoomBy(factor);
+
+    if (selectedIdx !== null) {
+      zoomBy(factor);
+    } else {
+      zoomBy(factor, mouseX, mouseY);
+    }
   }, { passive: false });
 }
 
@@ -321,7 +374,7 @@ function initKeyboardShortcuts() {
   });
 }
 
-// ─── Variance bars ────────────────────────────────────────────────────────────
+// ─── Variance bars & Legend list ──────────────────────────────────────────────
 
 function updateVarianceBars() {
   if (!fixtureData) return;
@@ -335,6 +388,36 @@ function updateVarianceBars() {
   document.getElementById("var-pc2").style.width = pct2.toFixed(1) + "%";
   document.getElementById("var-pc1-label").textContent = pct1.toFixed(0) + "%";
   document.getElementById("var-pc2-label").textContent = pct2.toFixed(0) + "%";
+}
+
+function updateLegendList() {
+  const legendList = document.getElementById("legend-list");
+  if (!legendList || !fixtureData) return;
+
+  const featNames = fixtureData.feature_names;
+  if (currentDataset === "fashion_mnist_10class") {
+    const palette = [
+      "#6ee7b7", "#93c5fd", "#c4b5fd", "#f472b6", "#fbbf24",
+      "#a7f3d0", "#f87171", "#60a5fa", "#e879f9", "#38bdf8"
+    ];
+    legendList.innerHTML = featNames
+      .map((name, i) => `<li><span class="legend-dot" style="background:${palette[i % palette.length]}"></span>${escapeHtml(name)}</li>`)
+      .join("");
+  } else if (currentDataset === "synthetic_4class") {
+    legendList.innerHTML = `
+      <li><span class="legend-dot" style="background:#6ee7b7"></span>Corner cluster</li>
+      <li><span class="legend-dot" style="background:#93c5fd"></span>Midpoint / Ambiguity</li>
+      <li><span class="legend-dot" style="background:#fbbf24"></span>Uniform center</li>
+      <li><span class="legend-dot" style="background:#f472b6"></span>Planted bridge / Outlier</li>
+    `;
+  } else {
+    legendList.innerHTML = `
+      <li><span class="legend-dot" style="background:#6ee7b7"></span>Corner cluster</li>
+      <li><span class="legend-dot" style="background:#93c5fd"></span>Midpoint / Ambiguity</li>
+      <li><span class="legend-dot" style="background:#fbbf24"></span>Uniform center</li>
+      <li><span class="legend-dot" style="background:#c4b5fd"></span>Interior distribution</li>
+    `;
+  }
 }
 
 // ─── Semantic Badge Panel ─────────────────────────────────────────────────────
@@ -394,8 +477,18 @@ function updateIntegrityPanel(data) {
   if (!data) return;
   document.getElementById("diag-precision").textContent = (data.precision * 100).toFixed(0) + "%";
   document.getElementById("diag-recall").textContent    = (data.recall * 100).toFixed(0) + "%";
-  document.getElementById("diag-trust").textContent     = data.trustworthiness.toFixed(2);
-  document.getElementById("diag-stress").textContent    = data.stress.toFixed(2);
+  
+  const trustElem = document.getElementById("diag-trust");
+  trustElem.textContent = data.trustworthiness.toFixed(2);
+  if (data.trustworthiness >= 0.90) {
+    trustElem.style.color = "#6ee7b7";
+  } else if (data.trustworthiness < 0.80) {
+    trustElem.style.color = "#f87171";
+  } else {
+    trustElem.style.color = "#fbbf24";
+  }
+
+  document.getElementById("diag-stress").textContent = data.stress.toFixed(2);
 
   const countPreserved = document.getElementById("count-preserved");
   const countTorn      = document.getElementById("count-torn");
@@ -632,7 +725,6 @@ function renderScatter() {
   for (let i = 0; i < coords.length; i++) {
     const [sx, sy] = sc2.toScreen(coords[i][0], coords[i][1]);
 
-    // Skip points out of view bounds
     if (sx < -20 || sx > W + 20 || sy < -20 || sy > H + 20) continue;
 
     const isSelected = i === selectedIdx;
@@ -658,16 +750,19 @@ function renderScatter() {
   }
   ctx.shadowBlur = 0;
 
-  // ID label on hover or select
+  // ID & Label on hover or select
   const activeIdx = hoveredIdx !== null ? hoveredIdx : selectedIdx;
   if (activeIdx !== null && activeIdx < coords.length) {
     const [sx, sy] = sc2.toScreen(coords[activeIdx][0], coords[activeIdx][1]);
     const id = fixtureData.object_ids[activeIdx];
+    const meta = fixtureData.objects_meta ? fixtureData.objects_meta[activeIdx] : null;
+    const labelText = meta ? `${id} • ${meta.pred_class_name} (${(meta.confidence * 100).toFixed(0)}%)` : id;
+
     ctx.font      = "10px 'JetBrains Mono', monospace";
-    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.fillStyle = "rgba(255,255,255,0.95)";
     ctx.textAlign = "center";
     const labelY = sy - POINT_RADIUS_HOVER - 6;
-    ctx.fillText(id, sx, labelY);
+    ctx.fillText(labelText, sx, labelY);
   }
 }
 
@@ -691,7 +786,6 @@ function drawDiagnosticOverlay(coords, sc) {
   const [srcX, srcY] = sc.toScreen(coords[selectedIdx][0], coords[selectedIdx][1]);
   const idToIdx = new Map(fixtureData.object_ids.map((id, idx) => [id, idx]));
 
-  // Draw overlay lines
   const drawLink = (targetId, color, dashPattern) => {
     const tIdx = idToIdx.get(targetId);
     if (tIdx === undefined || tIdx >= coords.length) return;
@@ -708,7 +802,6 @@ function drawDiagnosticOverlay(coords, sc) {
     ctx.restore();
   };
 
-  // Draw neighbor halos / rings around target points so overlay is visible even for overlapping cluster points
   const drawNeighborRing = (targetId, color, ringRadius) => {
     const tIdx = idToIdx.get(targetId);
     if (tIdx === undefined || tIdx >= coords.length) return;
@@ -751,7 +844,6 @@ function initCanvasInteraction() {
 }
 
 function onMouseDown(e) {
-  // If clicking background or holding Shift, initiate pan
   const idx = getHitIndex(e.clientX, e.clientY);
   if (idx === null || e.shiftKey || e.button === 1) {
     isPanning  = true;
@@ -803,8 +895,17 @@ function onMouseMove(e) {
 
   if (idx !== null) {
     const id   = fixtureData.object_ids[idx];
+    const meta = fixtureData.objects_meta ? fixtureData.objects_meta[idx] : null;
     const raw  = fixtureData.raw_matrix[idx];
-    tooltip.innerHTML = `<strong>${id}</strong> &nbsp; [${raw.map(v => v.toFixed(3)).join(", ")}]`;
+
+    if (meta) {
+      const confPct = (meta.confidence * 100).toFixed(0);
+      const statusIcon = meta.is_correct ? "✓" : "✕";
+      tooltip.innerHTML = `<strong>${id}</strong> &nbsp; Predict: <span style="color:#6ee7b7">${escapeHtml(meta.pred_class_name)}</span> (${confPct}%) ${statusIcon}`;
+    } else {
+      tooltip.innerHTML = `<strong>${id}</strong> &nbsp; [${raw.map(v => v.toFixed(3)).join(", ")}]`;
+    }
+
     const rect = canvas.getBoundingClientRect();
     const tx = e.clientX - rect.left + 14;
     const ty = e.clientY - rect.top  - 12;
@@ -838,18 +939,45 @@ function updateInspector(idx) {
   const id        = fixtureData.object_ids[idx];
   const raw       = fixtureData.raw_matrix[idx];
   const coords    = getCoords()[idx];
+  const meta      = fixtureData.objects_meta ? fixtureData.objects_meta[idx] : null;
   const featNames = fixtureData.feature_names || raw.map((_, i) => `class_${i}`);
   const dl        = document.getElementById("inspector-list");
 
-  let html = `<dt>Object ID</dt><dd class="highlight">${escapeHtml(id)}</dd>`;
+  let html = "";
+
+  if (meta) {
+    const confPct = (meta.confidence * 100).toFixed(1);
+    const correctBadge = meta.is_correct
+      ? '<span style="color:#6ee7b7; font-weight:700">✓ Correct</span>'
+      : '<span style="color:#f87171; font-weight:700">✕ Error</span>';
+
+    html += `<dt>Object ID</dt><dd class="highlight">${escapeHtml(id)}</dd>`;
+    html += `<dt>Prediction</dt><dd style="color:#6ee7b7; font-weight:600">${escapeHtml(meta.pred_class_name)} (${confPct}%)</dd>`;
+    html += `<dt>True Label</dt><dd>${escapeHtml(meta.true_class_name)} &nbsp; ${correctBadge}</dd>`;
+    html += `<dt>Entropy</dt><dd>${meta.entropy.toFixed(3)} nats</dd>`;
+  } else {
+    html += `<dt>Object ID</dt><dd class="highlight">${escapeHtml(id)}</dd>`;
+  }
+
+  const palette = [
+    "#6ee7b7", "#93c5fd", "#c4b5fd", "#f472b6", "#fbbf24",
+    "#a7f3d0", "#f87171", "#60a5fa", "#e879f9", "#38bdf8"
+  ];
+
   featNames.forEach((name, i) => {
     const val = raw[i] !== undefined ? raw[i].toFixed(4) : "—";
-    html += `<dt>${escapeHtml(name)}</dt><dd>${val}</dd>`;
+    const dotColor = palette[i % palette.length];
+    const isMax = raw[i] === Math.max(...raw);
+    const valStyle = isMax ? 'style="color:#6ee7b7; font-weight:600"' : '';
+
+    html += `<dt><span class="legend-dot" style="display:inline-block; width:6px; height:6px; background:${dotColor}; margin-right:4px"></span>${escapeHtml(name)}</dt><dd ${valStyle}>${val}</dd>`;
   });
+
   if (coords) {
     html += `<dt>PC1</dt><dd>${coords[0].toFixed(4)}</dd>`;
     html += `<dt>PC2</dt><dd>${coords[1].toFixed(4)}</dd>`;
   }
+
   dl.innerHTML = html;
 }
 

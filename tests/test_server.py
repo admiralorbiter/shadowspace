@@ -43,7 +43,7 @@ def test_api_health(client: FlaskClient) -> None:
     assert res.status_code == 200
     data = json.loads(res.data)
     assert data["status"] == "ok"
-    assert data["sprint"] == "6"
+    assert data["sprint"] == "7"
 
 
 def test_api_fixture_returns_200(client: FlaskClient) -> None:
