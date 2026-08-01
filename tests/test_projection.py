@@ -18,9 +18,7 @@ from shadowspace.projection.subspace import grassmannian_distance
 
 def test_validate_orthonormal_basis() -> None:
     # Valid 3x2 orthonormal basis
-    basis_valid = np.array(
-        [[1.0, 0.0], [0.0, 1.0], [0.0, 0.0]], dtype=np.float64
-    )
+    basis_valid = np.array([[1.0, 0.0], [0.0, 1.0], [0.0, 0.0]], dtype=np.float64)
     basis_res = validate_orthonormal_basis(basis_valid)
     np.testing.assert_array_equal(basis_res, basis_valid)
 
@@ -108,8 +106,12 @@ def test_path_semantics() -> None:
     matrix, object_ids = calibration_fixture()
     feature_names = ["p0", "p1", "p2"]
 
-    _, view_prob = fit_representation_pca(matrix, "probability", object_ids, feature_names, "v_prob")
-    _, view_sqrt = fit_representation_pca(matrix, "sqrt_probability", object_ids, feature_names, "v_sqrt")
+    _, view_prob = fit_representation_pca(
+        matrix, "probability", object_ids, feature_names, "v_prob"
+    )
+    _, view_sqrt = fit_representation_pca(
+        matrix, "sqrt_probability", object_ids, feature_names, "v_sqrt"
+    )
 
     # Linear projection path
     linear_path = create_linear_projection_path("path_linear", [view_prob])

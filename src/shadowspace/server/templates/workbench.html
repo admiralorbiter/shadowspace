@@ -26,7 +26,7 @@
         <line x1="16" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
       <span class="brand-name">Shadowspace</span>
-      <span class="brand-sprint">Sprint 6</span>
+      <span class="brand-sprint">Sprint 8</span>
     </div>
 
     <div class="topbar-controls">
@@ -35,6 +35,8 @@
         <option value="synthetic_4class">4-Class Synthetic (98 pts)</option>
         <option value="fashion_mnist_10class">Fashion-MNIST Predictions (10-class, 200 pts)</option>
       </select>
+
+      <button id="btn-open-import" class="topbar-import-btn" title="Import custom CSV or Parquet dataset">↑ Import Dataset</button>
 
       <label class="toggle-control" title="Toggle reduced-motion transitions">
         <input type="checkbox" id="toggle-reduced-motion" />
@@ -310,6 +312,57 @@
       </div>
       <div class="modal-footer">
         <button id="btn-dismiss-help" class="btn btn-primary">Got it!</button>
+      </div>
+    </div>
+  <!-- ═══════════════════════════════════════════════════════════════
+       IMPORT MODAL
+  ═══════════════════════════════════════════════════════════════ -->
+  <div id="import-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 class="modal-title">↑ Import Prediction Dataset</h2>
+        <button id="btn-close-import" class="modal-close-btn" title="Close modal">&times;</button>
+      </div>
+      <form id="import-form" class="modal-body">
+        <div class="form-group">
+          <label for="import-file">Prediction File (CSV or Parquet) <span class="required">*</span></label>
+          <input type="file" id="import-file" name="file" accept=".csv,.parquet,.pq,.txt" required class="file-input" />
+          <span class="form-hint">Supports CSV or Parquet files up to 10 MB.</span>
+        </div>
+
+        <div class="form-group">
+          <label for="import-name">Dataset Display Name</label>
+          <input type="text" id="import-name" name="dataset_name" placeholder="e.g. ResNet50 CIFAR-10 Predictions" class="text-input" />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group half">
+            <label for="import-id-col">ID Column Name</label>
+            <input type="text" id="import-id-col" name="id_column" placeholder="Auto-generated if empty" class="text-input" />
+          </div>
+          <div class="form-group half">
+            <label for="import-label-col">Ground Truth Label Col</label>
+            <input type="text" id="import-label-col" name="label_column" placeholder="Optional (e.g. true_label)" class="text-input" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="import-feat-cols">Probability / Logit Feature Columns</label>
+          <input type="text" id="import-feat-cols" name="feature_columns" placeholder="Comma-separated (e.g. p0, p1, p2 or cat, dog, bird). Auto-detected if empty." class="text-input" />
+        </div>
+
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label" title="Enable if your file contains raw logit scores that need softmax conversion">
+            <input type="checkbox" id="import-normalize" name="normalize" />
+            <span>Normalize (apply Softmax to raw logit scores)</span>
+          </label>
+        </div>
+
+        <div id="import-error-msg" class="import-error hidden"></div>
+      </form>
+      <div class="modal-footer">
+        <button id="btn-cancel-import" type="button" class="btn btn-secondary">Cancel</button>
+        <button id="btn-submit-import" type="button" class="btn btn-primary">Import &amp; Launch</button>
       </div>
     </div>
   </div>

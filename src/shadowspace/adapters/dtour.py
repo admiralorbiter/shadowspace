@@ -124,14 +124,11 @@ class DtourAdapter:
         # --- shape checks ---
         if representation_matrix.ndim != 2:
             raise ValueError(
-                f"representation_matrix must be 2-D, "
-                f"got shape {representation_matrix.shape}"
+                f"representation_matrix must be 2-D, got shape {representation_matrix.shape}"
             )
         n_rows, n_cols = representation_matrix.shape
         if n_cols < 2:
-            raise ValueError(
-                f"representation_matrix must have at least 2 columns, got {n_cols}."
-            )
+            raise ValueError(f"representation_matrix must have at least 2 columns, got {n_cols}.")
         if len(object_ids) != n_rows:
             raise ValueError(
                 f"object_ids has {len(object_ids)} entries but "

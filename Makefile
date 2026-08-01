@@ -1,4 +1,4 @@
-.PHONY: install test lint format typecheck check clean
+.PHONY: install test lint format typecheck check clean generate-datasets
 
 install:
 	pip install -r requirements.txt
@@ -14,6 +14,9 @@ format:
 
 typecheck:
 	mypy src
+
+generate-datasets:
+	python -m shadowspace datasets fetch --output data/bundles
 
 check: lint typecheck test
 

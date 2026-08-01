@@ -18,8 +18,8 @@ class NeighborClassification:
     target_id: str
     k: int
     preserved: list[str] = field(default_factory=list)  # In both source and projected k-NN
-    torn: list[str] = field(default_factory=list)       # In source k-NN, absent in projected
-    false_neighbors: list[str] = field(default_factory=list) # In projected k-NN, absent in source
+    torn: list[str] = field(default_factory=list)  # In source k-NN, absent in projected
+    false_neighbors: list[str] = field(default_factory=list)  # In projected k-NN, absent in source
 
     @property
     def precision(self) -> float:

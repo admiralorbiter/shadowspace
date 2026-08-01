@@ -154,9 +154,13 @@ class MetricRegistry:
             List of (id_or_index, distance) tuples sorted by distance.
         """
         if not (0 <= target_idx < len(matrix)):
-            raise ValueError(f"target_idx {target_idx} out of range for matrix length {len(matrix)}.")
+            raise ValueError(
+                f"target_idx {target_idx} out of range for matrix length {len(matrix)}."
+            )
 
-        distances = self.compute_pairwise_distances(matrix, metric_id, representation_id)[target_idx]
+        distances = self.compute_pairwise_distances(matrix, metric_id, representation_id)[
+            target_idx
+        ]
 
         # Sort indices by distance
         sorted_indices = np.argsort(distances)

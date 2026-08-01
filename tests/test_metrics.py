@@ -101,7 +101,9 @@ def test_pairwise_functions_match_single_pair() -> None:
             np.testing.assert_allclose(p_hel[i, j], hellinger_distance(mat[i], mat[j]), atol=1e-10)
             np.testing.assert_allclose(p_fr[i, j], fisher_rao_distance(mat[i], mat[j]), atol=1e-10)
             np.testing.assert_allclose(p_ait[i, j], aitchison_distance(mat[i], mat[j]), atol=1e-10)
-            np.testing.assert_allclose(p_js[i, j], jensen_shannon_distance(mat[i], mat[j]), atol=1e-10)
+            np.testing.assert_allclose(
+                p_js[i, j], jensen_shannon_distance(mat[i], mat[j]), atol=1e-10
+            )
 
 
 def test_pairwise_euclidean_diagonal_is_exact_zero() -> None:
@@ -138,7 +140,9 @@ def test_hypothesis_metric_axioms(
     np.testing.assert_allclose(hellinger_distance(p, q), hellinger_distance(q, p), atol=1e-12)
     np.testing.assert_allclose(fisher_rao_distance(p, q), fisher_rao_distance(q, p), atol=1e-12)
     np.testing.assert_allclose(aitchison_distance(p, q), aitchison_distance(q, p), atol=1e-12)
-    np.testing.assert_allclose(jensen_shannon_distance(p, q), jensen_shannon_distance(q, p), atol=1e-12)
+    np.testing.assert_allclose(
+        jensen_shannon_distance(p, q), jensen_shannon_distance(q, p), atol=1e-12
+    )
 
     # 3. Non-negativity
     assert euclidean_distance(p, q) >= 0.0

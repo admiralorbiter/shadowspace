@@ -42,9 +42,7 @@ def principal_angles(
     return np.asarray(np.sort(angles), dtype=np.float64)
 
 
-def grassmannian_distance(
-    basis1: NDArray[np.float64], basis2: NDArray[np.float64]
-) -> float:
+def grassmannian_distance(basis1: NDArray[np.float64], basis2: NDArray[np.float64]) -> float:
     """Compute Grassmannian distance between two subspace bases basis1 and basis2.
 
     d_Gr(basis1, basis2) = sqrt(sum(theta_i^2)) where theta_i are principal angles.

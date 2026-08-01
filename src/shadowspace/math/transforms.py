@@ -46,9 +46,7 @@ def sqrt_transform(probabilities: NDArray[np.float64]) -> NDArray[np.float64]:
     return np.asarray(np.sqrt(clipped), dtype=np.float64)
 
 
-def logit_transform(
-    probabilities: NDArray[np.float64], eps: float = 1e-6
-) -> NDArray[np.float64]:
+def logit_transform(probabilities: NDArray[np.float64], eps: float = 1e-6) -> NDArray[np.float64]:
     """Apply the logit (log-odds) transformation log(p / (1 - p)).
 
     Clips probabilities to [eps, 1 - eps] to handle exact 0 and 1 values safely.

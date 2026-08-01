@@ -22,7 +22,9 @@ class SavedView(BaseModel):
     metric_id: str
     k: int
     target_id: str
-    path_kind: Literal["linear_projection", "representation_morph", "sequential_embedding"] = "linear_projection"
+    path_kind: Literal["linear_projection", "representation_morph", "sequential_embedding"] = (
+        "linear_projection"
+    )
     semantically_valid: bool = True
     variance_explained: list[float] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)

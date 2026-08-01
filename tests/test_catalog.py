@@ -42,7 +42,9 @@ def test_collapsed_bridge_misleading_diagnostics() -> None:
     dists_bridge = pairwise_euclidean(coords_bridge)
 
     # Inspect midpoint_01 (index 3)
-    diag_bridge = compute_point_diagnostics(src_dists, dists_bridge, k=3, object_ids=object_ids, target_id="midpoint_01")
+    diag_bridge = compute_point_diagnostics(
+        src_dists, dists_bridge, k=3, object_ids=object_ids, target_id="midpoint_01"
+    )
 
     # Verify that the misleading collapsed_bridge view produces diagnostics with torn or false neighbors
     assert len(diag_bridge.torn) > 0 or len(diag_bridge.false_neighbors) > 0

@@ -5,6 +5,7 @@ Sprint 4: Local integrity diagnostics API endpoint.
 Sprint 5: Saved-View Atlas and Investigation Record export.
 Sprint 6: Four-Class Validation, Dataset Switcher, and Projection Catalog.
 Sprint 7: Fashion-MNIST 10-Class Prediction Belief Space & Metadata Inspector.
+Sprint 8: Real Data Ingestion & Flask Workbench Expansion.
 """
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ import hashlib
 import json
 import tempfile
 import uuid
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -29,6 +31,8 @@ from shadowspace.diagnostics.trustworthiness import (
 )
 from shadowspace.generators.fashion_mnist import FASHION_CLASSES, generate_fashion_mnist_bundle
 from shadowspace.generators.synthetic import generate_synthetic_bundle
+from shadowspace.importers.csv_importer import import_csv_bundle, import_parquet_bundle
+from shadowspace.importers.validator import ImportValidationError
 from shadowspace.math.metrics import pairwise_euclidean
 from shadowspace.math.registry import MetricRegistry
 from shadowspace.math.transforms import sqrt_transform
@@ -45,8 +49,10 @@ workbench_bp = Blueprint("workbench", __name__)
 _METRIC_REGISTRY = MetricRegistry()
 _SAVED_VIEWS: dict[str, SavedView] = {}
 
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB limit
+
 # ---------------------------------------------------------------------------
-# Fixture and Synthetic Data Pre-Computation (Sprint 7)
+# Fixture and Dataset Generators
 # ---------------------------------------------------------------------------
 
 _POINT_COLORS_3CLASS = {
@@ -98,6 +104,39 @@ def _point_color_fashion(object_id: str) -> str:
         return "#6ee7b7"
 
 
+def _point_color_generic(object_id: str) -> str:
+    # Hash object_id to a deterministic vibrant HSL color
+    h = int(hashlib.md5(object_id.encode("utf-8")).hexdigest(), 16) % 360
+    return f"hsl({h}, 70%, 65%)"
+
+
+def _compute_class_colors(
+    matrix: NDArray[np.float64],
+    feature_names: list[str],
+    objects_meta: list[dict[str, Any]] | None = None,
+) -> list[str]:
+    """Compute class-matched colors based on true_label or highest probability."""
+    palette = [
+        "#6ee7b7", "#93c5fd", "#c4b5fd", "#f472b6", "#fbbf24",
+        "#a7f3d0", "#f87171", "#60a5fa", "#e879f9", "#38bdf8"
+    ]
+    colors = []
+    for i, row in enumerate(matrix):
+        cls_idx = int(np.argmax(row))
+        if objects_meta and i < len(objects_meta):
+            meta = objects_meta[i]
+            label = meta.get("true_label") or meta.get("true_class_name")
+            if label is not None:
+                str_label = str(label)
+                for fn_i, fn in enumerate(feature_names):
+                    clean_fn = fn.replace("p_", "")
+                    if fn == str_label or clean_fn == str_label or f"p_{str_label}" == fn:
+                        cls_idx = fn_i
+                        break
+        colors.append(palette[cls_idx % len(palette)])
+    return colors
+
+
 def _build_dataset_entry(
     matrix: NDArray[np.float64],
     object_ids: list[str],
@@ -105,6 +144,7 @@ def _build_dataset_entry(
     display_name: str,
     color_fn: Any,
     objects_meta: list[dict[str, Any]] | None = None,
+    source_type: str = "synthetic",
 ) -> dict[str, Any]:
     """Build dataset dictionary with pre-computed representations and catalog."""
     representations: dict[str, NDArray[np.float64]] = {
@@ -148,7 +188,10 @@ def _build_dataset_entry(
             "warning_note": cat_view.warning_note,
         }
 
-    colors = [color_fn(oid) for oid in object_ids]
+    if color_fn in (None, _point_color_generic):
+        colors = _compute_class_colors(matrix, feature_names, objects_meta)
+    else:
+        colors = [color_fn(oid) for oid in object_ids]
 
     return {
         "display_name": display_name,
@@ -159,59 +202,95 @@ def _build_dataset_entry(
         "representations": rep_data,
         "catalog": catalog_payload,
         "objects_meta": objects_meta or [],
+        "source_type": source_type,
+        "n_objects": len(object_ids),
+        "n_classes": len(feature_names),
     }
 
 
-def _initialize_datasets() -> dict[str, dict[str, Any]]:
-    """Initialize 3-class, 4-class synthetic, and Fashion-MNIST 10-class datasets."""
-    # 1. 3-Class Calibration Fixture
-    m3, ids3 = calibration_fixture()
-    ds3 = _build_dataset_entry(
-        matrix=m3,
-        object_ids=ids3,
-        feature_names=["class_0", "class_1", "class_2"],
-        display_name="3-Class Calibration Fixture (15 pts)",
-        color_fn=_point_color_3class,
-    )
-
-    # 2. 4-Class Synthetic World
-    with tempfile.TemporaryDirectory() as tmpdir:
-        generate_synthetic_bundle(output_dir=tmpdir, seed=42, n_samples=100)
-        reader4 = BundleReader(tmpdir)
-        m4, ids4 = reader4.get_representation_matrix("probability")
-
-    ds4 = _build_dataset_entry(
-        matrix=m4,
-        object_ids=ids4,
-        feature_names=["class_0", "class_1", "class_2", "class_3"],
-        display_name="4-Class Synthetic World (98 pts)",
-        color_fn=_point_color_4class,
-    )
-
-    # 3. Fashion-MNIST 10-Class Belief Space
-    with tempfile.TemporaryDirectory() as tmpdir:
-        generate_fashion_mnist_bundle(output_dir=tmpdir, seed=20260801, n_samples=200)
-        reader_f = BundleReader(tmpdir)
-        mf, idsf = reader_f.get_representation_matrix("probability")
-        objects_meta = reader_f.get_objects().to_dicts()
-
-    dsf = _build_dataset_entry(
-        matrix=mf,
-        object_ids=idsf,
-        feature_names=FASHION_CLASSES,
-        display_name="Fashion-MNIST Predictions (10-class, 200 pts)",
-        color_fn=_point_color_fashion,
-        objects_meta=objects_meta,
-    )
-
-    return {
-        "calibration_3class": ds3,
-        "synthetic_4class": ds4,
-        "fashion_mnist_10class": dsf,
-    }
+# Cache for datasets
+_DATASETS: dict[str, dict[str, Any]] = {}
 
 
-_DATASETS = _initialize_datasets()
+def _get_dataset(key: str) -> dict[str, Any] | None:
+    """Lazy loader for built-in and imported datasets."""
+    if key in _DATASETS:
+        return _DATASETS[key]
+
+    if key == "calibration_3class":
+        m3, ids3 = calibration_fixture()
+        _DATASETS["calibration_3class"] = _build_dataset_entry(
+            matrix=m3,
+            object_ids=ids3,
+            feature_names=["class_0", "class_1", "class_2"],
+            display_name="3-Class Calibration Fixture (15 pts)",
+            color_fn=_point_color_3class,
+            source_type="synthetic",
+        )
+        return _DATASETS["calibration_3class"]
+
+    elif key == "synthetic_4class":
+        with tempfile.TemporaryDirectory() as tmpdir:
+            generate_synthetic_bundle(output_dir=tmpdir, seed=42, n_samples=100)
+            reader4 = BundleReader(tmpdir)
+            m4, ids4 = reader4.get_representation_matrix("probability")
+
+        _DATASETS["synthetic_4class"] = _build_dataset_entry(
+            matrix=m4,
+            object_ids=ids4,
+            feature_names=["class_0", "class_1", "class_2", "class_3"],
+            display_name="4-Class Synthetic World (98 pts)",
+            color_fn=_point_color_4class,
+            source_type="synthetic",
+        )
+        return _DATASETS["synthetic_4class"]
+
+    elif key == "fashion_mnist_10class":
+        with tempfile.TemporaryDirectory() as tmpdir:
+            generate_fashion_mnist_bundle(output_dir=tmpdir, seed=20260801, n_samples=200)
+            reader_f = BundleReader(tmpdir)
+            mf, idsf = reader_f.get_representation_matrix("probability")
+            objects_meta = reader_f.get_objects().to_dicts()
+
+        _DATASETS["fashion_mnist_10class"] = _build_dataset_entry(
+            matrix=mf,
+            object_ids=idsf,
+            feature_names=FASHION_CLASSES,
+            display_name="Fashion-MNIST Predictions (10-class, 200 pts)",
+            color_fn=_point_color_fashion,
+            objects_meta=objects_meta,
+            source_type="generated",
+        )
+        return _DATASETS["fashion_mnist_10class"]
+
+    # Check for fetched/pre-built bundles on disk in data/bundles/
+    bundle_dir = Path("data/bundles") / key
+    if bundle_dir.exists() and (bundle_dir / "manifest.json").exists():
+        try:
+            reader = BundleReader(bundle_dir)
+            matrix, object_ids = reader.get_representation_matrix("probability")
+            spec = reader.get_representation_spec("probability")
+            feature_names = list(spec.feature_columns)
+            display_name = reader.manifest.description or key
+            objects_meta = reader.get_objects().to_dicts()
+            _DATASETS[key] = _build_dataset_entry(
+                matrix=matrix,
+                object_ids=object_ids,
+                feature_names=feature_names,
+                display_name=display_name,
+                color_fn=_point_color_generic,
+                objects_meta=objects_meta,
+                source_type="fetched",
+            )
+            return _DATASETS[key]
+        except Exception:
+            pass
+
+    return None
+
+
+# Pre-initialize only calibration_3class for immediate startup
+_get_dataset("calibration_3class")
 
 
 # ---------------------------------------------------------------------------
@@ -225,24 +304,197 @@ def workbench() -> str:
     return render_template("workbench.html")
 
 
+@workbench_bp.route("/api/datasets")
+def api_datasets() -> Response:
+    """List available datasets and their metadata."""
+    from shadowspace.datasets.bundle_discovery import scan_bundle_dir
+
+    builtin_keys = ["calibration_3class", "synthetic_4class", "fashion_mnist_10class"]
+    discovered_bundles = scan_bundle_dir("data/bundles")
+
+    # Combine keys maintaining priority order
+    all_keys = list(builtin_keys)
+    for k in discovered_bundles:
+        if k not in all_keys and k not in ("calibration-v1", "synthetic-v1"):
+            all_keys.append(k)
+    for k in _DATASETS:
+        if k not in all_keys:
+            all_keys.append(k)
+
+    result = []
+    for k in all_keys:
+        ds = _get_dataset(k)
+        if ds:
+            result.append(
+                {
+                    "key": k,
+                    "display_name": ds["display_name"],
+                    "n_objects": ds["n_objects"],
+                    "n_classes": ds["n_classes"],
+                    "source_type": ds.get("source_type", "imported"),
+                }
+            )
+    return Response(json.dumps(result), mimetype="application/json")
+
+
+@workbench_bp.route("/api/dataset-status")
+def api_dataset_status() -> Response:
+    """Check dataset loading status."""
+    key = request.args.get("dataset", "calibration_3class")
+    loaded = key in _DATASETS
+    return Response(
+        json.dumps({"dataset": key, "status": "loaded" if loaded else "unloaded"}),
+        mimetype="application/json",
+    )
+
+
 @workbench_bp.route("/api/fixture")
 def api_fixture() -> Response:
     """Return dataset fixture data (defaults to calibration_3class)."""
     dataset_key = request.args.get("dataset", "calibration_3class")
-    if dataset_key not in _DATASETS:
-        dataset_key = "calibration_3class"
+    ds_data = _get_dataset(dataset_key)
+    if ds_data is None:
+        return Response(
+            json.dumps({"error": f"Unknown dataset '{dataset_key}'"}),
+            status=404,
+            mimetype="application/json",
+        )
 
     return Response(
-        json.dumps(_DATASETS[dataset_key], separators=(",", ":")),
+        json.dumps(ds_data, separators=(",", ":")),
         mimetype="application/json",
     )
+
+
+@workbench_bp.route("/api/import-dataset", methods=["POST"])
+def api_import_dataset() -> Response:
+    """Import custom CSV or Parquet prediction dataset."""
+    if "file" not in request.files:
+        return Response(
+            json.dumps({"error": "No file uploaded in form field 'file'"}),
+            status=400,
+            mimetype="application/json",
+        )
+
+    file_obj = request.files["file"]
+    filename = file_obj.filename or "uploaded_data.csv"
+
+    # Check file size
+    file_obj.seek(0, 2)
+    file_size = file_obj.tell()
+    file_obj.seek(0)
+
+    if file_size > MAX_UPLOAD_BYTES:
+        return Response(
+            json.dumps(
+                {
+                    "error": f"File size ({file_size / (1024 * 1024):.1f} MB) exceeds maximum limit of 10 MB."
+                }
+            ),
+            status=413,
+            mimetype="application/json",
+        )
+
+    # Form parameters
+    id_col = request.form.get("id_column", "").strip() or None
+    label_col = request.form.get("label_column", "").strip() or None
+    raw_feat_cols = request.form.get("feature_columns", "").strip()
+    feat_cols = (
+        [c.strip() for c in raw_feat_cols.split(",") if c.strip()] if raw_feat_cols else None
+    )
+    normalize = request.form.get("normalize", "false").lower() in ("true", "1", "yes")
+    dataset_name = (
+        request.form.get("dataset_name", "").strip() or f"Imported_{uuid.uuid4().hex[:6]}"
+    )
+
+    is_parquet = filename.endswith(".parquet") or filename.endswith(".pq")
+    is_csv = filename.endswith(".csv") or filename.endswith(".txt")
+
+    if not (is_parquet or is_csv):
+        return Response(
+            json.dumps({"error": "Only .csv and .parquet files are supported."}),
+            status=400,
+            mimetype="application/json",
+        )
+
+    try:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            temp_path = f"{tmp_dir}/{filename}"
+            file_obj.save(temp_path)
+
+            bundle_out_dir = f"{tmp_dir}/bundle"
+            if is_csv:
+                import_csv_bundle(
+                    csv_path=temp_path,
+                    output_dir=bundle_out_dir,
+                    id_column=id_col,
+                    label_column=label_col,
+                    feature_columns=feat_cols,
+                    normalize=normalize,
+                    dataset_name=dataset_name,
+                )
+            else:
+                import_parquet_bundle(
+                    parquet_path=temp_path,
+                    output_dir=bundle_out_dir,
+                    id_column=id_col,
+                    label_column=label_col,
+                    feature_columns=feat_cols,
+                    normalize=normalize,
+                    dataset_name=dataset_name,
+                )
+
+            reader = BundleReader(bundle_out_dir)
+            matrix, object_ids = reader.get_representation_matrix("probability")
+            rep_spec = reader.get_representation_spec("probability")
+            feature_names = rep_spec.feature_columns
+            objects_meta = reader.get_objects().to_dicts()
+
+        dataset_key = f"imported_{uuid.uuid4().hex[:8]}"
+        ds_entry = _build_dataset_entry(
+            matrix=matrix,
+            object_ids=object_ids,
+            feature_names=feature_names,
+            display_name=f"{dataset_name} ({len(object_ids)} pts)",
+            color_fn=_point_color_generic,
+            objects_meta=objects_meta,
+            source_type="imported",
+        )
+        _DATASETS[dataset_key] = ds_entry
+
+        return Response(
+            json.dumps(
+                {
+                    "status": "success",
+                    "dataset_key": dataset_key,
+                    "display_name": ds_entry["display_name"],
+                    "n_objects": len(object_ids),
+                    "n_classes": len(feature_names),
+                }
+            ),
+            status=201,
+            mimetype="application/json",
+        )
+
+    except ImportValidationError as err:
+        return Response(
+            json.dumps({"error": f"Import Validation Failed: {err}"}),
+            status=400,
+            mimetype="application/json",
+        )
+    except Exception as err:
+        return Response(
+            json.dumps({"error": f"Failed to process dataset file: {err}"}),
+            status=400,
+            mimetype="application/json",
+        )
 
 
 @workbench_bp.route("/api/health")
 def api_health() -> Response:
     """Health check endpoint."""
     return Response(
-        json.dumps({"status": "ok", "sprint": "7"}),
+        json.dumps({"status": "ok", "sprint": "8"}),
         mimetype="application/json",
     )
 
@@ -251,10 +503,12 @@ def api_health() -> Response:
 def api_diagnostics() -> Response:
     """Compute local integrity diagnostics for a target point, k, metric, and view catalog."""
     dataset_key = request.args.get("dataset", "calibration_3class")
-    if dataset_key not in _DATASETS:
+    ds_data = _get_dataset(dataset_key)
+    if ds_data is None:
+        ds_data = _get_dataset("calibration_3class")
         dataset_key = "calibration_3class"
 
-    ds_data = _DATASETS[dataset_key]
+    assert ds_data is not None
     object_ids = ds_data["object_ids"]
 
     target_id = request.args.get("target_id", object_ids[0])
@@ -265,13 +519,23 @@ def api_diagnostics() -> Response:
     try:
         k = int(request.args.get("k", 3))
     except ValueError:
-        return Response(json.dumps({"error": "Invalid k parameter"}), status=400, mimetype="application/json")
+        return Response(
+            json.dumps({"error": "Invalid k parameter"}), status=400, mimetype="application/json"
+        )
 
     if rep_id not in ds_data["representations"]:
-        return Response(json.dumps({"error": f"Unknown representation {rep_id!r}"}), status=400, mimetype="application/json")
+        return Response(
+            json.dumps({"error": f"Unknown representation {rep_id!r}"}),
+            status=400,
+            mimetype="application/json",
+        )
 
     if target_id not in object_ids:
-        return Response(json.dumps({"error": f"Unknown target_id {target_id!r}"}), status=400, mimetype="application/json")
+        return Response(
+            json.dumps({"error": f"Unknown target_id {target_id!r}"}),
+            status=400,
+            mimetype="application/json",
+        )
 
     raw_matrix = np.array(ds_data["raw_matrix"], dtype=np.float64)
     if rep_id == "sqrt_probability":
@@ -341,13 +605,26 @@ def api_saved_views() -> Response:
         try:
             k = int(data.get("k", 3))
         except (TypeError, ValueError):
-            return Response(json.dumps({"error": "Invalid k parameter"}), status=400, mimetype="application/json")
+            return Response(
+                json.dumps({"error": "Invalid k parameter"}),
+                status=400,
+                mimetype="application/json",
+            )
 
-        ds_data = _DATASETS.get(dataset_key, _DATASETS["calibration_3class"])
+        ds_data = _get_dataset(dataset_key) or _get_dataset("calibration_3class")
+        assert ds_data is not None
         if rep_id not in ds_data["representations"]:
-            return Response(json.dumps({"error": f"Unknown representation {rep_id!r}"}), status=400, mimetype="application/json")
+            return Response(
+                json.dumps({"error": f"Unknown representation {rep_id!r}"}),
+                status=400,
+                mimetype="application/json",
+            )
         if target_id not in ds_data["object_ids"]:
-            return Response(json.dumps({"error": f"Unknown target_id {target_id!r}"}), status=400, mimetype="application/json")
+            return Response(
+                json.dumps({"error": f"Unknown target_id {target_id!r}"}),
+                status=400,
+                mimetype="application/json",
+            )
 
         view_id = f"view_{uuid.uuid4().hex[:8]}"
         saved = SavedView(
@@ -358,28 +635,42 @@ def api_saved_views() -> Response:
             metric_id=metric_id,
             k=k,
             target_id=target_id,
-            variance_explained=ds_data["representations"].get(rep_id, {}).get("eigenvalues", [0.5, 0.5]),
+            variance_explained=ds_data["representations"]
+            .get(rep_id, {})
+            .get("eigenvalues", [0.5, 0.5]),
             metadata={"dataset": dataset_key},
         )
         _SAVED_VIEWS[view_id] = saved
-        return Response(json.dumps(saved.model_dump(mode="json")), status=201, mimetype="application/json")
+        return Response(
+            json.dumps(saved.model_dump(mode="json")), status=201, mimetype="application/json"
+        )
 
     elif request.method == "DELETE":
         view_id = request.args.get("id", "")
         if view_id in _SAVED_VIEWS:
             del _SAVED_VIEWS[view_id]
-            return Response(json.dumps({"status": "deleted", "id": view_id}), mimetype="application/json")
-        return Response(json.dumps({"error": f"View {view_id!r} not found"}), status=404, mimetype="application/json")
+            return Response(
+                json.dumps({"status": "deleted", "id": view_id}), mimetype="application/json"
+            )
+        return Response(
+            json.dumps({"error": f"View {view_id!r} not found"}),
+            status=404,
+            mimetype="application/json",
+        )
 
-    return Response(json.dumps({"error": "Method not allowed"}), status=405, mimetype="application/json")
+    return Response(
+        json.dumps({"error": "Method not allowed"}), status=405, mimetype="application/json"
+    )
 
 
 @workbench_bp.route("/api/export-record")
 def api_export_record() -> Response:
     """Export complete InvestigationRecord JSON with SHA-256 provenance hashes."""
-    matrix = np.array(_DATASETS["calibration_3class"]["raw_matrix"], dtype=np.float64)
-    object_ids = _DATASETS["calibration_3class"]["object_ids"]
-    feature_names = _DATASETS["calibration_3class"]["feature_names"]
+    ds = _get_dataset("calibration_3class")
+    assert ds is not None
+    matrix = np.array(ds["raw_matrix"], dtype=np.float64)
+    object_ids = ds["object_ids"]
+    feature_names = ds["feature_names"]
 
     matrix_hash = hashlib.sha256(matrix.tobytes()).hexdigest()
     object_hash = compute_object_id_hash(object_ids)
@@ -393,7 +684,7 @@ def api_export_record() -> Response:
             "object_ids_fit_hash": object_hash,
             "feature_schema_hash": feature_hash,
         },
-        summary_note="Investigation record exported from Shadowspace Sprint 7 workbench shell.",
+        summary_note="Investigation record exported from Shadowspace Sprint 8 workbench shell.",
     )
     headers = {"Content-Disposition": "attachment; filename=investigation_record.json"}
     return Response(

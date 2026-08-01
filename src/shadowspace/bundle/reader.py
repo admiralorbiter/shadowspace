@@ -161,9 +161,7 @@ class BundleValidator:
 
         if "finite" in rep.constraints:
             if not np.all(np.isfinite(mat)):
-                result.add_error(
-                    f"Representation {rep.id!r} contains non-finite values (NaN/Inf)"
-                )
+                result.add_error(f"Representation {rep.id!r} contains non-finite values (NaN/Inf)")
 
         if "nonnegative" in rep.constraints:
             if np.any(mat < 0.0):
@@ -202,11 +200,16 @@ class BundleReader:
         path = self.bundle_dir / self.manifest.object_table.path
         return pl.read_parquet(path)
 
-    def get_representation(self, rep_id: str) -> pl.DataFrame:
-        """Load and return the DataFrame for a specific representation."""
+    def get_representation_spec(self, rep_id: str) -> RepresentationSpec:
+        """Return the RepresentationSpec for a specific representation."""
         spec = next((r for r in self.manifest.representations if r.id == rep_id), None)
         if spec is None:
             raise KeyError(f"Representation {rep_id!r} not found in manifest.")
+        return spec
+
+    def get_representation(self, rep_id: str) -> pl.DataFrame:
+        """Load and return the DataFrame for a specific representation."""
+        spec = self.get_representation_spec(rep_id)
         path = self.bundle_dir / spec.path
         return pl.read_parquet(path)
 

@@ -92,9 +92,7 @@ def test_dtour_adapter_satisfies_protocol() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_adapter_load_valid(
-    calib_matrix: NDArray[np.float64], calib_ids: list[str]
-) -> None:
+def test_adapter_load_valid(calib_matrix: NDArray[np.float64], calib_ids: list[str]) -> None:
     adapter = DtourAdapter()
     adapter.load(calib_matrix, calib_ids)  # must not raise
 
@@ -129,9 +127,7 @@ def test_adapter_current_view_basis_returns_none(
     assert adapter.current_view_basis() is None
 
 
-def test_adapter_set_basis_valid(
-    calib_matrix: NDArray[np.float64], calib_ids: list[str]
-) -> None:
+def test_adapter_set_basis_valid(calib_matrix: NDArray[np.float64], calib_ids: list[str]) -> None:
     adapter = DtourAdapter()
     adapter.load(calib_matrix, calib_ids)
     basis = np.array([[1.0, 0.0], [0.0, 1.0], [0.0, 0.0]], dtype=np.float64)

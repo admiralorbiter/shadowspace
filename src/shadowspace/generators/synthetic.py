@@ -103,7 +103,9 @@ def generate_synthetic_bundle(
     traj_probs = np.zeros((n_traj, 4))
     for idx, step in enumerate(steps):
         # Starts uniform (0.25 each), transitions to class 1 dominant
-        vec = np.array([0.25 * (1 - step), 0.25 + 0.75 * step, 0.25 * (1 - step), 0.25 * (1 - step)])
+        vec = np.array(
+            [0.25 * (1 - step), 0.25 + 0.75 * step, 0.25 * (1 - step), 0.25 * (1 - step)]
+        )
         traj_probs[idx] = vec / vec.sum()
     probs_list.append(traj_probs)
     components_list.extend(["evidence_trajectory"] * n_traj)

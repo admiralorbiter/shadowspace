@@ -63,14 +63,10 @@ def compute_view_trustworthiness(
 
     for i in range(n_samples):
         # 2D k-NN of point i (excluding self)
-        proj_knn_indices = [
-            j for j in np.argsort(proj_dists[i]) if j != i
-        ][:k]
+        proj_knn_indices = [j for j in np.argsort(proj_dists[i]) if j != i][:k]
 
         # High-D k-NN set of point i (excluding self)
-        src_knn_set = set(
-            [j for j in np.argsort(source_dists[i]) if j != i][:k]
-        )
+        src_knn_set = set([j for j in np.argsort(source_dists[i]) if j != i][:k])
 
         for j in proj_knn_indices:
             if j not in src_knn_set:
@@ -114,14 +110,10 @@ def compute_view_continuity(
 
     for i in range(n_samples):
         # High-D k-NN of point i (excluding self)
-        src_knn_indices = [
-            j for j in np.argsort(source_dists[i]) if j != i
-        ][:k]
+        src_knn_indices = [j for j in np.argsort(source_dists[i]) if j != i][:k]
 
         # 2D k-NN set of point i (excluding self)
-        proj_knn_set = set(
-            [j for j in np.argsort(proj_dists[i]) if j != i][:k]
-        )
+        proj_knn_set = set([j for j in np.argsort(proj_dists[i]) if j != i][:k])
 
         for j in src_knn_indices:
             if j not in proj_knn_set:
@@ -155,5 +147,5 @@ def compute_kruskal_stress(
     if denom == 0.0:
         return 0.0
 
-    num = np.sum((high_d - proj_d)**2)
+    num = np.sum((high_d - proj_d) ** 2)
     return float(np.sqrt(num / denom))

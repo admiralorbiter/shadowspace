@@ -36,9 +36,7 @@ def clr_transform(probabilities: NDArray[np.float64]) -> NDArray[np.float64]:
         ValueError: If any row has so many zeros that m * CLR_ZERO_DELTA >= 1.
     """
     if probabilities.ndim != 2:
-        raise ValueError(
-            f"probabilities must be 2-D, got shape {probabilities.shape}"
-        )
+        raise ValueError(f"probabilities must be 2-D, got shape {probabilities.shape}")
 
     mat = probabilities.copy()
     m = (mat == 0.0).sum(axis=1, keepdims=True)

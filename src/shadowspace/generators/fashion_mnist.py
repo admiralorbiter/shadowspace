@@ -104,16 +104,18 @@ def generate_fashion_mnist_bundle(
     pred_names = [FASHION_CLASSES[c] for c in preds]
 
     # 2. Build objects table DataFrame
-    objects_df = pl.DataFrame({
-        "object_id": object_ids,
-        "true_class_id": true_labels,
-        "true_class_name": true_names,
-        "pred_class_id": preds.tolist(),
-        "pred_class_name": pred_names,
-        "confidence": confidences.tolist(),
-        "is_correct": correctness.tolist(),
-        "entropy": entropy.tolist(),
-    })
+    objects_df = pl.DataFrame(
+        {
+            "object_id": object_ids,
+            "true_class_id": true_labels,
+            "true_class_name": true_names,
+            "pred_class_id": preds.tolist(),
+            "pred_class_name": pred_names,
+            "confidence": confidences.tolist(),
+            "is_correct": correctness.tolist(),
+            "entropy": entropy.tolist(),
+        }
+    )
 
     # Feature column names
     feat_cols = [f"class_{i}" for i in range(10)]

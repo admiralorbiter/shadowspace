@@ -27,9 +27,9 @@ def test_workbench_html_contains_panel_ids(client: FlaskClient) -> None:
     res = client.get("/")
     html = res.data.decode("utf-8")
     assert "panel-integrity-overlay" in html
-    assert "panel-semantic-badge"    in html
-    assert "panel-source-inspector"  in html
-    assert "panel-saved-view-atlas"  in html
+    assert "panel-semantic-badge" in html
+    assert "panel-source-inspector" in html
+    assert "panel-saved-view-atlas" in html
 
 
 def test_workbench_html_contains_canvas(client: FlaskClient) -> None:
@@ -43,7 +43,53 @@ def test_api_health(client: FlaskClient) -> None:
     assert res.status_code == 200
     data = json.loads(res.data)
     assert data["status"] == "ok"
-    assert data["sprint"] == "7"
+    assert data["sprint"] == "8"
+
+
+def test_api_datasets_list(client: FlaskClient) -> None:
+    res = client.get("/api/datasets")
+    assert res.status_code == 200
+    data = json.loads(res.data)
+    assert isinstance(data, list)
+    assert len(data) >= 3
+    keys = [item["key"] for item in data]
+    assert "calibration_3class" in keys
+    assert "synthetic_4class" in keys
+    assert "fashion_mnist_10class" in keys
+
+
+def test_api_import_dataset_csv(client: FlaskClient) -> None:
+    from pathlib import Path
+
+    sample_csv = Path(__file__).parent / "fixtures" / "sample_3class.csv"
+    with open(sample_csv, "rb") as f:
+        data = {
+            "file": (f, "test_upload.csv"),
+            "dataset_name": "Test Upload Dataset",
+            "id_column": "object_id",
+            "label_column": "true_label",
+            "feature_columns": "p0,p1,p2",
+        }
+        res = client.post(
+            "/api/import-dataset",
+            data=data,
+            content_type="multipart/form-data",
+        )
+    assert res.status_code == 201
+    res_data = json.loads(res.data)
+    assert res_data["status"] == "success"
+    assert "dataset_key" in res_data
+    assert res_data["n_objects"] == 5
+    assert res_data["n_classes"] == 3
+
+
+def test_api_import_dataset_file_too_large(client: FlaskClient) -> None:
+    import io
+
+    big_file = io.BytesIO(b"x" * (10 * 1024 * 1024 + 1024))
+    data = {"file": (big_file, "large.csv")}
+    res = client.post("/api/import-dataset", data=data, content_type="multipart/form-data")
+    assert res.status_code == 413
 
 
 def test_api_fixture_returns_200(client: FlaskClient) -> None:
@@ -52,16 +98,48 @@ def test_api_fixture_returns_200(client: FlaskClient) -> None:
     assert res.content_type == "application/json"
 
 
+def test_api_fixture_synthetic_4class(client: FlaskClient) -> None:
+    res = client.get("/api/fixture?dataset=synthetic_4class")
+    assert res.status_code == 200
+    data = json.loads(res.data)
+    assert data["display_name"] == "4-Class Synthetic World (98 pts)"
+    assert data["n_classes"] == 4
+
+
+def test_api_fixture_fashion_mnist(client: FlaskClient) -> None:
+    res = client.get("/api/fixture?dataset=fashion_mnist_10class")
+    assert res.status_code == 200
+    data = json.loads(res.data)
+    assert data["n_classes"] == 10
+
+
+def test_api_fixture_unknown_dataset(client: FlaskClient) -> None:
+    res = client.get("/api/fixture?dataset=nonexistent")
+    assert res.status_code == 404
+
+
+def test_api_dataset_status(client: FlaskClient) -> None:
+    res = client.get("/api/dataset-status?dataset=calibration_3class")
+    assert res.status_code == 200
+    data = json.loads(res.data)
+    assert data["status"] == "loaded"
+
+    res_unloaded = client.get("/api/dataset-status?dataset=unloaded_key")
+    assert res_unloaded.status_code == 200
+    data_unloaded = json.loads(res_unloaded.data)
+    assert data_unloaded["status"] == "unloaded"
+
+
 def test_api_fixture_structure(client: FlaskClient) -> None:
     res = client.get("/api/fixture")
     data = json.loads(res.data)
 
     assert "representations" in data
-    assert "probability"      in data["representations"]
+    assert "probability" in data["representations"]
     assert "sqrt_probability" in data["representations"]
-    assert "object_ids"       in data
-    assert "colors"           in data
-    assert "raw_matrix"       in data
+    assert "object_ids" in data
+    assert "colors" in data
+    assert "raw_matrix" in data
 
 
 def test_api_fixture_object_count(client: FlaskClient) -> None:
@@ -69,7 +147,7 @@ def test_api_fixture_object_count(client: FlaskClient) -> None:
     data = json.loads(res.data)
 
     assert len(data["object_ids"]) == 15
-    assert len(data["colors"])     == 15
+    assert len(data["colors"]) == 15
     assert len(data["raw_matrix"]) == 15
 
 
@@ -114,7 +192,9 @@ def test_api_diagnostics_default(client: FlaskClient) -> None:
 
 
 def test_api_diagnostics_query_params(client: FlaskClient) -> None:
-    res = client.get("/api/diagnostics?target_id=center&representation=probability&metric=euclidean&k=4")
+    res = client.get(
+        "/api/diagnostics?target_id=center&representation=probability&metric=euclidean&k=4"
+    )
     assert res.status_code == 200
     data = json.loads(res.data)
 

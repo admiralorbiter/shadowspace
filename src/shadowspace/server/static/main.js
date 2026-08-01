@@ -61,6 +61,7 @@ const btnZoomReset = document.getElementById("btn-zoom-reset");
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 
 async function boot() {
+  await loadAvailableDatasets();
   initDatasetSelector();
   initCatalogSelector();
   initRepSelector();
@@ -69,6 +70,7 @@ async function boot() {
   initAtlasControls();
   initZoomControls();
   initHelpModal();
+  initImportModal();
   initAccessibility();
   initKeyboardShortcuts();
   initCanvasInteraction();
@@ -92,6 +94,8 @@ async function loadDataset(datasetKey) {
     document.getElementById("scatter-main-title").textContent = `PCA Tour — ${fixtureData.display_name}`;
     document.getElementById("scatter-subtitle").textContent  = `${nPts} objects · ${nFeat} features`;
 
+    updateCatalogSelector();
+
     kSlider.max = Math.max(1, nPts - 1);
     if (currentK >= nPts) currentK = Math.min(3, nPts - 1);
     kSlider.value = currentK;
@@ -107,6 +111,26 @@ async function loadDataset(datasetKey) {
   } catch (err) {
     setStatus("error", "Failed to load dataset");
     console.error("Dataset load error:", err);
+  }
+}
+
+function updateCatalogSelector() {
+  if (!catalogSelect || !fixtureData) return;
+  const cat = fixtureData.catalog || {};
+  const viewKeys = Object.keys(cat);
+  if (viewKeys.length > 0) {
+    catalogSelect.innerHTML = viewKeys.map(vk =>
+      `<option value="${escapeHtml(vk)}">${escapeHtml(cat[vk].display_name || vk)}</option>`
+    ).join("");
+    if (cat[currentViewId]) {
+      catalogSelect.value = currentViewId;
+    } else {
+      currentViewId = viewKeys[0];
+      catalogSelect.value = currentViewId;
+    }
+  } else {
+    catalogSelect.innerHTML = `<option value="pca_corners">PCA Corner View</option>`;
+    currentViewId = "pca_corners";
   }
 }
 
@@ -361,6 +385,102 @@ function initHelpModal() {
   });
 }
 
+async function loadAvailableDatasets() {
+  if (!datasetSelect) return;
+  try {
+    const res = await fetch("/api/datasets");
+    if (!res.ok) return;
+    const datasets = await res.json();
+    const badgeMap = {
+      synthetic: "⬡ ",
+      generated: "✦ ",
+      imported: "↑ ",
+      fetched: "📦 ",
+    };
+    datasetSelect.innerHTML = datasets.map(ds => {
+      const badge = badgeMap[ds.source_type] || "";
+      return `<option value="${escapeHtml(ds.key)}">${badge}${escapeHtml(ds.display_name)}</option>`;
+    }).join("");
+    datasetSelect.value = currentDataset;
+  } catch (err) {
+    console.error("Failed to load dataset list:", err);
+  }
+}
+
+function initImportModal() {
+  const modal       = document.getElementById("import-modal");
+  const btnOpen     = document.getElementById("btn-open-import");
+  const btnClose    = document.getElementById("btn-close-import");
+  const btnCancel   = document.getElementById("btn-cancel-import");
+  const btnSubmit   = document.getElementById("btn-submit-import");
+  const form        = document.getElementById("import-form");
+  const errorMsg    = document.getElementById("import-error-msg");
+
+  if (!modal) return;
+
+  const openModal  = () => {
+    errorMsg.classList.add("hidden");
+    errorMsg.textContent = "";
+    modal.classList.remove("hidden");
+  };
+  const closeModal = () => modal.classList.add("hidden");
+
+  if (btnOpen)   btnOpen.addEventListener("click", openModal);
+  if (btnClose)  btnClose.addEventListener("click", closeModal);
+  if (btnCancel) btnCancel.addEventListener("click", closeModal);
+
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !modal.classList.contains("hidden")) {
+      closeModal();
+    }
+  });
+
+  if (btnSubmit) {
+    btnSubmit.addEventListener("click", async () => {
+      const fileInput = document.getElementById("import-file");
+      if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        errorMsg.textContent = "Please select a CSV or Parquet file to upload.";
+        errorMsg.classList.remove("hidden");
+        return;
+      }
+
+      const formData = new FormData(form);
+      btnSubmit.disabled = true;
+      btnSubmit.textContent = "Uploading & Processing…";
+      errorMsg.classList.add("hidden");
+
+      try {
+        const res = await fetch("/api/import-dataset", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || `HTTP ${res.status}`);
+        }
+
+        closeModal();
+        form.reset();
+        await loadAvailableDatasets();
+        datasetSelect.value = data.dataset_key;
+        await loadDataset(data.dataset_key);
+
+      } catch (err) {
+        errorMsg.textContent = err.message || "Failed to import dataset.";
+        errorMsg.classList.remove("hidden");
+      } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = "Import & Launch";
+      }
+    });
+  }
+}
+
 // ─── Accessibility & Keyboard ─────────────────────────────────────────────────
 
 function initAccessibility() {
@@ -421,30 +541,71 @@ function updateLegendList() {
   const legendList = document.getElementById("legend-list");
   if (!legendList || !fixtureData) return;
 
-  const featNames = fixtureData.feature_names;
-  if (currentDataset === "fashion_mnist_10class") {
-    const palette = [
-      "#6ee7b7", "#93c5fd", "#c4b5fd", "#f472b6", "#fbbf24",
-      "#a7f3d0", "#f87171", "#60a5fa", "#e879f9", "#38bdf8"
-    ];
-    legendList.innerHTML = featNames
-      .map((name, i) => `<li><span class="legend-dot" style="background:${palette[i % palette.length]}"></span>${escapeHtml(name)}</li>`)
-      .join("");
-  } else if (currentDataset === "synthetic_4class") {
+  const palette = [
+    "#6ee7b7", "#93c5fd", "#c4b5fd", "#f472b6", "#fbbf24",
+    "#a7f3d0", "#f87171", "#60a5fa", "#e879f9", "#38bdf8"
+  ];
+
+  if (currentDataset === "synthetic_4class" || currentDataset === "calibration_3class") {
+    const isSynth = currentDataset === "synthetic_4class";
     legendList.innerHTML = `
       <li><span class="legend-dot" style="background:#6ee7b7"></span>Corner cluster</li>
       <li><span class="legend-dot" style="background:#93c5fd"></span>Midpoint / Ambiguity</li>
       <li><span class="legend-dot" style="background:#fbbf24"></span>Uniform center</li>
-      <li><span class="legend-dot" style="background:#f472b6"></span>Planted bridge / Outlier</li>
+      <li><span class="legend-dot" style="background:${isSynth ? '#f472b6' : '#c4b5fd'}"></span>${isSynth ? 'Planted bridge / Outlier' : 'Interior distribution'}</li>
     `;
-  } else {
-    legendList.innerHTML = `
-      <li><span class="legend-dot" style="background:#6ee7b7"></span>Corner cluster</li>
-      <li><span class="legend-dot" style="background:#93c5fd"></span>Midpoint / Ambiguity</li>
-      <li><span class="legend-dot" style="background:#fbbf24"></span>Uniform center</li>
-      <li><span class="legend-dot" style="background:#c4b5fd"></span>Interior distribution</li>
-    `;
+    return;
   }
+
+  const featNames = fixtureData.feature_names || [];
+  legendList.innerHTML = featNames
+    .map((name, i) => {
+      const cleanName = name.replace(/^p_/, '');
+      const color = palette[i % palette.length];
+      return `<li><span class="legend-dot" style="background:${color}"></span>${escapeHtml(cleanName)}</li>`;
+    })
+    .join("");
+}
+
+function getPointMeta(idx) {
+  if (!fixtureData || idx === null || idx < 0 || idx >= fixtureData.object_ids.length) return null;
+
+  const id = fixtureData.object_ids[idx];
+  const raw = fixtureData.raw_matrix[idx];
+  const featNames = fixtureData.feature_names || [];
+
+  let maxVal = -1;
+  let maxIdx = 0;
+  if (raw && raw.length > 0) {
+    for (let i = 0; i < raw.length; i++) {
+      if (raw[i] > maxVal) {
+        maxVal = raw[i];
+        maxIdx = i;
+      }
+    }
+  }
+
+  const rawPredName = featNames[maxIdx] ? featNames[maxIdx].replace(/^p_/, '') : `class_${maxIdx}`;
+  const confidence = maxVal >= 0 ? maxVal : 0;
+  const meta = fixtureData.objects_meta ? fixtureData.objects_meta[idx] : null;
+
+  const predClassName = (meta && (meta.pred_class_name || meta.predicted_label)) || rawPredName;
+  const trueClassName = (meta && (meta.true_class_name || meta.true_label)) || null;
+  const isCorrect = (meta && meta.is_correct !== undefined)
+    ? meta.is_correct
+    : ((meta && meta.correct !== undefined) ? meta.correct : (trueClassName ? String(trueClassName).replace(/^p_/, '') === String(predClassName).replace(/^p_/, '') : true));
+  const entropy = (meta && meta.entropy !== undefined) ? meta.entropy : null;
+
+  return {
+    id,
+    predClassName: String(predClassName).replace(/^p_/, ''),
+    trueClassName: trueClassName ? String(trueClassName).replace(/^p_/, '') : null,
+    confidence,
+    isCorrect,
+    entropy,
+    maxClassIdx: maxIdx,
+    raw,
+  };
 }
 
 // ─── Semantic Badge Panel ─────────────────────────────────────────────────────
@@ -657,6 +818,9 @@ function getCoords() {
 
 function computeScale(coords) {
   if (!coords || coords.length === 0) return { toScreen: () => [0, 0], pad: 48, w: 500, h: 500 };
+  const dpr    = window.devicePixelRatio || 1;
+  const cssW   = canvas.width / dpr;
+  const cssH   = canvas.height / dpr;
   const xs     = coords.map(c => c[0]);
   const ys     = coords.map(c => c[1]);
   const minX   = Math.min(...xs), maxX = Math.max(...xs);
@@ -664,8 +828,8 @@ function computeScale(coords) {
   const rangeX = maxX - minX || 1;
   const rangeY = maxY - minY || 1;
   const pad    = AXIS_PADDING;
-  const w      = canvas.width  - pad * 2;
-  const h      = canvas.height - pad * 2;
+  const w      = cssW - pad * 2;
+  const h      = cssH - pad * 2;
 
   const baseScale = Math.min(w / rangeX, h / rangeY) * 0.82;
   const scale     = baseScale * zoomLevel;
@@ -781,9 +945,10 @@ function renderScatter() {
   const activeIdx = hoveredIdx !== null ? hoveredIdx : selectedIdx;
   if (activeIdx !== null && activeIdx < coords.length) {
     const [sx, sy] = sc2.toScreen(coords[activeIdx][0], coords[activeIdx][1]);
-    const id = fixtureData.object_ids[activeIdx];
-    const meta = fixtureData.objects_meta ? fixtureData.objects_meta[activeIdx] : null;
-    const labelText = meta ? `${id} • ${meta.pred_class_name} (${(meta.confidence * 100).toFixed(0)}%)` : id;
+    const pMeta = getPointMeta(activeIdx);
+    const labelText = pMeta.trueClassName
+      ? `${pMeta.id} • ${pMeta.trueClassName} (${(pMeta.confidence * 100).toFixed(0)}% ${pMeta.predClassName})`
+      : `${pMeta.id} • ${pMeta.predClassName} (${(pMeta.confidence * 100).toFixed(0)}%)`;
 
     ctx.font      = "10px 'JetBrains Mono', monospace";
     ctx.fillStyle = "rgba(255,255,255,0.95)";
@@ -889,11 +1054,9 @@ function onMouseUp() {
 
 function getHitIndex(clientX, clientY) {
   if (!fixtureData) return null;
-  const rect   = canvas.getBoundingClientRect();
-  const scaleX = canvas.width  / rect.width  / (window.devicePixelRatio || 1);
-  const scaleY = canvas.height / rect.height / (window.devicePixelRatio || 1);
-  const mx = (clientX - rect.left) * scaleX;
-  const my = (clientY - rect.top)  * scaleY;
+  const rect = canvas.getBoundingClientRect();
+  const mx   = clientX - rect.left;
+  const my   = clientY - rect.top;
 
   const coords = getCoords();
   const sc     = computeScale(coords);
@@ -921,17 +1084,12 @@ function onMouseMove(e) {
   }
 
   if (idx !== null) {
-    const id   = fixtureData.object_ids[idx];
-    const meta = fixtureData.objects_meta ? fixtureData.objects_meta[idx] : null;
-    const raw  = fixtureData.raw_matrix[idx];
+    const pMeta = getPointMeta(idx);
+    const confPct = (pMeta.confidence * 100).toFixed(0);
+    const statusIcon = pMeta.isCorrect ? "✓" : "✕";
+    const trueLabelStr = pMeta.trueClassName ? ` [True: ${escapeHtml(pMeta.trueClassName)}]` : "";
 
-    if (meta) {
-      const confPct = (meta.confidence * 100).toFixed(0);
-      const statusIcon = meta.is_correct ? "✓" : "✕";
-      tooltip.innerHTML = `<strong>${id}</strong> &nbsp; Predict: <span style="color:#6ee7b7">${escapeHtml(meta.pred_class_name)}</span> (${confPct}%) ${statusIcon}`;
-    } else {
-      tooltip.innerHTML = `<strong>${id}</strong> &nbsp; [${raw.map(v => v.toFixed(3)).join(", ")}]`;
-    }
+    tooltip.innerHTML = `<strong>${escapeHtml(pMeta.id)}</strong> &nbsp; Predict: <span style="color:#6ee7b7">${escapeHtml(pMeta.predClassName)}</span> (${confPct}%)${trueLabelStr} ${statusIcon}`;
 
     const rect = canvas.getBoundingClientRect();
     const tx = e.clientX - rect.left + 14;
@@ -963,27 +1121,28 @@ function selectPoint(idx) {
 
 function updateInspector(idx) {
   if (!fixtureData || idx >= fixtureData.object_ids.length) return;
-  const id        = fixtureData.object_ids[idx];
-  const raw       = fixtureData.raw_matrix[idx];
+  const pMeta = getPointMeta(idx);
+  if (!pMeta) return;
+
+  const raw       = pMeta.raw;
   const coords    = getCoords()[idx];
-  const meta      = fixtureData.objects_meta ? fixtureData.objects_meta[idx] : null;
   const featNames = fixtureData.feature_names || raw.map((_, i) => `class_${i}`);
   const dl        = document.getElementById("inspector-list");
 
   let html = "";
 
-  if (meta) {
-    const confPct = (meta.confidence * 100).toFixed(1);
-    const correctBadge = meta.is_correct
-      ? '<span style="color:#6ee7b7; font-weight:700">✓ Correct</span>'
-      : '<span style="color:#f87171; font-weight:700">✕ Error</span>';
+  const confPct = (pMeta.confidence * 100).toFixed(1);
+  const correctBadge = pMeta.isCorrect
+    ? '<span style="color:#6ee7b7; font-weight:700">✓ Correct</span>'
+    : '<span style="color:#f87171; font-weight:700">✕ Error</span>';
 
-    html += `<dt>Object ID</dt><dd class="highlight">${escapeHtml(id)}</dd>`;
-    html += `<dt>Prediction</dt><dd style="color:#6ee7b7; font-weight:600">${escapeHtml(meta.pred_class_name)} (${confPct}%)</dd>`;
-    html += `<dt>True Label</dt><dd>${escapeHtml(meta.true_class_name)} &nbsp; ${correctBadge}</dd>`;
-    html += `<dt>Entropy</dt><dd>${meta.entropy.toFixed(3)} nats</dd>`;
-  } else {
-    html += `<dt>Object ID</dt><dd class="highlight">${escapeHtml(id)}</dd>`;
+  html += `<dt>Object ID</dt><dd class="highlight">${escapeHtml(pMeta.id)}</dd>`;
+  html += `<dt>Prediction</dt><dd style="color:#6ee7b7; font-weight:600">${escapeHtml(pMeta.predClassName)} (${confPct}%)</dd>`;
+  if (pMeta.trueClassName) {
+    html += `<dt>True Label</dt><dd>${escapeHtml(pMeta.trueClassName)} &nbsp; ${correctBadge}</dd>`;
+  }
+  if (pMeta.entropy !== null) {
+    html += `<dt>Entropy</dt><dd>${pMeta.entropy.toFixed(3)} nats</dd>`;
   }
 
   const palette = [
@@ -992,12 +1151,13 @@ function updateInspector(idx) {
   ];
 
   featNames.forEach((name, i) => {
+    const cleanName = name.replace(/^p_/, '');
     const val = raw[i] !== undefined ? raw[i].toFixed(4) : "—";
     const dotColor = palette[i % palette.length];
-    const isMax = raw[i] === Math.max(...raw);
+    const isMax = i === pMeta.maxClassIdx;
     const valStyle = isMax ? 'style="color:#6ee7b7; font-weight:600"' : '';
 
-    html += `<dt><span class="legend-dot" style="display:inline-block; width:6px; height:6px; background:${dotColor}; margin-right:4px"></span>${escapeHtml(name)}</dt><dd ${valStyle}>${val}</dd>`;
+    html += `<dt><span class="legend-dot" style="display:inline-block; width:6px; height:6px; background:${dotColor}; margin-right:4px"></span>${escapeHtml(cleanName)}</dt><dd ${valStyle}>${val}</dd>`;
   });
 
   if (coords) {

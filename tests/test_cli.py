@@ -13,7 +13,18 @@ def test_cli_generate_synthetic_and_validate() -> None:
         out_dir = str(Path(tmp_dir) / "synth-v1")
         # 1. Generate synthetic bundle
         exit_code_gen = main(
-            ["generate", "synthetic", "--classes", "4", "--seed", "20260801", "--samples", "200", "--output", out_dir]
+            [
+                "generate",
+                "synthetic",
+                "--classes",
+                "4",
+                "--seed",
+                "20260801",
+                "--samples",
+                "200",
+                "--output",
+                out_dir,
+            ]
         )
         assert exit_code_gen == 0
 

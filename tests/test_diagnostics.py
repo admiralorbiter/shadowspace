@@ -23,12 +23,15 @@ from shadowspace.projection.pca import fit_representation_pca
 def test_compute_knn_basic() -> None:
     object_ids = ["a", "b", "c", "d"]
     # 4x4 distance matrix
-    dist_mat = np.array([
-        [0.0, 1.0, 4.0, 5.0],
-        [1.0, 0.0, 2.0, 6.0],
-        [4.0, 2.0, 0.0, 3.0],
-        [5.0, 6.0, 3.0, 0.0],
-    ], dtype=np.float64)
+    dist_mat = np.array(
+        [
+            [0.0, 1.0, 4.0, 5.0],
+            [1.0, 0.0, 2.0, 6.0],
+            [4.0, 2.0, 0.0, 3.0],
+            [5.0, 6.0, 3.0, 0.0],
+        ],
+        dtype=np.float64,
+    )
 
     knn = compute_knn(dist_mat, k=2, object_ids=object_ids)
 
@@ -41,11 +44,14 @@ def test_compute_knn_basic() -> None:
 def test_knn_deterministic_tie_breaking() -> None:
     object_ids = ["z_point", "a_point", "m_point"]
     # Equal distance from z_point to a_point and m_point
-    dist_mat = np.array([
-        [0.0, 2.0, 2.0],
-        [2.0, 0.0, 3.0],
-        [2.0, 3.0, 0.0],
-    ], dtype=np.float64)
+    dist_mat = np.array(
+        [
+            [0.0, 2.0, 2.0],
+            [2.0, 0.0, 3.0],
+            [2.0, 3.0, 0.0],
+        ],
+        dtype=np.float64,
+    )
 
     knn = compute_knn(dist_mat, k=1, object_ids=object_ids)
     # Tie broken by string sort order ('a_point' < 'm_point')
@@ -86,7 +92,9 @@ def test_compute_point_diagnostics_calibration() -> None:
     proj_dists = pairwise_euclidean(coords_2d)
 
     # Check corner_0 diagnostics
-    diag = compute_point_diagnostics(src_dists, proj_dists, k=3, object_ids=object_ids, target_id="corner_0")
+    diag = compute_point_diagnostics(
+        src_dists, proj_dists, k=3, object_ids=object_ids, target_id="corner_0"
+    )
 
     assert diag.target_id == "corner_0"
     assert len(diag.preserved) + len(diag.torn) == 3
