@@ -68,6 +68,7 @@ async function boot() {
   initKSlider();
   initAtlasControls();
   initZoomControls();
+  initHelpModal();
   initAccessibility();
   initKeyboardShortcuts();
   initCanvasInteraction();
@@ -332,6 +333,32 @@ function initZoomControls() {
       zoomBy(factor, mouseX, mouseY);
     }
   }, { passive: false });
+}
+
+function initHelpModal() {
+  const modal       = document.getElementById("help-modal");
+  const btnOpen     = document.getElementById("btn-open-help");
+  const btnClose    = document.getElementById("btn-close-help");
+  const btnDismiss  = document.getElementById("btn-dismiss-help");
+
+  if (!modal) return;
+
+  const openModal  = () => modal.classList.remove("hidden");
+  const closeModal = () => modal.classList.add("hidden");
+
+  if (btnOpen)    btnOpen.addEventListener("click", openModal);
+  if (btnClose)   btnClose.addEventListener("click", closeModal);
+  if (btnDismiss) btnDismiss.addEventListener("click", closeModal);
+
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !modal.classList.contains("hidden")) {
+      closeModal();
+    }
+  });
 }
 
 // ─── Accessibility & Keyboard ─────────────────────────────────────────────────

@@ -41,6 +41,8 @@
         <span class="toggle-label">Reduced Motion</span>
       </label>
 
+      <button id="btn-open-help" class="topbar-help-btn" title="Open Quick Reference Guide">? Help</button>
+
       <div class="topbar-status" id="topbar-status">
         <span class="status-dot loading"></span>
         <span class="status-label">Loading dataset…</span>
@@ -260,6 +262,57 @@
 
     </aside>
   </main>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       HELP MODAL
+  ═══════════════════════════════════════════════════════════════ -->
+  <div id="help-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 class="modal-title">💡 Shadowspace Quick Reference Guide</h2>
+        <button id="btn-close-help" class="modal-close-btn" title="Close guide">&times;</button>
+      </div>
+      <div class="modal-body">
+        <section class="help-section">
+          <h3>What is Shadowspace?</h3>
+          <p>Shadowspace is an interactive visualization tool for exploring <strong>high-dimensional model belief distributions</strong> (like 10-class softmax probabilities). Because 10D data cannot be directly drawn on a 2D screen, linear PCA projection squishes space down—which can introduce geometric distortions.</p>
+        </section>
+
+        <section class="help-section">
+          <h3>Integrity X-Ray Links & Glowing Halos</h3>
+          <ul class="help-legend-list">
+            <li>
+              <span class="legend-line solid-green"></span>
+              <strong>🟢 Preserved Neighbors (Green)</strong>: True neighbors in both high-dimensional space AND 2D projection. The 2D map is truthful here.
+            </li>
+            <li>
+              <span class="legend-line dashed-red"></span>
+              <strong>🔴 Torn Neighbors (Red Dashed)</strong>: True high-dimensional neighbors that got <em>pulled apart</em> by 2D projection. The red dashed lines show where your real neighbors were dragged to.
+            </li>
+            <li>
+              <span class="legend-line dotted-amber"></span>
+              <strong>🟡 False Neighbors (Yellow Dotted)</strong>: Fake neighbors that look close in 2D only because space was squished on top of unrelated items.
+            </li>
+          </ul>
+        </section>
+
+        <section class="help-section">
+          <h3>Controls & Shortcuts</h3>
+          <div class="help-shortcuts-grid">
+            <div class="shortcut-item"><code>Mouse Wheel / + −</code> Zoom in & out (pivots on selected node)</div>
+            <div class="shortcut-item"><code>Drag Canvas</code> Pan camera across space</div>
+            <div class="shortcut-item"><code>🔍 Focus</code> Auto-fit camera around selected neighborhood</div>
+            <div class="shortcut-item"><code>↺ Reset</code> Restore default 1.0x view</div>
+            <div class="shortcut-item"><code>← / →</code> Cycle through objects</div>
+            <div class="shortcut-item"><code>1 / 2</code> Toggle Probability vs. Fisher-Rao (√Prob)</div>
+          </div>
+        </section>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-dismiss-help" class="btn btn-primary">Got it!</button>
+      </div>
+    </div>
+  </div>
 
   <script src="/static/main.js"></script>
 </body>
