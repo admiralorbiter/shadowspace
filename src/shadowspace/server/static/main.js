@@ -52,6 +52,16 @@ let boxCurY          = 0;
 // Representation Morph State
 let isMorphing       = false;  // true during representation morph animation
 
+// Dual View Split-Screen State
+let isDualView       = false;  // active split-screen comparison mode
+let syncCameras      = true;   // synchronized zoom & pan across View A and View B
+let canvasB          = null;   // DOM canvas element B
+let ctxB             = null;   // 2D rendering context B
+let viewCoordsB      = null;   // 2D coordinates array for View B
+let zoomLevelB       = 1.0;
+let panOffsetXB      = 0;
+let panOffsetYB      = 0;
+
 const POINT_RADIUS        = 7;
 const POINT_RADIUS_HOVER  = 10;
 const POINT_RADIUS_SELECT = 10;
@@ -98,6 +108,7 @@ async function boot() {
   initReportExport();
   initStressHeatmapToggle();
   initTourControls();
+  initDualViewControls();
   initOptimizerControls();
   initAccessibility();
   initKeyboardShortcuts();
@@ -199,6 +210,11 @@ const REP_METRICS = {
   ],
   sqrt_probability: [
     { id: "euclidean", label: "Euclidean" },
+    { id: "fisher_rao", label: "Fisher-Rao" },
+  ],
+  clr_probability: [
+    { id: "aitchison", label: "Aitchison" },
+    { id: "euclidean", label: "Euclidean" },
   ],
 };
 
@@ -225,7 +241,7 @@ function initRepSelector() {
   updateMetricOptions();
 }
 
-function setRepresentation(repId) {
+async function setRepresentation(repId) {
   const oldRep = currentRep;
   currentRep = repId;
   document.querySelectorAll(".radio-card").forEach(card => {
@@ -236,35 +252,30 @@ function setRepresentation(repId) {
     }
   });
   hoveredIdx = null;
+  tourFrameIdx = 0;
+  if (isTourPlaying) {
+    pauseTour();
+  }
   updateMetricOptions();
   updateVarianceBars();
-
-  if (oldRep !== repId) {
-    triggerRepresentationMorph(oldRep, repId);
-  } else {
-    updateSemanticBadge();
-    fetchDiagnostics();
-  }
-}
-
-async function triggerRepresentationMorph(fromRep, toRep) {
-  isMorphing = true;
   updateSemanticBadge();
+  renderScatter();
+
   await loadTourPath();
-  playTour();
-  setTimeout(() => {
-    isMorphing = false;
-    updateSemanticBadge();
-    fetchDiagnostics();
-  }, 3500);
+  if (isDualView) {
+    await loadDualViewBData();
+  }
+  await fetchDiagnostics();
+  renderScatter();
 }
 
 // ─── Metric & k selectors ─────────────────────────────────────────────────────
 
 function initMetricSelector() {
-  metricSelect.addEventListener("change", (e) => {
+  metricSelect.addEventListener("change", async (e) => {
     currentMetric = e.target.value;
-    fetchDiagnostics();
+    await fetchDiagnostics();
+    renderScatter();
   });
 }
 
@@ -1010,8 +1021,11 @@ function updateTourFrameLabel() {
 
 function getCoords() {
   if (!fixtureData) return [];
-  if (isTourPlaying && tourFrames && tourFrameIdx < tourFrames.length) {
+  if (tourFrames && tourFrameIdx < tourFrames.length && (isTourPlaying || tourFrameIdx > 0)) {
     return tourFrames[tourFrameIdx];
+  }
+  if (currentRep !== "probability" && fixtureData.representations && fixtureData.representations[currentRep]) {
+    return fixtureData.representations[currentRep].coords;
   }
   if (fixtureData.catalog && fixtureData.catalog[currentViewId]) {
     return fixtureData.catalog[currentViewId].coords;
@@ -1019,19 +1033,18 @@ function getCoords() {
   return fixtureData.representations[currentRep].coords;
 }
 
-function computeScale(coords) {
+function computeScale(coords, targetCanvas = canvas, zoom = zoomLevel, px = panOffsetX, py = panOffsetY) {
   if (!coords || coords.length === 0) return { toScreen: () => [0, 0], pad: 48, w: 500, h: 500 };
   const dpr  = window.devicePixelRatio || 1;
-  const cssW = canvas.width / dpr;
-  const cssH = canvas.height / dpr;
+  const cssW = (targetCanvas || canvas).width / dpr;
+  const cssH = (targetCanvas || canvas).height / dpr;
   const pad  = AXIS_PADDING;
   const w    = cssW - pad * 2;
   const h    = cssH - pad * 2;
 
-  // During tour playback use the fixed [-1.1, 1.1] viewport. Server
+  // During tour playback or scrubbing use the fixed [-1.1, 1.1] viewport. Server
   // globally normalises all frames so this always contains all points.
-  // User zoom/pan is suspended so the full tour stays visible.
-  if (isTourPlaying && tourGlobalBounds) {
+  if ((isTourPlaying || (tourFrames && tourFrameIdx > 0)) && tourGlobalBounds) {
     const b      = tourGlobalBounds;
     const rangeX = b.maxX - b.minX;
     const rangeY = b.maxY - b.minY;
@@ -1055,9 +1068,9 @@ function computeScale(coords) {
   const rangeY = maxY - minY || 1;
 
   const baseScale = Math.min(w / rangeX, h / rangeY) * 0.82;
-  const scale     = baseScale * zoomLevel;
-  const cx        = (minX + maxX) / 2 - (panOffsetX / scale);
-  const cy        = (minY + maxY) / 2 + (panOffsetY / scale);
+  const scale     = baseScale * zoom;
+  const cx        = (minX + maxX) / 2 - (px / scale);
+  const cy        = (minY + maxY) / 2 + (py / scale);
 
   return {
     toScreen: (x, y) => [
@@ -1070,77 +1083,95 @@ function computeScale(coords) {
 
 function renderScatter() {
   if (!fixtureData) return;
+  const coordsA = getCoords();
+  const wrap = document.getElementById("canvas-wrap");
 
-  const coords = getCoords();
+  if (!wrap) return;
+  const availW = isDualView ? (wrap.clientWidth - 32) / 2 : wrap.clientWidth - 16;
+  const availH = wrap.clientHeight - 16;
+  const size   = Math.max(100, Math.floor(Math.min(availW, availH)));
+
+  renderScatterCanvas(canvas, ctx, coordsA, zoomLevel, panOffsetX, panOffsetY, size, false);
+
+  if (isDualView && canvasB && ctxB) {
+    const coordsB = viewCoordsB || coordsA;
+    const zB  = syncCameras ? zoomLevel  : zoomLevelB;
+    const pxB = syncCameras ? panOffsetX : panOffsetXB;
+    const pyB = syncCameras ? panOffsetY : panOffsetYB;
+    renderScatterCanvas(canvasB, ctxB, coordsB, zB, pxB, pyB, size, true);
+  }
+}
+
+function renderScatterCanvas(cEl, cCtx, coords, zoom, px, py, size, isViewB) {
+  if (!cEl || !cCtx || !coords) return;
   const colors = fixtureData.colors;
   const dpr    = window.devicePixelRatio || 1;
 
-  const wrap  = document.getElementById("canvas-wrap");
-  const size  = Math.min(wrap.clientWidth - 16, wrap.clientHeight - 16);
-  canvas.style.width  = size + "px";
-  canvas.style.height = size + "px";
-  canvas.width  = size * dpr;
-  canvas.height = size * dpr;
-  ctx.scale(dpr, dpr);
+  cEl.style.width  = size + "px";
+  cEl.style.height = size + "px";
+  cEl.width  = Math.floor(size * dpr);
+  cEl.height = Math.floor(size * dpr);
+  cCtx.setTransform(1, 0, 0, 1, 0, 0);
+  cCtx.scale(dpr, dpr);
 
-  const sc2 = computeScale(coords);
+  const sc2 = computeScale(coords, cEl, zoom, px, py);
   const W = size, H = size;
 
   // Background
-  ctx.fillStyle = "#111827";
-  ctx.fillRect(0, 0, W, H);
+  cCtx.fillStyle = "#111827";
+  cCtx.fillRect(0, 0, W, H);
 
   // Grid
-  ctx.strokeStyle = "rgba(255,255,255,0.04)";
-  ctx.lineWidth   = 1;
+  cCtx.strokeStyle = "rgba(255,255,255,0.04)";
+  cCtx.lineWidth   = 1;
   for (let i = 0; i <= GRID_LINES; i++) {
     const t = i / GRID_LINES;
     const gx = sc2.pad + t * sc2.w;
     const gy = sc2.pad + t * sc2.h;
-    ctx.beginPath(); ctx.moveTo(gx, sc2.pad); ctx.lineTo(gx, sc2.pad + sc2.h); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(sc2.pad, gy); ctx.lineTo(sc2.pad + sc2.w, gy); ctx.stroke();
+    cCtx.beginPath(); cCtx.moveTo(gx, sc2.pad); cCtx.lineTo(gx, sc2.pad + sc2.h); cCtx.stroke();
+    cCtx.beginPath(); cCtx.moveTo(sc2.pad, gy); cCtx.lineTo(sc2.pad + sc2.w, gy); cCtx.stroke();
   }
 
   // Axis labels & zoom / tour indicator
-  ctx.font      = "10px 'JetBrains Mono', monospace";
-  ctx.textAlign = "center";
+  cCtx.font      = "10px 'JetBrains Mono', monospace";
+  cCtx.textAlign = "center";
   if (isTourPlaying) {
-    ctx.fillStyle = "rgba(52,211,153,0.7)";
-    ctx.fillText("Grand Tour — Proj. X →", W / 2, H - 8);
-    ctx.save();
-    ctx.translate(12, H / 2);
-    ctx.rotate(-Math.PI / 2);
-    ctx.fillText("Proj. Y ↑", 0, 0);
-    ctx.restore();
+    cCtx.fillStyle = "rgba(52,211,153,0.7)";
+    cCtx.fillText("Grand Tour — Proj. X →", W / 2, H - 8);
+    cCtx.save();
+    cCtx.translate(12, H / 2);
+    cCtx.rotate(-Math.PI / 2);
+    cCtx.fillText("Proj. Y ↑", 0, 0);
+    cCtx.restore();
   } else {
-    ctx.fillStyle = "rgba(148,163,184,0.5)";
-    ctx.fillText("PC1 →", W / 2, H - 8);
-    ctx.save();
-    ctx.translate(12, H / 2);
-    ctx.rotate(-Math.PI / 2);
-    ctx.fillText("PC2 ↑", 0, 0);
-    ctx.restore();
-    if (zoomLevel !== 1.0) {
-      ctx.textAlign = "left";
-      ctx.fillStyle = "#34d399";
-      ctx.fillText(`${zoomLevel.toFixed(1)}x Zoom`, 48, H - 10);
+    cCtx.fillStyle = isViewB ? "rgba(56,189,248,0.5)" : "rgba(148,163,184,0.5)";
+    cCtx.fillText(isViewB ? "Fisher LDA 1 →" : "PC1 →", W / 2, H - 8);
+    cCtx.save();
+    cCtx.translate(12, H / 2);
+    cCtx.rotate(-Math.PI / 2);
+    cCtx.fillText(isViewB ? "Fisher LDA 2 ↑" : "PC2 ↑", 0, 0);
+    cCtx.restore();
+    if (zoom !== 1.0) {
+      cCtx.textAlign = "left";
+      cCtx.fillStyle = isViewB ? "#38bdf8" : "#34d399";
+      cCtx.fillText(`${zoom.toFixed(1)}x Zoom`, 48, H - 10);
     }
   }
 
   // Rep label
-  ctx.font      = "11px Inter, sans-serif";
-  ctx.fillStyle = "rgba(148,163,184,0.4)";
-  ctx.textAlign = "right";
-  ctx.fillText(`${currentViewId} · ${currentRep.replace("_", " ")}`, W - 12, H - 10);
+  cCtx.font      = "11px Inter, sans-serif";
+  cCtx.fillStyle = "rgba(148,163,184,0.4)";
+  cCtx.textAlign = "right";
+  cCtx.fillText(isViewB ? "Fisher LDA View B" : `${currentViewId} · ${currentRep.replace("_", " ")}`, W - 12, H - 10);
 
   // Simplex structure lines (if 3-class calibration)
   if (coords.length === 15) {
-    drawSimplexEdges(coords, sc2);
+    drawSimplexEdges(coords, sc2, cCtx);
   }
 
   // Diagnostic overlay lines & neighbor rings from selected point
   if (selectedIdx !== null && diagResult) {
-    drawDiagnosticOverlay(coords, sc2);
+    drawDiagnosticOverlay(coords, sc2, cCtx);
   }
 
   // Draw points
@@ -1152,25 +1183,25 @@ function renderScatter() {
     const isSelected = i === selectedIdx || selectedIndices.includes(i);
     const isHovered  = i === hoveredIdx;
     const r    = isSelected ? POINT_RADIUS_SELECT : (isHovered ? POINT_RADIUS_HOVER : POINT_RADIUS);
-    const col  = colors[i];
+    const col  = colors[i] || "#94a3b8";
 
     if (isSelected || isHovered) {
-      ctx.shadowColor = isSelected ? "#34d399" : col;
-      ctx.shadowBlur  = 16;
+      cCtx.shadowColor = isSelected ? "#34d399" : col;
+      cCtx.shadowBlur  = 16;
     } else {
-      ctx.shadowBlur = 0;
+      cCtx.shadowBlur = 0;
     }
 
-    ctx.beginPath();
-    ctx.arc(sx, sy, r, 0, Math.PI * 2);
-    ctx.fillStyle = col;
-    ctx.fill();
+    cCtx.beginPath();
+    cCtx.arc(sx, sy, r, 0, Math.PI * 2);
+    cCtx.fillStyle = col;
+    cCtx.fill();
 
-    ctx.strokeStyle = isSelected ? "#34d399" : (isHovered ? "#ffffff" : "rgba(255,255,255,0.15)");
-    ctx.lineWidth   = isSelected ? 2.5 : (isHovered ? 1.5 : 0.8);
-    ctx.stroke();
+    cCtx.strokeStyle = isSelected ? "#34d399" : (isHovered ? "#ffffff" : "rgba(255,255,255,0.15)");
+    cCtx.lineWidth   = isSelected ? 2.5 : 1.5;
+    cCtx.stroke();
   }
-  ctx.shadowBlur = 0;
+  cCtx.shadowBlur = 0;
 
   // ID & Label on hover or select
   const activeIdx = hoveredIdx !== null ? hoveredIdx : selectedIdx;
@@ -1181,39 +1212,40 @@ function renderScatter() {
       ? `${pMeta.id} • ${pMeta.trueClassName} (${(pMeta.confidence * 100).toFixed(0)}% ${pMeta.predClassName})`
       : `${pMeta.id} • ${pMeta.predClassName} (${(pMeta.confidence * 100).toFixed(0)}%)`;
 
-    ctx.font      = "10px 'JetBrains Mono', monospace";
-    ctx.fillStyle = "rgba(255,255,255,0.95)";
-    ctx.textAlign = "center";
+    cCtx.font      = "10px 'JetBrains Mono', monospace";
+    cCtx.fillStyle = "rgba(255,255,255,0.95)";
+    cCtx.textAlign = "center";
     const labelY = sy - POINT_RADIUS_HOVER - 6;
-    ctx.fillText(labelText, sx, labelY);
+    cCtx.fillText(labelText, sx, labelY);
   }
 
   // Draw Shift+Drag Marquee Selection Box
   if (isBoxSelecting) {
     const bx = Math.min(boxStartX, boxCurX), bw = Math.abs(boxCurX - boxStartX);
     const by = Math.min(boxStartY, boxCurY), bh = Math.abs(boxCurY - boxStartY);
-    ctx.save();
-    ctx.fillStyle = "rgba(52, 211, 153, 0.12)";
-    ctx.strokeStyle = "#34d399";
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([4, 4]);
-    ctx.fillRect(bx, by, bw, bh);
-    ctx.strokeRect(bx, by, bw, bh);
-    ctx.restore();
+    cCtx.save();
+    cCtx.fillStyle = "rgba(52, 211, 153, 0.12)";
+    cCtx.strokeStyle = "#34d399";
+    cCtx.lineWidth = 1.5;
+    cCtx.setLineDash([4, 4]);
+    cCtx.fillRect(bx, by, bw, bh);
+    cCtx.strokeRect(bx, by, bw, bh);
+    cCtx.restore();
   }
 
   // Active Feature Loadings HUD during Grand Tour
   if (isTourPlaying || (tourFrames && tourFrames.length > 0 && tourFrameIdx > 0)) {
-    drawFeatureLoadingsHUD(W, H);
+    drawFeatureLoadingsHUD(W, H, cCtx);
   }
 }
 
-function drawFeatureLoadingsHUD(W, H) {
+function drawFeatureLoadingsHUD(W, H, targetCtx) {
+  const activeCtx = targetCtx || ctx;
   if (!tourBases || tourFrameIdx >= tourBases.length) return;
   const basis = tourBases[tourFrameIdx];
-  if (!basis || basis.length === 0) return;
+  const featNames = fixtureData ? fixtureData.feature_names : [];
+  if (!basis || !featNames) return;
 
-  const featNames = fixtureData.feature_names || basis.map((_, i) => `Feature ${i + 1}`);
   const loadings = [];
   for (let i = 0; i < basis.length; i++) {
     const vx = basis[i][0];
@@ -1232,25 +1264,25 @@ function drawFeatureLoadingsHUD(W, H) {
   const hudX  = W - hudW - 16;
   const hudY  = 16;
 
-  ctx.save();
+  activeCtx.save();
   // Glass panel container
-  ctx.fillStyle   = "rgba(15, 23, 42, 0.88)";
-  ctx.strokeStyle = "rgba(52, 211, 153, 0.35)";
-  ctx.lineWidth   = 1;
-  ctx.beginPath();
-  if (ctx.roundRect) {
-    ctx.roundRect(hudX, hudY, hudW, hudH, 6);
+  activeCtx.fillStyle   = "rgba(15, 23, 42, 0.88)";
+  activeCtx.strokeStyle = "rgba(52, 211, 153, 0.35)";
+  activeCtx.lineWidth   = 1;
+  activeCtx.beginPath();
+  if (activeCtx.roundRect) {
+    activeCtx.roundRect(hudX, hudY, hudW, hudH, 6);
   } else {
-    ctx.rect(hudX, hudY, hudW, hudH);
+    activeCtx.rect(hudX, hudY, hudW, hudH);
   }
-  ctx.fill();
-  ctx.stroke();
+  activeCtx.fill();
+  activeCtx.stroke();
 
   // HUD Title
-  ctx.font      = "600 9px 'JetBrains Mono', monospace";
-  ctx.fillStyle = "#34d399";
-  ctx.textAlign = "left";
-  ctx.fillText("TOP FEATURE LOADINGS", hudX + 10, hudY + 16);
+  activeCtx.font      = "600 9px 'JetBrains Mono', monospace";
+  activeCtx.fillStyle = "#34d399";
+  activeCtx.textAlign = "left";
+  activeCtx.fillText("TOP FEATURE LOADINGS", hudX + 10, hudY + 16);
 
   // Bars
   const barMaxW = 55;
@@ -1258,49 +1290,51 @@ function drawFeatureLoadingsHUD(W, H) {
     const y = hudY + 32 + idx * itemH;
 
     // Feature Name
-    ctx.font      = "10px Inter, sans-serif";
-    ctx.fillStyle = "rgba(226, 232, 240, 0.9)";
-    ctx.textAlign = "left";
+    activeCtx.font      = "10px Inter, sans-serif";
+    activeCtx.fillStyle = "rgba(226, 232, 240, 0.9)";
+    activeCtx.textAlign = "left";
     const displayName = item.name.length > 12 ? item.name.substring(0, 11) + "…" : item.name;
-    ctx.fillText(displayName, hudX + 10, y);
+    activeCtx.fillText(displayName, hudX + 10, y);
 
     // Track Background
     const barX = hudX + 88;
     const barY = y - 8;
-    ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
-    ctx.fillRect(barX, barY, barMaxW, 6);
+    activeCtx.fillStyle = "rgba(255, 255, 255, 0.08)";
+    activeCtx.fillRect(barX, barY, barMaxW, 6);
 
     // Active Bar
     const barW = Math.min(barMaxW, Math.max(2, item.mag * barMaxW));
-    ctx.fillStyle = "#34d399";
-    ctx.fillRect(barX, barY, barW, 6);
+    activeCtx.fillStyle = "#34d399";
+    activeCtx.fillRect(barX, barY, barW, 6);
 
     // Numeric Value
-    ctx.font      = "9px 'JetBrains Mono', monospace";
-    ctx.fillStyle = "rgba(148, 163, 184, 0.85)";
-    ctx.textAlign = "right";
-    ctx.fillText(item.mag.toFixed(2), hudX + hudW - 8, y);
+    activeCtx.font      = "9px 'JetBrains Mono', monospace";
+    activeCtx.fillStyle = "rgba(148, 163, 184, 0.85)";
+    activeCtx.textAlign = "right";
+    activeCtx.fillText(item.mag.toFixed(2), hudX + hudW - 8, y);
   });
 
-  ctx.restore();
+  activeCtx.restore();
 }
 
-function drawSimplexEdges(coords, sc) {
+function drawSimplexEdges(coords, sc, targetCtx) {
+  const activeCtx = targetCtx || ctx;
   const edgePairs = [[0, 3], [0, 4], [1, 3], [1, 5], [2, 4], [2, 5], [3, 6], [4, 6], [5, 6]];
-  ctx.strokeStyle = "rgba(255,255,255,0.05)";
-  ctx.lineWidth   = 0.8;
+  activeCtx.strokeStyle = "rgba(255,255,255,0.05)";
+  activeCtx.lineWidth   = 0.8;
   edgePairs.forEach(([a, b]) => {
     if (a >= coords.length || b >= coords.length) return;
     const [ax, ay] = sc.toScreen(coords[a][0], coords[a][1]);
     const [bx, by] = sc.toScreen(coords[b][0], coords[b][1]);
-    ctx.beginPath();
-    ctx.moveTo(ax, ay);
-    ctx.lineTo(bx, by);
-    ctx.stroke();
+    activeCtx.beginPath();
+    activeCtx.moveTo(ax, ay);
+    activeCtx.lineTo(bx, by);
+    activeCtx.stroke();
   });
 }
 
-function drawDiagnosticOverlay(coords, sc) {
+function drawDiagnosticOverlay(coords, sc, targetCtx) {
+  const activeCtx = targetCtx || ctx;
   if (!diagResult || selectedIdx >= coords.length) return;
   const [srcX, srcY] = sc.toScreen(coords[selectedIdx][0], coords[selectedIdx][1]);
   const idToIdx = new Map(fixtureData.object_ids.map((id, idx) => [id, idx]));
@@ -1310,15 +1344,15 @@ function drawDiagnosticOverlay(coords, sc) {
     if (tIdx === undefined || tIdx >= coords.length) return;
     const [tx, ty] = sc.toScreen(coords[tIdx][0], coords[tIdx][1]);
 
-    ctx.save();
-    ctx.strokeStyle = color;
-    ctx.lineWidth   = 2.5;
-    ctx.setLineDash(dashPattern);
-    ctx.beginPath();
-    ctx.moveTo(srcX, srcY);
-    ctx.lineTo(tx, ty);
-    ctx.stroke();
-    ctx.restore();
+    activeCtx.save();
+    activeCtx.strokeStyle = color;
+    activeCtx.lineWidth   = 2.5;
+    activeCtx.setLineDash(dashPattern);
+    activeCtx.beginPath();
+    activeCtx.moveTo(srcX, srcY);
+    activeCtx.lineTo(tx, ty);
+    activeCtx.stroke();
+    activeCtx.restore();
   };
 
   const drawNeighborRing = (targetId, color, ringRadius) => {
@@ -1326,15 +1360,15 @@ function drawDiagnosticOverlay(coords, sc) {
     if (tIdx === undefined || tIdx >= coords.length) return;
     const [tx, ty] = sc.toScreen(coords[tIdx][0], coords[tIdx][1]);
 
-    ctx.save();
-    ctx.shadowColor = color;
-    ctx.shadowBlur  = 12;
-    ctx.strokeStyle = color;
-    ctx.lineWidth   = 2.0;
-    ctx.beginPath();
-    ctx.arc(tx, ty, ringRadius, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
+    activeCtx.save();
+    activeCtx.shadowColor = color;
+    activeCtx.shadowBlur  = 12;
+    activeCtx.strokeStyle = color;
+    activeCtx.lineWidth   = 2.0;
+    activeCtx.beginPath();
+    activeCtx.arc(tx, ty, ringRadius, 0, Math.PI * 2);
+    activeCtx.stroke();
+    activeCtx.restore();
   };
 
   diagResult.preserved.forEach(id => drawLink(id, "#34d399", []));
@@ -1361,11 +1395,92 @@ function initCanvasInteraction() {
   canvas.addEventListener("mousedown", onMouseDown);
   canvas.addEventListener("mouseup", onMouseUp);
   canvas.addEventListener("click", onMouseClick);
+
+  canvasB = document.getElementById("scatter-canvas-b");
+  if (canvasB) {
+    ctxB = canvasB.getContext("2d");
+    canvasB.addEventListener("mousemove", onMouseMove);
+    canvasB.addEventListener("mouseleave", () => {
+      isPanning = false;
+      isBoxSelecting = false;
+      hoveredIdx = null;
+      tooltip.classList.add("hidden");
+      canvasB.style.cursor = "crosshair";
+      renderScatter();
+    });
+    canvasB.addEventListener("mousedown", onMouseDown);
+    canvasB.addEventListener("mouseup", onMouseUp);
+    canvasB.addEventListener("click", onMouseClick);
+  }
+
   window.addEventListener("resize", () => renderScatter());
 }
 
+function initDualViewControls() {
+  const btnSplit = document.getElementById("btn-split-view");
+  const chkSync  = document.getElementById("chk-sync-cameras");
+
+  if (chkSync) {
+    chkSync.addEventListener("change", (e) => {
+      syncCameras = e.target.checked;
+      if (syncCameras) {
+        zoomLevelB = zoomLevel;
+        panOffsetXB = panOffsetX;
+        panOffsetYB = panOffsetY;
+      }
+      renderScatter();
+    });
+  }
+
+  if (btnSplit) {
+    btnSplit.addEventListener("click", () => {
+      isDualView = !isDualView;
+      const wrap = document.getElementById("canvas-wrap");
+      const containerB = document.getElementById("canvas-container-b");
+
+      if (isDualView) {
+        btnSplit.classList.add("active");
+        btnSplit.textContent = "🗖 Single View";
+        if (wrap) wrap.classList.add("dual-view");
+        if (containerB) containerB.classList.remove("hidden");
+
+        loadDualViewBData();
+      } else {
+        btnSplit.classList.remove("active");
+        btnSplit.textContent = "🗖 Split View";
+        if (wrap) wrap.classList.remove("dual-view");
+        if (containerB) containerB.classList.add("hidden");
+      }
+      setTimeout(() => renderScatter(), 50);
+    });
+  }
+}
+
+async function loadDualViewBData() {
+  if (!fixtureData) return;
+  viewCoordsB = getCoords();
+  renderScatter();
+
+  try {
+    const targetId = (fixtureData.object_ids && fixtureData.object_ids[selectedIdx]) || "target_0";
+    const res = await fetch(`/api/optimize-view?dataset=${encodeURIComponent(currentDataset)}&representation=${encodeURIComponent(currentRep)}&criterion=class_separation&target_id=${encodeURIComponent(targetId)}&n_frames=2`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.frames && data.frames.length > 0) {
+        viewCoordsB = data.frames[data.frames.length - 1];
+        const tagB = document.getElementById("view-tag-b");
+        if (tagB) tagB.textContent = "View B: Fisher LDA";
+        renderScatter();
+      }
+    }
+  } catch (err) {
+    console.error("Failed to load dual view B coords:", err);
+  }
+}
+
 function onMouseDown(e) {
-  const rect = canvas.getBoundingClientRect();
+  const targetEl = (isDualView && e.target === canvasB) ? canvasB : canvas;
+  const rect = targetEl.getBoundingClientRect();
   const mx   = e.clientX - rect.left;
   const my   = e.clientY - rect.top;
 
@@ -1375,26 +1490,30 @@ function onMouseDown(e) {
     boxStartY = my;
     boxCurX = mx;
     boxCurY = my;
-    canvas.style.cursor = "crosshair";
+    targetEl.style.cursor = "crosshair";
     return;
   }
 
-  const idx = getHitIndex(e.clientX, e.clientY);
+  const idx = getHitIndex(e.clientX, e.clientY, targetEl);
   if (idx === null || e.button === 1) {
     isPanning  = true;
-    startPanX  = e.clientX - panOffsetX;
-    startPanY  = e.clientY - panOffsetY;
-    canvas.style.cursor = "grabbing";
+    startPanX  = (targetEl === canvasB && !syncCameras) ? e.clientX - panOffsetXB : e.clientX - panOffsetX;
+    startPanY  = (targetEl === canvasB && !syncCameras) ? e.clientY - panOffsetYB : e.clientY - panOffsetY;
+    targetEl.style.cursor = "grabbing";
   }
 }
 
 function onMouseUp(e) {
+  const targetEl = (isDualView && e.target === canvasB) ? canvasB : canvas;
   if (isBoxSelecting) {
     isBoxSelecting = false;
     const minX = Math.min(boxStartX, boxCurX), maxX = Math.max(boxStartX, boxCurX);
     const minY = Math.min(boxStartY, boxCurY), maxY = Math.max(boxStartY, boxCurY);
-    const coords = getCoords();
-    const sc = computeScale(coords);
+    const coords = (targetEl === canvasB) ? (viewCoordsB || getCoords()) : getCoords();
+    const z = (targetEl === canvasB) ? (syncCameras ? zoomLevel : zoomLevelB) : zoomLevel;
+    const px = (targetEl === canvasB) ? (syncCameras ? panOffsetX : panOffsetXB) : panOffsetX;
+    const py = (targetEl === canvasB) ? (syncCameras ? panOffsetY : panOffsetYB) : panOffsetY;
+    const sc = computeScale(coords, targetEl, z, px, py);
 
     selectedIndices = [];
     for (let i = 0; i < coords.length; i++) {
@@ -1405,24 +1524,29 @@ function onMouseUp(e) {
     }
     updateMultiInspector(selectedIndices);
     renderScatter();
-    canvas.style.cursor = "crosshair";
+    targetEl.style.cursor = "crosshair";
     return;
   }
 
   if (isPanning) {
     isPanning = false;
-    canvas.style.cursor = "crosshair";
+    targetEl.style.cursor = "crosshair";
   }
 }
 
-function getHitIndex(clientX, clientY) {
+function getHitIndex(clientX, clientY, targetEl) {
   if (!fixtureData) return null;
-  const rect = canvas.getBoundingClientRect();
+  const cEl = (targetEl === canvasB) ? canvasB : canvas;
+  const rect = cEl.getBoundingClientRect();
   const mx   = clientX - rect.left;
   const my   = clientY - rect.top;
 
-  const coords = getCoords();
-  const sc     = computeScale(coords);
+  const isB    = (cEl === canvasB);
+  const coords = isB ? (viewCoordsB || getCoords()) : getCoords();
+  const z      = isB ? (syncCameras ? zoomLevel : zoomLevelB) : zoomLevel;
+  const px     = isB ? (syncCameras ? panOffsetX : panOffsetXB) : panOffsetX;
+  const py     = isB ? (syncCameras ? panOffsetY : panOffsetYB) : panOffsetY;
+  const sc     = computeScale(coords, cEl, z, px, py);
 
   for (let i = coords.length - 1; i >= 0; i--) {
     const [sx, sy] = sc.toScreen(coords[i][0], coords[i][1]);
@@ -1433,7 +1557,8 @@ function getHitIndex(clientX, clientY) {
 }
 
 function onMouseMove(e) {
-  const rect = canvas.getBoundingClientRect();
+  const targetEl = (isDualView && e.target === canvasB) ? canvasB : canvas;
+  const rect = targetEl.getBoundingClientRect();
   const mx   = e.clientX - rect.left;
   const my   = e.clientY - rect.top;
 
@@ -1445,13 +1570,22 @@ function onMouseMove(e) {
   }
 
   if (isPanning) {
-    panOffsetX = e.clientX - startPanX;
-    panOffsetY = e.clientY - startPanY;
+    if (targetEl === canvasB && !syncCameras) {
+      panOffsetXB = e.clientX - startPanX;
+      panOffsetYB = e.clientY - startPanY;
+    } else {
+      panOffsetX = e.clientX - startPanX;
+      panOffsetY = e.clientY - startPanY;
+      if (syncCameras) {
+        panOffsetXB = panOffsetX;
+        panOffsetYB = panOffsetY;
+      }
+    }
     renderScatter();
     return;
   }
 
-  const idx = getHitIndex(e.clientX, e.clientY);
+  const idx = getHitIndex(e.clientX, e.clientY, targetEl);
   if (idx !== hoveredIdx) {
     hoveredIdx = idx;
     renderScatter();
@@ -1465,16 +1599,15 @@ function onMouseMove(e) {
 
     tooltip.innerHTML = `<strong>${escapeHtml(pMeta.id)}</strong> &nbsp; Predict: <span style="color:#6ee7b7">${escapeHtml(pMeta.predClassName)}</span> (${confPct}%)${trueLabelStr} ${statusIcon}`;
 
-    const rect = canvas.getBoundingClientRect();
     const tx = e.clientX - rect.left + 14;
     const ty = e.clientY - rect.top  - 12;
     tooltip.style.left = tx + "px";
     tooltip.style.top  = ty + "px";
     tooltip.classList.remove("hidden");
-    canvas.style.cursor = "pointer";
+    targetEl.style.cursor = "pointer";
   } else {
     tooltip.classList.add("hidden");
-    canvas.style.cursor = "crosshair";
+    targetEl.style.cursor = "crosshair";
   }
 }
 

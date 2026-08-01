@@ -1015,3 +1015,99 @@ body.reduced-motion *::after {
   background: rgba(251, 191, 36, 0.12) !important;
 }
 
+/* ── Dual-View Split Screen Styles ─────────────── */
+.scatter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.scatter-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toggle-sync-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-sync-label input[type="checkbox"] {
+  accent-color: #34d399;
+  cursor: pointer;
+}
+
+.btn-split-view {
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-split-view:hover, .btn-split-view.active {
+  background: rgba(52, 211, 153, 0.15);
+  border-color: #34d399;
+  color: #34d399;
+}
+
+.canvas-wrap.dual-view {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+}
+
+.canvas-container {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.canvas-container.hidden {
+  display: none !important;
+}
+
+.canvas-wrap:not(.dual-view) .view-tag {
+  display: none;
+}
+
+.view-tag {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #34d399;
+  pointer-events: none;
+  z-index: 10;
+  backdrop-filter: blur(4px);
+}
+
+#view-tag-b {
+  color: #38bdf8;
+}
+
+

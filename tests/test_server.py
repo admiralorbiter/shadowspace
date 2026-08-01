@@ -215,3 +215,32 @@ def test_api_diagnostics_invalid_params(client: FlaskClient) -> None:
     # Incompatible metric
     res = client.get("/api/diagnostics?metric=hellinger&representation=sqrt_probability")
     assert res.status_code == 400
+
+
+def test_workbench_html_contains_clr_and_split_view(client: FlaskClient) -> None:
+    res = client.get("/")
+    html = res.data.decode("utf-8")
+    assert "rep-clr_probability" in html
+    assert "btn-split-view" in html
+    assert "scatter-canvas-b" in html
+    assert "chk-sync-cameras" in html
+
+
+def test_api_fixture_includes_clr_representation(client: FlaskClient) -> None:
+    res = client.get("/api/fixture?dataset=calibration_3class")
+    assert res.status_code == 200
+    data = json.loads(res.data)
+    assert "clr_probability" in data["representations"]
+    assert "coords" in data["representations"]["clr_probability"]
+
+
+def test_api_diagnostics_clr_representation(client: FlaskClient) -> None:
+    res = client.get(
+        "/api/diagnostics?target_id=corner_0&representation=clr_probability&metric=euclidean&k=3"
+    )
+    assert res.status_code == 200
+    data = json.loads(res.data)
+    assert data["representation"] == "clr_probability"
+    assert data["metric"] == "euclidean"
+    assert "trustworthiness" in data
+

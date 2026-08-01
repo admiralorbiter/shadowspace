@@ -81,6 +81,11 @@
             <span class="radio-label">√ Probability</span>
             <span class="radio-hint">Fisher-Rao geometry</span>
           </label>
+          <label class="radio-card" id="rep-clr_probability">
+            <input type="radio" name="representation" value="clr_probability" />
+            <span class="radio-label">CLR (Log-Ratio)</span>
+            <span class="radio-hint">Aitchison geometry</span>
+          </label>
         </div>
       </div>
 
@@ -149,11 +154,27 @@
     <!-- CENTRE — scatter canvas -->
     <section class="scatter-panel" id="scatter-panel">
       <div class="scatter-header">
-        <h1 class="scatter-title" id="scatter-main-title">PCA Tour — 3-Class Calibration</h1>
-        <span class="scatter-subtitle" id="scatter-subtitle">15 objects · 3 features</span>
+        <div class="scatter-title-wrap">
+          <h1 class="scatter-title" id="scatter-main-title">PCA Tour — 3-Class Calibration</h1>
+          <span class="scatter-subtitle" id="scatter-subtitle">15 objects · 3 features</span>
+        </div>
+        <div class="scatter-header-controls">
+          <label class="toggle-sync-label" title="Synchronize camera zoom/pan between View A and View B">
+            <input type="checkbox" id="chk-sync-cameras" checked />
+            <span>Sync Cameras</span>
+          </label>
+          <button id="btn-split-view" class="btn-secondary btn-split-view" title="Toggle Split-Screen Dual-View Comparison">🗖 Split View</button>
+        </div>
       </div>
       <div class="canvas-wrap" id="canvas-wrap">
-        <canvas id="scatter-canvas" width="600" height="600"></canvas>
+        <div class="canvas-container canvas-container-a" id="canvas-container-a">
+          <div class="view-tag" id="view-tag-a">View A: PCA</div>
+          <canvas id="scatter-canvas" width="600" height="600"></canvas>
+        </div>
+        <div class="canvas-container canvas-container-b hidden" id="canvas-container-b">
+          <div class="view-tag" id="view-tag-b">View B: Fisher LDA</div>
+          <canvas id="scatter-canvas-b" width="600" height="600"></canvas>
+        </div>
         <div class="canvas-controls">
           <button id="btn-zoom-in" class="canvas-btn" title="Zoom in (+)">+</button>
           <button id="btn-zoom-out" class="canvas-btn" title="Zoom out (-)">−</button>

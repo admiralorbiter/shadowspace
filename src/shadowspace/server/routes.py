@@ -34,6 +34,7 @@ from shadowspace.generators.fashion_mnist import FASHION_CLASSES, generate_fashi
 from shadowspace.generators.synthetic import generate_synthetic_bundle
 from shadowspace.importers.csv_importer import import_csv_bundle, import_parquet_bundle
 from shadowspace.importers.validator import ImportValidationError
+from shadowspace.math.clr import clr_transform
 from shadowspace.math.metrics import pairwise_euclidean
 from shadowspace.math.registry import MetricRegistry
 from shadowspace.math.transforms import sqrt_transform
@@ -157,6 +158,7 @@ def _build_dataset_entry(
     representations: dict[str, NDArray[np.float64]] = {
         "probability": matrix,
         "sqrt_probability": sqrt_transform(matrix),
+        "clr_probability": clr_transform(matrix),
     }
 
     rep_data: dict[str, Any] = {}
@@ -569,6 +571,8 @@ def api_diagnostics() -> Response:
     raw_matrix = np.array(ds_data["raw_matrix"], dtype=np.float64)
     if rep_id == "sqrt_probability":
         rep_matrix = sqrt_transform(raw_matrix)
+    elif rep_id == "clr_probability":
+        rep_matrix = clr_transform(raw_matrix)
     else:
         rep_matrix = raw_matrix
 
@@ -837,6 +841,8 @@ def api_tour_path() -> Response:
     raw_matrix = np.array(ds_data["raw_matrix"], dtype=np.float64)
     if rep_id == "sqrt_probability":
         rep_matrix = sqrt_transform(raw_matrix)
+    elif rep_id == "clr_probability":
+        rep_matrix = clr_transform(raw_matrix)
     else:
         rep_matrix = raw_matrix
 
@@ -880,6 +886,8 @@ def api_optimize_view() -> Response:
     raw_matrix = np.array(ds_data["raw_matrix"], dtype=np.float64)
     if rep_id == "sqrt_probability":
         rep_matrix = sqrt_transform(raw_matrix)
+    elif rep_id == "clr_probability":
+        rep_matrix = clr_transform(raw_matrix)
     else:
         rep_matrix = raw_matrix
 
