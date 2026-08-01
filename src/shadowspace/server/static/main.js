@@ -28,6 +28,19 @@ let isPanning  = false;
 let startPanX  = 0;
 let startPanY  = 0;
 
+// Grand Tour Animation State
+let tourFrames       = null;
+let tourBases        = null;
+let isTourPlaying    = false;
+let tourFrameIdx     = 0;
+let tourSpeed        = 1.0;
+let tourAnimHandle   = null;
+let lastTourTime     = 0;
+let tourGlobalBounds = null; // fixed [-1.1, 1.1] x [-1.1, 1.1] since server normalises frames
+let savedZoom        = 1.0;  // saved before tour, restored on pause
+let savedPanX        = 0;
+let savedPanY        = 0;
+
 const POINT_RADIUS        = 7;
 const POINT_RADIUS_HOVER  = 10;
 const POINT_RADIUS_SELECT = 10;
@@ -76,6 +89,7 @@ async function boot() {
   initAccessibility();
   initKeyboardShortcuts();
   initCanvasInteraction();
+  initTourControls();
   await loadDataset(currentDataset);
   await fetchSavedViews();
 }
@@ -110,6 +124,7 @@ async function loadDataset(datasetKey) {
     updateSemanticBadge();
     updateLegendList();
     selectPoint(0);
+    await loadTourPath();
   } catch (err) {
     setStatus("error", "Failed to load dataset");
     console.error("Dataset load error:", err);
@@ -808,10 +823,97 @@ function escapeHtml(str) {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+// ─── Grand Tour Controller ───────────────────────────────────────────────────
+
+async function loadTourPath() {
+  if (!fixtureData) return;
+  try {
+    const res = await fetch(`/api/tour-path?dataset=${encodeURIComponent(currentDataset)}&representation=${encodeURIComponent(currentRep)}&n_frames=180`);
+    if (!res.ok) return;
+    const data = await res.json();
+    tourFrames = data.frames;
+    tourBases = data.bases;
+    tourFrameIdx = 0;
+    // Server globally normalises all frames to [-1, 1] — use fixed viewport.
+    tourGlobalBounds = { minX: -1.1, maxX: 1.1, minY: -1.1, maxY: 1.1 };
+    const scrubber = document.getElementById("tour-scrubber");
+    if (scrubber) {
+      scrubber.max = Math.max(0, tourFrames.length - 1);
+      scrubber.value = 0;
+    }
+    updateTourFrameLabel();
+  } catch (err) {
+    console.error("Failed to load tour path:", err);
+  }
+}
+
+function initTourControls() {
+  const btnPlay    = document.getElementById("btn-tour-play");
+  const scrubber   = document.getElementById("tour-scrubber");
+  const speedSelect = document.getElementById("tour-speed-select");
+  if (btnPlay)    btnPlay.addEventListener("click", () => toggleTourPlayback());
+  if (scrubber)   scrubber.addEventListener("input", (e) => seekTourFrame(parseInt(e.target.value, 10)));
+  if (speedSelect) speedSelect.addEventListener("change", (e) => { tourSpeed = parseFloat(e.target.value) || 1.0; });
+}
+
+function toggleTourPlayback() {
+  if (isTourPlaying) pauseTour(); else playTour();
+}
+
+function playTour() {
+  if (!tourFrames || tourFrames.length === 0) return;
+  savedZoom  = zoomLevel;  savedPanX = panOffsetX;  savedPanY = panOffsetY;
+  zoomLevel  = 1.0;        panOffsetX = 0;           panOffsetY = 0;
+  isTourPlaying = true;
+  const btnPlay = document.getElementById("btn-tour-play");
+  if (btnPlay) { btnPlay.textContent = "⏸ Pause Tour"; btnPlay.classList.add("playing"); }
+  lastTourTime = performance.now();
+  stepTourAnimation();
+}
+
+function pauseTour() {
+  isTourPlaying = false;
+  if (tourAnimHandle) { cancelAnimationFrame(tourAnimHandle); tourAnimHandle = null; }
+  zoomLevel  = savedZoom;  panOffsetX = savedPanX;  panOffsetY = savedPanY;
+  const btnPlay = document.getElementById("btn-tour-play");
+  if (btnPlay) { btnPlay.textContent = "▶ Play Tour"; btnPlay.classList.remove("playing"); }
+  renderScatter();
+}
+
+function stepTourAnimation(timestamp) {
+  if (!isTourPlaying || !tourFrames) return;
+  const now      = timestamp || performance.now();
+  const interval = (1000 / 20) / tourSpeed;
+  if (now - lastTourTime >= interval) {
+    tourFrameIdx = (tourFrameIdx + 1) % tourFrames.length;
+    const scrubber = document.getElementById("tour-scrubber");
+    if (scrubber) scrubber.value = tourFrameIdx;
+    updateTourFrameLabel();
+    renderScatter();
+    lastTourTime = now;
+  }
+  tourAnimHandle = requestAnimationFrame(stepTourAnimation);
+}
+
+function seekTourFrame(idx) {
+  if (!tourFrames || idx < 0 || idx >= tourFrames.length) return;
+  tourFrameIdx = idx;
+  updateTourFrameLabel();
+  renderScatter();
+}
+
+function updateTourFrameLabel() {
+  const lbl = document.getElementById("tour-frame-label");
+  if (lbl && tourFrames) lbl.textContent = `Frame ${tourFrameIdx + 1} / ${tourFrames.length}`;
+}
+
 // ─── Scatter renderer ─────────────────────────────────────────────────────────
 
 function getCoords() {
   if (!fixtureData) return [];
+  if (isTourPlaying && tourFrames && tourFrameIdx < tourFrames.length) {
+    return tourFrames[tourFrameIdx];
+  }
   if (fixtureData.catalog && fixtureData.catalog[currentViewId]) {
     return fixtureData.catalog[currentViewId].coords;
   }
@@ -820,18 +922,38 @@ function getCoords() {
 
 function computeScale(coords) {
   if (!coords || coords.length === 0) return { toScreen: () => [0, 0], pad: 48, w: 500, h: 500 };
-  const dpr    = window.devicePixelRatio || 1;
-  const cssW   = canvas.width / dpr;
-  const cssH   = canvas.height / dpr;
+  const dpr  = window.devicePixelRatio || 1;
+  const cssW = canvas.width / dpr;
+  const cssH = canvas.height / dpr;
+  const pad  = AXIS_PADDING;
+  const w    = cssW - pad * 2;
+  const h    = cssH - pad * 2;
+
+  // During tour playback use the fixed [-1.1, 1.1] viewport. Server
+  // globally normalises all frames so this always contains all points.
+  // User zoom/pan is suspended so the full tour stays visible.
+  if (isTourPlaying && tourGlobalBounds) {
+    const b      = tourGlobalBounds;
+    const rangeX = b.maxX - b.minX;
+    const rangeY = b.maxY - b.minY;
+    const scale  = Math.min(w / rangeX, h / rangeY) * 0.88;
+    const cx     = (b.minX + b.maxX) / 2;
+    const cy     = (b.minY + b.maxY) / 2;
+    return {
+      toScreen: (x, y) => [
+        pad + w / 2 + (x - cx) * scale,
+        pad + h / 2 - (y - cy) * scale,
+      ],
+      scale, minX: b.minX, maxX: b.maxX, minY: b.minY, maxY: b.maxY, cx, cy, pad, w, h,
+    };
+  }
+
   const xs     = coords.map(c => c[0]);
   const ys     = coords.map(c => c[1]);
   const minX   = Math.min(...xs), maxX = Math.max(...xs);
   const minY   = Math.min(...ys), maxY = Math.max(...ys);
   const rangeX = maxX - minX || 1;
   const rangeY = maxY - minY || 1;
-  const pad    = AXIS_PADDING;
-  const w      = cssW - pad * 2;
-  const h      = cssH - pad * 2;
 
   const baseScale = Math.min(w / rangeX, h / rangeY) * 0.82;
   const scale     = baseScale * zoomLevel;
@@ -880,22 +1002,30 @@ function renderScatter() {
     ctx.beginPath(); ctx.moveTo(sc2.pad, gy); ctx.lineTo(sc2.pad + sc2.w, gy); ctx.stroke();
   }
 
-  // Axis labels & zoom indicator
+  // Axis labels & zoom / tour indicator
   ctx.font      = "10px 'JetBrains Mono', monospace";
-  ctx.fillStyle = "rgba(148,163,184,0.5)";
   ctx.textAlign = "center";
-  ctx.fillText("PC1 →", W / 2, H - 8);
-  ctx.save();
-  ctx.translate(12, H / 2);
-  ctx.rotate(-Math.PI / 2);
-  ctx.fillText("PC2 ↑", 0, 0);
-  ctx.restore();
-
-  // Zoom indicator label at bottom left
-  if (zoomLevel !== 1.0) {
-    ctx.textAlign = "left";
-    ctx.fillStyle = "#34d399";
-    ctx.fillText(`${zoomLevel.toFixed(1)}x Zoom`, 48, H - 10);
+  if (isTourPlaying) {
+    ctx.fillStyle = "rgba(52,211,153,0.7)";
+    ctx.fillText("Grand Tour — Proj. X →", W / 2, H - 8);
+    ctx.save();
+    ctx.translate(12, H / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText("Proj. Y ↑", 0, 0);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = "rgba(148,163,184,0.5)";
+    ctx.fillText("PC1 →", W / 2, H - 8);
+    ctx.save();
+    ctx.translate(12, H / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText("PC2 ↑", 0, 0);
+    ctx.restore();
+    if (zoomLevel !== 1.0) {
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#34d399";
+      ctx.fillText(`${zoomLevel.toFixed(1)}x Zoom`, 48, H - 10);
+    }
   }
 
   // Rep label
@@ -958,6 +1088,88 @@ function renderScatter() {
     const labelY = sy - POINT_RADIUS_HOVER - 6;
     ctx.fillText(labelText, sx, labelY);
   }
+
+  // Active Feature Loadings HUD during Grand Tour
+  if (isTourPlaying || (tourFrames && tourFrames.length > 0 && tourFrameIdx > 0)) {
+    drawFeatureLoadingsHUD(W, H);
+  }
+}
+
+function drawFeatureLoadingsHUD(W, H) {
+  if (!tourBases || tourFrameIdx >= tourBases.length) return;
+  const basis = tourBases[tourFrameIdx];
+  if (!basis || basis.length === 0) return;
+
+  const featNames = fixtureData.feature_names || basis.map((_, i) => `Feature ${i + 1}`);
+  const loadings = [];
+  for (let i = 0; i < basis.length; i++) {
+    const vx = basis[i][0];
+    const vy = basis[i][1];
+    const mag = Math.hypot(vx, vy);
+    const name = featNames[i] ? featNames[i].replace(/^p_/, "") : `f${i}`;
+    loadings.push({ name, mag });
+  }
+
+  loadings.sort((a, b) => b.mag - a.mag);
+  const top = loadings.slice(0, 4);
+
+  const hudW  = 184;
+  const itemH = 16;
+  const hudH  = 26 + top.length * itemH;
+  const hudX  = W - hudW - 16;
+  const hudY  = 16;
+
+  ctx.save();
+  // Glass panel container
+  ctx.fillStyle   = "rgba(15, 23, 42, 0.88)";
+  ctx.strokeStyle = "rgba(52, 211, 153, 0.35)";
+  ctx.lineWidth   = 1;
+  ctx.beginPath();
+  if (ctx.roundRect) {
+    ctx.roundRect(hudX, hudY, hudW, hudH, 6);
+  } else {
+    ctx.rect(hudX, hudY, hudW, hudH);
+  }
+  ctx.fill();
+  ctx.stroke();
+
+  // HUD Title
+  ctx.font      = "600 9px 'JetBrains Mono', monospace";
+  ctx.fillStyle = "#34d399";
+  ctx.textAlign = "left";
+  ctx.fillText("TOP FEATURE LOADINGS", hudX + 10, hudY + 16);
+
+  // Bars
+  const barMaxW = 55;
+  top.forEach((item, idx) => {
+    const y = hudY + 32 + idx * itemH;
+
+    // Feature Name
+    ctx.font      = "10px Inter, sans-serif";
+    ctx.fillStyle = "rgba(226, 232, 240, 0.9)";
+    ctx.textAlign = "left";
+    const displayName = item.name.length > 12 ? item.name.substring(0, 11) + "…" : item.name;
+    ctx.fillText(displayName, hudX + 10, y);
+
+    // Track Background
+    const barX = hudX + 88;
+    const barY = y - 8;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
+    ctx.fillRect(barX, barY, barMaxW, 6);
+
+    // Active Bar
+    const barW = Math.min(barMaxW, Math.max(2, item.mag * barMaxW));
+    ctx.fillStyle = "#34d399";
+    ctx.fillRect(barX, barY, barW, 6);
+
+    // Numeric Value
+    ctx.font      = "9px 'JetBrains Mono', monospace";
+    ctx.fillStyle = "rgba(148, 163, 184, 0.85)";
+    ctx.textAlign = "right";
+    ctx.fillText(item.mag.toFixed(2), hudX + hudW - 8, y);
+  });
+
+  ctx.restore();
 }
 
 function drawSimplexEdges(coords, sc) {

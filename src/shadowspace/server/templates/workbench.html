@@ -154,6 +154,20 @@
         </div>
         <div class="canvas-tooltip hidden" id="canvas-tooltip"></div>
       </div>
+
+      <!-- Grand Tour Playback Controls -->
+      <div class="tour-controls-bar" id="tour-controls-bar">
+        <button id="btn-tour-play" class="btn-tour" title="Play / Pause Grand Tour">▶ Play Tour</button>
+        <div class="tour-scrubber-group">
+          <input type="range" id="tour-scrubber" min="0" max="89" value="0" class="range-slider tour-slider" />
+          <span class="tour-frame-label" id="tour-frame-label">Frame 1 / 90</span>
+        </div>
+        <select id="tour-speed-select" class="select-input tour-speed-select">
+          <option value="1">1.0x Speed</option>
+          <option value="0.5">0.5x Speed</option>
+          <option value="2">2.0x Speed</option>
+        </select>
+      </div>
     </section>
 
     <!-- RIGHT SIDEBAR — panels -->

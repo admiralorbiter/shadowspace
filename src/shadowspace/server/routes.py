@@ -40,6 +40,7 @@ from shadowspace.math.transforms import sqrt_transform
 from shadowspace.models.investigation import InvestigationRecord, SavedView
 from shadowspace.projection.basis import project
 from shadowspace.projection.catalog import build_projection_catalog
+from shadowspace.projection.paths import generate_grand_tour_path
 from shadowspace.projection.pca import (
     compute_feature_schema_hash,
     compute_object_id_hash,
@@ -807,3 +808,44 @@ def api_export_record() -> Response:
         mimetype="application/json",
         headers=headers,
     )
+
+
+@workbench_bp.route("/api/tour-path")
+def api_tour_path() -> Response:
+    """Return Grand Tour sequence of 2D projection frames for active dataset."""
+    dataset_key = request.args.get("dataset", "calibration_3class")
+    rep_id = request.args.get("representation", "probability")
+
+    try:
+        n_frames = int(request.args.get("n_frames", 180))
+    except (TypeError, ValueError):
+        n_frames = 180
+
+    ds_data = _get_dataset(dataset_key)
+    if ds_data is None:
+        return Response(
+            json.dumps({"error": f"Unknown dataset '{dataset_key}'"}),
+            status=404,
+            mimetype="application/json",
+        )
+
+    raw_matrix = np.array(ds_data["raw_matrix"], dtype=np.float64)
+    if rep_id == "sqrt_probability":
+        rep_matrix = sqrt_transform(raw_matrix)
+    else:
+        rep_matrix = raw_matrix
+
+    frames_coords, bases_matrices = generate_grand_tour_path(rep_matrix, n_frames=n_frames)
+
+    payload = {
+        "dataset": dataset_key,
+        "representation": rep_id,
+        "n_frames": len(frames_coords),
+        "frames": frames_coords,
+        "bases": bases_matrices,
+        "semantically_valid": True,
+        "kind": "linear_projection",
+        "geodesic_algorithm": "GLERP",
+    }
+
+    return Response(json.dumps(payload), mimetype="application/json")

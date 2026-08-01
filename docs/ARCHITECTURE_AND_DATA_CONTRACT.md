@@ -283,7 +283,7 @@ Represent projection planes correctly, generate useful tours, and enforce the se
 
 - Orthonormal basis validator and canonicalization utilities.
 - Projection operation \(Y=XF\).
-- PCA fitted **separately per representation** using `dtour.little_tour()` as the underlying generator.
+- PCA fitted **separately per representation** using `dtour.little_tour()` or true Grassmannian geodesic Grand Tour as the underlying generator.
   - Default initial tour: `probability` representation.
   - Later: `sqrt_probability`, `clr_probability`, `logits` each get their own independently fitted tour.
   - Every `ViewSpec` for a PCA tour records:
@@ -295,15 +295,21 @@ Represent projection planes correctly, generate useful tours, and enforce the se
     - eigenvalues;
     - implementation version.
   - A basis fitted in `probability` space is **rejected** if applied to `sqrt_probability` coordinates, even when dimensions match.
-- Grassmannian distance from principal angles.
-- Path metadata and semantic badge.
+- Grassmannian distance from principal angles and exact GLERP (Grassmannian Linear Interpolation) geodesic trajectory generation.
+- Feature preprocessing & viewport stability contract:
+  - Input matrices are Z-score normalized per-feature prior to Grassmann projection.
+  - Generated 2D trajectories are globally scaled to \([-1, 1]\) across all animation frames.
+  - Web client uses a fixed \([-1.1, 1.1]\) viewport to guarantee zero scale jitter and prevent point clipping.
+- Real-time Feature Loadings HUD:
+  - Computes top feature subspace contributions \(\|V_i\| = \sqrt{V_{i,1}^2 + V_{i,2}^2}\) dynamically per frame.
+- Path metadata (`geodesic_algorithm: "GLERP"`) and semantic badge.
 - `DtourAdapter` accepting a representation matrix, keyframe bases, IDs, and selections.
 - `representation_morph` path kind for animated transitions between separately fitted representation layouts:
   - Procrustes alignment may be applied for visual smoothness;
   - intermediate frames are **not** valid projections in either representation;
   - `intermediate_frames_semantically_valid=false` by default.
 - Initial saved-view object containing basis, representation, metric, labels, and provenance.
-- Optional intrinsic geodesic interpolation experiment kept separate from the default `dtour` path.
+- Intrinsic geodesic interpolation (GLERP) active as default Grand Tour generator.
 
 ### Automated tests
 

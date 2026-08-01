@@ -76,15 +76,16 @@ d(F_a,F_b)=\sqrt{\theta_1^2+\theta_2^2}.
 
 Clamp singular values to \([0,1]\) before applying \(\arccos\).
 
-### `dtour` implementation caution
+### `dtour` & GLERP Geodesic Implementation
 
-The current `dtour` paper presents guided, manual, and grand tours, static previews, reversible scrubbing, and GPU rendering. Its method describes Grassmannian distance for pacing and elementwise Catmull–Rom interpolation followed by re-orthonormalization for smooth frames. Shadowspace should therefore not automatically label the upstream interpolation as an intrinsic Grassmannian geodesic. Record:
+The classic `dtour` method uses Catmull–Rom interpolation followed by QR re-orthonormalization. In Shadowspace Sprint 10, we implemented **True Geodesic Grand Tour (GLERP)** via SVD principal angle decomposition (`grassmann_geodesic` in `paths.py`), ensuring constant angular velocity along exact geodesics on the Grassmannian manifold $\mathrm{Gr}(k, p)$.
 
-- path keyframes;
-- interpolation method;
-- pacing metric;
-- whether every frame is a valid projection;
-- whether the path is intrinsically geodesic.
+Shadowspace records path metadata for full reproducibility:
+- path keyframes & basis matrices;
+- interpolation method (`geodesic_algorithm: "GLERP"`);
+- pacing metric (geodesic L2 norm of principal angles);
+- global coordinate normalization ($\mathbf{X} \to [-1, 1]$) & fixed client viewport;
+- dynamic Feature Loadings HUD showing real-time subspace contributions $\|V_i\| = \sqrt{V_{i,1}^2 + V_{i,2}^2}$.
 
 `dtour` is still a strong rendering and interaction foundation, with Python and JavaScript interfaces and separated `@dtour/viewer` and `@dtour/scatter` packages.
 
