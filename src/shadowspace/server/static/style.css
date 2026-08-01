@@ -182,6 +182,20 @@ html, body {
   box-shadow: 0 0 0 1px rgba(52,211,153,0.2);
 }
 
+.sidebar-select {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+}
+.sidebar-select:focus { border-color: var(--accent-green); }
+
 .radio-label {
   font-size: 13px;
   font-weight: 500;
@@ -257,6 +271,81 @@ html, body {
   flex-shrink: 0;
   box-shadow: 0 0 6px currentColor;
 }
+
+.legend-line {
+  width: 18px;
+  height: 2px;
+  flex-shrink: 0;
+}
+.legend-line.solid-green { background: #34d399; }
+.legend-line.dashed-red  { border-top: 2px dashed #f87171; height: 0; }
+.legend-line.dotted-amber { border-top: 2px dotted #fbbf24; height: 0; }
+
+/* ── Diagnostic Integrity Panel ──────────────────────────── */
+.k-control-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.range-slider {
+  width: 100%;
+  accent-color: var(--accent-green);
+  cursor: pointer;
+}
+
+.diag-metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.diag-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.diag-value {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--accent-green-2);
+}
+
+.diag-label {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.diag-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 11px;
+}
+
+.breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+}
+.breakdown-row.preserved-row { border-left: 3px solid #34d399; }
+.breakdown-row.torn-row      { border-left: 3px solid #f87171; }
+.breakdown-row.false-row     { border-left: 3px solid #fbbf24; }
+
 
 /* ── Scatter panel ───────────────────────────────────────── */
 .scatter-panel {

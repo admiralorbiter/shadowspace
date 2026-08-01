@@ -1,4 +1,4 @@
-"""Tests for Sprint 3b — Flask workbench routes."""
+"""Tests for Sprint 3b & 4 — Flask workbench routes and diagnostics API."""
 
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ def test_api_health(client: FlaskClient) -> None:
     assert res.status_code == 200
     data = json.loads(res.data)
     assert data["status"] == "ok"
-    assert data["sprint"] == "3b"
+    assert data["sprint"] == "4"
 
 
 def test_api_fixture_returns_200(client: FlaskClient) -> None:
@@ -91,3 +91,47 @@ def test_api_fixture_eigenvalues_present(client: FlaskClient) -> None:
         evs = data["representations"][rep_id]["eigenvalues"]
         assert len(evs) == 2
         assert all(v >= 0 for v in evs)
+
+
+def test_api_diagnostics_default(client: FlaskClient) -> None:
+    res = client.get("/api/diagnostics")
+    assert res.status_code == 200
+    data = json.loads(res.data)
+
+    assert data["target_id"] == "corner_0"
+    assert data["representation"] == "probability"
+    assert data["metric"] == "euclidean"
+    assert data["k"] == 3
+    assert "preserved" in data
+    assert "torn" in data
+    assert "false_neighbors" in data
+    assert "precision" in data
+    assert "recall" in data
+    assert "jaccard_overlap" in data
+    assert "trustworthiness" in data
+    assert "continuity" in data
+    assert "stress" in data
+
+
+def test_api_diagnostics_query_params(client: FlaskClient) -> None:
+    res = client.get("/api/diagnostics?target_id=center&representation=probability&metric=euclidean&k=4")
+    assert res.status_code == 200
+    data = json.loads(res.data)
+
+    assert data["target_id"] == "center"
+    assert data["k"] == 4
+    assert len(data["preserved"]) + len(data["torn"]) == 4
+
+
+def test_api_diagnostics_invalid_params(client: FlaskClient) -> None:
+    # Invalid target_id
+    res = client.get("/api/diagnostics?target_id=unknown_id")
+    assert res.status_code == 400
+
+    # Invalid representation
+    res = client.get("/api/diagnostics?representation=unknown_rep")
+    assert res.status_code == 400
+
+    # Incompatible metric
+    res = client.get("/api/diagnostics?metric=hellinger&representation=sqrt_probability")
+    assert res.status_code == 400

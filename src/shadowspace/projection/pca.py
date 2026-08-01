@@ -25,10 +25,10 @@ def compute_object_id_hash(object_ids: list[str]) -> str:
     from adjacent-concatenation ambiguity (e.g. ['ab','c'] != ['a','bc']).
     """
     hasher = hashlib.sha256()
-    _SEP = b"\x00"
+    sep_bytes = b"\x00"
     for oid in object_ids:
         hasher.update(oid.encode("utf-8"))
-        hasher.update(_SEP)
+        hasher.update(sep_bytes)
     return hasher.hexdigest()
 
 
@@ -39,10 +39,10 @@ def compute_feature_schema_hash(feature_names: list[str]) -> str:
     from adjacent-concatenation ambiguity (e.g. ['ab','c'] != ['a','bc']).
     """
     hasher = hashlib.sha256()
-    _SEP = b"\x00"
+    sep_bytes = b"\x00"
     for fn in feature_names:
         hasher.update(fn.encode("utf-8"))
-        hasher.update(_SEP)
+        hasher.update(sep_bytes)
     return hasher.hexdigest()
 
 
