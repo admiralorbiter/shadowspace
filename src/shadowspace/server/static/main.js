@@ -1,20 +1,32 @@
 /**
- * Shadowspace Workbench — Sprint 4
- * main.js — Fetches fixture data, renders PCA scatter on canvas,
- * handles representation switching, point selection, and live local integrity overlays.
+ * Shadowspace Workbench — Sprint 6 Four-Class Validation & Projection Catalog
+ * main.js — Multi-dataset switching, Projection Catalog view selection,
+ * interactive zoom/pan canvas navigation, local integrity diagnostics,
+ * saved-view atlas, and reproducible exports.
  */
 
 "use strict";
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
-let fixtureData    = null;          // raw JSON from /api/fixture
-let currentRep     = "probability"; // active representation key
-let currentMetric  = "euclidean";   // active metric key
-let selectedIdx    = 0;             // selected point index (default 0)
-let hoveredIdx     = null;          // currently hovered point index
-let currentK       = 3;             // neighborhood size k
-let diagResult     = null;          // live diagnostic payload from /api/diagnostics
+let currentDataset = "calibration_3class"; // active dataset key
+let fixtureData    = null;                 // JSON from /api/fixture?dataset=...
+let currentRep     = "probability";        // active representation key
+let currentMetric  = "euclidean";          // active metric key
+let currentViewId  = "pca_corners";        // active catalog view ID
+let selectedIdx    = 0;                    // selected point index (default 0)
+let hoveredIdx     = null;                 // currently hovered point index
+let currentK       = 3;                    // neighborhood size k
+let diagResult     = null;                 // live diagnostic payload from /api/diagnostics
+let savedViews     = [];                   // list of SavedView objects from /api/saved-views
+
+// Zoom & Pan Camera State
+let zoomLevel  = 1.0;
+let panOffsetX = 0;
+let panOffsetY = 0;
+let isPanning  = false;
+let startPanX  = 0;
+let startPanY  = 0;
 
 const POINT_RADIUS        = 7;
 const POINT_RADIUS_HOVER  = 10;
@@ -24,33 +36,93 @@ const GRID_LINES          = 6;
 
 // ─── DOM refs ─────────────────────────────────────────────────────────────────
 
-const canvas      = document.getElementById("scatter-canvas");
-const ctx         = canvas.getContext("2d");
-const tooltip     = document.getElementById("canvas-tooltip");
-const statusDot   = document.querySelector(".status-dot");
-const statusLabel = document.querySelector(".status-label");
-const metricSelect = document.getElementById("metric-select");
-const kSlider      = document.getElementById("k-slider");
-const kValLabel    = document.getElementById("k-val-label");
+const canvas            = document.getElementById("scatter-canvas");
+const ctx               = canvas.getContext("2d");
+const tooltip           = document.getElementById("canvas-tooltip");
+const statusDot         = document.querySelector(".status-dot");
+const statusLabel       = document.querySelector(".status-label");
+const datasetSelect     = document.getElementById("dataset-select");
+const catalogSelect     = document.getElementById("catalog-select");
+const metricSelect      = document.getElementById("metric-select");
+const kSlider            = document.getElementById("k-slider");
+const kValLabel          = document.getElementById("k-val-label");
+const toggleReducedMotion = document.getElementById("toggle-reduced-motion");
+const btnSaveView       = document.getElementById("btn-save-view");
+const atlasViewName     = document.getElementById("atlas-view-name");
+const atlasViewNote     = document.getElementById("atlas-view-note");
+const atlasList         = document.getElementById("atlas-list");
+
+// Zoom controls
+const btnZoomIn    = document.getElementById("btn-zoom-in");
+const btnZoomOut   = document.getElementById("btn-zoom-out");
+const btnZoomFocus = document.getElementById("btn-zoom-focus");
+const btnZoomReset = document.getElementById("btn-zoom-reset");
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 
 async function boot() {
+  initDatasetSelector();
+  initCatalogSelector();
+  initRepSelector();
+  initMetricSelector();
+  initKSlider();
+  initAtlasControls();
+  initZoomControls();
+  initAccessibility();
+  initKeyboardShortcuts();
+  initCanvasInteraction();
+  await loadDataset(currentDataset);
+  await fetchSavedViews();
+}
+
+// ─── Dataset Loader ───────────────────────────────────────────────────────────
+
+async function loadDataset(datasetKey) {
   try {
-    const res = await fetch("/api/fixture");
+    setStatus("loading", "Loading dataset…");
+    const res = await fetch(`/api/fixture?dataset=${encodeURIComponent(datasetKey)}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     fixtureData = await res.json();
+    currentDataset = datasetKey;
 
-    setStatus("ready", "Fixture loaded — 15 objects");
-    initRepSelector();
-    initMetricSelector();
-    initKSlider();
+    const nPts = fixtureData.object_ids.length;
+    const nFeat = fixtureData.feature_names ? fixtureData.feature_names.length : 3;
+
+    document.getElementById("scatter-main-title").textContent = `PCA Tour — ${fixtureData.display_name}`;
+    document.getElementById("scatter-subtitle").textContent  = `${nPts} objects · ${nFeat} features`;
+
+    kSlider.max = Math.max(1, nPts - 1);
+    if (currentK >= nPts) currentK = Math.min(3, nPts - 1);
+    kSlider.value = currentK;
+    kValLabel.textContent = currentK;
+
+    resetZoom();
+
+    setStatus("ready", `${fixtureData.display_name} loaded`);
     updateVarianceBars();
-    initCanvasInteraction();
+    updateSemanticBadge();
     selectPoint(0);
   } catch (err) {
-    setStatus("error", "Failed to load fixture");
-    console.error("Boot error:", err);
+    setStatus("error", "Failed to load dataset");
+    console.error("Dataset load error:", err);
+  }
+}
+
+function initDatasetSelector() {
+  if (datasetSelect) {
+    datasetSelect.addEventListener("change", (e) => {
+      loadDataset(e.target.value);
+    });
+  }
+}
+
+function initCatalogSelector() {
+  if (catalogSelect) {
+    catalogSelect.addEventListener("change", (e) => {
+      currentViewId = e.target.value;
+      updateSemanticBadge();
+      fetchDiagnostics();
+    });
   }
 }
 
@@ -81,7 +153,6 @@ function updateMetricOptions() {
     .map(m => `<option value="${m.id}">${m.label}</option>`)
     .join("");
 
-  // Keep current metric if allowed, otherwise fall back to first
   if (allowed.some(m => m.id === currentMetric)) {
     metricSelect.value = currentMetric;
   } else {
@@ -93,17 +164,26 @@ function updateMetricOptions() {
 function initRepSelector() {
   document.querySelectorAll('input[name="representation"]').forEach(radio => {
     radio.addEventListener("change", (e) => {
-      currentRep = e.target.value;
-      document.querySelectorAll(".radio-card").forEach(card => {
-        card.classList.toggle("active", card.querySelector("input").value === currentRep);
-      });
-      hoveredIdx = null;
-      updateMetricOptions();
-      updateVarianceBars();
-      fetchDiagnostics();
+      setRepresentation(e.target.value);
     });
   });
   updateMetricOptions();
+}
+
+function setRepresentation(repId) {
+  currentRep = repId;
+  document.querySelectorAll(".radio-card").forEach(card => {
+    const radio = card.querySelector("input");
+    if (radio) {
+      radio.checked = radio.value === currentRep;
+      card.classList.toggle("active", radio.value === currentRep);
+    }
+  });
+  hoveredIdx = null;
+  updateMetricOptions();
+  updateVarianceBars();
+  updateSemanticBadge();
+  fetchDiagnostics();
 }
 
 // ─── Metric & k selectors ─────────────────────────────────────────────────────
@@ -123,12 +203,130 @@ function initKSlider() {
   });
 }
 
+// ─── Interactive Zoom & Pan Camera Controls ───────────────────────────────────
+
+function resetZoom() {
+  zoomLevel  = 1.0;
+  panOffsetX = 0;
+  panOffsetY = 0;
+  renderScatter();
+}
+
+function zoomBy(factor) {
+  zoomLevel = Math.max(0.8, Math.min(25.0, zoomLevel * factor));
+  renderScatter();
+}
+
+function focusNeighborhood() {
+  if (!fixtureData || selectedIdx === null) return;
+  const coords = getCoords();
+  const targetId = fixtureData.object_ids[selectedIdx];
+  const idToIdx = new Map(fixtureData.object_ids.map((id, idx) => [id, idx]));
+
+  // Collect target point and all neighbor IDs
+  const activeIds = [targetId];
+  if (diagResult) {
+    activeIds.push(...diagResult.preserved, ...diagResult.torn, ...diagResult.false_neighbors);
+  }
+
+  const activeCoords = activeIds
+    .map(id => idToIdx.get(id))
+    .filter(idx => idx !== undefined && idx < coords.length)
+    .map(idx => coords[idx]);
+
+  if (activeCoords.length === 0) return;
+
+  const xs = activeCoords.map(c => c[0]);
+  const ys = activeCoords.map(c => c[1]);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+
+  // Compute 2D bounding box center and span
+  const cx = (minX + maxX) / 2;
+  const cy = (minY + maxY) / 2;
+  const dx = Math.max(0.08, maxX - minX);
+  const dy = Math.max(0.08, maxY - minY);
+
+  // Full dataset bounds
+  const allXs = coords.map(c => c[0]), allYs = coords.map(c => c[1]);
+  const fullRangeX = Math.max(...allXs) - Math.min(...allXs) || 1;
+  const fullRangeY = Math.max(...allYs) - Math.min(...allYs) || 1;
+  const fullCx = (Math.min(...allXs) + Math.max(...allXs)) / 2;
+  const fullCy = (Math.min(...allYs) + Math.max(...allYs)) / 2;
+
+  // Fit zoom level
+  const targetZoom = Math.min(15.0, Math.max(1.5, 0.7 / Math.max(dx / fullRangeX, dy / fullRangeY)));
+  zoomLevel = targetZoom;
+
+  // Compute pan offsets in pixel space
+  const baseScale = Math.min(canvas.width / fullRangeX, canvas.height / fullRangeY) * 0.82;
+  const scale = baseScale * zoomLevel;
+  panOffsetX = (cx - fullCx) * scale;
+  panOffsetY = -(cy - fullCy) * scale;
+
+  renderScatter();
+}
+
+function initZoomControls() {
+  if (btnZoomIn)    btnZoomIn.addEventListener("click", () => zoomBy(1.3));
+  if (btnZoomOut)   btnZoomOut.addEventListener("click", () => zoomBy(1 / 1.3));
+  if (btnZoomFocus) btnZoomFocus.addEventListener("click", () => focusNeighborhood());
+  if (btnZoomReset) btnZoomReset.addEventListener("click", () => resetZoom());
+
+  // Mouse Wheel Zoom
+  canvas.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+    zoomBy(factor);
+  }, { passive: false });
+}
+
+// ─── Accessibility & Keyboard ─────────────────────────────────────────────────
+
+function initAccessibility() {
+  if (toggleReducedMotion) {
+    toggleReducedMotion.addEventListener("change", (e) => {
+      document.body.classList.toggle("reduced-motion", e.target.checked);
+    });
+  }
+}
+
+function initKeyboardShortcuts() {
+  window.addEventListener("keydown", (e) => {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT" || e.target.tagName === "TEXTAREA") {
+      return;
+    }
+    if (!fixtureData) return;
+
+    if (e.key === "ArrowRight") {
+      e.preventDefault();
+      selectPoint((selectedIdx + 1) % fixtureData.object_ids.length);
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      const n = fixtureData.object_ids.length;
+      selectPoint((selectedIdx - 1 + n) % n);
+    } else if (e.key === "1") {
+      setRepresentation("probability");
+    } else if (e.key === "2") {
+      setRepresentation("sqrt_probability");
+    } else if (e.key === "+" || e.key === "=") {
+      zoomBy(1.2);
+    } else if (e.key === "-") {
+      zoomBy(1 / 1.2);
+    } else if (e.key === "0") {
+      resetZoom();
+    } else if (e.key.toLowerCase() === "f") {
+      focusNeighborhood();
+    }
+  });
+}
+
 // ─── Variance bars ────────────────────────────────────────────────────────────
 
 function updateVarianceBars() {
   if (!fixtureData) return;
   const rep   = fixtureData.representations[currentRep];
-  const evs   = rep.eigenvalues;
+  const evs   = rep ? rep.eigenvalues : [0.5, 0.5];
   const total = evs[0] + evs[1];
   const pct1  = total > 0 ? (evs[0] / total * 100) : 50;
   const pct2  = total > 0 ? (evs[1] / total * 100) : 50;
@@ -139,12 +337,45 @@ function updateVarianceBars() {
   document.getElementById("var-pc2-label").textContent = pct2.toFixed(0) + "%";
 }
 
+// ─── Semantic Badge Panel ─────────────────────────────────────────────────────
+
+function updateSemanticBadge() {
+  const badgeTag    = document.getElementById("semantic-kind-tag");
+  const badgeDesc   = document.getElementById("semantic-desc");
+  const badgeStatus = document.getElementById("semantic-status-badge");
+
+  const catEntry = fixtureData && fixtureData.catalog ? fixtureData.catalog[currentViewId] : null;
+
+  if (catEntry && catEntry.is_misleading) {
+    badgeTag.textContent = catEntry.view_id;
+    badgeStatus.textContent = "Misleading View Warning";
+    badgeStatus.className = "panel-badge badge-placeholder";
+    badgeStatus.style.borderColor = "#f87171";
+    badgeStatus.style.color = "#f87171";
+    badgeDesc.textContent = catEntry.warning_note || catEntry.description;
+  } else if (currentRep === "probability") {
+    badgeTag.textContent = currentViewId;
+    badgeStatus.textContent = "Valid Projection";
+    badgeStatus.className = "panel-badge badge-active";
+    badgeStatus.style.borderColor = "";
+    badgeStatus.style.color = "";
+    badgeDesc.textContent = catEntry ? catEntry.description : "Orthogonal 2D linear projection Y = X F. Intermediate frames preserve exact linear geometry.";
+  } else {
+    badgeTag.textContent = `${currentViewId} (Fisher-Rao)`;
+    badgeStatus.textContent = "Valid Projection";
+    badgeStatus.className = "panel-badge badge-active";
+    badgeStatus.style.borderColor = "";
+    badgeStatus.style.color = "";
+    badgeDesc.textContent = "Orthogonal 2D projection on square-root probability coordinates. Preserves Fisher-Rao Riemannian geometry.";
+  }
+}
+
 // ─── Diagnostics API Fetch ────────────────────────────────────────────────────
 
 async function fetchDiagnostics() {
   if (!fixtureData || selectedIdx === null) return;
   const targetId = fixtureData.object_ids[selectedIdx];
-  const url = `/api/diagnostics?target_id=${encodeURIComponent(targetId)}&representation=${encodeURIComponent(currentRep)}&metric=${encodeURIComponent(currentMetric)}&k=${currentK}`;
+  const url = `/api/diagnostics?dataset=${encodeURIComponent(currentDataset)}&target_id=${encodeURIComponent(targetId)}&representation=${encodeURIComponent(currentRep)}&metric=${encodeURIComponent(currentMetric)}&view_id=${encodeURIComponent(currentViewId)}&k=${currentK}`;
 
   try {
     const res = await fetch(url);
@@ -154,6 +385,8 @@ async function fetchDiagnostics() {
     renderScatter();
   } catch (err) {
     console.error("Diagnostics fetch error:", err);
+    diagResult = null;
+    renderScatter();
   }
 }
 
@@ -164,18 +397,146 @@ function updateIntegrityPanel(data) {
   document.getElementById("diag-trust").textContent     = data.trustworthiness.toFixed(2);
   document.getElementById("diag-stress").textContent    = data.stress.toFixed(2);
 
-  document.getElementById("count-preserved").textContent = data.preserved.length;
-  document.getElementById("count-torn").textContent      = data.torn.length;
-  document.getElementById("count-false").textContent     = data.false_neighbors.length;
+  const countPreserved = document.getElementById("count-preserved");
+  const countTorn      = document.getElementById("count-torn");
+  const countFalse     = document.getElementById("count-false");
+
+  countPreserved.textContent = data.preserved.length;
+  countTorn.textContent      = data.torn.length ? `${data.torn.length} (${data.torn.join(", ")})` : "0";
+  countFalse.textContent     = data.false_neighbors.length ? `${data.false_neighbors.length} (${data.false_neighbors.join(", ")})` : "0";
+}
+
+// ─── Saved-View Atlas (Sprint 5) ─────────────────────────────────────────────
+
+function initAtlasControls() {
+  if (btnSaveView) {
+    btnSaveView.addEventListener("click", saveCurrentView);
+  }
+}
+
+async function fetchSavedViews() {
+  try {
+    const res = await fetch("/api/saved-views");
+    if (!res.ok) return;
+    savedViews = await res.json();
+    renderAtlasList();
+  } catch (err) {
+    console.error("Failed to fetch saved views:", err);
+  }
+}
+
+async function saveCurrentView() {
+  const name = atlasViewName.value.trim() || `View ${savedViews.length + 1}`;
+  const note = atlasViewNote.value.trim();
+  const targetId = fixtureData ? fixtureData.object_ids[selectedIdx] : "corner_0";
+
+  const payload = {
+    name,
+    note,
+    dataset: currentDataset,
+    representation_id: currentRep,
+    metric_id: currentMetric,
+    k: currentK,
+    target_id: targetId,
+  };
+
+  try {
+    const res = await fetch("/api/saved-views", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error("Failed to save view");
+    atlasViewName.value = "";
+    atlasViewNote.value = "";
+    await fetchSavedViews();
+  } catch (err) {
+    console.error("Error saving view:", err);
+  }
+}
+
+async function deleteSavedView(viewId, event) {
+  event.stopPropagation();
+  try {
+    const res = await fetch(`/api/saved-views?id=${encodeURIComponent(viewId)}`, { method: "DELETE" });
+    if (!res.ok) throw new Error("Failed to delete view");
+    await fetchSavedViews();
+  } catch (err) {
+    console.error("Error deleting view:", err);
+  }
+}
+
+async function restoreSavedView(view) {
+  if (view.metadata && view.metadata.dataset && view.metadata.dataset !== currentDataset) {
+    await loadDataset(view.metadata.dataset);
+    if (datasetSelect) datasetSelect.value = view.metadata.dataset;
+  }
+  setRepresentation(view.representation_id);
+  currentMetric = view.metric_id;
+  metricSelect.value = currentMetric;
+  currentK = view.k;
+  kSlider.value = currentK;
+  kValLabel.textContent = currentK;
+
+  if (fixtureData) {
+    const idx = fixtureData.object_ids.indexOf(view.target_id);
+    if (idx !== -1) {
+      selectPoint(idx);
+    }
+  }
+}
+
+function renderAtlasList() {
+  if (!atlasList) return;
+  if (savedViews.length === 0) {
+    atlasList.innerHTML = '<p class="panel-hint">No saved views yet.</p>';
+    return;
+  }
+
+  atlasList.innerHTML = savedViews
+    .map(v => `
+      <div class="atlas-card" data-id="${v.id}">
+        <div class="atlas-card-header">
+          <span class="atlas-card-title">${escapeHtml(v.name)}</span>
+          <button class="btn-delete-view" data-id="${v.id}" title="Delete view">✕</button>
+        </div>
+        <div class="atlas-card-meta">${v.representation_id} · ${v.metric_id} · k=${v.k} · ${v.target_id}</div>
+        ${v.note ? `<div class="atlas-card-note">${escapeHtml(v.note)}</div>` : ""}
+      </div>
+    `).join("");
+
+  atlasList.querySelectorAll(".atlas-card").forEach(card => {
+    card.addEventListener("click", () => {
+      const vId = card.getAttribute("data-id");
+      const found = savedViews.find(sv => sv.id === vId);
+      if (found) restoreSavedView(found);
+    });
+  });
+
+  atlasList.querySelectorAll(".btn-delete-view").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      const vId = btn.getAttribute("data-id");
+      deleteSavedView(vId, e);
+    });
+  });
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 // ─── Scatter renderer ─────────────────────────────────────────────────────────
 
 function getCoords() {
+  if (!fixtureData) return [];
+  if (fixtureData.catalog && fixtureData.catalog[currentViewId]) {
+    return fixtureData.catalog[currentViewId].coords;
+  }
   return fixtureData.representations[currentRep].coords;
 }
 
 function computeScale(coords) {
+  if (!coords || coords.length === 0) return { toScreen: () => [0, 0], pad: 48, w: 500, h: 500 };
   const xs     = coords.map(c => c[0]);
   const ys     = coords.map(c => c[1]);
   const minX   = Math.min(...xs), maxX = Math.max(...xs);
@@ -186,9 +547,10 @@ function computeScale(coords) {
   const w      = canvas.width  - pad * 2;
   const h      = canvas.height - pad * 2;
 
-  const scale = Math.min(w / rangeX, h / rangeY) * 0.82;
-  const cx    = (minX + maxX) / 2;
-  const cy    = (minY + maxY) / 2;
+  const baseScale = Math.min(w / rangeX, h / rangeY) * 0.82;
+  const scale     = baseScale * zoomLevel;
+  const cx        = (minX + maxX) / 2 - (panOffsetX / scale);
+  const cy        = (minY + maxY) / 2 + (panOffsetY / scale);
 
   return {
     toScreen: (x, y) => [
@@ -204,11 +566,10 @@ function renderScatter() {
 
   const coords = getCoords();
   const colors = fixtureData.colors;
-  const sc     = computeScale(coords);
   const dpr    = window.devicePixelRatio || 1;
 
   const wrap  = document.getElementById("canvas-wrap");
-  const size  = Math.min(wrap.clientWidth, wrap.clientHeight, 580);
+  const size  = Math.min(wrap.clientWidth - 16, wrap.clientHeight - 16);
   canvas.style.width  = size + "px";
   canvas.style.height = size + "px";
   canvas.width  = size * dpr;
@@ -233,7 +594,7 @@ function renderScatter() {
     ctx.beginPath(); ctx.moveTo(sc2.pad, gy); ctx.lineTo(sc2.pad + sc2.w, gy); ctx.stroke();
   }
 
-  // Axis labels
+  // Axis labels & zoom indicator
   ctx.font      = "10px 'JetBrains Mono', monospace";
   ctx.fillStyle = "rgba(148,163,184,0.5)";
   ctx.textAlign = "center";
@@ -244,16 +605,25 @@ function renderScatter() {
   ctx.fillText("PC2 ↑", 0, 0);
   ctx.restore();
 
+  // Zoom indicator label at bottom left
+  if (zoomLevel !== 1.0) {
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#34d399";
+    ctx.fillText(`${zoomLevel.toFixed(1)}x Zoom`, 48, H - 10);
+  }
+
   // Rep label
   ctx.font      = "11px Inter, sans-serif";
   ctx.fillStyle = "rgba(148,163,184,0.4)";
   ctx.textAlign = "right";
-  ctx.fillText(currentRep.replace("_", " "), W - 12, H - 10);
+  ctx.fillText(`${currentViewId} · ${currentRep.replace("_", " ")}`, W - 12, H - 10);
 
-  // Simplex structure lines
-  drawSimplexEdges(coords, sc2);
+  // Simplex structure lines (if 3-class calibration)
+  if (coords.length === 15) {
+    drawSimplexEdges(coords, sc2);
+  }
 
-  // Diagnostic overlay lines from selected point
+  // Diagnostic overlay lines & neighbor rings from selected point
   if (selectedIdx !== null && diagResult) {
     drawDiagnosticOverlay(coords, sc2);
   }
@@ -261,6 +631,10 @@ function renderScatter() {
   // Draw points
   for (let i = 0; i < coords.length; i++) {
     const [sx, sy] = sc2.toScreen(coords[i][0], coords[i][1]);
+
+    // Skip points out of view bounds
+    if (sx < -20 || sx > W + 20 || sy < -20 || sy > H + 20) continue;
+
     const isSelected = i === selectedIdx;
     const isHovered  = i === hoveredIdx;
     const r    = isSelected ? POINT_RADIUS_SELECT : (isHovered ? POINT_RADIUS_HOVER : POINT_RADIUS);
@@ -286,7 +660,7 @@ function renderScatter() {
 
   // ID label on hover or select
   const activeIdx = hoveredIdx !== null ? hoveredIdx : selectedIdx;
-  if (activeIdx !== null) {
+  if (activeIdx !== null && activeIdx < coords.length) {
     const [sx, sy] = sc2.toScreen(coords[activeIdx][0], coords[activeIdx][1]);
     const id = fixtureData.object_ids[activeIdx];
     ctx.font      = "10px 'JetBrains Mono', monospace";
@@ -313,18 +687,19 @@ function drawSimplexEdges(coords, sc) {
 }
 
 function drawDiagnosticOverlay(coords, sc) {
+  if (!diagResult || selectedIdx >= coords.length) return;
   const [srcX, srcY] = sc.toScreen(coords[selectedIdx][0], coords[selectedIdx][1]);
   const idToIdx = new Map(fixtureData.object_ids.map((id, idx) => [id, idx]));
 
-  // Helper to draw link line
+  // Draw overlay lines
   const drawLink = (targetId, color, dashPattern) => {
     const tIdx = idToIdx.get(targetId);
-    if (tIdx === undefined) return;
+    if (tIdx === undefined || tIdx >= coords.length) return;
     const [tx, ty] = sc.toScreen(coords[tIdx][0], coords[tIdx][1]);
 
     ctx.save();
     ctx.strokeStyle = color;
-    ctx.lineWidth   = 2.0;
+    ctx.lineWidth   = 2.5;
     ctx.setLineDash(dashPattern);
     ctx.beginPath();
     ctx.moveTo(srcX, srcY);
@@ -333,27 +708,64 @@ function drawDiagnosticOverlay(coords, sc) {
     ctx.restore();
   };
 
-  // Preserved (Solid Green)
+  // Draw neighbor halos / rings around target points so overlay is visible even for overlapping cluster points
+  const drawNeighborRing = (targetId, color, ringRadius) => {
+    const tIdx = idToIdx.get(targetId);
+    if (tIdx === undefined || tIdx >= coords.length) return;
+    const [tx, ty] = sc.toScreen(coords[tIdx][0], coords[tIdx][1]);
+
+    ctx.save();
+    ctx.shadowColor = color;
+    ctx.shadowBlur  = 12;
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = 2.0;
+    ctx.beginPath();
+    ctx.arc(tx, ty, ringRadius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  };
+
   diagResult.preserved.forEach(id => drawLink(id, "#34d399", []));
-
-  // Torn (Dashed Red)
   diagResult.torn.forEach(id => drawLink(id, "#f87171", [6, 4]));
-
-  // False (Dotted Amber)
   diagResult.false_neighbors.forEach(id => drawLink(id, "#fbbf24", [2, 3]));
+
+  diagResult.preserved.forEach(id => drawNeighborRing(id, "#34d399", 12));
+  diagResult.torn.forEach(id => drawNeighborRing(id, "#f87171", 14));
+  diagResult.false_neighbors.forEach(id => drawNeighborRing(id, "#fbbf24", 14));
 }
 
-// ─── Canvas interaction ───────────────────────────────────────────────────────
+// ─── Canvas interaction & Pan ─────────────────────────────────────────────────
 
 function initCanvasInteraction() {
   canvas.addEventListener("mousemove", onMouseMove);
   canvas.addEventListener("mouseleave", () => {
+    isPanning = false;
     hoveredIdx = null;
     tooltip.classList.add("hidden");
     renderScatter();
   });
+  canvas.addEventListener("mousedown", onMouseDown);
+  canvas.addEventListener("mouseup", onMouseUp);
   canvas.addEventListener("click", onMouseClick);
   window.addEventListener("resize", () => renderScatter());
+}
+
+function onMouseDown(e) {
+  // If clicking background or holding Shift, initiate pan
+  const idx = getHitIndex(e.clientX, e.clientY);
+  if (idx === null || e.shiftKey || e.button === 1) {
+    isPanning  = true;
+    startPanX  = e.clientX - panOffsetX;
+    startPanY  = e.clientY - panOffsetY;
+    canvas.style.cursor = "grabbing";
+  }
+}
+
+function onMouseUp() {
+  if (isPanning) {
+    isPanning = false;
+    canvas.style.cursor = "crosshair";
+  }
 }
 
 function getHitIndex(clientX, clientY) {
@@ -376,6 +788,13 @@ function getHitIndex(clientX, clientY) {
 }
 
 function onMouseMove(e) {
+  if (isPanning) {
+    panOffsetX = e.clientX - startPanX;
+    panOffsetY = e.clientY - startPanY;
+    renderScatter();
+    return;
+  }
+
   const idx = getHitIndex(e.clientX, e.clientY);
   if (idx !== hoveredIdx) {
     hoveredIdx = idx;
@@ -400,6 +819,7 @@ function onMouseMove(e) {
 }
 
 function onMouseClick(e) {
+  if (isPanning) return;
   const idx = getHitIndex(e.clientX, e.clientY);
   if (idx === null) return;
   selectPoint(idx);
@@ -414,16 +834,23 @@ function selectPoint(idx) {
 // ─── Source inspector ─────────────────────────────────────────────────────────
 
 function updateInspector(idx) {
-  const id     = fixtureData.object_ids[idx];
-  const raw    = fixtureData.raw_matrix[idx];
-  const coords = getCoords()[idx];
+  if (!fixtureData || idx >= fixtureData.object_ids.length) return;
+  const id        = fixtureData.object_ids[idx];
+  const raw       = fixtureData.raw_matrix[idx];
+  const coords    = getCoords()[idx];
+  const featNames = fixtureData.feature_names || raw.map((_, i) => `class_${i}`);
+  const dl        = document.getElementById("inspector-list");
 
-  document.getElementById("insp-id").textContent  = id;
-  document.getElementById("insp-p0").textContent  = raw[0].toFixed(4);
-  document.getElementById("insp-p1").textContent  = raw[1].toFixed(4);
-  document.getElementById("insp-p2").textContent  = raw[2].toFixed(4);
-  document.getElementById("insp-pc1").textContent = coords[0].toFixed(4);
-  document.getElementById("insp-pc2").textContent = coords[1].toFixed(4);
+  let html = `<dt>Object ID</dt><dd class="highlight">${escapeHtml(id)}</dd>`;
+  featNames.forEach((name, i) => {
+    const val = raw[i] !== undefined ? raw[i].toFixed(4) : "—";
+    html += `<dt>${escapeHtml(name)}</dt><dd>${val}</dd>`;
+  });
+  if (coords) {
+    html += `<dt>PC1</dt><dd>${coords[0].toFixed(4)}</dd>`;
+    html += `<dt>PC2</dt><dd>${coords[1].toFixed(4)}</dd>`;
+  }
+  dl.innerHTML = html;
 }
 
 // ─── Go ───────────────────────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
-"""shadowspace.models — Pydantic schemas for the Shadowspace domain model and bundle manifest."""
+"""shadowspace.models — Pydantic schemas for the Shadowspace domain model, investigation records, and bundle manifest."""
 
+from shadowspace.models.investigation import InvestigationRecord, SavedView
 from shadowspace.models.schemas import (
     BundleManifest,
     DiagnosticSpec,
@@ -18,10 +19,12 @@ __all__ = [
     "BundleManifest",
     "DiagnosticSpec",
     "DisplayTransform",
+    "InvestigationRecord",
     "MetricSpec",
     "ObjectTableSpec",
     "PathSpec",
     "RepresentationSpec",
+    "SavedView",
     "SourceObject",
     "TransformProvenance",
     "ViewSpec",
