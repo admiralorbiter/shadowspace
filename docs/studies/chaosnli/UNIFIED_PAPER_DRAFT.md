@@ -7,7 +7,7 @@
 
 ## Abstract
 
-Human NLI annotations can exhibit persistent and substantively meaningful variation, alongside annotation error. Conventional majority-label evaluation ignores this variation. We study whether collective human disagreement, encoded as vote distributions over semantic labels, forms a reproducible relational structure that NLI models recover. Methodologically, we demonstrate that standard fixed-$k$ nearest-neighbor graphs are unstable under distance ties ($0.9074 \pm 0.0024$ top-$k$ overlap under array re-indexing; 62.1% of items affected), whereas our fractional soft-overlap statistic $Q_{NX}^{\text{soft}}(k)$ is strictly invariant (maximum absolute difference $0.0000$). We formalize a three-quantity tie-aware framework ($Q_{\text{strict}} \le Q_{\text{expected}} \le Q_{\text{fuzzy}}$) and prove six core theoretical properties. Empirically, across $N=3,113$ ChaosNLI items under a fully paired design where both model and human scores are evaluated against identical posterior-predictive cohorts, benchmark NLI models recover substantially less human-opinion neighborhood structure than human replicates (BART-Large paired mean $0.01572$ vs. human reference $0.07549$, 95% CI $[0.07000, 0.08099]$; mean difference $\Delta_m = 0.05977$, 95% CI $[0.05431, 0.06539]$). Fixed-reference baseline scores ($0.01617$ full-data, $0.01867$ bootstrap mean) achieve a chance-adjusted ratio of $9.6\%$. Plug-in empirical reference similarity $R_{\text{reference}}(n, k)$ increases monotonically with annotation depth across all neighborhood scales examined. Multi-regime Dirichlet simulations confirm that empirical ChaosNLI boundary-tie prevalence ($72.4\%$) is close to the tested $\alpha=0.1$ concentrated regime on this summary statistic. A secondary exploratory test on matched VariErr items is inconclusive ($p = 0.2045$).
+Human NLI annotations can exhibit persistent and substantively meaningful variation, alongside annotation error. Conventional majority-label evaluation ignores this variation. We study whether collective human disagreement, encoded as vote distributions over semantic labels, forms a reproducible relational structure that NLI models recover. Methodologically, we demonstrate that standard fixed-$k$ nearest-neighbor graphs are unstable under distance ties ($0.9074 \pm 0.0024$ top-$k$ overlap under array re-indexing; 62.1% of items affected), whereas our fractional soft-overlap statistic $Q_{NX}^{\text{soft}}(k)$ is strictly invariant (maximum absolute difference $0.0000$). We formalize a three-quantity tie-aware framework ($Q_{\text{strict}} \le Q_{\text{expected}} \le Q_{\text{fuzzy}}$) and prove six core theoretical properties. Empirically, across $N=3,113$ ChaosNLI items under a fully paired design where both model and human scores are evaluated against identical posterior-predictive cohorts, benchmark NLI models recover substantially less human-opinion neighborhood structure than human replicates (BART-Large paired mean $0.01572$ vs. posterior-predictive human benchmark $0.0755$, mean difference $\Delta_m = 0.05977$, 95% CI $[0.05431, 0.06539]$; all 1,000 bootstrap replicates show $\Delta_m > 0$). Plug-in empirical reference similarity $R_{\text{reference}}(n, k)$ increases monotonically with annotation depth, from $0.0109$ at $n=3$ to $0.5376$ at $n=100$ for $k=100$. Multi-regime Dirichlet simulations confirm that empirical ChaosNLI boundary-tie prevalence ($72.4\%$) is close to the tested $\alpha=0.1$ concentrated regime on this summary statistic.
 
 ---
 
@@ -35,15 +35,15 @@ Nonlinear dimensionality reduction and manifold learning rely on rank-based neig
 
 Our tie-aware relational framework connects to three broader lines of research:
 
-1. **Uncertain Nearest-Neighbor Search**: In stochastic data settings, pairwise distances are accessed through noisy estimates. Our setting frames annotation acquisition as reducing neighborhood uncertainty, previewing the posterior uncertain graph membership probability $s_{ij} = P(j \in N_k(i) \mid \text{votes})$.
-2. **Fuzzy Human-Label Evaluation**: Recent human label variation (HLV) research uses fuzzy set operations for item-level evaluation. We extend fuzzy evaluation from individual labels attached to single examples to relational neighborhoods induced among empirical label distributions.
-3. **Graph Estimator Stability**: Following graph perturbation analyses (e.g., Mapper algorithm instability), we treat variability in a derived neighborhood graph as an informative property of empirical opinion spaces rather than an implementation artifact.
+1. **Uncertain Nearest-Neighbor Search**: In stochastic data settings, pairwise distances are accessed through noisy estimates (Mason et al., 2019). Our setting frames annotation acquisition as reducing neighborhood uncertainty, previewing the posterior uncertain graph membership probability $s_{ij} = P(j \in N_k(i) \mid \text{votes})$.
+2. **Fuzzy Human-Label Evaluation**: Recent human label variation (HLV) research uses fuzzy set operations and soft labels for evaluation (Uma et al., 2021). We extend fuzzy evaluation from individual labels attached to single examples to relational neighborhoods induced among empirical label distributions.
+3. **Graph Estimator Stability**: Following graph perturbation analyses (e.g., Mapper algorithm instability; Chazal and Michel, 2021), we treat variability in a derived neighborhood graph as an informative property of empirical opinion spaces rather than an implementation artifact.
 
 Tied-rank correlations (Kendall's $\tau_b$, Spearman's $\rho$ with tie corrections) handle discrete ties in linear rankings but do not extend to multiscale set-based $k$-nearest-neighbor graphs. Fuzzy set theory (Zadeh, 1965) models partial set membership using minimum operators ($\min(w_A, w_B)$). In statistical geometry, compositional data (Aitchison, 1982) and information geometry (Amari, 2000; Endres and Schindelin, 2003) provide metric distances for probability simplices (Hellinger, Jensen–Shannon). We synthesize co-ranking, fuzzy-set membership, and information geometry into a tie-aware neighborhood framework.
 
 ### 2.3 Human Disagreement in NLI and Finite-Rater Reliability
 
-Pavlick and Kwiatkowski (2019) established that NLI disagreement reflects genuine interpretive variation. Nie et al. (2020; ChaosNLI) and Plank (2022) argued majority-vote calibration is ill-defined under label variation. Gruber et al. (2024) demonstrated that annotation depth better recovers latent class boundaries than breadth. Weber-Genzel et al. (2024; VariErr NLI) introduced 7,732 validity judgments over 500 re-annotated MNLI items to separate valid human variation from annotation error.
+Pavlick and Kwiatkowski (2019) established that NLI disagreement reflects genuine interpretive variation. Nie et al. (2020; ChaosNLI) and Plank (2022) argued majority-vote calibration is ill-defined under label variation. Baan et al. (2022) demonstrated that standard calibration metrics become unreliable when humans genuinely disagree. Gruber et al. (2024) demonstrated that annotation depth better recovers latent class boundaries than breadth. Weber-Genzel et al. (2024; VariErr NLI) introduced 7,732 validity judgments over 500 re-annotated MNLI items to separate valid human variation from annotation error.
 
 ---
 
@@ -111,7 +111,7 @@ We evaluate nine benchmark NLI models against 500 posterior-predictive simulatio
 
 **Table 2: Benchmark NLI Model Overlap Scores Under Fully Paired Estimand ($k=10$)**
 
-| Model | Paired Score $M_{m,b}$ | Mean $\Delta_m$ (vs. Paired HH100) | 95% Joint Bootstrap CI | Replicates $\Delta_m > 0$ | Fixed Reference $Q(G_m, G_{100}^{\text{obs}})$ |
+| Model | Paired Score $M_{m,b}$ | Mean $\Delta_m$ (vs. Paired HH100) | 95% Joint Bootstrap CI | Replicates $\Delta_m > 0$ | Fixed-ref. focal-bootstrap mean$^\dagger$ |
 |---|---|---|---|---|---|
 | BART-Large | **0.01572** | **0.05977** | [0.05431, 0.06539] | 1,000 / 1,000 | 0.01867 |
 | RoBERTa-Large | **0.01415** | **0.06135** | [0.05557, 0.06685] | 1,000 / 1,000 | 0.01821 |
@@ -129,6 +129,8 @@ $$H_b = \frac{1}{|\mathbf{b}|}\sum_{i \in \mathbf{b}} Q_{\text{fuzzy, item}}\!\l
 $$M_{m,b} = \frac{1}{|\mathbf{b}|}\sum_{i \in \mathbf{b}} \frac{1}{2}\left[Q_{\text{fuzzy, item}}\!\left(G_m, G_{H1}^{(s)}\right) + Q_{\text{fuzzy, item}}\!\left(G_m, G_{H2}^{(s)}\right)\right]$$
 $$\Delta_{m,b} = H_b - M_{m,b}$$
 Both human reliability $H_b$ and model score $M_{m,b}$ evaluate against the exact same two simulated posterior cohorts. Given the same simulated human cohorts, models resemble those cohorts substantially less than the cohorts resemble one another.
+
+$^\dagger$ *Fixed-ref. focal-bootstrap mean*: The focal-item bootstrap resamples which items contribute to the mean while holding the reference graph $G_{100}^{\text{obs}}$ fixed, yielding a bootstrap-mean fixed-reference score (e.g., $0.01867$ for BART-Large) that differs from the full-data fixed-reference score ($0.01617$). The ~15% upward shift reflects which items are upweighted in the bootstrap distribution relative to the full-data average.
 
 *Bootstrap Scope Statement*: The bootstrap estimates sampling variation across focal items within the fixed ChaosNLI candidate population. It does not reconstruct the neighbor graph from resampled rows or estimate uncertainty over an unselected NLI population. Edge contributions are non-independent through shared candidate nodes; this limitation is unlikely to alter the qualitative finding given the size of the observed gap.
 
@@ -274,7 +276,7 @@ VariErr NLI (Weber-Genzel et al., 2024) matches 500 items to ChaosNLI-M via `sou
 7. **Unobserved Disagreement Drivers**: Level-1 vote profiles describe label frequencies but do not reveal underlying linguistic or cognitive causes of disagreement.
 8. **VariErr Sample Constraints**: External validity test is restricted to 500 items across 52 multi-item profiles, limiting statistical power for subtle profile-level effects.
 9. **Relational Agreement vs. Ground Truth**: High neighborhood preservation indicates structural alignment with human opinion topology, not absolute semantic correctness.
-10. **Mixed Estimand Design**: The model–human benchmark uses an asymmetric design: $H_b$ is computed between two independent posterior cohorts, while $M_{m,b}$ compares the model against the single fixed observed graph. This means the reference ceiling and model floor use different comparison constructions; a fully paired design remains future work.
+10. **Conditional Candidate Graph**: The paired bootstrap resamples focal-item contributions while holding the full candidate graph $G_{100}^{\text{obs}}$ fixed. It therefore estimates focal-item variation within the selected ChaosNLI population rather than uncertainty from reconstructing the candidate graph itself.
 11. **Bootstrap Edge Non-Independence**: Focal-item resampling treats per-item overlaps as exchangeable, but edges in the neighbor graph are non-independent (shared candidate nodes). Confidence intervals should be interpreted as approximations.
 12. **Single-Seed Reference Surface**: Each cell of $R_{\text{reference}}(n, k)$ is a single-seed simulation draw. Multi-seed replication with uncertainty intervals is pending.
 
@@ -291,6 +293,7 @@ We have presented a tie-aware computational study of human collective NLI opinio
 Aitchison, J. (1982). The statistical analysis of compositional data. *JRSS B, 44*(2), 139–177.  
 Amari, S. (2000). Methods of information geometry. *AMS*.  
 Baan, J. et al. (2022). Stop measuring calibration when humans disagree. *EMNLP 2022*.  
+Chazal, F., & Michel, B. (2021). An introduction to topological data analysis: Fundamental and practical aspects for data scientists. *Frontiers in Artificial Intelligence, 4*, 667963.  
 Chen, L., & Buja, A. (2009). Local multidimensional scaling for nonlinear dimension reduction, graph drawing, and proximity analysis. *Journal of the American Statistical Association, 104*(485), 209–219.  
 Endres, D.M., & Schindelin, J.E. (2003). A new metric for probability distributions. *IEEE TIT, 49*(7), 1858–1860.  
 Gruber, N. et al. (2024). More labels or cases? Assessing label variation in NLI.  
@@ -298,9 +301,11 @@ Jiang, M., & de Marneffe, M.-C. (2022). Investigating reasons for disagreement i
 Lee, J.A., & Verleysen, M. (2008). Quality assessment of nonlinear dimensionality reduction based on K-ary neighborhoods. *PMLR, 4*, 21–35.  
 Lee, J.A., & Verleysen, M. (2009). Quality assessment of dimensionality reduction: Rank-based criteria. *Neurocomputing, 72*, 1431–1443.  
 Lueks, W. et al. (2011). How to evaluate dimensionality reduction? Improving co-ranking matrix analysis. *ESANN 2011*.  
+Mason, B., Tripathy, A., & Nowak, R. (2019). Learning nearest neighbor graphs from noisy distance samples. *NeurIPS 2019*.  
 Nie, Y., Zhou, X., & Bansal, M. (2020). What can we learn from collective human opinions on NLI data? *EMNLP 2020*.  
 Pavlick, E., & Kwiatkowski, T. (2019). Inherent disagreements in human textual inferences. *TACL, 7*, 677–694.  
 Plank, B. (2022). The "problem" of human label variation. *EMNLP 2022*.  
+Uma, A.N., Fornaciari, T., Hovy, D., Paun, S., Plank, B., & Poesio, M. (2021). Learning from disagreement: A survey. *Journal of Artificial Intelligence Research, 72*, 1385–1470.  
 Wang, et al. (2022). Capture human disagreement distributions by calibrated networks. *EMNLP 2022*.  
 Weber-Genzel, S., Peng, S., de Marneffe, M.-C., & Plank, B. (2024). VariErr NLI: Separating annotation error from human label variation. *ACL 2024*.  
 Zadeh, L.A. (1965). Fuzzy sets. *Information and Control, 8*(3), 338–353.  

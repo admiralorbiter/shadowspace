@@ -30,6 +30,18 @@
 
 ---
 
+## Quick Summary (5-minute read)
+
+**What we asked**: Do AI language models organize ambiguous language examples into the same relational patterns that people do?
+
+**What we found**: Human disagreement about ambiguous sentence pairs produces a structured—but noisy and scale-dependent—map of similarity. Standard nearest-neighbor software distorts this map silently, because tied distances occur for 72.4% of items and the software resolves ties using file row order. Our tie-aware framework is provably invariant to row order. Under a fully paired comparison against the same simulated human cohorts, benchmark NLI models recover roughly 17–21% of human replicate overlap—substantially below the posterior-predictive human reference of ~0.0755.
+
+**Why it matters**: Evaluation methods that ignore distance ties are non-reproducible across data orderings. Models that match majority labels can still organize the opinion space very differently from human populations.
+
+**What we did not prove**: We do not identify which annotator is correct, why specific items are disputed, or that human opinion topology is the right target for all engineering applications.
+
+---
+
 ## 1. What Problem Is This Research Trying to Solve?
 
 Most language model evaluations evaluate **one example at a time**.
@@ -55,7 +67,7 @@ However, when 100 people evaluate this exact sentence pair, their judgments look
 | **Neutral** | 70 votes | 70% |
 | **Contradiction** | 0 votes | 0% |
 
-Reducing this to a single label ("Neutral") discards the fact that **30% of human evaluators saw an entailment relationship**. That variation is not random noise—it reflects genuine ambiguity, implicit context, or differing cognitive interpretations.
+Reducing this to a single label ("Neutral") discards the fact that **30% of human evaluators saw an entailment relationship**. That variation may reflect genuine ambiguity, implicit context, differing interpretations, annotation error, or a mixture of these.
 
 ### The Research Question
 Instead of asking *"Does the AI get the majority label right?"*, this project asks:
@@ -88,11 +100,11 @@ $$\mathbf{p}_i = \left( \frac{\text{votes}_E}{100}, \frac{\text{votes}_N}{100}, 
 - **Human Votes**: **30 Entailment, 70 Neutral, 0 Contradiction** $\rightarrow \mathbf{p} = (0.30, 0.70, 0.00)$
 - *Interpretation*: 70% feel "blue jerseys" doesn't guarantee they are at a ballgame (Neutral), while 30% infer from the jerseys that they are kids at a ballgame (Entailment).
 
-#### 3. Near-Equal Three-Way Disagreement Item (`chaosnli_snli_3271178748`)
+#### 3. Near-Even Three-Way Disagreement Item (`chaosnli_snli_3271178748`)
 - **Premise**: *"Number 13 kicks a soccer ball towards the goal during children's soccer game."*
 - **Hypothesis**: *"A player passing the ball in a soccer game."*
 - **Human Votes**: **36 Entailment, 33 Neutral, 31 Contradiction** $\rightarrow \mathbf{p} = (0.36, 0.33, 0.31)$
-- *Interpretation*: Complete 3-way human split! Some see kicking towards goal as passing (Entailment), some see it as ambiguous (Neutral), and others argue shooting on goal is mutually exclusive with passing (Contradiction).
+- *Possible interpretation*: A near-even three-way split. Some may see kicking towards the goal as consistent with passing (Entailment), some may find the action ambiguous (Neutral), and others may read shooting on goal as mutually exclusive with passing (Contradiction).
 
 > [!IMPORTANT]
 > **Sample Scope**: ChaosNLI specifically targets items with low initial annotator agreement. The results describe a selected population of disputed NLI examples and should not be assumed to apply uniformly to easy, clear-cut language items.
@@ -108,7 +120,9 @@ We measure distance between two items $i$ and $j$ using **Hellinger distance**:
 $$d_H(\mathbf{p}_i, \mathbf{p}_j) = \sqrt{\frac{1}{2} \sum_{c \in \{E,N,C\}} \left( \sqrt{p_{i,c}} - \sqrt{p_{j,c}} \right)^2}$$
 
 - Item A $(0.30, 0.70, 0.00)$ and Item B $(0.33, 0.67, 0.00)$ have a tiny distance ($d_H = 0.0228$). They are **nearest neighbors** on the human opinion map.
-- Item C $(0.98, 0.02, 0.00)$ is far away from Item A and B ($d_H \approx 0.76$).
+- Item C $(0.98, 0.02, 0.00)$ is far away from Item A and B ($d_H \approx 0.583$).
+
+> *Calculation check for Item C*: $d_H = \frac{1}{\sqrt{2}}\sqrt{(\sqrt{0.30}-\sqrt{0.98})^2 + (\sqrt{0.70}-\sqrt{0.02})^2 + 0^2} \approx \frac{1}{\sqrt{2}}\sqrt{0.1295 + 0.5222} \approx \frac{1}{\sqrt{2}}\sqrt{0.6517} \approx 0.583$
 
 ```
 [ Human Opinion Map ]
@@ -177,7 +191,7 @@ Votes:      (33 E, 67 N, 0 C)  -->  d_H = 0.02284
 ### The Arbitrary Storage-Order Failure
 We need **10 neighbors total**. Since 9 items are strictly closer, we only have **1 remaining slot** ($r_i = 10 - 9 = 1$). But we have **7 tied candidates** ($|B_i| = 7$).
 
-- **Standard Nearest Neighbor Software** (`scikit-learn`, `np.argsort`): Arbitrarily selects **Candidate 62** simply because Candidate 62 appeared earlier in the CSV file row index. If you sort your CSV file alphabetically or shuffle the rows, the software picks Candidate 74 or 194 instead!
+- **Standard Nearest Neighbor Software** (`scikit-learn`, `np.argsort`): In this run, the implementation selected **Candidate 62**. Because NumPy's default sort is not guaranteed to preserve the original row order among tied values, reordering the rows of the dataset can cause another equally valid tied candidate (Candidate 74, 194, etc.) to be selected instead.
 - **Our Tie-Aware Solution**: Assigns each of the 7 tied candidates an exact, reproducible fractional weight:
 
 $$w_{ij} = \frac{r_i}{|B_i|} = \frac{1}{7} \approx 0.14286$$
@@ -222,7 +236,7 @@ Across 500 simulated human-human pairs, average fuzzy overlap is:
 $$E[Q_{\text{fuzzy}}(G_{H1}, G_{H2})] = 0.07549 \quad (95\% \text{ CI: } [0.07000, 0.08099])$$
 
 > [!NOTE]
-> **Why is 0.07549 not 1.0?** Exact 10-nearest-neighbor recovery across 3,113 items is a strict metric. Small sampling fluctuations in vote counts shift ranks at the boundary. The key is that **0.07549 represents the true human-to-human replication ceiling**.
+> **Why is 0.07549 not 1.0?** Exact 10-nearest-neighbor recovery across 3,113 items is a strict metric. Small sampling fluctuations in vote counts shift ranks at the boundary. The value **0.07549 is the posterior-predictive human replicate reference** — the average fuzzy overlap between two independent cohorts of 100 simulated human votes — under this dataset, prior, and distance metric.
 
 ---
 
@@ -237,7 +251,7 @@ Both model and human scores are evaluated **symmetrically against the exact same
 
 ### Complete Benchmark Results ($k=10$, Hellinger Distance)
 
-| Model Architecture | Paired Score $M_{m,b}$ | Model Gap $\Delta_m$ (vs. Human Ceiling) | 95% Joint Bootstrap CI | Replicates $\Delta_m > 0$ | Fixed Reference $Q(G_m, G_{100}^{\text{obs}})$ |
+| Model Architecture | Paired Score $M_{m,b}$ | Model Gap $\Delta_m$ (vs. Human Replicate Reference) | 95% Joint Bootstrap CI | Replicates $\Delta_m > 0$ | Fixed-ref. focal-bootstrap mean |
 |---|---|---|---|---|---|
 | **BART-Large** | **0.01572** | **0.05977** | [0.05431, 0.06539] | 1,000 / 1,000 | 0.01867 |
 | **RoBERTa-Large** | **0.01415** | **0.06135** | [0.05557, 0.06685] | 1,000 / 1,000 | 0.01821 |
@@ -248,10 +262,10 @@ Both model and human scores are evaluated **symmetrically against the exact same
 | **XLNet-Base** | **0.00927** | **0.06623** | [0.06069, 0.07175] | 1,000 / 1,000 | 0.00893 |
 | **DistilBERT** | **0.00854** | **0.06695** | [0.06124, 0.07261] | 1,000 / 1,000 | 0.00854 |
 | **BERT-Base** | **0.00768** | **0.06782** | [0.06235, 0.07356] | 1,000 / 1,000 | 0.00865 |
-| **HH100 Reference (Human Ceiling)** | **0.07549** | — | **[0.07000, 0.08099]** | — | — |
+| **HH100 Reference (Human Replicate Reference)** | **0.07549** | — | **[0.07000, 0.08099]** | — | — |
 
 ```
-Human Replicate Ceiling (0.07549)  ========================================|
+Human Replicate Reference (0.07549)  ========================================|
                                                                            | Gap = 0.05977
 BART-Large Paired Score (0.01572)  ========|                               |
 BERT-Base Paired Score  (0.00768)  ====|                                   |
@@ -259,7 +273,7 @@ Random Chance Null      (0.00321)  =|                                      |
 ```
 
 ### Key Takeaway
-Top-performing models (BART-Large at $0.01572$) achieve a chance-adjusted ratio of only **9.6%** relative to human cohort replication. Models are significantly closer to random chance ($0.00321$) than to human collective opinion alignment.
+Top-performing models (BART-Large at $0.01572$) achieve a raw paired ratio of approximately **20.8%** relative to the posterior-predictive human reference ($0.01572 / 0.07549 \approx 0.208$), or a chance-adjusted ratio of approximately **17.3%** after subtracting the theoretical chance baseline ($[0.01572 - 0.00321] / [0.07549 - 0.00321] \approx 0.173$). Models are substantially closer to random chance ($0.00321$) than to human collective opinion alignment.
 
 ---
 
@@ -372,7 +386,7 @@ A text-space tie-breaker slightly improves heuristic taxonomy retrieval (MAP@10 
 
 1. **Diagnosing Storage-Order Instability**: Exposing that standard nearest-neighbor algorithms silently resolve distance ties using file row index, altering neighbor sets for $62.1\%$ of items.
 2. **Formalizing Tie-Aware Mathematics**: Proving $Q_{\text{strict}} \le Q_{\text{expected}} \le Q_{\text{fuzzy}} \le 1.0$ and establishing six core theoretical properties (fuzzy self-identity, row-permutation invariance, etc.).
-3. **Paired Relational Model Evaluation**: Evaluating whether AI models internalize the *relational topology of collective human judgment*, demonstrating a $9.6\%$ chance-adjusted recovery ratio.
+3. **Paired Relational Model Evaluation**: Evaluating whether AI models internalize the *relational topology of collective human judgment*, demonstrating a raw paired recovery of approximately $20.8\%$ (or $17.3\%$ chance-adjusted) relative to the posterior-predictive human replicate reference.
 4. **Multiscale Scale Dependence**: Disentangling volatile local microstructure ($k=5,10$) from stable regional mesostructure ($k=50,100$).
 
 ---
@@ -448,4 +462,4 @@ $$\mathbf{\text{Does the model organize uncertain examples into the same relatio
 
 The research finds that human disagreement creates a structured—but noisy and scale-dependent—relational space. Standard nearest-neighbor methods distort this space because distance ties are ubiquitous ($72.4\%$). Our tie-aware framework represents these ties explicitly and invariant to file row order.
 
-Under a fully paired experimental design, current benchmark language models recover only **$9.6\%$** of human-level relational structure. Human disagreement is not merely noise—it induces a rich relational topology that remains a key challenge for AI systems.
+Under a fully paired experimental design, current benchmark language models recover approximately **17–21%** of human replicate overlap in the opinion relational space. Human disagreement is not merely noise—it may induce a rich relational topology that remains a key challenge for AI systems. The tie-aware framework developed here provides a reproducible, storage-order-invariant foundation for studying these structures.

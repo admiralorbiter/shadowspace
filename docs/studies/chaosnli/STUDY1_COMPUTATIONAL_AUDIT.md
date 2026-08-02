@@ -99,7 +99,7 @@ For candidate weights $w_{ij}^A, w_{ij}^B \in [0, 1]$, we formalize three neighb
 
 ## 5. Reference Graph Similarity Surface $R_{\text{reference}}(n, k) = Q(G_n^{\text{rep}}, G_{100}^{\text{obs}})$
 
-*Notation*: $G_n^{\text{rep}}$ is an independent $n$-vote posterior-predictive draw; $G_{100}^{\text{obs}}$ is the empirical 100-vote observed graph. Because both are stochastic samples, $R(100, k) < 1.0$ by definition — this is reference graph *similarity*, not ground-truth *recovery*.
+*Notation*: $G_n^{\text{rep}}$ is an independent $n$-vote **plug-in empirical multinomial** draw, $\mathbf{y}_i \sim \text{Multinomial}(n, \hat{p}_i)$, using the observed vote proportions $\hat{p}_i$ (not a Dirichlet posterior-predictive sample); $G_{100}^{\text{obs}}$ is the empirical 100-vote observed graph. Because $G_n^{\text{rep}}$ is a stochastic sample, $R(100, k) < 1.0$ by definition — this is reference graph *similarity*, not ground-truth *recovery*.
 
 | Votes ($n$) | $k=5$ | $k=10$ | $k=20$ | $k=50$ | $k=100$ |
 |---|---|---|---|---|---|
