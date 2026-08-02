@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-from hypothesis import given
+from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 from numpy.typing import NDArray
 
@@ -112,6 +112,7 @@ def test_pairwise_euclidean_diagonal_is_exact_zero() -> None:
     np.testing.assert_array_equal(np.diag(d), 0.0)
 
 
+@settings(suppress_health_check=[HealthCheck.too_slow])
 @given(
     w0=st.floats(min_value=0.01, max_value=1.0),
     w1=st.floats(min_value=0.01, max_value=1.0),

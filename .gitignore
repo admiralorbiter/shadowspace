@@ -28,6 +28,10 @@ htmlcov/
 # Generated bundles (run `shadowspace generate` to recreate)
 data/bundles/
 
+# ChaosNLI raw data and artifacts
+data/chaosnli/
+research/chaosnli/artifacts/
+
 # Notebooks checkpoints
 .ipynb_checkpoints/
 

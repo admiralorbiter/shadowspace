@@ -12,6 +12,13 @@ from shadowspace.server import create_app
 
 @pytest.fixture()
 def client() -> FlaskClient:
+    from pathlib import Path
+    from shadowspace.datasets.fetchers.sklearn_datasets import fetch_dataset
+
+    bundle_path = Path("data/bundles/digits_10class")
+    if not bundle_path.exists():
+        fetch_dataset("digits_10class", "data/bundles", seed=42)
+
     app = create_app()
     app.config["TESTING"] = True
     with app.test_client() as c:

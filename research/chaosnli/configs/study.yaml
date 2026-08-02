@@ -1,0 +1,42 @@
+# Shadowspace ChaosNLI Research Study Configuration
+study_id: chaosnli-human-opinion-topology-v1
+version: 1.0.0
+created_at: 2026-08-01
+
+datasets:
+  - chaosnli_snli
+  - chaosnli_mnli
+
+exclude:
+  - alpha_nli
+
+paths:
+  raw_data_dir: data/chaosnli/raw
+  processed_data_dir: data/chaosnli/processed
+  artifacts_dir: research/chaosnli/artifacts
+  manifests_dir: research/chaosnli/manifests
+
+human_prior:
+  family: dirichlet
+  alpha: [0.5, 0.5, 0.5]
+
+posterior_draws: 2000
+
+metrics:
+  pointwise_primary: jensen_shannon
+  neighborhood_primary: hellinger
+  sensitivity:
+    - jensen_shannon
+    - total_variation
+    - euclidean
+    - aitchison_delta_1e-6
+
+k_values: [5, 10, 20, 50]
+primary_k: 10
+
+split_half:
+  repetitions: 1000
+  labels_per_half: 50
+
+random_seed: 20260801
+confirmatory_split_manifest: research/chaosnli/manifests/items.lock.parquet

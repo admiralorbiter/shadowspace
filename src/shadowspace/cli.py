@@ -134,6 +134,11 @@ def main(args: list[str] | None = None) -> int:
     ds_info = ds_subparsers.add_parser("info", help="Get details for a benchmark dataset")
     ds_info.add_argument("key", type=str, help="Dataset key")
 
+    # --- chaosnli ---
+    from shadowspace.chaosnli.cli import register_chaosnli_subparser
+
+    register_chaosnli_subparser(subparsers)
+
     parsed_args = parser.parse_args(args)
 
     if parsed_args.command == "generate":
@@ -256,6 +261,11 @@ def main(args: list[str] | None = None) -> int:
                 except Exception as err:
                     print(f"  [FAIL] {key}: {err}", file=sys.stderr)
             return 0
+
+    elif parsed_args.command == "chaosnli":
+        from shadowspace.chaosnli.cli import handle_chaosnli_command
+
+        return handle_chaosnli_command(parsed_args)
 
     return 0
 
