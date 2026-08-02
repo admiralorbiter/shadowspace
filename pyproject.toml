@@ -7,7 +7,7 @@ name = "shadowspace"
 version = "0.1.0"
 description = "Epistemic reliability during interactive high-dimensional visualization."
 requires-python = ">=3.12"
-license = { text = "Apache-2.0" }
+license = { text = "CC-BY-NC-4.0" }
 dependencies = [
     "dtour==0.4.4",
     "polars>=1.38.1",
