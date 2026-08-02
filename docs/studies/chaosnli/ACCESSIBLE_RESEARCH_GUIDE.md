@@ -34,11 +34,11 @@
 
 **What we asked**: Do AI language models organize ambiguous language examples into the same relational patterns that people do?
 
-**What we found**: Human disagreement about ambiguous sentence pairs produces a structured—but noisy and scale-dependent—map of similarity. Standard nearest-neighbor software distorts this map silently, because tied distances occur for 72.4% of items and the software resolves ties using file row order. Our tie-aware framework is provably invariant to row order. Under a fully paired comparison against the same simulated human cohorts, benchmark NLI models recover roughly 17–21% of human replicate overlap—substantially below the posterior-predictive human reference of ~0.0755.
+**What we found**: Human disagreement about ambiguous sentence pairs produces a structured—but noisy and scale-dependent—map of similarity. The index-resolved nearest-neighbor implementation tested here distorts this map silently, because tied distances occur for 72.4% of items and the implementation resolves ties using array storage order (different libraries may use different tie policies). Our tie-aware framework is provably invariant to row order. Under a fully paired comparison against the same simulated human cohorts, the nine evaluated NLI models recover roughly 17–21% of human replicate overlap—substantially below the posterior-predictive human reference of ~0.0755.
 
 **Why it matters**: Evaluation methods that ignore distance ties are non-reproducible across data orderings. Models that match majority labels can still organize the opinion space very differently from human populations.
 
-**What we did not prove**: We do not identify which annotator is correct, why specific items are disputed, or that human opinion topology is the right target for all engineering applications.
+**What we did not prove**: We do not identify which annotator is correct, why specific items are disputed, or that preserving human opinion neighborhood structure is required for all engineering applications.
 
 ---
 
@@ -72,7 +72,7 @@ Reducing this to a single label ("Neutral") discards the fact that **30% of huma
 ### The Research Question
 Instead of asking *"Does the AI get the majority label right?"*, this project asks:
 
-$$\mathbf{\text{Do AI models preserve the relational relationships among examples implied by human judgment distributions?}}$$
+$$\mathbf{\text{Do AI models preserve the relationships among examples implied by human judgment distributions?}}$$
 
 In plain language: **When humans judge two disputed items similarly, does the AI model also treat those items as near neighbors in its internal probability space?**
 
@@ -283,12 +283,12 @@ In earlier revisions of this research, model performance was evaluated asymmetri
 - $H_b = Q(G_{H1}^{(b)}, G_{H2}^{(b)})$ (human vs. posterior cohort)
 - $M_{m,b} = Q(G_m, G_{100}^{\text{obs}})$ (model vs. fixed observed graph)
 
-Our current **Round 12/13 baseline** resolves this asymmetry by adopting the **fully paired construction**:
+Our current baseline resolves this asymmetry by adopting the **fully paired construction**:
 
 $$M_{m,b} = \frac{1}{2}\left[Q(G_m, G_{H1}^{(b)}) + Q(G_m, G_{H2}^{(b)})\right]$$
 
-This allows us to make the clean, unassailable scientific statement:
-> *"Given the exact same simulated human cohorts, AI language models resemble those cohorts substantially less than the cohorts resemble one another."*
+This supports a cleaner, directly matched scientific comparison:
+> *"Given the exact same simulated human cohorts, the nine evaluated AI language models resemble those cohorts substantially less than the cohorts resemble one another."*
 
 ---
 
@@ -324,7 +324,7 @@ Out of $S = \binom{100+3-1}{3-1} = 5,151$ possible 3-class 100-vote profiles:
 - Expected occupied profiles under uniform occupancy: $\approx 2,337$
 - **Observed occupied profiles in ChaosNLI**: **1,604**
 
-Human response patterns are highly concentrated in specific recurring regions of the probability simplex, explaining the high tie prevalence ($72.4\%$).
+Human response patterns are highly concentrated in specific recurring regions of the probability simplex. This concentration is consistent with, and likely contributes to, the high observed tie prevalence ($72.4\%$); however, the simulations match only one summary statistic and do not uniquely identify a single generating distribution.
 
 ---
 
@@ -378,7 +378,7 @@ We evaluated operational case-routing categories combining model predictions, te
 | **Broadly Shared Relation** | 792 | 0.3% | Consensus reference edge |
 
 ### Retrieval Benchmark
-A text-space tie-breaker slightly improves heuristic taxonomy retrieval (MAP@10 $+0.00535$, $p \le 0.002$), but pure text embeddings discard opinion topology ($Q_{NX}^{\text{soft}} = 0.0041$). Text similarity and opinion similarity are complementary, non-interchangeable structures.
+A text-space tie-breaker slightly improves heuristic taxonomy retrieval (MAP@10 $+0.00535$, $p \le 0.002$), but pure text embeddings discard opinion neighborhood structure ($Q_{NX}^{\text{soft}} = 0.0041$). Text similarity and opinion similarity are complementary, non-interchangeable structures.
 
 ---
 
@@ -386,7 +386,7 @@ A text-space tie-breaker slightly improves heuristic taxonomy retrieval (MAP@10 
 
 1. **Diagnosing Storage-Order Instability**: Exposing that standard nearest-neighbor algorithms silently resolve distance ties using file row index, altering neighbor sets for $62.1\%$ of items.
 2. **Formalizing Tie-Aware Mathematics**: Proving $Q_{\text{strict}} \le Q_{\text{expected}} \le Q_{\text{fuzzy}} \le 1.0$ and establishing six core theoretical properties (fuzzy self-identity, row-permutation invariance, etc.).
-3. **Paired Relational Model Evaluation**: Evaluating whether AI models internalize the *relational topology of collective human judgment*, demonstrating a raw paired recovery of approximately $20.8\%$ (or $17.3\%$ chance-adjusted) relative to the posterior-predictive human replicate reference.
+3. **Paired Relational Model Evaluation**: Evaluating whether the nine evaluated models' **output probability distributions** preserve the *relational neighborhood structure of collective human judgment*, demonstrating a raw paired recovery of approximately $20.8\%$ (or $17.3\%$ chance-adjusted) relative to the posterior-predictive human replicate reference.
 4. **Multiscale Scale Dependence**: Disentangling volatile local microstructure ($k=5,10$) from stable regional mesostructure ($k=50,100$).
 
 ---
@@ -398,9 +398,9 @@ A language model can achieve high majority-label accuracy while constructing a d
 For example, a model might:
 - Predict correct probabilities for isolated items.
 - Group examples together based on lexical overlap (e.g., matching words) rather than shared ambiguity profiles.
-- Fail to distinguish between clear-cut items and disputed items in its internal representation space.
+- Fail to distinguish between clear-cut items and disputed items in its output distributions.
 
-Relational evaluation audits whether language models internalize the **collective judgment structure of human populations**.
+Relational evaluation audits whether language models' **output probability distributions** align with the **collective judgment structure of human populations**.
 
 ---
 
@@ -429,7 +429,7 @@ The tie-aware relational methodology applies to any domain with multi-annotator 
 
 - It does **not** identify which individual human annotator is "correct."
 - It does **not** prove why annotators disagreed on specific items (Level-2 rationale drivers).
-- It does **not** establish that matching human opinion topology is required for all engineering tasks.
+- It does **not** establish that preserving human opinion neighborhood structure is required for all engineering tasks.
 - It measures specifically: **How reproducible are relationships among judgment distributions, and how well do AI models preserve those relationships?**
 
 ---
@@ -462,4 +462,4 @@ $$\mathbf{\text{Does the model organize uncertain examples into the same relatio
 
 The research finds that human disagreement creates a structured—but noisy and scale-dependent—relational space. Standard nearest-neighbor methods distort this space because distance ties are ubiquitous ($72.4\%$). Our tie-aware framework represents these ties explicitly and invariant to file row order.
 
-Under a fully paired experimental design, current benchmark language models recover approximately **17–21%** of human replicate overlap in the opinion relational space. Human disagreement is not merely noise—it may induce a rich relational topology that remains a key challenge for AI systems. The tie-aware framework developed here provides a reproducible, storage-order-invariant foundation for studying these structures.
+Under a fully paired experimental design, the nine evaluated benchmark language models recover approximately **17–21%** of human replicate overlap in the opinion relational space. Human disagreement is not merely noise—it may induce a rich neighbor-graph structure that remains a key challenge for AI systems. The tie-aware framework developed here provides a reproducible, storage-order-invariant foundation for studying these structures.

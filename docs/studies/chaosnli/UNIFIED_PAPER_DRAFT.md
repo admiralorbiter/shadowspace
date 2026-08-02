@@ -19,7 +19,7 @@ The ChaosNLI dataset (Nie et al., 2020) provides 100 human judgments for each of
 
 We investigate a complementary, relational question: **does model $m$ recover the neighborhood structure among human opinion distributions?** That is, among examples that humans judge similarly, do models assign similar probability distributions? And among examples humans distinguish, do models distinguish them?
 
-This relational framing evaluates whether models internalize the *relational organization of collective judgment patterns*. It also directly informs tools like Shadowspace that generate structured views of opinion distributions for diagnostic review.
+This relational framing evaluates whether a model's **output probability distributions** preserve the *relational organization of collective judgment patterns*. It also directly informs tools like Shadowspace that generate structured views of opinion distributions for diagnostic review.
 
 Section 3 formalizes the tie-aware overlap framework and proves six core properties. Section 4 benchmarks nine NLI models against human posterior-predictive replicates, characterizes reference similarity scaling with annotation depth, and maps tie-prevalence regimes. Section 5 presents a secondary exploratory analysis on matched VariErr items. Section 6 gives full reproducibility specifications; Sections 7–8 discuss limitations and conclusions.
 
@@ -36,8 +36,8 @@ Nonlinear dimensionality reduction and manifold learning rely on rank-based neig
 Our tie-aware relational framework connects to three broader lines of research:
 
 1. **Uncertain Nearest-Neighbor Search**: In stochastic data settings, pairwise distances are accessed through noisy estimates (Mason et al., 2019). Our setting frames annotation acquisition as reducing neighborhood uncertainty, previewing the posterior uncertain graph membership probability $s_{ij} = P(j \in N_k(i) \mid \text{votes})$.
-2. **Fuzzy Human-Label Evaluation**: Recent human label variation (HLV) research uses fuzzy set operations and soft labels for evaluation (Uma et al., 2021). We extend fuzzy evaluation from individual labels attached to single examples to relational neighborhoods induced among empirical label distributions.
-3. **Graph Estimator Stability**: Following graph perturbation analyses (e.g., Mapper algorithm instability; Chazal and Michel, 2021), we treat variability in a derived neighborhood graph as an informative property of empirical opinion spaces rather than an implementation artifact.
+2. **Fuzzy Human-Label Evaluation**: Prior HLV work surveys soft-label and disaggregated-label approaches (Uma et al., 2021), while Kurniawan et al. (2026) introduce fuzzy-set-based item-level evaluation metrics. We extend fuzzy evaluation from item-label relationships to relational neighborhoods induced among empirical label distributions.
+3. **Graph Estimator Stability**: Following graph perturbation analyses (e.g., Mapper-type algorithm parameter sensitivity reviewed in Chazal and Michel, 2021), we treat variability in a derived neighborhood graph as an informative property of empirical opinion spaces rather than an implementation artifact.
 
 Tied-rank correlations (Kendall's $\tau_b$, Spearman's $\rho$ with tie corrections) handle discrete ties in linear rankings but do not extend to multiscale set-based $k$-nearest-neighbor graphs. Fuzzy set theory (Zadeh, 1965) models partial set membership using minimum operators ($\min(w_A, w_B)$). In statistical geometry, compositional data (Aitchison, 1982) and information geometry (Amari, 2000; Endres and Schindelin, 2003) provide metric distances for probability simplices (Hellinger, Jensen–Shannon). We synthesize co-ranking, fuzzy-set membership, and information geometry into a tie-aware neighborhood framework.
 
@@ -107,11 +107,11 @@ Conventional index-resolved fixed-$k$ neighborhoods rely on array storage row or
 
 ### 4.1 Nine-Model Hellinger Benchmark ($k=10$)
 
-We evaluate nine benchmark NLI models against 500 posterior-predictive simulation pairs on $N=3,113$ ChaosNLI items under Hellinger distance at $k=10$. We use a **fully paired estimand** where both human reliability $H_b$ and model performance $M_{m,b}$ are evaluated symmetrically against identical simulated posterior cohorts ($G_{H1}^{(s)}, G_{H2}^{(s)}$). Fixed full-data reference scores $Q(G_m, G_{100}^{\text{obs}})$ are reported as a descriptive baseline:
+We evaluate nine benchmark NLI models against 500 posterior-predictive simulation pairs on $N=3,113$ ChaosNLI items under Hellinger distance at $k=10$. We use a **fully paired estimand** where both human reliability $H_b$ and model performance $M_{m,b}$ are evaluated symmetrically against identical simulated posterior cohorts ($G_{H1}^{(s)}, G_{H2}^{(s)}$). Direct 500-pair means serve as point estimates; bootstrap is used only for confidence intervals and $\Delta_m$ distributions. Fixed full-data reference scores $Q(G_m, G_{100}^{\text{obs}})$ are reported separately as a descriptive baseline:
 
 **Table 2: Benchmark NLI Model Overlap Scores Under Fully Paired Estimand ($k=10$)**
 
-| Model | Paired Score $M_{m,b}$ | Mean $\Delta_m$ (vs. Paired HH100) | 95% Joint Bootstrap CI | Replicates $\Delta_m > 0$ | Fixed-ref. focal-bootstrap mean$^\dagger$ |
+| Model | Direct Paired Score $\bar{M}_m$ | Mean $\Delta_m$ (vs. HH100) | 95% Joint Bootstrap CI | Replicates $\Delta_m > 0$ | Fixed-ref. $Q(G_m, G_{100}^{\text{obs}})$ |
 |---|---|---|---|---|---|
 | BART-Large | **0.01572** | **0.05977** | [0.05431, 0.06539] | 1,000 / 1,000 | 0.01867 |
 | RoBERTa-Large | **0.01415** | **0.06135** | [0.05557, 0.06685] | 1,000 / 1,000 | 0.01821 |
@@ -122,15 +122,13 @@ We evaluate nine benchmark NLI models against 500 posterior-predictive simulatio
 | XLNet-Base | **0.00927** | **0.06623** | [0.06069, 0.07175] | 1,000 / 1,000 | 0.00893 |
 | DistilBERT | **0.00854** | **0.06695** | [0.06124, 0.07261] | 1,000 / 1,000 | 0.00854 |
 | BERT-Base | **0.00768** | **0.06782** | [0.06235, 0.07356] | 1,000 / 1,000 | 0.00865 |
-| **HH100 Reference (Paired)** | **0.07549** | — | [0.07000, 0.08099] | — | — |
+| **HH100 Direct Mean** ($\bar{H}$) | **0.07522** | — | [0.07000, 0.08099] | — | — |
 
-*Methods and Inference Note*: In 1,000 of 1,000 stratified joint bootstrap replicates, every model difference interval $\Delta_m$ comfortably excludes zero (minimum lower bound $0.05431$). Formally, for bootstrap replicate $b \in \{1,...,1000\}$, a stratified focal-item resample $\mathbf{b} \subset \{1..N\}$ is drawn. Let $s = b \bmod 500$ index one of 500 pre-computed posterior human pairs. We define:
+*Methods and Inference Note*: Point estimates ($\bar{M}_m$, $\bar{H}$) are direct means over 500 pre-computed posterior pairs, not bootstrap means. Bootstrap resampling is used only to generate confidence intervals and the $\Delta_m$ distribution. In 1,000 of 1,000 stratified joint bootstrap replicates, every model difference interval $\Delta_m$ comfortably excludes zero (minimum lower bound $0.05431$). Formally, for bootstrap replicate $b \in \{1,...,1000\}$, a stratified focal-item resample $\mathbf{b} \subset \{1..N\}$ is drawn. Let $s = b \bmod 500$ index one of 500 pre-computed posterior human pairs. We define:
 $$H_b = \frac{1}{|\mathbf{b}|}\sum_{i \in \mathbf{b}} Q_{\text{fuzzy, item}}\!\left(G_{H1}^{(s)}, G_{H2}^{(s)}\right)$$
 $$M_{m,b} = \frac{1}{|\mathbf{b}|}\sum_{i \in \mathbf{b}} \frac{1}{2}\left[Q_{\text{fuzzy, item}}\!\left(G_m, G_{H1}^{(s)}\right) + Q_{\text{fuzzy, item}}\!\left(G_m, G_{H2}^{(s)}\right)\right]$$
 $$\Delta_{m,b} = H_b - M_{m,b}$$
 Both human reliability $H_b$ and model score $M_{m,b}$ evaluate against the exact same two simulated posterior cohorts. Given the same simulated human cohorts, models resemble those cohorts substantially less than the cohorts resemble one another.
-
-$^\dagger$ *Fixed-ref. focal-bootstrap mean*: The focal-item bootstrap resamples which items contribute to the mean while holding the reference graph $G_{100}^{\text{obs}}$ fixed, yielding a bootstrap-mean fixed-reference score (e.g., $0.01867$ for BART-Large) that differs from the full-data fixed-reference score ($0.01617$). The ~15% upward shift reflects which items are upweighted in the bootstrap distribution relative to the full-data average.
 
 *Bootstrap Scope Statement*: The bootstrap estimates sampling variation across focal items within the fixed ChaosNLI candidate population. It does not reconstruct the neighbor graph from resampled rows or estimate uncertainty over an unselected NLI population. Edge contributions are non-independent through shared candidate nodes; this limitation is unlikely to alter the qualitative finding given the size of the observed gap.
 
@@ -142,27 +140,27 @@ To provide an interpretable anchor for model evaluation, we present a **Referenc
 
 **Table 3: Reference Ladder of Graph Overlap ($k=10$)**
 
-*Panel A: Model vs. Human Reference Overlap ($Q_{\text{fuzzy}}$)*
+*Panel A: Model vs. Human Reference Overlap ($Q_{\text{fuzzy}}$, Fixed Reference)*
 
 | Graph Comparison | Overlap Score ($Q_{\text{fuzzy}}$) | Interpretation |
 |---|---|---|
 | Random Chance Null | 0.00321 | Expected overlap for random item pairs ($10 / 3,112$) |
-| BERT-Base vs. Observed | 0.00865 | Lowest-performing benchmark model (fixed reference) |
-| BART-Large vs. Observed | 0.01617 | Best-performing benchmark model (fixed reference) |
-| **Posterior-Predictive 100-Vote Replicate vs. Observed** | **0.13850** | **Human-level agreement: posterior cohort vs. observed graph** |
+| BERT-Base vs. Observed | 0.00865 | Lowest-performing evaluated model |
+| BART-Large vs. Observed | 0.01867 | Best-performing evaluated model |
+| **Posterior-Predictive 100-Vote Replicate vs. Observed** | **0.13850** | **Human replicate reference: posterior cohort vs. observed graph** |
 | Observed Graph Self-Overlap ($Q_{\text{fuzzy}}$) | 1.00000 | Exact fuzzy self-identity |
 
 *Panel B: Tie-Interpretation Sensitivity Across 500 HH100 Reference Pairs ($k=10$)*
 
-| Overlap Formulation | Mean Overlap ($E[Q]$) | 95% Simulation Interval | Scientific Attitude |
+| Overlap Formulation | Direct Mean | 95% Simulation Interval | Scientific Attitude |
 |---|---|---|---|
-| $E[Q_{\text{strict}}]$ (Core Bound) | 0.00020 | [0.00018, 0.00023] | Guaranteed common neighbors only |
-| $E[Q_{\text{expected}}]$ (Random Resolution) | 0.07450 | [0.07011, 0.07907] | Collision probability under random tie choices |
-| $E[Q_{\text{fuzzy}}]$ (Partial Membership) | 0.07522 | [0.07085, 0.07980] | Full partial-membership weighted overlap |
+| $Q_{\text{strict}}$ (Core Bound) | 0.00020 | [0.00018, 0.00023] | Guaranteed common neighbors only |
+| $Q_{\text{expected}}$ (Random Resolution) | 0.07450 | [0.07011, 0.07907] | Collision probability under random tie choices |
+| $Q_{\text{fuzzy}}$ (Partial Membership) — **$\bar{H}$** | **0.07522** | [0.07085, 0.07980] | Full partial-membership weighted overlap; canonical HH100 direct mean |
 
-*Note on 0.07550 vs. 0.07522:* Panel B values are unweighted means over 500 raw posterior pairs without focal-item resampling. The main HH100 reference mean ($0.07550$) additionally incorporates focal-item resampling variance across 1,000 bootstrap replicates; the $0.00028$ difference is within the simulation SD ($0.00227$) and reflects this design difference, not a numerical error.
+*Note*: $\bar{H} = 0.07522$ is the direct unweighted mean over 500 posterior pairs and is the canonical HH100 point estimate used throughout. Bootstrap-based intervals use focal-item resampling across the same 500 pairs.
 
-*Takeaway*: BART-Large ($0.01617$) achieves a raw ratio of **11.7%** ($0.01617 / 0.13850$) and a chance-adjusted ratio of **9.6%** ($(0.01617 - 0.00321) / (0.13850 - 0.00321)$) of human-level replicate overlap, placing language models closer to the random chance baseline ($0.00321$) than to human collective opinion alignment.
+*Takeaway*: BART-Large ($0.01867$ fixed reference) achieves a raw ratio of **13.5%** ($0.01867 / 0.13850$) and a chance-adjusted ratio of **11.3%** ($(0.01867 - 0.00321) / (0.13850 - 0.00321)$) of human-level replicate overlap under the fixed-reference comparison, placing the evaluated models substantially closer to random chance than to human collective opinion alignment.
 
 **Table 4: Reference Graph Similarity Surface $R_{\text{reference}}(n, k) = Q(G_n^{\text{rep}}, G_{100}^{\text{obs}})$**
 
@@ -275,7 +273,7 @@ VariErr NLI (Weber-Genzel et al., 2024) matches 500 items to ChaosNLI-M via `sou
 6. **Single Aitchison Zero Policy**: Log-ratio geometry uses a single zero-replacement threshold ($\epsilon=10^{-4}$); alternative log-ratio zero policies were not evaluated.
 7. **Unobserved Disagreement Drivers**: Level-1 vote profiles describe label frequencies but do not reveal underlying linguistic or cognitive causes of disagreement.
 8. **VariErr Sample Constraints**: External validity test is restricted to 500 items across 52 multi-item profiles, limiting statistical power for subtle profile-level effects.
-9. **Relational Agreement vs. Ground Truth**: High neighborhood preservation indicates structural alignment with human opinion topology, not absolute semantic correctness.
+9. **Relational Agreement vs. Ground Truth**: High neighborhood preservation indicates structural alignment with human opinion neighborhood structure, not absolute semantic correctness.
 10. **Conditional Candidate Graph**: The paired bootstrap resamples focal-item contributions while holding the full candidate graph $G_{100}^{\text{obs}}$ fixed. It therefore estimates focal-item variation within the selected ChaosNLI population rather than uncertainty from reconstructing the candidate graph itself.
 11. **Bootstrap Edge Non-Independence**: Focal-item resampling treats per-item overlaps as exchangeable, but edges in the neighbor graph are non-independent (shared candidate nodes). Confidence intervals should be interpreted as approximations.
 12. **Single-Seed Reference Surface**: Each cell of $R_{\text{reference}}(n, k)$ is a single-seed simulation draw. Multi-seed replication with uncertainty intervals is pending.
@@ -284,7 +282,7 @@ VariErr NLI (Weber-Genzel et al., 2024) matches 500 items to ChaosNLI-M via `sou
 
 ## 8. Conclusion
 
-We have presented a tie-aware computational study of human collective NLI opinion topology. We formalized the three-quantity tie interval ($Q_{\text{strict}} \le Q_{\text{expected}} \le Q_{\text{fuzzy}}$), proved six core properties, established a 9-model recovery gap under 1,000 joint bootstrap replicates, mapped reference graph similarity $R_{\text{reference}}(n, k)$, and executed high-performance native Rust verification. The Hellinger benchmark gap remains significant under joint posterior-reference resampling, while fixed-reference gaps persist across five distance specifications. Recovering the relational organization of human disagreement remains an important open challenge for language models.
+We have presented a tie-aware computational study of human collective NLI opinion neighborhood structure. We formalized the three-quantity tie interval ($Q_{\text{strict}} \le Q_{\text{expected}} \le Q_{\text{fuzzy}}$), proved six core properties, established a 9-model recovery gap under 1,000 joint bootstrap replicates, mapped reference graph similarity $R_{\text{reference}}(n, k)$, and executed high-performance native Rust verification. The Hellinger benchmark gap remains significant under joint posterior-reference resampling, while fixed-reference gaps persist across five distance specifications. Recovering the neighbor-graph organization of collective human disagreement remains an important open challenge for language models.
 
 ---
 
@@ -298,6 +296,7 @@ Chen, L., & Buja, A. (2009). Local multidimensional scaling for nonlinear dimens
 Endres, D.M., & Schindelin, J.E. (2003). A new metric for probability distributions. *IEEE TIT, 49*(7), 1858–1860.  
 Gruber, N. et al. (2024). More labels or cases? Assessing label variation in NLI.  
 Jiang, M., & de Marneffe, M.-C. (2022). Investigating reasons for disagreement in NLI. *TACL, 10*, 1357–1374.  
+Kurniawan, K., Mistica, M., Baldwin, T., & Lau, J.H. (2026). Training and evaluating with human label variation: An empirical study. *Computational Linguistics, 52*(1).  
 Lee, J.A., & Verleysen, M. (2008). Quality assessment of nonlinear dimensionality reduction based on K-ary neighborhoods. *PMLR, 4*, 21–35.  
 Lee, J.A., & Verleysen, M. (2009). Quality assessment of dimensionality reduction: Rank-based criteria. *Neurocomputing, 72*, 1431–1443.  
 Lueks, W. et al. (2011). How to evaluate dimensionality reduction? Improving co-ranking matrix analysis. *ESANN 2011*.  
