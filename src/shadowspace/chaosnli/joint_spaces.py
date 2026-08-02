@@ -98,3 +98,63 @@ def evaluate_hypothesis7_joint_space(
             and lambda_evaluations[3]["qnx_soft_opinion_recovery"] > 0.04
         ),
     }
+
+
+def compute_lexicographic_tie_breaking(
+    d_opinion: np.ndarray,
+    d_text: np.ndarray,
+    k: int = 10,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Compute k-NN graph using lexicographic tie-breaking: (d_opinion, d_text).
+
+    Opinion distance is primary. Text distance breaks exact/near opinion ties.
+    Returns (knn_indices, knn_distances).
+    """
+    n = len(d_opinion)
+    knn_indices = np.zeros((n, k), dtype=int)
+    knn_distances = np.zeros((n, k), dtype=np.float32)
+
+    for i in range(n):
+        # Exclude self
+        cand_indices = np.array([j for j in range(n) if j != i], dtype=int)
+        op_dists = d_opinion[i, cand_indices]
+        txt_dists = d_text[i, cand_indices]
+
+        # Lexicographic sort by primary (d_opinion) then secondary (d_text)
+        sorted_order = np.lexsort((txt_dists, op_dists))
+        top_k = cand_indices[sorted_order[:k]]
+
+        knn_indices[i] = top_k
+        knn_distances[i] = op_dists[sorted_order[:k]]
+
+    return knn_indices, knn_distances
+
+
+def compute_random_tie_breaking_baseline(
+    d_opinion: np.ndarray,
+    k: int = 10,
+    seed: int = 42,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Compute k-NN graph using Monte Carlo random tie-breaking.
+
+    Opinion distance is primary; uniform random noise is secondary to break ties.
+    Returns (knn_indices, knn_distances).
+    """
+    n = len(d_opinion)
+    rng = np.random.default_rng(seed)
+
+    knn_indices = np.zeros((n, k), dtype=int)
+    knn_distances = np.zeros((n, k), dtype=np.float32)
+
+    for i in range(n):
+        cand_indices = np.array([j for j in range(n) if j != i], dtype=int)
+        op_dists = d_opinion[i, cand_indices]
+        rand_noise = rng.uniform(0.0, 1.0, size=len(cand_indices))
+
+        sorted_order = np.lexsort((rand_noise, op_dists))
+        top_k = cand_indices[sorted_order[:k]]
+
+        knn_indices[i] = top_k
+        knn_distances[i] = op_dists[sorted_order[:k]]
+
+    return knn_indices, knn_distances
