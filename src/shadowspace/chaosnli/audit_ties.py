@@ -7,8 +7,8 @@ from typing import Any
 import numpy as np
 import polars as pl
 
-from shadowspace.chaosnli.distances import build_distance_matrix
 from shadowspace.chaosnli.graph_metrics import compute_qnx
+from shadowspace.chaosnli.neighbors_soft import compute_boundary_tie_mask
 
 
 def run_multiplicity_and_tie_audit(
@@ -54,6 +54,8 @@ def run_multiplicity_and_tie_audit(
     items_with_tie_at_k = 0
     boundary_tie_sizes = []
 
+    boundary_mask = compute_boundary_tie_mask(dist_matrix, k=k)
+
     for i in range(n):
         row = dist_matrix[i].copy()
         row[i] = np.inf  # Exclude self
@@ -68,7 +70,7 @@ def run_multiplicity_and_tie_audit(
 
         # Check ties at k-th boundary distance
         ties_at_k = np.isclose(row, k_dist, atol=1e-7).sum()
-        if ties_at_k > 1:
+        if boundary_mask[i]:
             items_with_tie_at_k += 1
             boundary_tie_sizes.append(int(ties_at_k))
 
@@ -86,7 +88,7 @@ def run_multiplicity_and_tie_audit(
 
     knn_ref, _ = extract_knn_graph(dist_matrix, ids, k=k)
 
-    for p_idx in range(n_permutations):
+    for _ in range(n_permutations):
         perm = rng.permutation(n)
         perm_dist = dist_matrix[perm][:, perm]
         perm_ids = [ids[idx] for idx in perm]
@@ -108,6 +110,7 @@ def run_multiplicity_and_tie_audit(
         "items_in_non_singleton_profiles": items_in_non_singletons,
         "pct_items_in_non_singleton_profiles": pct_non_singletons,
         "max_profile_multiplicity": max_multiplicity,
+        "multiplicity_histogram": multiplicity_hist,
         "items_with_tie_before_k": items_with_tie_before_k,
         "pct_with_tie_before_k": pct_tie_before_k,
         "items_with_tie_at_k": items_with_tie_at_k,

@@ -14,17 +14,20 @@ against the same two posterior-predictive cohorts.
 The fixed full-data scores Q(G_m, G_100^obs) are retained as a separate
 descriptive benchmark (Panel A of the reference ladder).
 
-Output: results/paired_estimand_results.yaml
+Output: research/chaosnli/artifacts/paired_estimand_results.json
 """
+
+import json
+import time
+from pathlib import Path
 
 import numpy as np
 import polars as pl
-import yaml
-from pathlib import Path
+
 from shadowspace.chaosnli.distances import build_distance_matrix
+from shadowspace.chaosnli.models import load_model_predictions
 from shadowspace.chaosnli.neighbors_soft import compute_soft_neighborhood_weights, compute_soft_qnx
 from shadowspace.chaosnli.posterior import compute_100_vs_100_posterior_predictive_reliability
-from shadowspace.chaosnli.models import load_model_predictions
 
 # ── Config ──────────────────────────────────────────────────────────────────
 K = 10
@@ -32,7 +35,7 @@ N_PAIRS = 500
 N_BOOT = 1000
 SEED_START = 0
 DATA_PATH = "data/chaosnli/processed/canonical_items_posterior.parquet"
-OUTPUT_PATH = "results/paired_estimand_results.yaml"
+OUTPUT_PATH = Path("research/chaosnli/artifacts/paired_estimand_results.json")
 
 print("=" * 72)
 print("   PAIRED ESTIMAND MANIFEST (Q_m vs POSTERIOR COHORTS)")
@@ -79,7 +82,6 @@ for m_key in model_keys:
 
 # ── Pre-compute 500 posterior pairs ──────────────────────────────────────────
 print(f"\nPre-computing {N_PAIRS} posterior-predictive pairs...")
-import time
 t0 = time.time()
 
 # For each pair s, store per-item overlaps:
@@ -190,8 +192,10 @@ output = {
     "models": model_results,
 }
 
-with open(OUTPUT_PATH, "w") as f:
-    yaml.dump(output, f, default_flow_style=False, sort_keys=False)
+OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
+    json.dump(output, f, indent=2)
+    f.write("\n")
 
 print(f"\nSaved paired estimand results to {OUTPUT_PATH}")
 print("=" * 72)

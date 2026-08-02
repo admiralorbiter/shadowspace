@@ -1468,7 +1468,9 @@ def api_point_stability() -> Response:
         return Response(json.dumps({"error": str(err)}), status=400, mimetype="application/json")
 
     k_eff = min(k, max(1, n_pts - 1))
-    src_knn = np.argsort(src_dists, axis=1)[:, 1:k_eff+1]
+    candidate_dists = src_dists.copy()
+    np.fill_diagonal(candidate_dists, np.inf)
+    src_knn = np.argsort(candidate_dists, axis=1, kind="stable")[:, :k_eff]
 
     # Dynamically reproject catalog 2D coords against active rep_matrix
     catalog = ds_data.get("catalog", {})

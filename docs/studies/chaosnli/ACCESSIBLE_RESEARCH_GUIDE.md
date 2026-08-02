@@ -40,7 +40,7 @@
 
 **What we asked**: Do AI language models organize ambiguous language examples into the same relational patterns that people do?
 
-**What we found**: Human disagreement about ambiguous sentence pairs produces a structured—but noisy and scale-dependent—map of similarity. The index-resolved nearest-neighbor implementation tested here distorts this map silently, because tied distances occur for 72.4% of items and the implementation resolves ties using array storage order (different libraries may use different tie policies). Our tie-aware framework is provably invariant to row order. Under a fully paired comparison against the same simulated human cohorts, the nine evaluated NLI models recover roughly 17–21% of human replicate overlap—substantially below the posterior-predictive human reference of ~0.0755.
+**What we found**: Human disagreement about ambiguous sentence pairs produces a structured—but noisy and scale-dependent—map of similarity. The index-resolved nearest-neighbor implementation tested here distorts this map silently, because exact ties cross the $k=10$ boundary for 49.1% of items and the implementation resolves ties using array storage order (different libraries may use different tie policies). Our tie-aware framework is provably invariant to row order. Under a fully paired comparison against the same simulated human cohorts, the nine evaluated NLI models recover roughly 17–21% of human replicate overlap—substantially below the posterior-predictive human reference of ~0.0755.
 
 **Why it matters**: Evaluation methods that ignore distance ties are non-reproducible across data orderings. Models that match majority labels can still organize the opinion space very differently from human populations.
 
@@ -157,7 +157,7 @@ $$\binom{100 + 3 - 1}{3 - 1} = \binom{102}{2} = 5,151 \text{ possible profiles}$
 Across 3,113 items in ChaosNLI:
 - **1,604 unique profiles** are occupied.
 - **70.4% of items** (2,193 items) share their exact vote counts with at least one other item.
-- **72.4% of items** (2,254 items) have an **exact distance tie** at the boundary of their top-$k=10$ nearest neighbors!
+- **49.1% of items** (1,529 items) have an **exact distance tie crossing the boundary** of their top-$k=10$ nearest neighbors.
 
 ---
 
@@ -319,7 +319,7 @@ Across 10,500 simulations (100 reps per cell):
 
 | Votes ($n$) | Concentrated ($\alpha=0.1$) | Symmetric ($\alpha=0.5$) | Uniform ($\alpha=1.0$) | Empirical ChaosNLI |
 |---|---|---|---|---|
-| **100 votes ($k=10$)** | **73.3% ± 3.0%** | 16.6% ± 2.9% | 9.4% ± 2.2% | **72.4%** |
+| **100 votes ($k=10$)** | **80.2% ± 1.2%** | 35.7% ± 1.6% | 25.5% ± 1.1% | **49.1%** |
 
 ### Theoretical Occupancy
 
@@ -327,7 +327,7 @@ Out of $S = \binom{100+3-1}{3-1} = 5,151$ possible 3-class 100-vote profiles:
 - Expected occupied profiles under uniform occupancy: $\approx 2,337$
 - **Observed occupied profiles in ChaosNLI**: **1,604**
 
-Human response patterns are highly concentrated in specific recurring regions of the probability simplex. This concentration is consistent with, and likely contributes to, the high observed tie prevalence ($72.4\%$); however, the simulations match only one summary statistic and do not uniquely identify a single generating distribution.
+Human response patterns are highly concentrated in specific recurring regions of the probability simplex. At 100 votes, the observed tie prevalence ($49.1\%$) lies between the tested $\alpha=0.1$ and $\alpha=0.5$ regimes. This is consistent with concentration contributing to boundary ties, but the simulations match only one summary statistic and do not uniquely identify a generating distribution.
 
 ---
 
@@ -389,7 +389,7 @@ A text-space tie-breaker slightly improves heuristic taxonomy retrieval (MAP@10 
 
 ## 14. What Is the Main Scientific Contribution?
 
-1. **Diagnosing Storage-Order Instability**: Exposing that conventional fixed-$k$ implementations that resolve ties by index order silently distort neighbor sets for $62.1\%$ of items.
+1. **Diagnosing Storage-Order Instability**: Exposing that conventional fixed-$k$ implementations that resolve ties by storage index silently alter neighbor sets for $49.1\%$ of items at $k=10$.
 2. **Formalizing Tie-Aware Mathematics**: Proving $Q_{\text{strict}} \le Q_{\text{expected}} \le Q_{\text{fuzzy}} \le 1.0$ and establishing six core theoretical properties (fuzzy self-identity, row-permutation invariance, etc.).
 3. **Paired Relational Model Evaluation**: Evaluating whether the nine evaluated models' **output probability distributions** preserve the *relational neighborhood structure of collective human judgment*, demonstrating a raw paired recovery of approximately $20.8\%$ (or $16.9\%$ chance-adjusted using the empirical stratified null) relative to the posterior-predictive human replicate reference.
 4. **Multiscale Scale Dependence**: Disentangling volatile local microstructure ($k=5,10$) from stable regional mesostructure ($k=50,100$).
@@ -465,7 +465,7 @@ This study asks something broader:
 
 $$\mathbf{\text{Does the model organize uncertain examples into the same relational patterns people do?}}$$
 
-The research finds that human disagreement creates a structured—but noisy and scale-dependent—relational space. Conventional fixed-$k$ implementations that resolve ties by index order distort this space because distance ties are ubiquitous ($72.4\%$). Our tie-aware framework represents these ties explicitly and is invariant to file row order.
+The research finds that human disagreement creates a structured—but noisy and scale-dependent—relational space. Conventional fixed-$k$ implementations that resolve ties by index order distort this space because exact ties cross the $k=10$ boundary for nearly half of items ($49.1\%$). Our tie-aware framework represents these ties explicitly and is invariant to file row order.
 
 Under a fully paired experimental design, the nine evaluated benchmark language models recover approximately **17–21%** of human replicate overlap in the opinion relational space. Human disagreement is not merely noise—it may induce a rich neighbor-graph structure that remains a key challenge for AI systems. The tie-aware framework developed here provides a reproducible, storage-order-invariant foundation for studying these structures.
 

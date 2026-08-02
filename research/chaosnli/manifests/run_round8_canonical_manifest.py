@@ -9,16 +9,22 @@ Parallelized across 16 CPU cores:
 Completes in ~5 seconds total.
 """
 
-from concurrent.futures import ProcessPoolExecutor
 import json
 import os
-import yaml
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
 import numpy as np
 import polars as pl
+import yaml
 
 from shadowspace.chaosnli.distances import build_distance_matrix
 from shadowspace.chaosnli.models import load_model_predictions
-from shadowspace.chaosnli.neighbors_soft import compute_soft_neighborhood_weights, compute_soft_qnx
+from shadowspace.chaosnli.neighbors_soft import (
+    compute_boundary_tie_percentage,
+    compute_soft_neighborhood_weights,
+    compute_soft_qnx,
+)
 from shadowspace.chaosnli.posterior import compute_100_vs_100_posterior_predictive_reliability
 
 
@@ -39,13 +45,16 @@ def _eval_single_row_perm(seed: int) -> tuple[float, float]:
     p_human = df_sub.select(["human_p_entailment", "human_p_neutral", "human_p_contradiction"]).to_numpy()
     d_emp = build_distance_matrix(p_human, metric="hellinger")
     w_emp = compute_soft_neighborhood_weights(d_emp, k=10)
-    knn_base = np.argsort(d_emp, axis=1)[:, 1:11]
+    d_base = d_emp.copy()
+    np.fill_diagonal(d_base, np.inf)
+    knn_base = np.argsort(d_base, axis=1, kind="stable")[:, :10]
     n_items = len(p_human)
 
     rng = np.random.default_rng(seed)
     perm_idx = rng.permutation(n_items)
     d_reordered = d_emp[np.ix_(perm_idx, perm_idx)]
-    knn_reordered = np.argsort(d_reordered, axis=1)[:, 1:11]
+    np.fill_diagonal(d_reordered, np.inf)
+    knn_reordered = np.argsort(d_reordered, axis=1, kind="stable")[:, :10]
 
     inv_p = np.argsort(perm_idx)
     overlaps = []
@@ -71,7 +80,7 @@ def _eval_single_varierr_perm(seed: int) -> float:
     df_sub = pl.read_parquet("data/chaosnli/processed/canonical_items_posterior.parquet")
     varierr_path = "data/external/varierr.json"
     varierr_records = []
-    with open(varierr_path, "r", encoding="utf-8") as f:
+    with open(varierr_path, encoding="utf-8") as f:
         for line in f:
             if line.strip():
                 varierr_records.append(json.loads(line))
@@ -143,7 +152,7 @@ def main():
     hh100_q975 = float(np.percentile(hh100_pair_means, 97.5))
     hh100_mc_se = float(hh100_sd / np.sqrt(500))
 
-    print(f"HH100 Pairs Count           : 500 simulation pairs", flush=True)
+    print("HH100 Pairs Count           : 500 simulation pairs", flush=True)
     print(f"HH100 Simulation Mean       : {hh100_mean:.5f}", flush=True)
     print(f"HH100 Simulation Median     : {hh100_median:.5f}", flush=True)
     print(f"HH100 Simulation SD         : {hh100_sd:.5f}", flush=True)
@@ -292,7 +301,7 @@ def main():
 
     varierr_path = "data/external/varierr.json"
     varierr_records = []
-    with open(varierr_path, "r", encoding="utf-8") as f:
+    with open(varierr_path, encoding="utf-8") as f:
         for line in f:
             if line.strip():
                 varierr_records.append(json.loads(line))
@@ -334,8 +343,8 @@ def main():
     mean_within_sd = float(profile_counts["validity_std"].fill_null(0.0).mean())
     mean_within_var = float(profile_counts["validity_var"].fill_null(0.0).mean())
 
-    sd_reduction = (1.0 - mean_within_sd / total_sd) * 100.0
-    var_reduction = (1.0 - mean_within_var / total_var) * 100.0
+    sd_reduction_vs_overall = (1.0 - mean_within_sd / total_sd) * 100.0
+    var_reduction_vs_overall = (1.0 - mean_within_var / total_var) * 100.0
 
     print("Running 5,000-permutation profile-size preserved null across 16 CPU cores...", flush=True)
     with ProcessPoolExecutor(max_workers=n_workers) as pool:
@@ -343,6 +352,7 @@ def main():
 
     null_sd_mean = float(np.mean(null_within_sds))
     p_val_homo = float((np.array(null_within_sds) <= mean_within_sd).mean())
+    sd_reduction_vs_null = (1.0 - mean_within_sd / null_sd_mean) * 100.0
 
     print(f"Total Matched Items                         : {len(matched_indices)} / 500 VariErr items", flush=True)
     print(f"Multi-Item Matched Profiles in VariErr      : {len(profile_counts)} profiles", flush=True)
@@ -350,8 +360,9 @@ def main():
     print(f"Overall Dataset Validity Variance           : {total_var:.4f}", flush=True)
     print(f"Mean Within-Profile Validity SD             : {mean_within_sd:.4f}", flush=True)
     print(f"Mean Within-Profile Validity Variance       : {mean_within_var:.4f}", flush=True)
-    print(f"Relative Standard Deviation Reduction       : {sd_reduction:.1f}%", flush=True)
-    print(f"Relative Variance Reduction                 : {var_reduction:.1f}%", flush=True)
+    print(f"SD Reduction vs Permutation Null            : {sd_reduction_vs_null:.1f}%", flush=True)
+    print(f"SD Reduction vs Overall Sample              : {sd_reduction_vs_overall:.1f}%", flush=True)
+    print(f"Variance Reduction vs Overall Sample        : {var_reduction_vs_overall:.1f}%", flush=True)
     print(f"5,000-Permutation Null Mean Within-Profile SD: {null_sd_mean:.4f} [p = {p_val_homo:.4f}]", flush=True)
 
     canonical_data["varierr_validation"] = {
@@ -361,8 +372,9 @@ def main():
         "overall_var": total_var,
         "within_profile_sd": mean_within_sd,
         "within_profile_var": mean_within_var,
-        "sd_reduction_pct": sd_reduction,
-        "var_reduction_pct": var_reduction,
+        "sd_reduction_vs_null_pct": sd_reduction_vs_null,
+        "sd_reduction_vs_overall_pct": sd_reduction_vs_overall,
+        "var_reduction_vs_overall_pct": var_reduction_vs_overall,
         "null_sd_mean": null_sd_mean,
         "n_permutations": 5000,
         "permutation_p_value": p_val_homo
@@ -388,12 +400,10 @@ def main():
                     counts_sim[i] = sim_rng.multinomial(n_v, dir_p[i])
                 p_sim = counts_sim / float(n_v)
                 d_sim = build_distance_matrix(p_sim, metric="hellinger")
-                w_sim = compute_soft_neighborhood_weights(d_sim, k=10)
-                tie_frac = float(np.mean(w_sim < 1.0))
-                phase_results[f"alpha_{alpha}"][f"C_{c}"][f"n_{n_v}"] = round(tie_frac * 100.0, 1)
+                tie_pct = compute_boundary_tie_percentage(d_sim, k=10)
+                phase_results[f"alpha_{alpha}"][f"C_{c}"][f"n_{n_v}"] = round(tie_pct, 1)
 
-    w_chaos = compute_soft_neighborhood_weights(d_emp, k=10)
-    empirical_chaos_tie_pct = round(float(np.mean(w_chaos < 1.0)) * 100.0, 1)
+    empirical_chaos_tie_pct = round(compute_boundary_tie_percentage(d_emp, k=10), 1)
 
     print(f"Empirical ChaosNLI Boundary Tie Percentage (n=100, C=3): {empirical_chaos_tie_pct}%", flush=True)
 
@@ -402,10 +412,12 @@ def main():
         "simulations": phase_results
     }
 
-    with open("results/canonical_results.yaml", "w", encoding="utf-8") as f:
+    output_path = Path("research/chaosnli/artifacts/round8_canonical_results.yaml")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f:
         yaml.dump(canonical_data, f, default_flow_style=False)
 
-    print("\nAll Round 8 canonical results successfully written to results/canonical_results.yaml", flush=True)
+    print(f"\nRound 8 recomputation written to {output_path}", flush=True)
     print("=========================================================================", flush=True)
 
 

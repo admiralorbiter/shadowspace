@@ -8,7 +8,7 @@
 
 ## Abstract
 
-Human NLI annotations can exhibit persistent and substantively meaningful variation, alongside annotation error. Conventional majority-label evaluation ignores this variation. We study whether collective human disagreement, encoded as vote distributions over semantic labels, forms a reproducible relational structure that NLI models recover. Methodologically, we demonstrate that conventional index-resolved fixed-$k$ neighborhood graphs are unstable under distance ties ($0.9074 \pm 0.0024$ top-$k$ overlap under array re-indexing; 62.1% of items affected), whereas our fractional soft-overlap statistic $Q_{NX}^{\text{soft}}(k)$ is strictly invariant (maximum absolute difference $0.0000$). We formalize a three-quantity tie-aware framework ($Q_{\text{strict}} \le Q_{\text{expected}} \le Q_{\text{fuzzy}}$) and prove six core theoretical properties. Empirically, across $N=3,113$ ChaosNLI items under a fully paired design where both model and human scores are evaluated against identical posterior-predictive cohorts, benchmark NLI models recover substantially less human-opinion neighborhood structure than human replicates (BART-Large paired mean $0.01572$ vs. posterior-predictive human benchmark $\bar{H}=0.07549$, mean difference $\Delta_m = 0.05977$, 95% CI $[0.05431, 0.06539]$; all 1,000 bootstrap replicates show $\Delta_m > 0$). Plug-in empirical reference similarity $R_{\text{reference}}(n, k)$ increases monotonically with annotation depth across all five tested neighborhood scales (50-seed simulation; simulation interval lower bounds monotone for all $k \in \{5, 10, 20, 50, 100\}$), from $0.0109 \pm 0.0002$ at $n=3$ to $0.1391 \pm 0.0033$ at $n=100$ ($k=10$). Multi-regime Dirichlet simulations confirm that empirical ChaosNLI boundary-tie prevalence ($72.4\%$) is close to the tested $\alpha=0.1$ concentrated regime on this summary statistic.
+Human NLI annotations can exhibit persistent and substantively meaningful variation, alongside annotation error. Conventional majority-label evaluation ignores this variation. We study whether collective human disagreement, encoded as vote distributions over semantic labels, forms a reproducible relational structure that NLI models recover. Methodologically, we demonstrate that conventional index-resolved fixed-$k$ neighborhood graphs are unstable under distance ties ($0.9554 \pm 0.0015$ top-$k$ overlap under array re-indexing; 49.1% of items affected at $k=10$), whereas our fractional soft-overlap statistic $Q_{NX}^{\text{soft}}(k)$ is strictly invariant (maximum absolute difference $0.0000$). We formalize a three-quantity tie-aware framework ($Q_{\text{strict}} \le Q_{\text{expected}} \le Q_{\text{fuzzy}}$) and prove six core theoretical properties. Empirically, across $N=3,113$ ChaosNLI items under a fully paired design where both model and human scores are evaluated against identical posterior-predictive cohorts, benchmark NLI models recover substantially less human-opinion neighborhood structure than human replicates (BART-Large paired mean $0.01572$ vs. posterior-predictive human benchmark $\bar{H}=0.07549$, mean difference $\Delta_m = 0.05977$, 95% CI $[0.05431, 0.06539]$; all 1,000 bootstrap replicates show $\Delta_m > 0$). Plug-in empirical reference similarity $R_{\text{reference}}(n, k)$ increases monotonically with annotation depth across all five tested neighborhood scales (50-seed simulation; simulation interval lower bounds monotone for all $k \in \{5, 10, 20, 50, 100\}$), from $0.0109 \pm 0.0002$ at $n=3$ to $0.1391 \pm 0.0033$ at $n=100$ ($k=10$). The corrected boundary definition finds exact ties crossing the empirical $k=10$ boundary for $49.1\%$ of items; multi-regime Dirichlet simulations place that value between the tested $\alpha=0.1$ and $\alpha=0.5$ regimes at 100 votes.
 
 ---
 
@@ -87,24 +87,24 @@ $$Q_{\text{strict}} \le Q_{\text{expected}} \le Q_{\text{fuzzy}} \le 1.0$$
 
 ### 3.4 Item-Level Permutation Damage Breakdown
 
-To demonstrate how arbitrary array storage re-indexing affects deterministic top-$k$ neighbor sets across items, we analyze the item-level overlap distribution under 100 random row permutations:
+To demonstrate how arbitrary array storage re-indexing affects deterministic top-$k$ neighbor sets across items, we analyze the item-level overlap distribution under 1,000 random row permutations after explicitly excluding self-distance:
 
 **Table 1: Item-Level Permutation Overlap Breakdown Across Neighborhood Scales ($k$)**
 
 | Scale ($k$) | Mean Overlap | Median Overlap | 5% – 95% Interval | Min Overlap | Items Changed (%) |
 |---|---|---|---|---|---|
-| $k=5$ | 0.8182 | 0.8480 | [0.5620, 1.0000] | 0.3340 | 62.0% |
-| $k=10$ | **0.9071** | **0.9210** | **[0.7700, 1.0000]** | **0.6640** | **62.1%** |
-| $k=20$ | 0.9520 | 0.9620 | [0.8800, 1.0000] | 0.6885 | 62.3% |
-| $k=50$ | 0.9808 | 0.9846 | [0.9526, 1.0000] | 0.9108 | 63.3% |
+| $k=5$ | 0.9062 | 1.0000 | [0.6818, 1.0000] | 0.3760 | 49.5% |
+| $k=10$ | **0.9554** | **1.0000** | **[0.8516, 1.0000]** | **0.7266** | **49.1%** |
+| $k=20$ | 0.9763 | 0.9763 | [0.9200, 1.0000] | 0.7424 | 50.7% |
+| $k=50$ | 0.9905 | 0.9902 | [0.9674, 1.0000] | 0.9287 | 51.6% |
 
-*Takeaway*: At $k=10$, array re-indexing alters the top-$k$ neighbor set of **62.1% of items**, with minimum item overlap dropping to $0.6640$. This confirms that storage-order instability affects a majority of items in finite vote lattice spaces.
+*Takeaway*: At $k=10$, array re-indexing alters the top-$k$ neighbor set of **49.1% of items**, with minimum mean item overlap dropping to $0.7266$ across 1,000 permutations. Storage-order instability therefore affects nearly half of items in this finite vote lattice.
 
 ---
 
 ## 4. Study 1: Empirical Benchmark and Reference Analysis
 
-Conventional index-resolved fixed-$k$ neighborhoods rely on array storage row order for tie-breaking. Across 1,000 random row permutations, deterministic top-$k$ overlap fluctuates ($0.9074 \pm 0.0024$, SD $0.0024$), whereas fractional soft overlap is strictly row-order invariant ($1.0000 \pm 0.0000$).
+Conventional index-resolved fixed-$k$ neighborhoods rely on array storage row order for tie-breaking. Across 1,000 random row permutations, deterministic top-$k$ overlap fluctuates ($0.9554 \pm 0.0015$, SD $0.0015$), whereas fractional soft overlap is strictly row-order invariant ($1.0000 \pm 0.0000$).
 
 ### 4.1 Nine-Model Hellinger Benchmark ($k=10$)
 
@@ -189,19 +189,19 @@ To model how annotation scale ($n$) and label granularity ($C$) shape boundary t
 | Votes ($n$) | Concentrated ($\alpha=0.1$) | Symmetric ($\alpha=0.5$) | Uniform ($\alpha=1.0$) | Empirical ChaosNLI |
 |---|---|---|---|---|
 | 3 | 100.0% ± 0.0% | 100.0% ± 0.0% | 100.0% ± 0.0% | — |
-| 5 | 99.9% ± 0.2% | 100.0% ± 0.0% | 100.0% ± 0.0% | — |
-| 10 | 97.4% ± 1.1% | 99.7% ± 0.3% | 100.0% ± 0.1% | — |
-| 20 | 91.0% ± 1.9% | 89.2% ± 2.0% | 96.0% ± 1.3% | — |
-| 30 | 85.3% ± 2.4% | 68.3% ± 3.0% | 76.9% ± 2.7% | — |
-| 50 | 79.5% ± 2.7% | 37.9% ± 3.0% | 38.6% ± 3.0% | — |
-| **100** | **73.3% ± 3.0%** | **16.6% ± 2.9%** | **9.4% ± 2.2%** | **72.4%** |
+| 5 | 99.8% ± 0.2% | 100.0% ± 0.0% | 100.0% ± 0.0% | — |
+| 10 | 99.1% ± 0.3% | 100.0% ± 0.1% | 100.0% ± 0.0% | — |
+| 20 | 95.7% ± 0.7% | 94.3% ± 1.4% | 92.5% ± 1.6% | — |
+| 30 | 92.2% ± 0.9% | 84.8% ± 1.7% | 85.8% ± 1.7% | — |
+| 50 | 87.6% ± 1.2% | 66.2% ± 1.7% | 62.5% ± 1.5% | — |
+| **100** | **80.2% ± 1.2%** | **35.7% ± 1.6%** | **25.5% ± 1.1%** | **49.1%** |
 
 #### Occupancy and Simplex Concentration Analysis
 
 Theoretical occupancy analysis over ChaosNLI's $N=3,113$ items and $S = \binom{100+3-1}{3-1} = 5,151$ possible 100-vote 3-class profiles shows that under uniform independent occupancy, expected occupied profiles are:
 $$\mathbb{E}[U] = S \left[1 - \left(1 - \frac{1}{S}\right)^N\right] \approx 2,337$$
 
-Empirically, ChaosNLI populates only **1,604 unique profiles**, demonstrating far greater profile concentration than uniform occupancy predicts. The observed boundary-tie prevalence (**72.4%**) is compatible with substantially greater concentration than the tested $\alpha=0.5$ ($16.6\%$) and $\alpha=1.0$ ($9.4\%$) symmetric Dirichlet regimes, matching a concentrated regime ($\alpha=0.1$: $73.3\% \pm 3.0\%$). However, a single symmetric Dirichlet may not fully characterize the generating distribution.
+Empirically, ChaosNLI populates only **1,604 unique profiles**, demonstrating far greater profile concentration than uniform occupancy predicts. The observed boundary-tie prevalence (**49.1%**) lies above the tested $\alpha=0.5$ ($35.7\% \pm 1.6\%$) and $\alpha=1.0$ ($25.5\% \pm 1.1\%$) regimes but below the more concentrated $\alpha=0.1$ regime ($80.2\% \pm 1.2\%$). A single symmetric Dirichlet does not fully characterize the generating distribution, and this comparison should be treated as descriptive rather than as parameter identification.
 
 ---
 
@@ -253,7 +253,7 @@ Model predictions use pre-computed logits from 9 benchmark NLI models: BART-Larg
 
 ### 6.4 Storage-Order Row Permutation Experiment
 
-Row-permutation tests apply 1,000 random permutations $\pi$ to distance matrix rows and columns simultaneously. Nearest neighbors are sorted using NumPy's `np.argsort` without an explicit `kind` argument (defaulting to quicksort). In the presence of exact distance ties, sorting order is determined by array memory layout index, generating storage-order instability. Inverse permutations $\pi^{-1}$ restore persistent object identities before computing top-$k$ overlap.
+Row-permutation tests apply 1,000 random permutations $\pi$ to persistent item identities. Self-distance is explicitly excluded, and deterministic neighbors are ordered by distance with stable storage index as the boundary tie policy. In the presence of exact distance ties, re-indexing changes which boundary candidates have the lowest storage positions. Persistent object identities are restored before computing top-$k$ overlap.
 
 ### 6.5 Stratified Joint Bootstrap Procedure
 

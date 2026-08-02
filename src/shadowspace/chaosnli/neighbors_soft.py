@@ -5,6 +5,39 @@ from __future__ import annotations
 import numpy as np
 
 
+def compute_boundary_tie_mask(
+    dist_matrix: np.ndarray,
+    k: int = 10,
+    atol: float = 1e-7,
+) -> np.ndarray:
+    """Return one Boolean per item indicating a tie that crosses the top-k boundary.
+
+    A repeated distance entirely contained inside the first ``k`` neighbors is not
+    a boundary ambiguity. The boundary is tied only when the k-th and (k+1)-th
+    candidate distances are equal after excluding self-distance.
+    """
+    distances = np.asarray(dist_matrix)
+    if distances.ndim != 2 or distances.shape[0] != distances.shape[1]:
+        raise ValueError("dist_matrix must be square")
+    n = distances.shape[0]
+    if not 1 <= k < n - 1:
+        raise ValueError(f"k must satisfy 1 <= k < N-1; got k={k}, N={n}")
+
+    candidates = distances.copy()
+    np.fill_diagonal(candidates, np.inf)
+    sorted_distances = np.sort(candidates, axis=1)
+    return np.isclose(sorted_distances[:, k - 1], sorted_distances[:, k], atol=atol)
+
+
+def compute_boundary_tie_percentage(
+    dist_matrix: np.ndarray,
+    k: int = 10,
+    atol: float = 1e-7,
+) -> float:
+    """Return the percentage of items with a tie crossing the top-k boundary."""
+    return float(compute_boundary_tie_mask(dist_matrix, k=k, atol=atol).mean() * 100.0)
+
+
 def compute_soft_neighborhood_weights(
     dist_matrix: np.ndarray,
     k: int = 10,

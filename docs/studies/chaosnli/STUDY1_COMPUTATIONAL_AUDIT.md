@@ -7,7 +7,7 @@
   tie-aware neighborhoods, scale curves, annotation budgeting, and geometry sensitivity
 
 > **Canonical results:** Quantitative values are generated from
-> [`results/canonical_results.yaml`](../../../results/canonical_results.yaml).
+> [`results/canonical_results.json`](../../../results/canonical_results.json).
 
 ---
 
@@ -19,10 +19,10 @@
 | **Unique Opinion Profiles (Level 1 Nodes)** | **1,604 unique** | Discrete 3-class distribution vectors |
 | **Items in Non-Singleton Profiles** | **2,193 items (70.4%)** | Items sharing an exact label distribution with at least one other item |
 | **Multi-Item Profiles with Mixed Sources** | **337 profiles (49.3%)** | Multi-item profiles containing both SNLI and MNLI items |
-| **Items with Distance Ties at $k=10$ Boundary** | **2,254 items (72.4%)** | Items with exact distance ties across the $k=10$ neighbor boundary |
+| **Items with Distance Ties Crossing the $k=10$ Boundary** | **1,529 items (49.1%)** | Items whose $k$th and $(k+1)$th candidate distances are exactly tied after excluding self-distance |
 | **Empirical Mean Entropy** | **0.9386 bits** | Overall distribution dispersion across dataset |
 | **Posterior Mean Composition Entropy ($H(E[\theta\mid x])$)** | **0.9534 bits** | Regularized under Dirichlet $\boldsymbol{\alpha}=(0.5, 0.5, 0.5)$ |
-| **Deterministic Storage-Order Overlap Artifact** | **0.9074 $\pm$ 0.0024** | Deterministic overlap across **1,000** random row permutations (SD $= 0.0024$) |
+| **Deterministic Storage-Order Overlap Artifact** | **0.9554 $\pm$ 0.0015** | Deterministic overlap across **1,000** random row permutations after explicit self-exclusion (SD $= 0.0015$) |
 | **Fractional Soft Overlap Invariance** | **1.0000 $\pm$ 0.0000** | Strictly row-order invariant across all 1,000 permutations |
 | **500-Pair Posterior Predictive Reference (`hh100`)** | **0.07550** (direct) / **0.07549** ($\bar{H}$) | Direct unweighted mean of 500 posterior-predictive simulation pairs (`hh100.direct_pair_mean`: 0.07550, simulation interval `[0.07111, 0.08007]`); canonical bootstrap mean `hh100.focal_bootstrap_mean`: $\bar{H} = 0.07549$, 95% Joint Bootstrap Interval `[0.07000, 0.08099]`. Monte Carlo difference is 0.00001 (within simulation error).
 | **Theoretical Chance Baseline Overlap ($k/(N-1)$)** | **0.00321 (0.321%)** | Expected random overlap for $k=10, N=3113$ |
@@ -34,7 +34,7 @@
 
 Our audit investigated the storage-order sensitivity of deterministic top-$k$ sorting under distance ties:
 
-- **Mechanism**: Conventional index-resolved fixed-$k$ neighborhoods are not data-order-invariant in highly tied empirical-distribution spaces. Re-indexing data rows under **1,000 independent row permutations** alters deterministic top-$k$ overlap (**$0.9074 \pm 0.0024$**, SD $0.0024$, 95% interval $[0.9027, 0.9119]$), verified by the native Rust 16-core engine.
+- **Mechanism**: Conventional index-resolved fixed-$k$ neighborhoods are not data-order-invariant in highly tied empirical-distribution spaces. Re-indexing data rows under **1,000 independent row permutations** alters deterministic top-$k$ overlap (**$0.9554 \pm 0.0015$**, SD $0.0015$, 95% interval $[0.9527, 0.9585]$) after self-distance is explicitly excluded.
 - **Fractional Soft Invariance**: Fractional soft overlap $Q_{NX}^{\text{soft}}$ is strictly invariant (**$1.0000 \pm 0.0000$**).
 
 ### Formal Definition of Fractional Soft Overlap
@@ -72,10 +72,10 @@ For candidate weights $w_{ij}^A, w_{ij}^B \in [0, 1]$ satisfying $\sum_{j \ne i}
 
 | Scale ($k$) | Mean Overlap | Median Overlap | 5% – 95% Interval | Min Overlap | Items Changed (%) |
 |---|---|---|---|---|---|
-| $k=5$ | 0.8182 | 0.8480 | [0.5620, 1.0000] | 0.3340 | 62.0% |
-| $k=10$ | **0.9071** | **0.9210** | **[0.7700, 1.0000]** | **0.6640** | **62.1%** |
-| $k=20$ | 0.9520 | 0.9620 | [0.8800, 1.0000] | 0.6885 | 62.3% |
-| $k=50$ | 0.9808 | 0.9846 | [0.9526, 1.0000] | 0.9108 | 63.3% |
+| $k=5$ | 0.9062 | 1.0000 | [0.6818, 1.0000] | 0.3760 | 49.5% |
+| $k=10$ | **0.9554** | **1.0000** | **[0.8516, 1.0000]** | **0.7266** | **49.1%** |
+| $k=20$ | 0.9763 | 0.9763 | [0.9200, 1.0000] | 0.7424 | 50.7% |
+| $k=50$ | 0.9905 | 0.9902 | [0.9674, 1.0000] | 0.9287 | 51.6% |
 
 ---
 

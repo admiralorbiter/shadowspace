@@ -12,15 +12,16 @@ For each (n_votes, k) cell:
   - Compute Q(G_n^rep, G_100^obs)
   - Aggregate: mean, SD, 95% interval over N_SEEDS
 
-Output: results/multi_seed_reference_surface.yaml
+Output: research/chaosnli/artifacts/multi_seed_reference_surface.json
 Also prints the updated table with uncertainty intervals.
 """
 
+import json
 import time
-import yaml
+from pathlib import Path
+
 import numpy as np
 import polars as pl
-from pathlib import Path
 
 from shadowspace.chaosnli.distances import build_distance_matrix
 from shadowspace.chaosnli.neighbors_soft import compute_soft_neighborhood_weights, compute_soft_qnx
@@ -145,8 +146,10 @@ output = {
     }
 }
 
-out_path = Path("results/multi_seed_reference_surface.yaml")
-with open(out_path, "w") as f:
-    yaml.dump(output, f, default_flow_style=False, sort_keys=False)
+out_path = Path("research/chaosnli/artifacts/multi_seed_reference_surface.json")
+out_path.parent.mkdir(parents=True, exist_ok=True)
+with open(out_path, "w", encoding="utf-8") as f:
+    json.dump(output, f, indent=2)
+    f.write("\n")
 print(f"\nSaved to {out_path}")
 print("=" * 72)

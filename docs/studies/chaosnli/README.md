@@ -113,9 +113,12 @@ Only after Studies 0–3 are frozen:
 
 ## 3. Analytical conventions
 
-The canonical Study 1 report and `results/canonical_results.yaml` are the source of truth for
+The canonical Study 1 report and `results/canonical_results.json` are the source of truth for
 completed quantitative analyses. The planning documents describe the broader intended program
 and should not be read as evidence that every planned analysis is complete.
+
+Recomputation scripts write ignored intermediates beneath `research/chaosnli/artifacts/`.
+Only the explicitly promoted canonical JSON is release-facing; see `results/README.md`.
 
 | Decision | Default |
 |---|---|

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 import numpy as np
 import polars as pl
 
@@ -23,7 +21,7 @@ def build_persistent_edge_ledger(
     """Build persistent edge ledger across all candidate directed edges (i, j).
 
     Measures:
-      s_ij: Dirichlet posterior human edge support / weight
+      w_ij: Empirical fractional human neighborhood membership
       c_ij: Cross-model consensus fraction
       t_ij: Text-semantic similarity (normalized inverse text distance)
 
@@ -32,7 +30,9 @@ def build_persistent_edge_ledger(
     n = len(df)
     obj_ids = df["object_id"].to_list()
 
-    p_human = df.select(["human_p_entailment", "human_p_neutral", "human_p_contradiction"]).to_numpy()
+    p_human = df.select(
+        ["human_p_entailment", "human_p_neutral", "human_p_contradiction"]
+    ).to_numpy()
     d_human = build_distance_matrix(p_human, metric=metric)
     w_human = compute_soft_neighborhood_weights(d_human, k=k)
 
@@ -40,7 +40,7 @@ def build_persistent_edge_ledger(
     n_models = len(model_results)
     w_models_sum = np.zeros((n, n), dtype=np.float32)
 
-    for m_name, m_data in model_results.items():
+    for m_data in model_results.values():
         logits = m_data["logits"]
         q_m = compute_model_probabilities(logits, temperature=1.0)
         d_m = build_distance_matrix(q_m, metric=metric)
@@ -60,21 +60,22 @@ def build_persistent_edge_ledger(
     # Exclude diagonal
     np.fill_diagonal(cand_mask, False)
 
-    # Extract values for candidate edges to compute distribution quantiles
-    s_vals = w_human[cand_mask]
+    # Extract values for candidate edges to compute distribution quantiles.
+    # This is empirical fractional membership, not posterior edge support.
+    w_vals = w_human[cand_mask]
     c_vals = c_consensus[cand_mask]
     t_vals = t_sim[cand_mask]
 
     if use_quantiles:
         # Quantile thresholds based on non-zero candidate distribution
-        s_high = float(np.percentile(s_vals[s_vals > 0], 75)) if np.any(s_vals > 0) else 0.5
-        s_low = float(np.percentile(s_vals[s_vals > 0], 25)) if np.any(s_vals > 0) else 0.1
+        w_high = float(np.percentile(w_vals[w_vals > 0], 75)) if np.any(w_vals > 0) else 0.5
+        w_low = float(np.percentile(w_vals[w_vals > 0], 25)) if np.any(w_vals > 0) else 0.1
         c_high = float(np.percentile(c_vals[c_vals > 0], 75)) if np.any(c_vals > 0) else 0.5
         c_low = float(np.percentile(c_vals[c_vals > 0], 25)) if np.any(c_vals > 0) else 0.1
         t_high = float(np.percentile(t_vals, 75))
         t_low = float(np.percentile(t_vals, 25))
     else:
-        s_high, s_low = 0.8, 0.2
+        w_high, w_low = 0.8, 0.2
         c_high, c_low = 0.8, 0.2
         t_high, t_low = 0.10, 0.05
 
@@ -85,39 +86,41 @@ def build_persistent_edge_ledger(
         i = int(indices_i[idx])
         j = int(indices_j[idx])
 
-        s_ij = float(w_human[i, j])
+        w_ij = float(w_human[i, j])
         c_ij = float(c_consensus[i, j])
         t_ij = float(t_sim[i, j])
 
-        high_s = s_ij >= s_high
-        low_s = s_ij <= s_low
+        high_w = w_ij >= w_high
+        low_w = w_ij <= w_low
         high_c = c_ij >= c_high
         low_c = c_ij <= c_low
         high_t = t_ij >= t_high
         low_t = t_ij <= t_low
 
-        if high_s and high_c and high_t:
+        if high_w and high_c and high_t:
             cat = "broadly_shared_relation"
-        elif high_s and low_c and high_t:
+        elif high_w and low_c and high_t:
             cat = "human_relation_missed_by_models"
-        elif low_s and high_c and low_t:
+        elif low_w and high_c and low_t:
             cat = "model_family_artifact_candidate"
-        elif low_s and high_c and high_t:
+        elif low_w and high_c and high_t:
             cat = "semantic_similarity_divergence"
-        elif high_s and low_c and low_t:
+        elif high_w and low_c and low_t:
             cat = "same_opinion_behavior_distinct_language"
-        elif s_low < s_ij < s_high:
+        elif w_low < w_ij < w_high:
             cat = "insufficient_annotation_support"
         else:
             cat = "unclassified_intermediate"
 
-        records.append({
-            "source_id": obj_ids[i],
-            "target_id": obj_ids[j],
-            "s_human_support": s_ij,
-            "c_model_consensus": c_ij,
-            "t_text_support": t_ij,
-            "diagnostic_category": cat,
-        })
+        records.append(
+            {
+                "source_id": obj_ids[i],
+                "target_id": obj_ids[j],
+                "w_human_empirical": w_ij,
+                "c_model_consensus": c_ij,
+                "t_text_support": t_ij,
+                "diagnostic_category": cat,
+            }
+        )
 
     return pl.DataFrame(records)

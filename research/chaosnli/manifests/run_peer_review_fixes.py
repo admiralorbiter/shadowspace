@@ -4,24 +4,32 @@ Uses ProcessPoolExecutor across CPU cores to complete 1,000 HH100 simulations
 and 1,000 Monte Carlo tie-breaking passes in ~10-15 seconds.
 """
 
-from concurrent.futures import ProcessPoolExecutor
 import os
-import sys
+from concurrent.futures import ProcessPoolExecutor
+
 import numpy as np
 import polars as pl
 
 from shadowspace.chaosnli.distances import build_distance_matrix
 from shadowspace.chaosnli.joint_spaces import compute_lexicographic_tie_breaking
-from shadowspace.chaosnli.linguistic_validation import evaluate_taxonomy_retrieval, extract_linguistic_disagreement_taxonomy
+from shadowspace.chaosnli.linguistic_validation import (
+    evaluate_taxonomy_retrieval,
+    extract_linguistic_disagreement_taxonomy,
+)
 from shadowspace.chaosnli.models import load_model_predictions
 from shadowspace.chaosnli.neighbors_soft import compute_soft_neighborhood_weights, compute_soft_qnx
-from shadowspace.chaosnli.posterior import compute_100_vs_100_posterior_predictive_reliability, compute_split_half_distributions
+from shadowspace.chaosnli.posterior import (
+    compute_100_vs_100_posterior_predictive_reliability,
+    compute_split_half_distributions,
+)
 
 
 def _single_hh100_sim(seed: int) -> float:
     # Load canonical counts inside process
     df_sub = pl.read_parquet("data/chaosnli/processed/canonical_items_posterior.parquet")
-    cnts = df_sub.select(["human_count_entailment", "human_count_neutral", "human_count_contradiction"]).to_numpy()
+    cnts = df_sub.select(
+        ["human_count_entailment", "human_count_neutral", "human_count_contradiction"]
+    ).to_numpy()
     p1, p2 = compute_100_vs_100_posterior_predictive_reliability(cnts, n_votes=100, seed=seed)
     d1 = build_distance_matrix(p1, metric="hellinger")
     d2 = build_distance_matrix(p2, metric="hellinger")
@@ -33,7 +41,6 @@ def _single_hh100_sim(seed: int) -> float:
 
 def _single_rand_tie_eval(seed: int) -> tuple[float, float]:
     df_sub = pl.read_parquet("data/chaosnli/processed/canonical_items_posterior.parquet")
-    cnts = df_sub.select(["human_count_entailment", "human_count_neutral", "human_count_contradiction"]).to_numpy()
     p_h = df_sub.select(["human_p_entailment", "human_p_neutral", "human_p_contradiction"]).to_numpy()
     d_e = build_distance_matrix(p_h, metric="hellinger")
     tax_df = extract_linguistic_disagreement_taxonomy(df_sub)
@@ -58,8 +65,6 @@ def main():
     p_human = df.select(["human_p_entailment", "human_p_neutral", "human_p_contradiction"]).to_numpy()
     models = load_model_predictions()
     n_items = len(df)
-    is_snli = (df["source_dataset"] == "chaosnli_snli").to_numpy()
-    is_mnli = (df["source_dataset"] == "chaosnli_mnli").to_numpy()
 
     print("=========================================================================", flush=True)
     print("      FAST PARALLELIZED PEER REVIEW CRITICAL & MAJOR FIXES EXECUTION     ", flush=True)
@@ -76,10 +81,15 @@ def main():
     perm_order = rng.permutation(n_items)
     d_emp_reordered = d_emp[np.ix_(perm_order, perm_order)]
 
+    def deterministic_knn(distances: np.ndarray, k: int = 10) -> np.ndarray:
+        candidates = distances.copy()
+        np.fill_diagonal(candidates, np.inf)
+        return np.argsort(candidates, axis=1, kind="stable")[:, :k]
+
     def compute_deterministic_qnx(d1: np.ndarray, d2: np.ndarray, k: int = 10) -> float:
         n = len(d1)
-        knn1 = np.argsort(d1, axis=1)[:, 1:k+1]
-        knn2 = np.argsort(d2, axis=1)[:, 1:k+1]
+        knn1 = deterministic_knn(d1, k=k)
+        knn2 = deterministic_knn(d2, k=k)
         overlaps = [len(set(knn1[i]).intersection(set(knn2[i]))) / float(k) for i in range(n)]
         return float(np.mean(overlaps))
 
@@ -92,7 +102,19 @@ def main():
     frac_reordered, _ = compute_soft_qnx(w_emp, w_emp_unreordered, k=10)
 
     det_self_raw = compute_deterministic_qnx(d_emp, d_emp, k=10)
-    det_self_reordered = compute_deterministic_qnx(d_emp, d_emp_reordered, k=10)
+    knn_emp = deterministic_knn(d_emp)
+    knn_reordered = deterministic_knn(d_emp_reordered)
+    det_self_reordered = float(
+        np.mean([
+            len(
+                set(knn_emp[orig_i]).intersection(
+                    set(perm_order[knn_reordered[inv_perm[orig_i]]])
+                )
+            )
+            / 10.0
+            for orig_i in range(n_items)
+        ])
+    )
 
     det_split_common = compute_deterministic_qnx(d1_50, d2_50, k=10)
     w1_50 = compute_soft_neighborhood_weights(d1_50, k=10)
@@ -100,13 +122,13 @@ def main():
     frac_split_common, _ = compute_soft_qnx(w1_50, w2_50, k=10)
 
     det_split_perm_vals = []
-    for s in range(50):
+    for _ in range(50):
         p_a = rng.permutation(n_items)
         p_b = rng.permutation(n_items)
         d1_p = d1_50[np.ix_(p_a, p_a)]
         d2_p = d2_50[np.ix_(p_b, p_b)]
-        knn1 = np.argsort(d1_p, axis=1)[:, 1:11]
-        knn2 = np.argsort(d2_p, axis=1)[:, 1:11]
+        knn1 = deterministic_knn(d1_p)
+        knn2 = deterministic_knn(d2_p)
         overlaps = []
         for idx_i in range(n_items):
             orig_i = p_a[idx_i]
@@ -188,7 +210,7 @@ def main():
     print(f"{'Model Name':<18} | {'Hellinger':<10} | {'JSD (sqrt)':<10} | {'Total Var':<10} | {'Euclidean':<10} | {'Aitchison':<10}", flush=True)
     print("-" * 80, flush=True)
 
-    p1_100, p2_100 = compute_100_vs_100_posterior_predictive_reliability(counts, n_votes=100, seed=42)
+    p1_100, _p2_100 = compute_100_vs_100_posterior_predictive_reliability(counts, n_votes=100, seed=42)
     for m_name in models.keys():
         scores = []
         for met in metrics_list:

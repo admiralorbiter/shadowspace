@@ -4,16 +4,17 @@ geometry_and_hbar.py
 Fast targeted audit:
   1. Recomputes geometry sensitivity table: Q(G_m, G_emp) for all 9 models x 5 metrics
      G_emp = observed empirical graph from p_human (NOT a single posterior draw)
-  2. Confirms H_bar from canonical_results.yaml (hh100_simulation.mean)
+  2. Confirms H_bar from the single canonical JSON release
   3. Computes direct deltas: H_bar - M_bar_m using stored q_paired_hm_mean values
 
 Takes ~30-60 seconds (no pair loop needed).
 """
 
-import yaml
+import json
+from pathlib import Path
+
 import numpy as np
 import polars as pl
-from pathlib import Path
 
 from shadowspace.chaosnli.distances import build_distance_matrix
 from shadowspace.chaosnli.models import load_model_predictions
@@ -32,19 +33,16 @@ p_human = df.select(["human_p_entailment", "human_p_neutral", "human_p_contradic
 n_items = len(df)
 print(f"Loaded {n_items} items")
 
-# Load existing canonical results
-with open("results/canonical_results.yaml") as f:
-    canon = yaml.safe_load(f)
-with open("results/paired_estimand_results.yaml") as f:
-    paired = yaml.safe_load(f)
+# Load the single committed canonical release.
+with open("results/canonical_results.json", encoding="utf-8") as f:
+    canon = json.load(f)
 
 # === 1. H_bar from canonical ===
-hh100_sim_mean = canon["hh100_simulation"]["mean"]   # stored as 0.0755
-h1_boot_mean   = canon["h1_bootstrap"]["hh100_bootstrap_mean"]  # stored as 0.07549
-print(f"\n--- H_bar values from stored files ---")
+hh100_sim_mean = canon["human_reference"]["hh100_direct_pair"]["mean"]
+h1_boot_mean = canon["human_reference"]["hh100_paired_focal_bootstrap"]["mean"]
+print("\n--- H_bar values from stored files ---")
 print(f"  hh100_simulation.mean      : {hh100_sim_mean} (direct 500-pair mean, ≈ H_bar)")
 print(f"  h1_bootstrap.hh100_mean    : {h1_boot_mean} (bootstrap mean)")
-print(f"  Panel B Q_fuzzy (paper)    : 0.07522  (ORIGIN UNCLEAR - investigate)")
 print(f"  Canonical H_bar to use     : {h1_boot_mean} (paired estimand bootstrap mean)")
 
 # === 2. Direct delta = H_bar - M_bar_m ===
@@ -54,33 +52,30 @@ print(f"{'Model':<20} {'M_bar_m':>10} {'Direct Delta':>14} {'Stored Delta':>14} 
 print("-" * 72)
 
 model_keys_display = {
-    "ALBERT-xxLarge": "ALBERT-xxLarge",
-    "BART-Large": "BART-Large",
-    "BERT-Base": "BERT-Base",
-    "BERT-Large": "BERT-Large",
-    "DistilBERT": "DistilBERT",
-    "RoBERTa-Base": "RoBERTa-Base",
-    "RoBERTa-Large": "RoBERTa-Large",
-    "XLNet-Base": "XLNet-Base",
-    "XLNet-Large": "XLNet-Large",
+    "ALBERT-xxLarge": "albert-xxlarge",
+    "BART-Large": "bart-large",
+    "BERT-Base": "bert-base",
+    "BERT-Large": "bert-large",
+    "DistilBERT": "distilbert",
+    "RoBERTa-Base": "roberta-base",
+    "RoBERTa-Large": "roberta-large",
+    "XLNet-Base": "xlnet-base",
+    "XLNet-Large": "xlnet-large",
 }
 
 delta_results = {}
-for disp_key in model_keys_display:
-    m_data_canon = canon["h1_bootstrap"]["models"].get(disp_key, {})
-    m_data_paired = paired["models"].get(disp_key.lower().replace(" ", "-").replace("bert", "bert"), {})
-    
-    # Try both naming conventions
-    M_bar = m_data_canon.get("q_paired_hm_mean") or m_data_canon.get("q_soft_hm_mean")
+for disp_key, model_slug in model_keys_display.items():
+    m_data_canon = canon["model_recovery"]["models"].get(model_slug, {})
+    M_bar = m_data_canon.get("q_paired_hm_mean")
     stored_delta = m_data_canon.get("delta_m_mean")
-    
+
     if M_bar is None:
         print(f"{disp_key:<20} NOT FOUND")
         continue
-    
+
     direct_delta = round(H_bar - M_bar, 5)
     match = abs(direct_delta - stored_delta) < 0.0001 if stored_delta else "?"
-    
+
     delta_results[disp_key] = {
         "M_bar_m": M_bar,
         "direct_delta": direct_delta,
@@ -123,7 +118,7 @@ for m_key in model_keys_sorted:
     logits = models[m_key]["logits"]
     exp_l = np.exp(logits - np.max(logits, axis=1, keepdims=True))
     q_m = exp_l / np.sum(exp_l, axis=1, keepdims=True)
-    
+
     row_vals = {}
     cells = []
     for met_key, met_name in metrics_list:
@@ -132,27 +127,27 @@ for m_key in model_keys_sorted:
         q_val, _ = compute_soft_qnx(w_emp_all[met_key], w_m, k=K)
         row_vals[met_name] = round(float(q_val), 5)
         cells.append(f"{q_val:>12.5f}")
-    
+
     geo_results[m_key] = row_vals
     print(f"{m_key:<20} " + " ".join(cells))
 
 print(f"\nBART-Large Hellinger (G_emp): {geo_results['bart-large']['Hellinger']:.5f}")
-print(f"OLD table Hellinger (G_H1^seed42): 0.01617")
-print(f"Diagnostic Hellinger (G_emp):      0.01867")
+print("OLD table Hellinger (G_H1^seed42): 0.01617")
+print("Diagnostic Hellinger (G_emp):      0.01867")
 print(f"THIS RESULT matches diagnostic:    {'YES' if abs(geo_results['bart-large']['Hellinger'] - 0.01867) < 0.0002 else 'NO'}")
 
 # === Save ===
 output = {
     "H_bar_hh100_simulation_mean": hh100_sim_mean,
     "H_bar_h1_bootstrap_mean": h1_boot_mean,
-    "panel_b_Q_fuzzy_paper": 0.07522,
-    "note_0_07522": "Origin unclear - likely from older analysis. Canonical H_bar = h1_bootstrap_mean = 0.07549",
     "direct_deltas": {k: v for k, v in delta_results.items()},
     "geometry_table_Q_G_m_G_emp": geo_results,
 }
 
-out_path = Path("results/geometry_and_hbar_audit.yaml")
-with open(out_path, "w") as f:
-    yaml.dump(output, f, default_flow_style=False, sort_keys=False)
+out_path = Path("research/chaosnli/artifacts/geometry_and_hbar_audit.json")
+out_path.parent.mkdir(parents=True, exist_ok=True)
+with open(out_path, "w", encoding="utf-8") as f:
+    json.dump(output, f, indent=2)
+    f.write("\n")
 print(f"\nSaved to {out_path}")
 print("=" * 72)

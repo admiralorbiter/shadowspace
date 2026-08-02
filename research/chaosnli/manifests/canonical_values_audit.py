@@ -15,10 +15,11 @@ All outputs are printed and saved to results/canonical_audit.yaml.
 """
 
 import time
-import yaml
+from pathlib import Path
+
 import numpy as np
 import polars as pl
-from pathlib import Path
+import yaml
 
 from shadowspace.chaosnli.distances import build_distance_matrix
 from shadowspace.chaosnli.models import load_model_predictions
@@ -112,7 +113,7 @@ H_bar_strict = float(np.mean(hh_strict))
 H_bar_expected = float(np.mean(hh_expected))
 H_bar_fuzzy = float(np.mean(hh_fuzzy))
 
-print(f"\nPanel B canonical values (direct 500-pair means):")
+print("\nPanel B canonical values (direct 500-pair means):")
 print(f"  Q_strict  direct mean: {H_bar_strict:.5f}  95% interval: [{np.percentile(hh_strict,2.5):.5f}, {np.percentile(hh_strict,97.5):.5f}]")
 print(f"  Q_expected direct mean: {H_bar_expected:.5f}  95% interval: [{np.percentile(hh_expected,2.5):.5f}, {np.percentile(hh_expected,97.5):.5f}]")
 print(f"  Q_fuzzy   direct mean: {H_bar_fuzzy:.5f}  95% interval: [{np.percentile(hh_fuzzy,2.5):.5f}, {np.percentile(hh_fuzzy,97.5):.5f}]")
@@ -120,7 +121,7 @@ print(f"  Q_fuzzy   direct mean: {H_bar_fuzzy:.5f}  95% interval: [{np.percentil
 # ==========================================================================
 # 2. DIRECT DELTA = H_bar_fuzzy - M_bar_m (NOT bootstrap weighted)
 # ==========================================================================
-print(f"\n--- 2. DIRECT PAIRED SCORES AND DELTAS ---")
+print("\n--- 2. DIRECT PAIRED SCORES AND DELTAS ---")
 print(f"H_bar (Q_fuzzy direct mean) = {H_bar_fuzzy:.5f}")
 print(f"\n{'Model':<20} {'M_bar_m':>10} {'Direct Delta':>14} {'Ratio raw%':>12} {'Ratio adj%':>12}")
 print("-" * 72)
@@ -147,7 +148,7 @@ for m_key in model_keys:
 #    G_emp = observed empirical human graph (using p_human directly)
 #    NOT a single posterior draw -- that was the old (incorrect) method
 # ==========================================================================
-print(f"\n--- 3. GEOMETRY SENSITIVITY TABLE (Q(G_m, G_emp), k=10) ---")
+print("\n--- 3. GEOMETRY SENSITIVITY TABLE (Q(G_m, G_emp), k=10) ---")
 print("NOTE: G_emp uses observed p_human directly. OLD geometry table used single")
 print("      posterior draw G_H1^(seed=42), which is a DIFFERENT estimand.\n")
 
@@ -161,7 +162,7 @@ metrics_list = [
 
 # Build observed-graph for each metric
 obs_graphs = {}
-for met_key, met_name in metrics_list:
+for met_key, _met_name in metrics_list:
     d_obs = build_distance_matrix(p_human, metric=met_key)
     w_obs_k = compute_soft_neighborhood_weights(d_obs, k=K)
     obs_graphs[met_key] = (d_obs, w_obs_k)
@@ -190,8 +191,8 @@ for m_key in model_keys:
 # Check rank order
 bart_hell = geo_table["bart-large"]["Hellinger"]
 print(f"\nBART-Large Hellinger Q(G_m, G_emp): {bart_hell:.5f}")
-print(f"   Previously reported (vs G_H1^seed42): 0.01617")
-print(f"   Previously reported (vs G_emp):       0.01867 (from diagnostic)")
+print("   Previously reported (vs G_H1^seed42): 0.01617")
+print("   Previously reported (vs G_emp):       0.01867 (from diagnostic)")
 
 # ==========================================================================
 # 4. REFERENCE LADDER: confirm HH100 vs observed ratio
@@ -202,7 +203,7 @@ d1_ref = build_distance_matrix(p1_ref, metric="hellinger")
 w1_ref = compute_soft_neighborhood_weights(d1_ref, k=K)
 q_hh_vs_obs, _ = compute_soft_qnx(w_emp, w1_ref, k=K)
 print(f"\nHH100 posterior pair (seed=0) vs G_emp: {q_hh_vs_obs:.5f}")
-print(f"   This is the Reference Ladder 'posterior cohort vs observed' value (0.13850)")
+print("   This is the Reference Ladder 'posterior cohort vs observed' value (0.13850)")
 
 # ==========================================================================
 # Save results
@@ -226,7 +227,8 @@ output = {
     }
 }
 
-out_path = Path("results/canonical_audit.yaml")
+out_path = Path("research/chaosnli/artifacts/canonical_values_audit.yaml")
+out_path.parent.mkdir(parents=True, exist_ok=True)
 with open(out_path, "w") as f:
     yaml.dump(output, f, default_flow_style=False, sort_keys=False)
 print(f"\nSaved to {out_path}")

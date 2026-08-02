@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_id": "chaosnli-supplied-snli-mnli-model-predictions",
+  "path": "data/chaosnli/raw/model_predictions/model_predictions_for_snli_mnli.json",
+  "source": "ChaosNLI supplied model predictions",
+  "source_url": "https://github.com/easonnie/ChaosNLI",
+  "license": "CC-BY-NC-4.0",
+  "sha256": "7c788bb9df6917f56a99a3bbf19c307bf2d02ad14d8f02537338b7bfb629bb53",
+  "size_bytes": 33204599,
+  "canonical_label_order": [
+    "entailment",
+    "neutral",
+    "contradiction"
+  ],
+  "models": [
+    "albert-xxlarge",
+    "bart-large",
+    "bert-base",
+    "bert-large",
+    "distilbert",
+    "roberta-base",
+    "roberta-large",
+    "xlnet-base",
+    "xlnet-large"
+  ],
+  "checkpoint_revisions": null,
+  "provenance_status": "supplied artifact hash locked; exact checkpoint revisions unavailable"
+}

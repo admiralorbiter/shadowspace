@@ -1,82 +1,123 @@
-"""Phase Diagram Simulation Script for Boundary Tie Regimes.
+"""Recompute the 100-repetition boundary-tie phase diagram.
 
-Simulates categorical vote distributions across C categories, n votes, N items,
-and 3 Dirichlet concentration regimes to compute boundary tie probability at k=10.
+The output is an ignored recomputation artifact. Promote it only after the
+full grid and empirical reference pass the canonical release validations.
 """
 
+from __future__ import annotations
+
+import json
+import os
+import time
+from concurrent.futures import ProcessPoolExecutor
 from math import comb
+from pathlib import Path
+
 import numpy as np
 import polars as pl
+
 from shadowspace.chaosnli.distances import build_distance_matrix
+from shadowspace.chaosnli.neighbors_soft import compute_boundary_tie_percentage
 
-print("=========================================================================", flush=True)
-print("           RUNNING TIE-REGIME PHASE DIAGRAM SIMULATION                   ", flush=True)
-print("=========================================================================\n", flush=True)
-
-categories_list = [2, 3, 5, 7, 10]
-votes_list = [3, 5, 10, 20, 30, 50, 75, 100]
-k_eval = 10
-
-# 1. Theoretical Lattice Capacity S(n, C)
-print("--- 1. THEORETICAL LATTICE CAPACITY S(n, C) = (n+C-1 choose C-1) ---", flush=True)
-print(f"{'n votes':<10} | " + " | ".join([f"C={c:<5}" for c in categories_list]), flush=True)
-print("-" * 65, flush=True)
-for n in votes_list:
-    row_str = f"{n:<10} | "
-    capacities = [f"{comb(n + c - 1, c - 1):<7,d}" for c in categories_list]
-    print(row_str + " | ".join(capacities), flush=True)
+CATEGORIES = (2, 3, 5, 7, 10)
+VOTE_DEPTHS = (3, 5, 10, 20, 30, 50, 100)
+ALPHAS = (0.1, 0.5, 1.0)
+N_ITEMS = 3113
+K = 10
+N_REPETITIONS = 100
+BASE_SEED = 20260802
 
 
-# 2. Empirical Boundary Tie Probability Simulation across Regimes
-print("\n--- 2. BOUNDARY TIE PROBABILITY AT k=10 (N=3,113 Items) ---", flush=True)
-regimes = {
-    "Concentrated (Dirichlet alpha=0.5)": 0.5,
-    "Uniform (Dirichlet alpha=1.0)": 1.0,
-    "Boundary-Heavy (Dirichlet alpha=0.1)": 0.1
-}
+def _simulate_cell(args: tuple[float, int, int]) -> dict[str, float | int]:
+    alpha, categories, n_votes = args
+    tie_percentages = []
 
-rng = np.random.default_rng(20260802)
-results_table = []
+    for repetition in range(N_REPETITIONS):
+        seed = (
+            BASE_SEED
+            + repetition * 100_000
+            + int(alpha * 1_000) * 1_000
+            + categories * 100
+            + n_votes
+        )
+        rng = np.random.default_rng(seed)
+        theta = rng.dirichlet(np.full(categories, alpha), size=N_ITEMS)
+        counts = np.array(
+            [rng.multinomial(n_votes, theta_i) for theta_i in theta],
+            dtype=np.int16,
+        )
+        probabilities = counts / float(n_votes)
+        distances = build_distance_matrix(probabilities, metric="hellinger")
+        tie_percentages.append(compute_boundary_tie_percentage(distances, k=K))
 
-for r_name, alpha_val in regimes.items():
-    print(f"\nRegime: {r_name}", flush=True)
-    print(f"{'n votes':<10} | " + " | ".join([f"C={c:<5}" for c in categories_list]), flush=True)
-    print("-" * 65, flush=True)
+    values = np.asarray(tie_percentages)
+    return {
+        "alpha": alpha,
+        "c": categories,
+        "n_votes": n_votes,
+        "mean_tie_pct": round(float(values.mean()), 1),
+        "sd_tie_pct": round(float(values.std(ddof=1)), 2),
+    }
 
-    for n_votes in votes_list:
-        row_pcts = []
-        for C in categories_list:
-            alpha_vec = np.full(C, alpha_val)
-            theta = rng.dirichlet(alpha_vec, size=3113)
 
-            # Fast vector sampling
-            counts = np.zeros((3113, C), dtype=int)
-            for i in range(3113):
-                counts[i] = rng.multinomial(n_votes, theta[i])
+def _empirical_tie_percentage() -> float:
+    items_path = Path("data/chaosnli/processed/canonical_items_posterior.parquet")
+    if not items_path.exists():
+        items_path = Path("data/chaosnli/processed/canonical_items.parquet")
+    frame = pl.read_parquet(items_path)
+    probabilities = frame.select(
+        ["human_p_entailment", "human_p_neutral", "human_p_contradiction"]
+    ).to_numpy()
+    distances = build_distance_matrix(probabilities, metric="hellinger")
+    return compute_boundary_tie_percentage(distances, k=K)
 
-            p_emp = counts / float(n_votes)
-            d_mat = build_distance_matrix(p_emp, metric="hellinger")
 
-            d_sorted = np.sort(d_mat, axis=1)
-            tie_mask = (d_sorted[:, k_eval] == d_sorted[:, k_eval + 1])
-            tie_pct = float(np.mean(tie_mask) * 100.0)
-            row_pcts.append(f"{tie_pct:<6.1f}%")
+def main() -> int:
+    started = time.perf_counter()
+    tasks = [
+        (alpha, categories, n_votes)
+        for alpha in ALPHAS
+        for categories in CATEGORIES
+        for n_votes in VOTE_DEPTHS
+    ]
+    workers = min(os.cpu_count() or 4, 16)
+    print(
+        f"Running {len(tasks)} phase cells x {N_REPETITIONS} repetitions "
+        f"across {workers} workers...",
+        flush=True,
+    )
+    with ProcessPoolExecutor(max_workers=workers) as pool:
+        cells = list(pool.map(_simulate_cell, tasks))
 
-            results_table.append({
-                "regime": r_name,
+    empirical_tie_pct = _empirical_tie_percentage()
+    output = {
+        "description": (
+            "Boundary tie prevalence at k=10 for N=3,113 categorical-vote items; "
+            "100 deterministic repetitions per Dirichlet regime cell."
+        ),
+        "n_repetitions_per_cell": N_REPETITIONS,
+        "n_items": N_ITEMS,
+        "k": K,
+        "theoretical_lattice_capacity": [
+            {
                 "n_votes": n_votes,
-                "categories": C,
-                "n_items": 3113,
-                "tie_pct": tie_pct,
-                "lattice_capacity": comb(n_votes + C - 1, C - 1)
-            })
+                "c": categories,
+                "capacity": comb(n_votes + categories - 1, categories - 1),
+            }
+            for n_votes in VOTE_DEPTHS
+            for categories in CATEGORIES
+        ],
+        "empirical_chaosnli_tie_pct": empirical_tie_pct,
+        "phase_diagram_100reps": cells,
+        "total_runtime_ms": (time.perf_counter() - started) * 1000.0,
+    }
 
-        print(f"{n_votes:<10} | " + " | ".join(row_pcts), flush=True)
+    output_path = Path("research/chaosnli/artifacts/phase_diagram_100reps.json")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(output, indent=2) + "\n", encoding="utf-8")
+    print(f"Phase-diagram recomputation written to {output_path}", flush=True)
+    return 0
 
-df_res = pl.DataFrame(results_table)
-df_res.write_parquet("data/external/phase_diagram_simulation.parquet")
-print("\nPhase diagram simulation saved to data/external/phase_diagram_simulation.parquet", flush=True)
 
-print("\n=========================================================================", flush=True)
-print("          PHASE DIAGRAM SIMULATION COMPLETED CLEANLY                     ", flush=True)
-print("=========================================================================", flush=True)
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -86,8 +86,12 @@ impl Default for RunPaths {
         Self {
             items: PathBuf::from("data/chaosnli/processed/canonical_items_posterior.json"),
             models: PathBuf::from("research/chaosnli/rust_manifest/model_probs.json"),
-            paired_output: PathBuf::from("results/paired_estimand_results.yaml"),
-            surface_output: PathBuf::from("results/multi_seed_reference_surface.json"),
+            paired_output: PathBuf::from(
+                "research/chaosnli/artifacts/paired_estimand_results.json",
+            ),
+            surface_output: PathBuf::from(
+                "research/chaosnli/artifacts/multi_seed_reference_surface.json",
+            ),
         }
     }
 }
@@ -1044,11 +1048,11 @@ mod tests {
         );
         assert_eq!(
             paths.paired_output,
-            PathBuf::from("results/paired_estimand_results.yaml")
+            PathBuf::from("research/chaosnli/artifacts/paired_estimand_results.json")
         );
         assert_eq!(
             paths.surface_output,
-            PathBuf::from("results/multi_seed_reference_surface.json")
+            PathBuf::from("research/chaosnli/artifacts/multi_seed_reference_surface.json")
         );
     }
 
