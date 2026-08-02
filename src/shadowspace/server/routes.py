@@ -36,6 +36,7 @@ from shadowspace.importers.csv_importer import import_csv_bundle, import_parquet
 from shadowspace.math.clr import clr_transform
 from shadowspace.math.metrics import pairwise_euclidean
 from shadowspace.math.registry import MetricRegistry
+from shadowspace.math.stability import compute_point_stability, generate_rashomon_set
 from shadowspace.math.subspace_angles import compute_canonical_angles, compute_grassmannian_distance
 from shadowspace.math.transforms import sqrt_transform
 from shadowspace.models.investigation import InvestigationRecord, SavedView
@@ -1227,3 +1228,112 @@ def api_optimize_view() -> Response:
     }
 
     return Response(json.dumps(payload), mimetype="application/json")
+
+
+@workbench_bp.route("/api/point-stability")
+def api_point_stability() -> Response:
+    """Compute per-point stability overlap scores across candidate catalog views."""
+    dataset_key = request.args.get("dataset", "calibration_3class")
+    rep_id = request.args.get("representation", "probability")
+    metric_id = request.args.get("metric", "euclidean")
+    k = request.args.get("k", 5, type=int)
+
+    ds_data = _get_dataset(dataset_key)
+    if not ds_data:
+        return Response(json.dumps({"error": f"Unknown dataset {dataset_key!r}"}), status=404, mimetype="application/json")
+
+    raw_matrix = np.array(ds_data["raw_matrix"], dtype=np.float64)
+    if rep_id == "sqrt_probability":
+        rep_matrix = sqrt_transform(raw_matrix)
+    elif rep_id == "clr_probability":
+        rep_matrix = clr_transform(raw_matrix)
+    elif rep_id == "logits":
+        rep_matrix = logit_transform(raw_matrix)
+    else:
+        rep_matrix = raw_matrix
+
+    n_pts = len(rep_matrix)
+
+    # Compute source k-NN
+    try:
+        src_dists = _METRIC_REGISTRY.compute_pairwise_distances(rep_matrix, metric_id, rep_id)
+    except (KeyError, ValueError) as err:
+        return Response(json.dumps({"error": str(err)}), status=400, mimetype="application/json")
+
+    k_eff = min(k, max(1, n_pts - 1))
+    src_knn = np.argsort(src_dists, axis=1)[:, 1:k_eff+1]
+
+    # Collect catalog 2D coords
+    catalog = ds_data.get("catalog", {})
+    catalog_coords = {}
+    for v_id, v_data in catalog.items():
+        if "coords" in v_data:
+            catalog_coords[v_id] = np.array(v_data["coords"], dtype=np.float64)
+
+    if not catalog_coords:
+        if "representations" in ds_data and rep_id in ds_data["representations"]:
+            catalog_coords["default"] = np.array(ds_data["representations"][rep_id]["coords"], dtype=np.float64)
+
+    res = compute_point_stability(rep_matrix, catalog_coords, src_knn, k=k_eff)
+    res["dataset"] = dataset_key
+    res["representation"] = rep_id
+    res["metric"] = metric_id
+    res["k"] = k_eff
+
+    return Response(json.dumps(res), mimetype="application/json")
+
+
+@workbench_bp.route("/api/rashomon-set")
+def api_rashomon_set() -> Response:
+    """Generate a diverse Rashomon candidate set of projection bases."""
+    dataset_key = request.args.get("dataset", "calibration_3class")
+    rep_id = request.args.get("representation", "probability")
+    view_id = request.args.get("view_id", "pca_corners")
+    threshold = request.args.get("threshold", 0.50, type=float)
+
+    ds_data = _get_dataset(dataset_key)
+    if not ds_data:
+        return Response(json.dumps({"error": f"Unknown dataset {dataset_key!r}"}), status=404, mimetype="application/json")
+
+    raw_matrix = np.array(ds_data["raw_matrix"], dtype=np.float64)
+    if rep_id == "sqrt_probability":
+        rep_matrix = sqrt_transform(raw_matrix)
+    elif rep_id == "clr_probability":
+        rep_matrix = clr_transform(raw_matrix)
+    elif rep_id == "logits":
+        rep_matrix = logit_transform(raw_matrix)
+    else:
+        rep_matrix = raw_matrix
+
+    # Extract labels if present
+    objects_meta = ds_data.get("objects_meta", [])
+    y_labels = None
+    if objects_meta and isinstance(objects_meta, list):
+        if "label" in objects_meta[0]:
+            y_labels = np.array([o.get("label", 0) for o in objects_meta])
+        elif "class_name" in objects_meta[0]:
+            classes = sorted(list(set(o.get("class_name", "") for o in objects_meta)))
+            c_map = {c: i for i, c in enumerate(classes)}
+            y_labels = np.array([c_map.get(o.get("class_name", ""), 0) for o in objects_meta])
+
+    current_basis = None
+    if view_id in ds_data.get("catalog", {}):
+        v_info = ds_data["catalog"][view_id]
+        if "basis" in v_info.get("provenance", {}):
+            current_basis = np.array(v_info["provenance"]["basis"], dtype=np.float64)
+
+    candidates = generate_rashomon_set(
+        rep_matrix, Y_labels=y_labels, current_basis=current_basis, n_candidates=6, quality_threshold=threshold
+    )
+
+    payload = {
+        "dataset": dataset_key,
+        "representation": rep_id,
+        "active_view": view_id,
+        "threshold": threshold,
+        "n_candidates": len(candidates),
+        "candidates": candidates,
+    }
+
+    return Response(json.dumps(payload), mimetype="application/json")
+

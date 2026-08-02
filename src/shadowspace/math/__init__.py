@@ -14,6 +14,7 @@ from shadowspace.math.metrics import (
     pairwise_jensen_shannon,
 )
 from shadowspace.math.registry import MetricRegistry
+from shadowspace.math.stability import compute_point_stability, generate_rashomon_set, sample_uniform_haar_grassmannian
 from shadowspace.math.subspace_angles import compute_canonical_angles, compute_grassmannian_distance
 from shadowspace.math.transforms import logit_transform, sqrt_transform
 
@@ -23,8 +24,10 @@ __all__ = [
     "clr_transform",
     "compute_canonical_angles",
     "compute_grassmannian_distance",
+    "compute_point_stability",
     "euclidean_distance",
     "fisher_rao_distance",
+    "generate_rashomon_set",
     "hellinger_distance",
     "jensen_shannon_distance",
     "logit_transform",
@@ -33,5 +36,6 @@ __all__ = [
     "pairwise_fisher_rao",
     "pairwise_hellinger",
     "pairwise_jensen_shannon",
+    "sample_uniform_haar_grassmannian",
     "sqrt_transform",
 ]

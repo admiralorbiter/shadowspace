@@ -123,6 +123,34 @@
         </div>
       </div>
 
+      <div class="sidebar-section hidden" id="stability-panel">
+        <h2 class="sidebar-title">Stability & Rashomon Atlas</h2>
+        <div class="stability-panel-content">
+          <div class="stability-metric-row">
+            <span class="stability-label">Persistence Index:</span>
+            <span class="stability-val-badge" id="stability-index-label">—</span>
+          </div>
+          <div class="stability-subtext" id="stability-summary-label">
+            Percentage of points with persistent 2D neighborhoods across projection views.
+          </div>
+          <div class="selected-stability-card hidden" id="selected-stability-card">
+            <div class="card-status-row">
+              <span class="card-status-title">Selected Point:</span>
+              <span class="card-status-tag" id="selected-point-stab-tag">Perspective-Invariant</span>
+            </div>
+            <div class="card-status-desc" id="selected-point-stab-desc">
+              Neighborhood persists across candidate projection planes.
+            </div>
+          </div>
+          <div class="rashomon-candidates-group">
+            <h3 class="rashomon-subtitle">Rashomon Candidate Views</h3>
+            <div class="rashomon-list" id="rashomon-list">
+              <div class="rashomon-empty">Click 🛡️ Stability to compute Rashomon set.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="sidebar-section hidden" id="subspace-angle-panel">
         <h2 class="sidebar-title">Subspace Angles (Dual View)</h2>
         <div class="angle-panel-content">
@@ -179,6 +207,7 @@
         <div class="scatter-header-controls">
           <button id="btn-topology" class="btn-secondary btn-topology" title="Toggle Global k-NN Topology Graph Network">🕸️ Topology</button>
           <button id="btn-distortion" class="btn-secondary btn-distortion" title="Toggle Spatial Projection Distortion Heatmap">🌡️ Distortion</button>
+          <button id="btn-stability" class="btn-secondary btn-stability" title="Toggle Point Stability & Persistence Overlay">🛡️ Stability</button>
           <label class="toggle-sync-label" title="Synchronize camera zoom/pan between View A and View B">
             <input type="checkbox" id="chk-sync-cameras" checked />
             <span>Sync Cameras</span>

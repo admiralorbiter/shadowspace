@@ -285,3 +285,23 @@ def test_workbench_html_contains_sprint13_controls(client: FlaskClient) -> None:
     assert "subspace-angle-panel" in html
 
 
+def test_api_point_stability_endpoint(client: FlaskClient) -> None:
+    res = client.get("/api/point-stability?dataset=calibration_3class&representation=probability&k=5")
+    assert res.status_code == 200
+    data = json.loads(res.data)
+    assert "mean_stability" in data
+    assert "persistence_index" in data
+    assert "volatile_index" in data
+    assert "stability_scores" in data
+    assert len(data["stability_scores"]) > 0
+
+
+def test_api_rashomon_set_endpoint(client: FlaskClient) -> None:
+    res = client.get("/api/rashomon-set?dataset=calibration_3class&representation=probability&threshold=0.30")
+    assert res.status_code == 200
+    data = json.loads(res.data)
+    assert "candidates" in data
+    assert isinstance(data["candidates"], list)
+
+
+

@@ -69,6 +69,11 @@ let topologyEdges     = null;  // cached edge list from /api/topology
 let distortionGrid    = null;  // cached grid from /api/distortion-grid
 let subspaceAngles    = null;  // cached angles from /api/subspace-angles
 
+// Sprint 14 Stability & Rashomon Atlas State
+let showStabilityMap   = false; // point stability overlay
+let pointStabilityData = null;  // cached payload from /api/point-stability
+let rashomonSetData    = null;  // cached payload from /api/rashomon-set
+
 const POINT_RADIUS        = 7;
 const POINT_RADIUS_HOVER  = 10;
 const POINT_RADIUS_SELECT = 10;
@@ -199,7 +204,12 @@ function initDatasetSelector() {
 function initCatalogSelector() {
   if (catalogSelect) {
     catalogSelect.addEventListener("change", (e) => {
-      currentViewId = e.target.value;
+      const newViewId = e.target.value;
+      // If switching away from a Rashomon injected view, remove injected options
+      [...catalogSelect.options]
+        .filter(o => o.dataset.rashomon && o.value !== newViewId)
+        .forEach(o => o.remove());
+      currentViewId = newViewId;
       // Invalidate view-specific overlay caches
       topologyEdges  = null;
       distortionGrid = null;
@@ -208,6 +218,7 @@ function initCatalogSelector() {
       if (showTopologyGraph) loadTopologyEdges();
       if (showDistortionMap) loadDistortionGrid();
       if (isDualView) loadSubspaceAngles();
+      renderScatter();
     });
   }
 }
@@ -811,9 +822,256 @@ function updateSubspaceAnglePanel() {
   }
 }
 
+// ─── Sprint 14 Stability & Rashomon Atlas ──────────────────────────────────────
+
+async function loadPointStability() {
+  if (!fixtureData) return;
+  const url = `/api/point-stability?dataset=${encodeURIComponent(currentDataset)}&representation=${encodeURIComponent(currentRep)}&metric=${encodeURIComponent(currentMetric)}&k=${currentK}`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return;
+    pointStabilityData = await res.json();
+    updateStabilityPanel();
+    renderScatter();
+  } catch (err) {
+    console.error("Failed to load point stability:", err);
+  }
+}
+
+async function loadRashomonSet() {
+  if (!fixtureData) return;
+  const url = `/api/rashomon-set?dataset=${encodeURIComponent(currentDataset)}&representation=${encodeURIComponent(currentRep)}&view_id=${encodeURIComponent(currentViewId)}&threshold=0.30`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return;
+    rashomonSetData = await res.json();
+    updateStabilityPanel();
+  } catch (err) {
+    console.error("Failed to load Rashomon set:", err);
+  }
+}
+
+function updateStabilityPanel() {
+  const panel = document.getElementById("stability-panel");
+  if (!panel) return;
+  if (!showStabilityMap) {
+    panel.classList.add("hidden");
+    return;
+  }
+  panel.classList.remove("hidden");
+
+  if (pointStabilityData) {
+    const pIdxLabel = document.getElementById("stability-index-label");
+    if (pIdxLabel) {
+      const pct = Math.round((pointStabilityData.persistence_index || 0) * 100);
+      pIdxLabel.textContent = `${pct}% Persistent`;
+    }
+  }
+
+  updateSelectedPointStabilityCard();
+  updateRashomonListUI();
+}
+
+function updateSelectedPointStabilityCard() {
+  const card = document.getElementById("selected-stability-card");
+  if (!card) return;
+  if (!showStabilityMap || !pointStabilityData || !pointStabilityData.stability_scores) {
+    card.classList.add("hidden");
+    return;
+  }
+  card.classList.remove("hidden");
+
+  const score = pointStabilityData.stability_scores[selectedIdx] ?? 1.0;
+  const tag = document.getElementById("selected-point-stab-tag");
+  const desc = document.getElementById("selected-point-stab-desc");
+
+  if (score >= 0.65) {
+    if (tag) {
+      tag.textContent = "Perspective-Invariant";
+      tag.className = "card-status-tag";
+    }
+    if (desc) desc.textContent = `High stability (${Math.round(score * 100)}% overlap). Neighborhood persists across candidate 2D views.`;
+  } else if (score >= 0.35) {
+    if (tag) {
+      tag.textContent = "Moderate Sensitivity";
+      tag.className = "card-status-tag";
+      tag.style.background = "rgba(251, 191, 36, 0.2)";
+      tag.style.color = "#fbbf24";
+    }
+    if (desc) desc.textContent = `Moderate stability (${Math.round(score * 100)}% overlap). Neighborhood varies across some projection planes.`;
+  } else {
+    if (tag) {
+      tag.textContent = "Perspective-Sensitive";
+      tag.className = "card-status-tag volatile";
+    }
+    if (desc) desc.textContent = `Low stability (${Math.round(score * 100)}% overlap). 2D placement is an orthographic projection artifact. True high-D distance is preserved.`;
+  }
+}
+
+function updateRashomonListUI() {
+  const list = document.getElementById("rashomon-list");
+  if (!list) return;
+  if (!rashomonSetData || !rashomonSetData.candidates || rashomonSetData.candidates.length === 0) {
+    list.innerHTML = `<div class="rashomon-empty">No candidates met threshold.</div>`;
+    return;
+  }
+
+  list.innerHTML = rashomonSetData.candidates.map(cand => `
+    <div class="rashomon-card">
+      <div class="rashomon-card-header">
+        <span class="rashomon-name">${escapeHtml(cand.display_name)}</span>
+        <span class="rashomon-t-score">T: ${(cand.trustworthiness * 100).toFixed(1)}%</span>
+      </div>
+      <div class="rashomon-card-meta">
+        <span>Dist: ${cand.grassmannian_dist_deg}°</span>
+      </div>
+      <div class="rashomon-actions">
+        <button class="btn-rashomon-action" onclick="jumpToRashomonCandidate('${escapeHtml(cand.id)}')">▶ Jump to View</button>
+        <button class="btn-rashomon-action" onclick="compareRashomonCandidate('${escapeHtml(cand.id)}')">🗖 Dual View</button>
+      </div>
+    </div>
+  `).join("");
+}
+
+function toggleSplitView(forceState) {
+  if (typeof forceState === "boolean") {
+    isDualView = forceState;
+  } else {
+    isDualView = !isDualView;
+  }
+  const btnSplit = document.getElementById("btn-split-view");
+  const wrap = document.getElementById("canvas-wrap");
+  const containerB = document.getElementById("canvas-container-b");
+
+  if (isDualView) {
+    if (btnSplit) { btnSplit.classList.add("active"); btnSplit.textContent = "🗖 Single View"; }
+    if (wrap) wrap.classList.add("dual-view");
+    if (containerB) containerB.classList.remove("hidden");
+    loadDualViewBData();
+  } else {
+    if (btnSplit) { btnSplit.classList.remove("active"); btnSplit.textContent = "🗖 Split View"; }
+    if (wrap) wrap.classList.remove("dual-view");
+    if (containerB) containerB.classList.add("hidden");
+  }
+  updateSubspaceAnglePanel();
+  renderScatter();
+}
+
+function _projectBasis(basis) {
+  // Project the current representation matrix onto a (p, 2) basis,
+  // returning normalised 2D coordinates [[x,y], ...]
+  if (!fixtureData) return null;
+  const rawMat = fixtureData.raw_matrix;
+  if (!rawMat || !basis || !basis.length) return null;
+  const projected = rawMat.map(row =>
+    [row.reduce((s, v, j) => s + v * basis[j][0], 0),
+     row.reduce((s, v, j) => s + v * basis[j][1], 0)]
+  );
+  const xs = projected.map(c => c[0]), ys = projected.map(c => c[1]);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const rx = maxX - minX || 1, ry = maxY - minY || 1;
+  return projected.map(([x, y]) => [
+    ((x - minX) / rx) * 2 - 1,
+    ((y - minY) / ry) * 2 - 1
+  ]);
+}
+
+function jumpToRashomonCandidate(candId) {
+  const cand = (rashomonSetData?.candidates || []).find(c => c.id === candId);
+  if (!cand) return;
+
+  // Stop any running Grand Tour first
+  if (isTourPlaying) pauseTour();
+
+  // If this view exists in the catalog, switch to it normally
+  if (fixtureData?.catalog && fixtureData.catalog[candId]) {
+    currentViewId = candId;
+    if (catalogSelect) catalogSelect.value = candId;
+    topologyEdges  = null;
+    distortionGrid = null;
+    updateSemanticBadge();
+    fetchDiagnostics();
+    if (showTopologyGraph) loadTopologyEdges();
+    if (showDistortionMap) loadDistortionGrid();
+    if (showStabilityMap)  loadRashomonSet();
+    renderScatter();
+    return;
+  }
+
+  // For Haar / custom bases: directly project dataset onto basis and display
+  if (cand.basis) {
+    const coords = _projectBasis(cand.basis);
+    if (coords) {
+      // Temporarily inject into catalog so getCoords() picks it up
+      if (!fixtureData.catalog) fixtureData.catalog = {};
+      fixtureData.catalog[candId] = { coords, description: cand.display_name };
+      if (!fixtureData.representations[currentRep]) {
+        fixtureData.representations[currentRep] = {};
+      }
+      currentViewId = candId;
+      if (catalogSelect) {
+        const opt = document.createElement("option");
+        opt.value = candId;
+        opt.textContent = cand.display_name;
+        opt.dataset.rashomon = "true";
+        // Remove stale Rashomon options first
+        [...catalogSelect.options].filter(o => o.dataset.rashomon).forEach(o => o.remove());
+        catalogSelect.appendChild(opt);
+        catalogSelect.value = candId;
+      }
+      topologyEdges = null;
+      distortionGrid = null;
+      updateSemanticBadge();
+      fetchDiagnostics();
+      renderScatter();
+    }
+  }
+}
+
+function compareRashomonCandidate(candId) {
+  const cand = (rashomonSetData?.candidates || []).find(c => c.id === candId);
+  if (!cand) return;
+
+  if (!isDualView) {
+    toggleSplitView(true);
+  }
+
+  if (fixtureData) {
+    if (fixtureData.catalog && fixtureData.catalog[candId]) {
+      viewCoordsB = fixtureData.catalog[candId].coords;
+    } else if (cand.basis && fixtureData.raw_matrix) {
+      const rawMat = fixtureData.raw_matrix;
+      const basis = cand.basis;
+      const projected = rawMat.map(row => [
+        row.reduce((sum, val, j) => sum + val * basis[j][0], 0),
+        row.reduce((sum, val, j) => sum + val * basis[j][1], 0)
+      ]);
+      const xs = projected.map(c => c[0]), ys = projected.map(c => c[1]);
+      const minX = Math.min(...xs), maxX = Math.max(...xs) || 1;
+      const minY = Math.min(...ys), maxY = Math.max(...ys) || 1;
+      const rangeX = maxX - minX || 1, rangeY = maxY - minY || 1;
+      viewCoordsB = projected.map(([x, y]) => [
+        ((x - minX) / rangeX) * 2 - 1,
+        ((y - minY) / rangeY) * 2 - 1
+      ]);
+    }
+
+    const tagB = document.getElementById("view-tag-b");
+    if (tagB) tagB.textContent = `View B: ${cand.display_name}`;
+    loadSubspaceAngles();
+    renderScatter();
+  }
+}
+
+window.toggleSplitView = toggleSplitView;
+window.jumpToRashomonCandidate = jumpToRashomonCandidate;
+window.compareRashomonCandidate = compareRashomonCandidate;
+
 function initSprint13Controls() {
   const btnTopo = document.getElementById("btn-topology");
   const btnDist = document.getElementById("btn-distortion");
+  const btnStab = document.getElementById("btn-stability");
 
   if (btnTopo) {
     btnTopo.addEventListener("click", () => {
@@ -833,6 +1091,20 @@ function initSprint13Controls() {
       btnDist.classList.toggle("active", showDistortionMap);
       if (showDistortionMap && !distortionGrid) {
         loadDistortionGrid();
+      } else {
+        renderScatter();
+      }
+    });
+  }
+
+  if (btnStab) {
+    btnStab.addEventListener("click", () => {
+      showStabilityMap = !showStabilityMap;
+      btnStab.classList.toggle("active", showStabilityMap);
+      updateStabilityPanel();
+      if (showStabilityMap && !pointStabilityData) {
+        loadPointStability();
+        loadRashomonSet();
       } else {
         renderScatter();
       }
@@ -1407,6 +1679,29 @@ function renderScatterCanvas(cEl, cCtx, coords, zoom, px, py, size, isViewB) {
     cCtx.strokeStyle = isSelected ? "#34d399" : (isHovered ? "#ffffff" : "rgba(255,255,255,0.15)");
     cCtx.lineWidth   = isSelected ? 2.5 : 1.5;
     cCtx.stroke();
+
+    // Volatile & Persistent point stability rim strokes
+    if (showStabilityMap && pointStabilityData && pointStabilityData.stability_scores) {
+      const stabScore = pointStabilityData.stability_scores[i] ?? 1.0;
+      if (stabScore < 0.35) {
+        cCtx.save();
+        cCtx.beginPath();
+        cCtx.arc(sx, sy, r + 3, 0, Math.PI * 2);
+        cCtx.strokeStyle = "#f43f5e";
+        cCtx.lineWidth = 1.5;
+        cCtx.setLineDash([3, 2]);
+        cCtx.stroke();
+        cCtx.restore();
+      } else if (stabScore >= 0.75) {
+        cCtx.save();
+        cCtx.beginPath();
+        cCtx.arc(sx, sy, r + 2.5, 0, Math.PI * 2);
+        cCtx.strokeStyle = "rgba(52, 211, 153, 0.6)";
+        cCtx.lineWidth = 1.2;
+        cCtx.stroke();
+        cCtx.restore();
+      }
+    }
   }
   cCtx.shadowBlur = 0;
 
@@ -1830,6 +2125,7 @@ function selectPoint(idx) {
   selectedIdx = idx;
   updateInspector(idx);
   fetchDiagnostics();
+  updateSelectedPointStabilityCard();
 }
 
 // ─── Source inspector ─────────────────────────────────────────────────────────
