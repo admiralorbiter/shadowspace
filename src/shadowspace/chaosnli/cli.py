@@ -202,7 +202,20 @@ def handle_chaosnli_command(parsed_args: argparse.Namespace) -> int:
             np.save(out_file, dist_mat)
             metrics_built.append(m)
 
-        _emit_status("chaosnli.build-spaces", n_items=len(df), metrics=metrics_built)
+        # Build text embedding distance matrix
+        from shadowspace.chaosnli.text_embeddings import build_text_distance_space
+        text_info = build_text_distance_space(canonical_items_path=canon_p, output_dir=proc_dir)
+        metrics_built.append("text_cosine")
+
+        # Build joint distance matrix (lambda = 0.5)
+        from shadowspace.chaosnli.joint_spaces import compute_joint_distance_matrix
+        d_hellinger = np.load(proc_dir / "distance_matrix_human_hellinger.npy")
+        d_text = np.load(proc_dir / "distance_matrix_text_cosine.npy")
+        d_joint = compute_joint_distance_matrix(d_hellinger, d_text, lambda_weight=0.5)
+        np.save(proc_dir / "distance_matrix_joint_lambda050.npy", d_joint)
+        metrics_built.append("joint_lambda050")
+
+        _emit_status("chaosnli.build-spaces", n_items=len(df), metrics=metrics_built, text_embedding_dim=text_info["embedding_dim"])
         return 0
 
     elif cmd == "compute-neighbors":

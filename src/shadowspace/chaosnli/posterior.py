@@ -120,6 +120,33 @@ def compute_split_half_distributions(
     return p_half1, p_half2
 
 
+def compute_100_vs_100_posterior_predictive_reliability(
+    counts: np.ndarray,
+    n_votes: int = 100,
+    alpha_prior: float = 0.5,
+    seed: int = 20260801,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Generate two independent 100-vote Dirichlet-Multinomial posterior predictive replicates.
+
+    theta_i ~ Dirichlet(x_i + alpha)
+    x_i1, x_i2 ~ Multinomial(100, theta_i)
+    """
+    rng = np.random.default_rng(seed)
+    alpha = counts.astype(np.float64) + alpha_prior
+
+    # Draw latent theta_i per item
+    gamma_draws = rng.gamma(shape=alpha)
+    theta = gamma_draws / gamma_draws.sum(axis=-1, keepdims=True)
+
+    # Draw two independent 100-vote samples
+    x1 = np.array([rng.multinomial(n_votes, p) for p in theta], dtype=np.float64)
+    x2 = np.array([rng.multinomial(n_votes, p) for p in theta], dtype=np.float64)
+
+    p1 = x1 / float(n_votes)
+    p2 = x2 / float(n_votes)
+    return p1, p2
+
+
 def run_posterior_pipeline(
     canonical_parquet: Path = Path("data/chaosnli/processed/canonical_items.parquet"),
     output_dir: Path = Path("data/chaosnli/processed"),

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -38,14 +39,46 @@ def evaluate_model_topology_recovery(
 
     model_evaluations: dict[str, dict[str, Any]] = {}
 
+    # Map item object_ids to model logits indices
+    if Path("data/chaosnli/processed/canonical_items_posterior.parquet").exists():
+        all_canon_df = pl.read_parquet("data/chaosnli/processed/canonical_items_posterior.parquet")
+        obj_id_to_idx = {obj_id: idx for idx, obj_id in enumerate(all_canon_df["object_id"])}
+        df_indices = [obj_id_to_idx.get(obj_id, idx) for idx, obj_id in enumerate(canon_df["object_id"])]
+    else:
+        df_indices = list(range(len(canon_df)))
+
     for model_name, m_data in model_results.items():
-        logits = m_data["logits"]
+        logits_full = m_data["logits"]
+        logits = logits_full[df_indices]
         q_model = compute_model_probabilities(logits, temperature=1.0)
 
         d_model = build_distance_matrix(q_model, metric=metric)
         w_model = compute_soft_neighborhood_weights(d_model, k=k)
 
         qnx_hm_soft, local_o = compute_soft_qnx(w_human, w_model, k=k)
+
+        # Stratified 95% Equal-Tailed Bootstrap CI over local soft overlap scores
+        # Stratify by source dataset
+        if "source_dataset" in canon_df.columns:
+            snli_mask = (canon_df["source_dataset"] == "chaosnli_snli").to_numpy()
+            mnli_mask = ~snli_mask
+            n_snli = int(snli_mask.sum())
+            n_mnli = int(mnli_mask.sum())
+
+            rng = np.random.default_rng(20260801)
+            boot_scores = []
+            for _ in range(200):
+                idx_snli = rng.choice(np.where(snli_mask)[0], size=n_snli, replace=True) if n_snli > 0 else np.array([], dtype=int)
+                idx_mnli = rng.choice(np.where(mnli_mask)[0], size=n_mnli, replace=True) if n_mnli > 0 else np.array([], dtype=int)
+                boot_idx = np.concatenate([idx_snli, idx_mnli]) if len(idx_snli) + len(idx_mnli) > 0 else np.arange(len(canon_df))
+                boot_scores.append(float(local_o[boot_idx].mean()))
+        else:
+            rng = np.random.default_rng(20260801)
+            n_df = len(canon_df)
+            boot_scores = [float(local_o[rng.choice(n_df, size=n_df, replace=True)].mean()) for _ in range(200)]
+
+        ci_lower = float(np.percentile(boot_scores, 2.5))
+        ci_upper = float(np.percentile(boot_scores, 97.5))
 
         # Excess-over-chance ratio
         excess_ratio = (qnx_hm_soft - qnx_chance) / max(qnx_hh_soft - qnx_chance, 1e-6)
@@ -59,11 +92,13 @@ def evaluate_model_topology_recovery(
         model_evaluations[model_name] = {
             "model_name": model_name,
             "qnx_soft_hm": float(qnx_hm_soft),
+            "ci_95_lower": ci_lower,
+            "ci_95_upper": ci_upper,
             "qnx_chance": qnx_chance,
             "qnx_hh_soft": qnx_hh_soft,
             "excess_ratio_vs_human": float(excess_ratio),
             "mean_pointwise_jsd_bits": mean_jsd,
-            "h1_confirmed": bool(qnx_hm_soft < qnx_hh_soft),
+            "all_point_estimates_below_human": bool(ci_upper < qnx_hh_soft),
         }
 
     return model_evaluations
@@ -78,8 +113,7 @@ def evaluate_hypothesis2_temperature_scaling(
 ) -> dict[str, list[dict[str, Any]]]:
     """Test Hypothesis 2: Temperature scaling effects on pointwise JSD vs topological recovery.
 
-    H2 states: Temperature scaling alters pointwise distribution calibration (JSD) without changing
-    monotonic rank ordering within distance spaces (preserving Q_NX_soft).
+    Computes direct model-to-model graph turnover between T=1.0 base and other temperatures.
     """
     prob_cols = ["human_p_entailment", "human_p_neutral", "human_p_contradiction"]
     p_human = canon_df.select(prob_cols).to_numpy()
@@ -89,9 +123,23 @@ def evaluate_hypothesis2_temperature_scaling(
 
     results_by_model: dict[str, list[dict[str, Any]]] = {}
 
+    # Map item object_ids to model logits indices
+    if Path("data/chaosnli/processed/canonical_items_posterior.parquet").exists():
+        all_canon_df = pl.read_parquet("data/chaosnli/processed/canonical_items_posterior.parquet")
+        obj_id_to_idx = {obj_id: idx for idx, obj_id in enumerate(all_canon_df["object_id"])}
+        df_indices = [obj_id_to_idx.get(obj_id, idx) for idx, obj_id in enumerate(canon_df["object_id"])]
+    else:
+        df_indices = list(range(len(canon_df)))
+
     for model_name, m_data in model_results.items():
-        logits = m_data["logits"]
+        logits_full = m_data["logits"]
+        logits = logits_full[df_indices]
         temp_curve = []
+
+        # Baseline weights at T=1.0
+        q_base = compute_model_probabilities(logits, temperature=1.0)
+        d_base = build_distance_matrix(q_base, metric=metric)
+        w_base = compute_soft_neighborhood_weights(d_base, k=k)
 
         for T in temperatures:
             q_T = compute_model_probabilities(logits, temperature=T)
@@ -104,12 +152,20 @@ def evaluate_hypothesis2_temperature_scaling(
 
             d_model_T = build_distance_matrix(q_T, metric=metric)
             w_model_T = compute_soft_neighborhood_weights(d_model_T, k=k)
+
+            # Model vs Human soft overlap
             qnx_soft_T, _ = compute_soft_qnx(w_human, w_model_T, k=k)
+
+            # Direct Model-to-Model graph overlap with T=1.0 base
+            qnx_model_self, _ = compute_soft_qnx(w_base, w_model_T, k=k)
+            edge_turnover = 1.0 - qnx_model_self
 
             temp_curve.append({
                 "temperature": T,
                 "mean_jsd_bits": mean_jsd,
                 "qnx_soft_hm": float(qnx_soft_T),
+                "qnx_model_self_vs_t1": float(qnx_model_self),
+                "edge_turnover_vs_t1": float(edge_turnover),
             })
 
         results_by_model[model_name] = temp_curve

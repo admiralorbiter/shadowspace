@@ -1,0 +1,78 @@
+"""Text embedding extraction and text-distance space module for ChaosNLI."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+import polars as pl
+from scipy.spatial.distance import cdist
+
+
+def extract_text_embeddings(
+    canon_df: pl.DataFrame,
+    model_name: str = "all-MiniLM-L6-v2",
+) -> np.ndarray:
+    """Extract dense sentence embeddings for premise-hypothesis pairs.
+
+    Format: Premise + " [SEP] " + Hypothesis
+    """
+    texts = [
+        f"{r['premise']} [SEP] {r['hypothesis']}" for r in canon_df.iter_rows(named=True)
+    ]
+
+    try:
+        from sentence_transformers import SentenceTransformer
+
+        model = SentenceTransformer(model_name)
+        embeddings = model.encode(texts, show_progress_bar=False, convert_to_numpy=True)
+        return embeddings.astype(np.float32)
+    except Exception:
+        # Fallback to TF-IDF + TruncatedSVD if sentence_transformers fails or model download is blocked
+        from sklearn.decomposition import TruncatedSVD
+        from sklearn.feature_extraction.text import TfidfVectorizer
+
+        tfidf = TfidfVectorizer(max_features=5000, stop_words="english")
+        x_tfidf = tfidf.fit_transform(texts)
+        svd = TruncatedSVD(n_components=min(128, x_tfidf.shape[1] - 1), random_state=42)
+        x_emb = svd.fit_transform(x_tfidf)
+        # Normalize to unit length
+        norms = np.linalg.norm(x_emb, axis=1, keepdims=True)
+        norms = np.maximum(norms, 1e-12)
+        return (x_emb / norms).astype(np.float32)
+
+
+def compute_text_cosine_distance_matrix(embeddings: np.ndarray) -> np.ndarray:
+    """Compute NxN Cosine distance matrix for text embeddings."""
+    dist_mat = cdist(embeddings, embeddings, metric="cosine").astype(np.float32)
+    np.fill_diagonal(dist_mat, 0.0)
+    return np.clip(dist_mat, 0.0, 2.0)
+
+
+def build_text_distance_space(
+    canonical_items_path: Path = Path("data/chaosnli/processed/canonical_items_posterior.parquet"),
+    output_dir: Path = Path("data/chaosnli/processed"),
+) -> dict[str, Any]:
+    """Build and save text embedding distance matrix."""
+    if not canonical_items_path.exists():
+        canonical_items_path = Path("data/chaosnli/processed/canonical_items.parquet")
+
+    canon_df = pl.read_parquet(canonical_items_path)
+    embeddings = extract_text_embeddings(canon_df)
+
+    dist_matrix = compute_text_cosine_distance_matrix(embeddings)
+
+    output_file = output_dir / "distance_matrix_text_cosine.npy"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    np.save(output_file, dist_matrix)
+
+    emb_file = output_dir / "text_embeddings_minilm.npy"
+    np.save(emb_file, embeddings)
+
+    return {
+        "n_items": len(canon_df),
+        "embedding_dim": embeddings.shape[1],
+        "dist_matrix_path": str(output_file),
+        "embedding_path": str(emb_file),
+    }
