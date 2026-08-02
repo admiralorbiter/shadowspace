@@ -1,8 +1,10 @@
-# Study 1 Computational Audit & Empirical Report
+# Study 1 Computational Audit & Empirical Report (Revised)
 
 **Dataset:** 3,113 Three-Class ChaosNLI Examples (1,514 SNLI + 1,599 MNLI)  
-**Date:** 2026-08-01  
-**Scope:** Human-Opinion Topology, Dirichlet Posteriors, Split-Half Baseline, and Geometry Sensitivity
+**Date:** 2026-08-01 (Revised post peer-review audit)  
+**Scope:** Selection-Conditioned ChaosNLI Low-Agreement Sample, Human-Opinion Topology, Dirichlet Posteriors, Fractional Tie-Aware Neighborhoods, and Level-1 Opinion Profile Graphs
+
+> **Scope Declaration:** All entropy, density, tie, and topology results reported herein are strictly conditional on the low-original-agreement selection defining ChaosNLI-S/M (where MNLI items had exactly 3 of 5 original annotators agreeing). They must not be generalized without qualification to all NLI data.
 
 ---
 
@@ -11,41 +13,60 @@
 | Estimand / Property | Value | Description |
 |---|---|---|
 | **Canonical Dataset Size** | **3,113 items** | 100 human judgments per item ($N=3,113$) |
-| **Unique Count Vectors** | **1,604 unique** | 48.5% of items share exact label distributions |
+| **Unique Opinion Profiles (Level 1 Nodes)** | **1,604 unique** | Discrete 3-class distribution vectors |
+| **Items in Non-Singleton Profiles** | **2,193 items (70.4%)** | Items sharing an exact label distribution with at least one other item |
+| **Max Profile Multiplicity** | **14 items** | Maximum number of items sharing an identical vote count vector |
+| **Items with Distance Ties at $k=10$ Boundary** | **2,254 items (72.4%)** | Items with exact distance ties across the $k=10$ neighbor boundary |
+| **Median Boundary Tie Block Size** | **3.0 items** | Median number of tied candidate neighbors at rank $k=10$ |
 | **Empirical Mean Entropy** | **0.9386 bits** | Overall distribution dispersion across dataset |
-| **Posterior Mean Entropy** | **0.9534 bits** | Smoothly regularized under Dirichlet $\boldsymbol{\alpha}=(0.5, 0.5, 0.5)$ |
+| **Posterior Mean Composition Entropy ($H(E[\theta\mid x])$)** | **0.9534 bits** | Smoothly regularized under Dirichlet $\boldsymbol{\alpha}=(0.5, 0.5, 0.5)$ |
 | **Average 95% Entropy CI Width** | **0.3278 bits** | Finite 100-vote sampling noise bounds |
 | **Zero-Count Prevalence** | **23.1% (720 items)** | Items with at least one zero-vote class ($p_j = 0$) |
-| **Human Split-Half Ceiling ($Q_{NX}^{HH}(10)$)** | **0.0395 (3.95%)** | Recoverable topology ceiling between two 50-vote human halves |
+| **Deterministic Fixed-$k$ $Q_{NX}(10)$** | **0.9555** | Sensitivity under natural row ordering |
+| **Fractional Tie-Aware Soft Overlap ($Q_{NX}^{\text{soft}}(10)$)** | **0.0426 (4.26%)** | Tie-invariant 50/50 split-half agreement |
+| **Chance Baseline Overlap ($k/(N-1)$)** | **0.00321 (0.321%)** | Expected random overlap for $k=10, N=3113$ |
+| **Excess-Over-Chance Soft Overlap** | **12.3x chance** | Soft split-half overlap relative to random chance baseline |
 
 ---
 
-## 2. Deep Dive: Unique Vectors & Node Density Ties
+## 2. Deep Dive: Unique Vectors & Profile Ties
 
 ### The Empirical Fact
-Out of 3,113 items, there are **only 1,604 unique 3-class count vectors**. Multiple items occupy exact identical points on the two-dimensional probability simplex $\Delta^2$.
+Out of 3,113 items, there are **only 1,604 unique 3-class count vectors**. Exactly **2,193 items (70.4%)** belong to non-singleton profile groups sharing exact human label distributions.
 
 ### Mathematical Mechanism
-A 3-class probability distribution with $N_{votes}=100$ lives on a 2-dimensional equilateral triangle:
+A 3-class probability distribution with $N_{\text{votes}}=100$ lives on a 2-dimensional equilateral triangle:
 $$\Delta^2 = \{(p_E, p_N, p_C) : p_j \ge 0, \; p_E + p_N + p_C = 1\}.$$
 For integer vote counts summing to 100, there are exactly $\binom{100 + 3 - 1}{3 - 1} = 5,151$ possible grid positions.
 
 ### Research Implication
-Any two NLI items with identical vote counts have Hellinger distance $d_H = 0.0$. Pure label-distribution geometry cannot explain **why** annotators disagreed on Premise A vs Premise B. This confirms **Hypothesis 7**: **joint opinion-and-text spaces** (opinion geometry $\times$ text embeddings) are necessary to resolve density ties.
+Any two NLI items with identical vote counts have Hellinger distance $d_H = 0.0$. Pure label-distribution geometry cannot explain **why** annotators split 50/50 on Premise A vs Premise B. This result **motivates Hypothesis 7** and establishes that label-distribution geometry alone is insufficient; **joint opinion-and-text spaces** (opinion geometry $\times$ text embeddings) are required to resolve profile ties.
 
 ---
 
-## 3. Human Split-Half Reliability Baseline ($Q_{NX}^{HH}(10)$)
+## 3. Human 50/50 Split-Half Agreement & Sampling Redesign
 
-To evaluate whether models recover human opinion structure, model performance must be compared against the **recoverable structure at available annotation depth**, not an assumed $100\%$ ideal.
+To evaluate whether models recover human opinion structure, model performance must be compared against **human split-half agreement under specified tie rules**, normalized by excess-over-chance scaling.
 
-- **Procedure**: Repeatedly split 100 votes into two independent 50-vote distributions ($p_1, p_2$), build Hellinger $k$-NN graphs for both ($k=10$), and compute global overlap $Q_{NX}(10)$.
-- **Result**: Median human split-half recovery is **$Q_{NX}^{HH}(10) = 0.0395$** ($3.95\%$).
-- **Model Evaluation Criterion (Hypothesis 1)**: A model recovering $3.5\%$ of human neighbors is operating near human split-half reliability ($3.5 / 3.95 = 88.6\%$ of human reliability), whereas expecting a model to hit $50\%$ overlap misunderstands the dense 2D sampling geometry.
+### Sampling Schemes
+1. **Complementary 50/50 Random Partition**: $Q_{NX}^{\text{soft}}(10) = 0.0426$ (4.26%).
+2. **Independent Posterior-Predictive Dirichlet-Multinomial 50-Vote Samples**: $Q_{NX}^{\text{soft}}(10) = 0.0474$ (4.74%).
+
+### Excess-Over-Chance Ratio
+Rather than raw ratios, model evaluation will use excess-over-chance scaling:
+$$\text{Excess Ratio} = \frac{Q_{\text{model}} - Q_{\text{chance}}}{Q_{\text{human}} - Q_{\text{chance}}}, \qquad Q_{\text{chance}} = \frac{k}{N-1} \approx 0.00321.$$
 
 ---
 
-## 4. Concrete NLI Case Studies
+## 4. Two-Level Representation Architecture
+
+To eliminate arbitrary tie truncation artifacts, our analysis adopts a **Two-Level Graph Representation**:
+- **Level 1 (Opinion-Profile Graph)**: Graph constructed over the $1,604$ unique count vectors weighted by item frequency. Minimum distance between distinct profile nodes is $d_H = 0.0071$, completely eliminating zero-distance ties.
+- **Level 2 (Items within Profiles)**: Evaluates text embedding, disagreement taxonomy, and model prediction dispersion among items sharing identical opinion profiles.
+
+---
+
+## 5. Concrete NLI Case Studies (Provisional Interpretive Coding)
 
 ### Example Case A: Exact Distribution Tie ($E=50, N=50, C=0$)
 *Demonstrates two distinct linguistic phenomena mapped to the exact same probability coordinate.*
@@ -54,13 +75,13 @@ To evaluate whether models recover human opinion structure, model performance mu
   - **Premise**: *"A young man is washing his hair, brushing his teeth, and shaving his face simultaneously."*
   - **Hypothesis**: *"The young man is very coordinated and flexible."*
   - **Human Votes**: `Entailment: 50 | Neutral: 50 | Contradiction: 0` ($H = 1.0000 \text{ bits}$)
-  - **Linguistic Cause**: **Probabilistic Enrichment / Implicature**. Is multi-tasking grooming an implicit proof of coordination (Entailment) or a separate subjective evaluation (Neutral)?
+  - **Provisional Interpretive Coding**: **Probabilistic Enrichment / Implicature**. Is multi-tasking grooming an implicit proof of coordination (Entailment) or a separate subjective evaluation (Neutral)?
 
 - **Item A2 (`chaosnli_snli_3160531982.jpg#0r1e`)**:
   - **Premise**: *"With the sun rising, a person is gliding with a huge parachute attached to them."*
   - **Hypothesis**: *"The person is falling to saftey with the parachute"*
   - **Human Votes**: `Entailment: 50 | Neutral: 50 | Contradiction: 0` ($H = 1.0000 \text{ bits}$)
-  - **Linguistic Cause**: **Presupposition / Accommodating Minimal Content**. Does paragliding at sunrise entail "falling to safety" or merely gliding?
+  - **Provisional Interpretive Coding**: **Presupposition / Accommodating Minimal Content**. Does paragliding at sunrise entail "falling to safety" or merely gliding?
 
 ---
 
@@ -71,14 +92,14 @@ To evaluate whether models recover human opinion structure, model performance mu
   - **Premise**: *"An elderly woman crafts a design on a loom."*
   - **Hypothesis**: *"The woman is sewing."*
   - **Human Votes**: `Entailment: 35 | Neutral: 31 | Contradiction: 34`
-  - **Entropy**: **1.5831 bits** (Theoretical max = 1.5850 bits). $P(\text{majority}) = 0.4620$.
-  - **Linguistic Cause**: **Lexical Ambiguity & Category Inclusion**. Is weaving on a loom a sub-type of "sewing" (Entailment), a completely distinct craft (Contradiction), or loosely related handiwork (Neutral)?
+  - **Entropy**: **1.5831 bits** (Theoretical max = 1.5850 bits). $P(\text{mode}) = 0.4620$.
+  - **Provisional Interpretive Coding**: **Lexical Ambiguity & Category Inclusion**. Is weaving on a loom a sub-type of "sewing" (Entailment), a completely distinct craft (Contradiction), or loosely related handiwork (Neutral)?
 
 - **Item B2 (`chaosnli_mnli_18189c`)**:
   - **Premise**: *"The important thing is to realize that it's way past time to move it."*
   - **Hypothesis**: *"It cannot be moved, now or ever."*
-  - **Human Votes**: `Entailment: 34 | Neutral: 32 | Contradiction: 34`
-  - **Entropy**: **1.5844 bits**. $P(\text{majority}) = 0.3875$.
+  - **Human Votes**: `Entailment: 34 | Neutral: 32 | Contradiction: 34` (Plurality tie between Entailment and Contradiction)
+  - **Entropy**: **1.5844 bits**. $P(\text{mode}) = 0.3875$.
 
 ---
 
@@ -89,13 +110,14 @@ To evaluate whether models recover human opinion structure, model performance mu
   - **Premise**: *"Two monks are visiting a big city."*
   - **Hypothesis**: *"The monks are running down the dirt trail."*
   - **Human Votes**: `Entailment: 0 | Neutral: 50 | Contradiction: 50` ($H = 1.0000 \text{ bits}$)
-  - **Linguistic Cause**: **Location & Coreference Underspecification**. If visiting a big city, can they also run on a dirt trail in a city park (Neutral), or does "big city" contradict a "dirt trail" (Contradiction)?
-  - **Distance Impact**: Under Aitchison distance, the zero $E=0$ count requires smoothed regularization ($\delta = 10^{-6} \implies p_E \approx 0.00493$), preventing infinite log-ratio spikes while preserving Hellinger boundary stability ($d_H = 0.7071$).
+  - **Provisional Interpretive Coding**: **Location & Coreference Underspecification**. If visiting a big city, can they also run on a dirt trail in a city park (Neutral), or does "big city" contradict a "dirt trail" (Contradiction)?
+  - **Distance Impact**: Under Aitchison distance, Bayesian Dirichlet smoothing yields $p_E = \frac{0 + 0.5}{100 + 1.5} \approx 0.00493$, preventing log-ratio infinity while preserving Hellinger boundary stability ($d_H(p, q) = 0.7071$).
 
 ---
 
-## 5. Summary & Protocol Approvals
+## 6. Audit Summary & Next Pipeline Actions
 
-1. **Reproduction & Audit Complete (Study 0 Gate Passed)**.
-2. **Human Opinion Topology & Split-Half Ceiling Locked ($Q_{NX}^{HH}(10) = 0.0395$)**.
-3. **Canonical Parquet & Distance Matrices Persisted**.
+1. **Multiplicity & Tie Audit Complete**: 70.4% items in non-singleton profiles; 72.4% boundary ties at $k=10$.
+2. **Fractional Tie-Aware Neighborhoods Enabled**: $Q_{NX}^{\text{soft}}(10) = 0.0426$ (12.3x chance).
+3. **Level-1 Opinion-Profile Graph Built** ($1,604$ unique profile nodes).
+4. **Ready for Model Benchmark Predictions & Topology Recovery Testing**.

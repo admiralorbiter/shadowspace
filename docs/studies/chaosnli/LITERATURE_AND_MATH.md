@@ -404,29 +404,34 @@ J_i(k)
 {|N_H(i;k)\cup N_M(i;k)|}.
 \]
 
-### 5.3 Global preservation
+### 5.3 Global preservation & Fractional Tie-Aware Neighborhoods
 
+Under discrete 3-class human distributions, distance ties at the $k$-th boundary distance are frequent. For focal item $i$, let $A_i$ be the set of points strictly closer than the $k$-th distance, and $B_i$ be the set of points tied at the $k$-th distance boundary. Let $r_i = k - |A_i|$.
+
+Define fractional tie-aware weights:
 \[
-Q_{NX}(k)
-=
-\frac1{Nk}
-\sum_{i=1}^N
-|N_H(i;k)\cap N_M(i;k)|.
+w_{ij} = \begin{cases} 1 & \text{if } j \in A_i \\ \frac{r_i}{|B_i|} & \text{if } j \in B_i \\ 0 & \text{otherwise} \end{cases}
 \]
 
-Chance overlap is approximately \(k/(N-1)\). Define
-
+The soft overlap is:
 \[
-LCMC(k)=Q_{NX}(k)-\frac{k}{N-1}.
+O_i^{\mathrm{soft}}(k) = \frac{1}{k} \sum_j \min(w_{ij}^H, w_{ij}^M).
 \]
 
-Use the full \(Q_{NX}\) curve to avoid selecting a favorable scale.
+Global tie-aware preservation is:
+\[
+Q_{NX}^{\mathrm{soft}}(k) = \frac{1}{N} \sum_{i=1}^N O_i^{\mathrm{soft}}(k).
+\]
 
-### 5.4 Rank-sensitive comparison
+Chance overlap is $Q_{\mathrm{chance}} = \frac{k}{N-1}$. Excess-over-chance ratio comparing model to human reliability is:
+\[
+\text{Excess Ratio} = \frac{Q_{\mathrm{model}} - Q_{\mathrm{chance}}}{Q_{\mathrm{human}} - Q_{\mathrm{chance}}}.
+\]
 
-Use rank-weighted overlap or a co-ranking matrix when order matters.
+### 5.4 Two-Level Graph Representation
 
-Do not treat all pairwise distances as independent observations in an ordinary significance test; pairs share nodes.
+- **Level 1 (Opinion-Profile Graph)**: Graph constructed over unique count vectors ($1,604$ unique nodes for ChaosNLI-S/M), weighted by item frequency. Evaluates opinion geometry without duplicate-item tie artifacts.
+- **Level 2 (Items within Profiles)**: Evaluates text embedding, taxonomy, and prediction dispersion among items sharing identical opinion profiles.
 
 ### 5.5 Model edge consensus
 
