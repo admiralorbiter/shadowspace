@@ -137,16 +137,28 @@ def handle_chaosnli_command(parsed_args: argparse.Namespace) -> int:
 
     # Placeholder handlers for skeleton CLI. As modules are implemented, handlers will call module logic.
     if cmd == "fetch":
+        from shadowspace.chaosnli.acquisition import acquire_sources
+
         manifest_path = Path(parsed_args.manifest)
-        _emit_status("chaosnli.fetch", message=f"Fetch requested using manifest: {manifest_path}")
+        force = getattr(parsed_args, "force", False)
+        res = acquire_sources(manifest_path=manifest_path, force=force)
+        _emit_status("chaosnli.fetch", manifest=str(manifest_path), acquired=res["files"])
         return 0
 
     elif cmd == "verify-sources":
-        _emit_status("chaosnli.verify-sources", message="Source verification requested.")
-        return 0
+        from shadowspace.chaosnli.acquisition import verify_source_checksums
+
+        manifest_path = Path(parsed_args.manifest)
+        valid = verify_source_checksums(manifest_path=manifest_path)
+        status = "success" if valid else "failed"
+        _emit_status("chaosnli.verify-sources", status=status, valid=valid)
+        return 0 if valid else 1
 
     elif cmd == "normalize":
-        _emit_status("chaosnli.normalize", message="Record normalization requested.")
+        from shadowspace.chaosnli.normalize import normalize_dataset
+
+        res = normalize_dataset()
+        _emit_status("chaosnli.normalize", summary=res)
         return 0
 
     elif cmd == "audit-joins":
@@ -154,7 +166,11 @@ def handle_chaosnli_command(parsed_args: argparse.Namespace) -> int:
         return 0
 
     elif cmd == "human-posterior":
-        _emit_status("chaosnli.human-posterior", message="Dirichlet posterior estimation requested.")
+        from shadowspace.chaosnli.posterior import run_posterior_pipeline
+
+        n_draws = getattr(parsed_args, "draws", 2000)
+        res = run_posterior_pipeline(n_draws=n_draws)
+        _emit_status("chaosnli.human-posterior", summary=res)
         return 0
 
     elif cmd == "predict":
@@ -166,15 +182,75 @@ def handle_chaosnli_command(parsed_args: argparse.Namespace) -> int:
         return 0
 
     elif cmd == "build-spaces":
-        _emit_status("chaosnli.build-spaces", message="Space construction requested.")
+        from shadowspace.chaosnli.distances import build_distance_matrix
+        import numpy as np
+        import polars as pl
+
+        proc_dir = Path("data/chaosnli/processed")
+        canon_p = proc_dir / "canonical_items_posterior.parquet"
+        if not canon_p.exists():
+            canon_p = proc_dir / "canonical_items.parquet"
+
+        df = pl.read_parquet(canon_p)
+        prob_cols = ["human_p_entailment", "human_p_neutral", "human_p_contradiction"]
+        p_matrix = df.select(prob_cols).to_numpy()
+
+        metrics_built = []
+        for m in ["hellinger", "jensen_shannon", "total_variation", "euclidean", "aitchison"]:
+            dist_mat = build_distance_matrix(p_matrix, metric=m)
+            out_file = proc_dir / f"distance_matrix_human_{m}.npy"
+            np.save(out_file, dist_mat)
+            metrics_built.append(m)
+
+        _emit_status("chaosnli.build-spaces", n_items=len(df), metrics=metrics_built)
         return 0
 
     elif cmd == "compute-neighbors":
-        _emit_status("chaosnli.compute-neighbors", message="k-NN computation requested.")
+        from shadowspace.chaosnli.distances import build_distance_matrix
+        from shadowspace.chaosnli.neighbors import extract_knn_graph, save_knn_graph
+        import numpy as np
+        import polars as pl
+
+        proc_dir = Path("data/chaosnli/processed")
+        canon_p = proc_dir / "canonical_items_posterior.parquet"
+        if not canon_p.exists():
+            canon_p = proc_dir / "canonical_items.parquet"
+
+        df = pl.read_parquet(canon_p)
+        ids = df["object_id"].to_list()
+        prob_cols = ["human_p_entailment", "human_p_neutral", "human_p_contradiction"]
+        p_matrix = df.select(prob_cols).to_numpy()
+
+        saved_files = []
+        for k_val in [5, 10, 20, 50]:
+            for metric in ["hellinger", "jensen_shannon", "euclidean"]:
+                dist_file = proc_dir / f"distance_matrix_human_{metric}.npy"
+                if dist_file.exists():
+                    dist_mat = np.load(dist_file)
+                else:
+                    dist_mat = build_distance_matrix(p_matrix, metric=metric)
+
+                _, neighbor_df = extract_knn_graph(dist_mat, ids, k=k_val, space_id="human_opinion", metric_id=metric)
+                out_p = save_knn_graph(neighbor_df, output_dir=proc_dir, space_id="human_opinion", metric_id=metric, k=k_val)
+                saved_files.append(str(out_p.name))
+
+        _emit_status("chaosnli.compute-neighbors", count=len(saved_files), files=saved_files[:4])
         return 0
 
     elif cmd == "compare-graphs":
-        _emit_status("chaosnli.compare-graphs", message="Graph comparison requested.")
+        from shadowspace.chaosnli.graph_metrics import compute_human_split_half_reliability
+        import polars as pl
+
+        proc_dir = Path("data/chaosnli/processed")
+        canon_p = proc_dir / "canonical_items_posterior.parquet"
+        if not canon_p.exists():
+            canon_p = proc_dir / "canonical_items.parquet"
+
+        df = pl.read_parquet(canon_p)
+        counts = df.select(["human_count_entailment", "human_count_neutral", "human_count_contradiction"]).to_numpy()
+
+        reliability_res = compute_human_split_half_reliability(counts, k=10, n_repetitions=20, metric="hellinger")
+        _emit_status("chaosnli.compare-graphs", reliability=reliability_res)
         return 0
 
     elif cmd == "analyze":

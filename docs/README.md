@@ -425,3 +425,15 @@ Strong at evaluating a fixed embedding. Shadowspace's opportunity is to make loc
 | integrity | evidence about preservation and distortion; not an absolute truth score |
 | stability | persistence across a declared family of assumptions or runs |
 | finding | saved view plus evidence, source identities, provenance, and note |
+
+## 14. Active Research Projects
+
+- **ChaosNLI Research Package**: [`docs/studies/chaosnli/`](file:///c:/Users/admir/Github/shadowspace/docs/studies/chaosnli/README.md)
+  - Computational study comparing human opinion distributions vs model softmax distributions across 3,113 ChaosNLI items.
+  - Documents:
+    - [Research Overview](file:///c:/Users/admir/Github/shadowspace/docs/studies/chaosnli/README.md)
+    - [Literature & Math Foundations](file:///c:/Users/admir/Github/shadowspace/docs/studies/chaosnli/LITERATURE_AND_MATH.md)
+    - [Data Pipeline & Automation Plan](file:///c:/Users/admir/Github/shadowspace/docs/studies/chaosnli/DATA_PIPELINE_AND_AUTOMATION.md)
+    - [Hypotheses & Analysis Plan](file:///c:/Users/admir/Github/shadowspace/docs/studies/chaosnli/HYPOTHESES_AND_ANALYSIS_PLAN.md)
+    - [Coding & Review Protocol](file:///c:/Users/admir/Github/shadowspace/docs/studies/chaosnli/CODING_AND_REVIEW_PROTOCOL.md)
+    - [Study 1 Computational Audit Report](file:///c:/Users/admir/Github/shadowspace/docs/studies/chaosnli/STUDY1_COMPUTATIONAL_AUDIT.md)
