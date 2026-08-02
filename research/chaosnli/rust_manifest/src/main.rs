@@ -4,8 +4,11 @@ use rand_distr::Dirichlet;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fs::File;
+use std::env;
+use std::ffi::OsString;
+use std::fs::{File, create_dir_all};
 use std::io::BufReader;
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 // ─── Data structures ────────────────────────────────────────────────────────
@@ -13,7 +16,6 @@ use std::time::Instant;
 #[derive(Debug, Deserialize)]
 struct ItemRecord {
     object_id: String,
-    source_pair_id: String,
     source_dataset: Option<String>,
     human_count_entailment: i32,
     human_count_neutral: i32,
@@ -67,6 +69,86 @@ struct ReferenceSurfaceResult {
     cells: Vec<RefSurfaceCell>,
 }
 
+type PerItemOverlap = Vec<f64>;
+type ModelPairOverlaps = HashMap<String, (PerItemOverlap, PerItemOverlap)>;
+type PairResult = (PerItemOverlap, ModelPairOverlaps);
+
+#[derive(Debug, PartialEq)]
+struct RunPaths {
+    items: PathBuf,
+    models: PathBuf,
+    paired_output: PathBuf,
+    surface_output: PathBuf,
+}
+
+impl Default for RunPaths {
+    fn default() -> Self {
+        Self {
+            items: PathBuf::from("data/chaosnli/processed/canonical_items_posterior.json"),
+            models: PathBuf::from("research/chaosnli/rust_manifest/model_probs.json"),
+            paired_output: PathBuf::from("results/paired_estimand_results.yaml"),
+            surface_output: PathBuf::from("results/multi_seed_reference_surface.json"),
+        }
+    }
+}
+
+fn parse_run_paths<I>(args: I) -> Result<RunPaths, String>
+where
+    I: IntoIterator<Item = OsString>,
+{
+    let mut paths = RunPaths::default();
+    let mut args = args.into_iter();
+
+    while let Some(argument) = args.next() {
+        let flag = argument
+            .to_str()
+            .ok_or_else(|| "command-line flags must be valid UTF-8".to_string())?;
+        let target = match flag {
+            "--items" => &mut paths.items,
+            "--models" => &mut paths.models,
+            "--paired-output" => &mut paths.paired_output,
+            "--surface-output" => &mut paths.surface_output,
+            _ => return Err(format!("unknown argument: {flag}")),
+        };
+        let value = args
+            .next()
+            .ok_or_else(|| format!("missing path after {flag}"))?;
+        *target = PathBuf::from(value);
+    }
+
+    Ok(paths)
+}
+
+fn print_usage() {
+    println!(
+        r#"Usage: rust_manifest [OPTIONS]
+
+Paths default to repository-relative locations, so run from the Shadowspace root.
+
+Options:
+  --items PATH          Canonical item JSON input
+  --models PATH         Model-probability JSON input
+  --paired-output PATH  Paired-estimand output
+  --surface-output PATH Multi-seed reference-surface output
+  -h, --help            Show this help"#
+    );
+}
+
+fn create_output_file(path: &Path) -> File {
+    if let Some(parent) = path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        create_dir_all(parent).unwrap_or_else(|error| {
+            panic!(
+                "Failed to create output directory {}: {error}",
+                parent.display()
+            )
+        });
+    }
+    File::create(path)
+        .unwrap_or_else(|error| panic!("Failed to create {}: {error}", path.display()))
+}
+
 // ─── Core geometry ───────────────────────────────────────────────────────────
 
 #[inline(always)]
@@ -112,40 +194,78 @@ fn soft_qnx_per_item_seq(dist_a: &[f64], dist_b: &[f64], n: usize, k: usize) -> 
         let row_a = &dist_a[i * n..(i + 1) * n];
         let row_b = &dist_b[i * n..(i + 1) * n];
 
-        let mut sorted_a: Vec<f64> = row_a.iter().enumerate()
-            .filter(|&(j, _)| j != i).map(|(_, &d)| d).collect();
+        let mut sorted_a: Vec<f64> = row_a
+            .iter()
+            .enumerate()
+            .filter(|&(j, _)| j != i)
+            .map(|(_, &d)| d)
+            .collect();
         sorted_a.sort_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal));
         let k_dist_a = sorted_a[k - 1];
 
-        let mut sorted_b: Vec<f64> = row_b.iter().enumerate()
-            .filter(|&(j, _)| j != i).map(|(_, &d)| d).collect();
+        let mut sorted_b: Vec<f64> = row_b
+            .iter()
+            .enumerate()
+            .filter(|&(j, _)| j != i)
+            .map(|(_, &d)| d)
+            .collect();
         sorted_b.sort_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal));
         let k_dist_b = sorted_b[k - 1];
 
         // Pre-compute tie fractions for this row
-        let n_closer_a = row_a.iter().enumerate()
-            .filter(|&(j, &d)| j != i && d < k_dist_a - ATOL).count();
-        let n_tied_a = row_a.iter().enumerate()
-            .filter(|&(j, &d)| j != i && (d - k_dist_a).abs() <= ATOL).count();
-        let frac_a = if n_tied_a > 0 { (k as f64 - n_closer_a as f64) / n_tied_a as f64 } else { 0.0 };
+        let n_closer_a = row_a
+            .iter()
+            .enumerate()
+            .filter(|&(j, &d)| j != i && d < k_dist_a - ATOL)
+            .count();
+        let n_tied_a = row_a
+            .iter()
+            .enumerate()
+            .filter(|&(j, &d)| j != i && (d - k_dist_a).abs() <= ATOL)
+            .count();
+        let frac_a = if n_tied_a > 0 {
+            (k as f64 - n_closer_a as f64) / n_tied_a as f64
+        } else {
+            0.0
+        };
 
-        let n_closer_b = row_b.iter().enumerate()
-            .filter(|&(j, &d)| j != i && d < k_dist_b - ATOL).count();
-        let n_tied_b = row_b.iter().enumerate()
-            .filter(|&(j, &d)| j != i && (d - k_dist_b).abs() <= ATOL).count();
-        let frac_b = if n_tied_b > 0 { (k as f64 - n_closer_b as f64) / n_tied_b as f64 } else { 0.0 };
+        let n_closer_b = row_b
+            .iter()
+            .enumerate()
+            .filter(|&(j, &d)| j != i && d < k_dist_b - ATOL)
+            .count();
+        let n_tied_b = row_b
+            .iter()
+            .enumerate()
+            .filter(|&(j, &d)| j != i && (d - k_dist_b).abs() <= ATOL)
+            .count();
+        let frac_b = if n_tied_b > 0 {
+            (k as f64 - n_closer_b as f64) / n_tied_b as f64
+        } else {
+            0.0
+        };
 
         let mut sum_min = 0.0f64;
         for j in 0..n {
-            if j == i { continue; }
+            if j == i {
+                continue;
+            }
             let d_a = row_a[j];
             let d_b = row_b[j];
-            let w_a = if d_a < k_dist_a - ATOL { 1.0 }
-                      else if (d_a - k_dist_a).abs() <= ATOL { frac_a }
-                      else { 0.0 };
-            let w_b = if d_b < k_dist_b - ATOL { 1.0 }
-                      else if (d_b - k_dist_b).abs() <= ATOL { frac_b }
-                      else { 0.0 };
+            let w_a = if d_a < k_dist_a - ATOL {
+                1.0
+            } else if (d_a - k_dist_a).abs() <= ATOL {
+                frac_a
+            } else {
+                0.0
+            };
+            let w_b = if d_b < k_dist_b - ATOL {
+                1.0
+            } else if (d_b - k_dist_b).abs() <= ATOL {
+                frac_b
+            } else {
+                0.0
+            };
             sum_min += w_a.min(w_b);
         }
         result[i] = sum_min / k as f64;
@@ -206,7 +326,11 @@ fn soft_qnx_per_item(dist_a: &[f64], dist_b: &[f64], n: usize, k: usize) -> Vec<
                         .filter(|&(jj, &d)| jj != i && (d - k_dist_a).abs() <= ATOL)
                         .count();
                     let r_a = k as f64 - n_closer_a as f64;
-                    if n_tied_a > 0 { r_a / n_tied_a as f64 } else { 0.0 }
+                    if n_tied_a > 0 {
+                        r_a / n_tied_a as f64
+                    } else {
+                        0.0
+                    }
                 } else {
                     0.0
                 };
@@ -225,7 +349,11 @@ fn soft_qnx_per_item(dist_a: &[f64], dist_b: &[f64], n: usize, k: usize) -> Vec<
                         .filter(|&(jj, &d)| jj != i && (d - k_dist_b).abs() <= ATOL)
                         .count();
                     let r_b = k as f64 - n_closer_b as f64;
-                    if n_tied_b > 0 { r_b / n_tied_b as f64 } else { 0.0 }
+                    if n_tied_b > 0 {
+                        r_b / n_tied_b as f64
+                    } else {
+                        0.0
+                    }
                 } else {
                     0.0
                 };
@@ -238,34 +366,49 @@ fn soft_qnx_per_item(dist_a: &[f64], dist_b: &[f64], n: usize, k: usize) -> Vec<
 }
 
 /// Fast variant with pre-computed A weights — SEQUENTIAL (safe inside par_iter)
-fn soft_qnx_with_wa_seq(
-    weights_a: &[f64],
-    dist_b: &[f64],
-    n: usize,
-    k: usize,
-) -> Vec<f64> {
+fn soft_qnx_with_wa_seq(weights_a: &[f64], dist_b: &[f64], n: usize, k: usize) -> Vec<f64> {
     const ATOL: f64 = 1e-7;
     let mut result = vec![0.0f64; n];
     for i in 0..n {
         let row_b = &dist_b[i * n..(i + 1) * n];
-        let mut sorted_b: Vec<f64> = row_b.iter().enumerate()
-            .filter(|&(j, _)| j != i).map(|(_, &d)| d).collect();
+        let mut sorted_b: Vec<f64> = row_b
+            .iter()
+            .enumerate()
+            .filter(|&(j, _)| j != i)
+            .map(|(_, &d)| d)
+            .collect();
         sorted_b.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
         let k_dist_b = sorted_b[k - 1];
-        let n_closer_b = row_b.iter().enumerate()
-            .filter(|&(j, &d)| j != i && d < k_dist_b - ATOL).count();
-        let n_tied_b = row_b.iter().enumerate()
-            .filter(|&(j, &d)| j != i && (d - k_dist_b).abs() <= ATOL).count();
-        let frac_b = if n_tied_b > 0 { (k as f64 - n_closer_b as f64) / n_tied_b as f64 } else { 0.0 };
+        let n_closer_b = row_b
+            .iter()
+            .enumerate()
+            .filter(|&(j, &d)| j != i && d < k_dist_b - ATOL)
+            .count();
+        let n_tied_b = row_b
+            .iter()
+            .enumerate()
+            .filter(|&(j, &d)| j != i && (d - k_dist_b).abs() <= ATOL)
+            .count();
+        let frac_b = if n_tied_b > 0 {
+            (k as f64 - n_closer_b as f64) / n_tied_b as f64
+        } else {
+            0.0
+        };
 
         let mut sum_min = 0.0f64;
         for j in 0..n {
-            if j == i { continue; }
+            if j == i {
+                continue;
+            }
             let w_a = weights_a[i * n + j];
             let d_b = row_b[j];
-            let w_b = if d_b < k_dist_b - ATOL { 1.0 }
-                      else if (d_b - k_dist_b).abs() <= ATOL { frac_b }
-                      else { 0.0 };
+            let w_b = if d_b < k_dist_b - ATOL {
+                1.0
+            } else if (d_b - k_dist_b).abs() <= ATOL {
+                frac_b
+            } else {
+                0.0
+            };
             sum_min += w_a.min(w_b);
         }
         result[i] = sum_min / k as f64;
@@ -275,12 +418,7 @@ fn soft_qnx_with_wa_seq(
 
 /// Fast variant with pre-computed A weights — PARALLEL (top-level only)
 #[allow(dead_code)]
-fn soft_qnx_per_item_with_wa(
-    weights_a: &[f64],
-    dist_b: &[f64],
-    n: usize,
-    k: usize,
-) -> Vec<f64> {
+fn soft_qnx_per_item_with_wa(weights_a: &[f64], dist_b: &[f64], n: usize, k: usize) -> Vec<f64> {
     const ATOL: f64 = 1e-7;
     (0..n)
         .into_par_iter()
@@ -307,11 +445,17 @@ fn soft_qnx_per_item_with_wa(
                 .filter(|&(j, &d)| j != i && (d - k_dist_b).abs() <= ATOL)
                 .count();
             let r_b = k as f64 - n_closer_b as f64;
-            let frac_b = if n_tied_b > 0 { r_b / n_tied_b as f64 } else { 0.0 };
+            let frac_b = if n_tied_b > 0 {
+                r_b / n_tied_b as f64
+            } else {
+                0.0
+            };
 
             let mut sum_min = 0.0f64;
             for j in 0..n {
-                if j == i { continue; }
+                if j == i {
+                    continue;
+                }
                 let w_a = weights_a[i * n + j];
                 let d_b = row_b[j];
                 let w_b = if d_b < k_dist_b - ATOL {
@@ -361,7 +505,9 @@ fn build_weight_matrix(dist: &[f64], n: usize, k: usize) -> Vec<f64> {
 
             let mut w_row = vec![0.0f64; n];
             for j in 0..n {
-                if j == i { continue; }
+                if j == i {
+                    continue;
+                }
                 let d = row[j];
                 w_row[j] = if d < k_dist - ATOL {
                     1.0
@@ -395,10 +541,7 @@ fn generate_posterior_pair(
     let mut p2 = vec![[0.0f64; 3]; n];
 
     for i in 0..n {
-        let alpha: Vec<f64> = counts[i]
-            .iter()
-            .map(|&c| c as f64 + alpha_prior)
-            .collect();
+        let alpha: Vec<f64> = counts[i].iter().map(|&c| c as f64 + alpha_prior).collect();
         let dirichlet = Dirichlet::new(&alpha).unwrap();
         let theta: Vec<f64> = dirichlet.sample(&mut rng);
 
@@ -408,23 +551,19 @@ fn generate_posterior_pair(
         for _ in 0..n_votes {
             let u1: f64 = rng.gen_range(0.0..1.0);
             let u2: f64 = rng.gen_range(0.0..1.0);
-            let mut cum = 0.0;
-            let mut ch1 = 2usize;
-            let mut ch2 = 2usize;
-            for cat in 0..3 {
-                cum += theta[cat];
-                if u1 < cum && ch1 == 2 { ch1 = cat; }
-                if u2 < cum && ch2 == 2 { ch2 = cat; }
-            }
-            // Reset cum for second loop
             let mut cum1 = 0.0;
             let mut cum2 = 0.0;
-            ch1 = 2; ch2 = 2;
-            for cat in 0..3 {
-                cum1 += theta[cat];
-                cum2 += theta[cat];
-                if u1 < cum1 && ch1 == 2 { ch1 = cat; }
-                if u2 < cum2 && ch2 == 2 { ch2 = cat; }
+            let mut ch1 = 2usize;
+            let mut ch2 = 2usize;
+            for (cat, &probability) in theta.iter().enumerate() {
+                cum1 += probability;
+                cum2 += probability;
+                if u1 < cum1 && ch1 == 2 {
+                    ch1 = cat;
+                }
+                if u2 < cum2 && ch2 == 2 {
+                    ch2 = cat;
+                }
             }
             c1[ch1] += 1;
             c2[ch2] += 1;
@@ -456,8 +595,8 @@ fn sample_multinomial_from_p(
             let u: f64 = rng.gen_range(0.0..1.0);
             let mut cum = 0.0f64;
             let mut chosen = 2usize;
-            for cat in 0..3 {
-                cum += p[cat];
+            for (cat, &probability) in p.iter().enumerate() {
+                cum += probability;
                 if u < cum && chosen == 2 {
                     chosen = cat;
                 }
@@ -474,6 +613,20 @@ fn sample_multinomial_from_p(
 // ─── Main ────────────────────────────────────────────────────────────────────
 
 fn main() {
+    let raw_args: Vec<OsString> = env::args_os().skip(1).collect();
+    if raw_args
+        .iter()
+        .any(|arg| matches!(arg.to_str(), Some("-h" | "--help")))
+    {
+        print_usage();
+        return;
+    }
+    let paths = parse_run_paths(raw_args).unwrap_or_else(|message| {
+        eprintln!("Error: {message}\n");
+        print_usage();
+        std::process::exit(2);
+    });
+
     let t0 = Instant::now();
     println!("=========================================================================");
     println!("   PAIRED ESTIMAND ENGINE — RUST/RAYON IMPLEMENTATION");
@@ -485,33 +638,54 @@ fn main() {
     const ALPHA_PRIOR: f64 = 0.5;
 
     // ── Load canonical items ────────────────────────────────────────────────
-    let item_path = "c:/Users/admir/Github/shadowspace/data/chaosnli/processed/canonical_items_posterior.json";
-    let file = File::open(item_path).expect("Failed to open canonical items JSON");
+    let file = File::open(&paths.items).unwrap_or_else(|error| {
+        panic!(
+            "Failed to open canonical items JSON {}: {error}",
+            paths.items.display()
+        )
+    });
     let reader = BufReader::new(file);
     let items: Vec<ItemRecord> = serde_json::from_reader(reader).expect("Failed to parse items");
     let n = items.len();
     println!("Loaded {} items in {:?}", n, t0.elapsed());
 
-    let probs_human: Vec<[f64; 3]> = items.iter()
-        .map(|it| [it.human_p_entailment, it.human_p_neutral, it.human_p_contradiction])
+    let probs_human: Vec<[f64; 3]> = items
+        .iter()
+        .map(|it| {
+            [
+                it.human_p_entailment,
+                it.human_p_neutral,
+                it.human_p_contradiction,
+            ]
+        })
         .collect();
-    let counts: Vec<[i32; 3]> = items.iter()
-        .map(|it| [it.human_count_entailment, it.human_count_neutral, it.human_count_contradiction])
+    let counts: Vec<[i32; 3]> = items
+        .iter()
+        .map(|it| {
+            [
+                it.human_count_entailment,
+                it.human_count_neutral,
+                it.human_count_contradiction,
+            ]
+        })
         .collect();
 
-    // Stratification indices
-    let snli_idx: Vec<usize> = items.iter().enumerate()
-        .filter(|(_, it)| it.source_dataset.as_deref().map(|s| s.contains("snli")).unwrap_or(false)
-            || (!it.object_id.contains("mnli")))
-        .map(|(i, _)| i)
-        .collect();
-    // Simple split: first 1514 = SNLI, rest = MNLI (matching Python)
-    let snli_indices: Vec<usize> = (0..1514).collect();
-    let mnli_indices: Vec<usize> = (1514..n).collect();
+    // Preserve dataset strata without relying on input row order.
+    let (snli_indices, mnli_indices): (Vec<usize>, Vec<usize>) = (0..n).partition(|&index| {
+        let item = &items[index];
+        item.source_dataset
+            .as_deref()
+            .map(|source| source.contains("snli"))
+            .unwrap_or_else(|| !item.object_id.contains("mnli"))
+    });
 
     // ── Load model probabilities ────────────────────────────────────────────
-    let model_path = "c:/Users/admir/Github/shadowspace/research/chaosnli/rust_manifest/model_probs.json";
-    let mfile = File::open(model_path).expect("Failed to open model_probs.json");
+    let mfile = File::open(&paths.models).unwrap_or_else(|error| {
+        panic!(
+            "Failed to open model probabilities JSON {}: {error}",
+            paths.models.display()
+        )
+    });
     let mreader = BufReader::new(mfile);
     let model_probs_raw: HashMap<String, Vec<[f64; 3]>> =
         serde_json::from_reader(mreader).expect("Failed to parse model probs");
@@ -538,13 +712,15 @@ fn main() {
 
         // Fixed reference Q (model vs observed)
         let w_emp_full = build_weight_matrix(&d_emp, n, K);
-        let overlap: Vec<f64> = (0..n).map(|i| {
-            let mut s = 0.0f64;
-            for j in 0..n {
-                s += w_emp_full[i * n + j].min(w_m[i * n + j]);
-            }
-            s / K as f64
-        }).collect();
+        let overlap: Vec<f64> = (0..n)
+            .map(|i| {
+                let mut s = 0.0f64;
+                for j in 0..n {
+                    s += w_emp_full[i * n + j].min(w_m[i * n + j]);
+                }
+                s / K as f64
+            })
+            .collect();
         let q_fixed = overlap.iter().sum::<f64>() / n as f64;
         println!("  {}: fixed Q = {:.5}", m_key, q_fixed);
         model_fixed_q.insert(m_key.clone(), q_fixed);
@@ -559,7 +735,7 @@ fn main() {
     let t_pairs = Instant::now();
 
     // Compute all 500 pairs in parallel — inner calls MUST be sequential to avoid Rayon deadlock
-    let pair_results: Vec<(Vec<f64>, HashMap<String, (Vec<f64>, Vec<f64>)>)> = (0..N_PAIRS)
+    let pair_results: Vec<PairResult> = (0..N_PAIRS)
         .into_par_iter()
         .map(|s| {
             let (p1, p2) = generate_posterior_pair(&counts, 100, ALPHA_PRIOR, s as u64, n);
@@ -571,7 +747,7 @@ fn main() {
             let hh_item = soft_qnx_per_item_seq(&d1, &d2, n, K);
 
             // Model vs H1 and H2 per item (sequential, using pre-built weight matrices)
-            let mut model_items: HashMap<String, (Vec<f64>, Vec<f64>)> = HashMap::new();
+            let mut model_items: ModelPairOverlaps = HashMap::new();
             for m_key in model_keys.iter() {
                 let w_m = model_weights[m_key].as_slice();
                 let mh1 = soft_qnx_with_wa_seq(w_m, &d1, n, K);
@@ -590,10 +766,14 @@ fn main() {
     let t_boot = Instant::now();
 
     let mut q_hhs_boot: Vec<f64> = Vec::with_capacity(N_BOOT);
-    let mut q_hms_paired: HashMap<String, Vec<f64>> = model_keys.iter()
-        .map(|k| (k.clone(), Vec::with_capacity(N_BOOT))).collect();
-    let mut delta_ms: HashMap<String, Vec<f64>> = model_keys.iter()
-        .map(|k| (k.clone(), Vec::with_capacity(N_BOOT))).collect();
+    let mut q_hms_paired: HashMap<String, Vec<f64>> = model_keys
+        .iter()
+        .map(|k| (k.clone(), Vec::with_capacity(N_BOOT)))
+        .collect();
+    let mut delta_ms: HashMap<String, Vec<f64>> = model_keys
+        .iter()
+        .map(|k| (k.clone(), Vec::with_capacity(N_BOOT)))
+        .collect();
 
     let mut rng_boot = ChaCha8Rng::seed_from_u64(42);
 
@@ -632,10 +812,15 @@ fn main() {
     let hh_p975 = hh_sorted[(N_BOOT as f64 * 0.975) as usize];
 
     println!("\nHH100 paired bootstrap mean: {:.5}", hh_mean);
-    println!("HH100 paired bootstrap 95%CI: [{:.5}, {:.5}]", hh_p025, hh_p975);
+    println!(
+        "HH100 paired bootstrap 95%CI: [{:.5}, {:.5}]",
+        hh_p025, hh_p975
+    );
     println!();
-    println!("{:<22} {:>12} {:>10} {:>12} {:>12} {:>12}",
-        "Model", "Paired Q_m", "Delta_m", "CI Low", "CI Hi", "Fixed Q_m");
+    println!(
+        "{:<22} {:>12} {:>10} {:>12} {:>12} {:>12}",
+        "Model", "Paired Q_m", "Delta_m", "CI Low", "CI Hi", "Fixed Q_m"
+    );
     println!("{}", "-".repeat(82));
 
     let mut model_results: HashMap<String, ModelPairedResult> = HashMap::new();
@@ -651,19 +836,24 @@ fn main() {
         let n_gt = d_arr.iter().filter(|&&x| x > 0.0).count();
         let q_fixed = model_fixed_q[m_key];
 
-        println!("{:<22} {:>12.5} {:>10.5} {:>12.5} {:>12.5} {:>12.5}",
-            m_key, q_mean, d_mean, d_p025, d_p975, q_fixed);
+        println!(
+            "{:<22} {:>12.5} {:>10.5} {:>12.5} {:>12.5} {:>12.5}",
+            m_key, q_mean, d_mean, d_p025, d_p975, q_fixed
+        );
 
-        model_results.insert(m_key.clone(), ModelPairedResult {
-            q_paired_hm_mean: (q_mean * 100000.0).round() / 100000.0,
-            delta_m_mean: (d_mean * 100000.0).round() / 100000.0,
-            delta_m_95ci: [
-                (d_p025 * 100000.0).round() / 100000.0,
-                (d_p975 * 100000.0).round() / 100000.0,
-            ],
-            replicates_gt_zero: format!("{}/{}", n_gt, N_BOOT),
-            q_fixed_reference: (q_fixed * 100000.0).round() / 100000.0,
-        });
+        model_results.insert(
+            m_key.clone(),
+            ModelPairedResult {
+                q_paired_hm_mean: (q_mean * 100000.0).round() / 100000.0,
+                delta_m_mean: (d_mean * 100000.0).round() / 100000.0,
+                delta_m_95ci: [
+                    (d_p025 * 100000.0).round() / 100000.0,
+                    (d_p975 * 100000.0).round() / 100000.0,
+                ],
+                replicates_gt_zero: format!("{}/{}", n_gt, N_BOOT),
+                q_fixed_reference: (q_fixed * 100000.0).round() / 100000.0,
+            },
+        );
     }
 
     let total = t0.elapsed();
@@ -673,7 +863,8 @@ fn main() {
 
     let out = PairedEstimandResults {
         estimand: "paired".to_string(),
-        description: "M_m,b = 0.5 * [Q(G_m, G_H1^(b)) + Q(G_m, G_H2^(b))]; fully paired design".to_string(),
+        description: "M_m,b = 0.5 * [Q(G_m, G_H1^(b)) + Q(G_m, G_H2^(b))]; fully paired design"
+            .to_string(),
         n_pairs: N_PAIRS,
         n_bootstrap: N_BOOT,
         k: K,
@@ -686,11 +877,9 @@ fn main() {
         total_runtime_ms: total.as_secs_f64() * 1000.0,
     };
 
-    let f_out = File::create(
-        "c:/Users/admir/Github/shadowspace/results/paired_estimand_results.yaml"
-    ).unwrap();
+    let f_out = create_output_file(&paths.paired_output);
     serde_json::to_writer_pretty(f_out, &out).unwrap();
-    println!("Saved to results/paired_estimand_results.yaml");
+    println!("Saved to {}", paths.paired_output.display());
 
     // ════════════════════════════════════════════════════════════════════════
     // MULTI-SEED REFERENCE SURFACE
@@ -709,8 +898,12 @@ fn main() {
     let t_surf = Instant::now();
 
     // Pre-build G_emp weight matrices for each k value (reused across all seeds)
-    println!("Pre-building G_emp weight matrices for {} k values...", k_list.len());
-    let emp_weights: Vec<Vec<f64>> = k_list.iter()
+    println!(
+        "Pre-building G_emp weight matrices for {} k values...",
+        k_list.len()
+    );
+    let emp_weights: Vec<Vec<f64>> = k_list
+        .iter()
         .map(|&k_v| build_weight_matrix(&d_emp, n, k_v))
         .collect();
     println!("  Done in {:?}", t_surf.elapsed());
@@ -719,7 +912,9 @@ fn main() {
 
     // Header
     print!("\n{:<10}", "n_votes");
-    for &k_v in &k_list { print!(" {:>14}", format!("k={}", k_v)); }
+    for &k_v in &k_list {
+        print!(" {:>14}", format!("k={}", k_v));
+    }
     println!();
     println!("{}", "-".repeat(10 + 15 * k_list.len()));
 
@@ -739,10 +934,14 @@ fn main() {
                 let d_sub = build_dist_matrix_seq(&p_sub, n);
 
                 // Compute Q for each k (reuse d_sub across k values)
-                emp_weights.iter().zip(k_list.iter()).map(|(w_emp_k, &k_v)| {
-                    let per_item = soft_qnx_with_wa_seq(w_emp_k, &d_sub, n, k_v);
-                    per_item.iter().sum::<f64>() / n as f64
-                }).collect::<Vec<f64>>()
+                emp_weights
+                    .iter()
+                    .zip(k_list.iter())
+                    .map(|(w_emp_k, &k_v)| {
+                        let per_item = soft_qnx_with_wa_seq(w_emp_k, &d_sub, n, k_v);
+                        per_item.iter().sum::<f64>() / n as f64
+                    })
+                    .collect::<Vec<f64>>()
             })
             .collect();
 
@@ -753,7 +952,8 @@ fn main() {
         for (ki, &k_v) in k_list.iter().enumerate() {
             let mut vals: Vec<f64> = seed_results.iter().map(|row| row[ki]).collect();
             let mean = vals.iter().sum::<f64>() / vals.len() as f64;
-            let variance = vals.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / (vals.len() - 1) as f64;
+            let variance =
+                vals.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / (vals.len() - 1) as f64;
             let sd = variance.sqrt();
             vals.sort_by(|a, b| a.partial_cmp(b).unwrap());
             let ci_lo = vals[(N_SEEDS as f64 * 0.025) as usize];
@@ -782,16 +982,29 @@ fn main() {
 
     // Monotonicity summary
     println!("\n--- MONOTONICITY CHECK ---");
-    for (ki, &k_v) in k_list.iter().enumerate() {
-        let means: Vec<f64> = all_cells.iter().filter(|c| c.k == k_v).map(|c| c.mean).collect();
+    for &k_v in &k_list {
+        let means: Vec<f64> = all_cells
+            .iter()
+            .filter(|c| c.k == k_v)
+            .map(|c| c.mean)
+            .collect();
         let monotone = means.windows(2).all(|w| w[1] >= w[0] - 1e-4);
-        let ci_lo_mono = all_cells.iter().filter(|c| c.k == k_v)
+        let ci_lo_mono = all_cells
+            .iter()
+            .filter(|c| c.k == k_v)
             .collect::<Vec<_>>()
             .windows(2)
             .all(|w| w[1].ci_lo >= w[0].ci_lo - 1e-4);
-        println!("  k={}: mean-monotone={}, ci_lo-monotone={}, means={:?}",
-            k_v, monotone, ci_lo_mono,
-            means.iter().map(|&m| format!("{:.4}", m)).collect::<Vec<_>>());
+        println!(
+            "  k={}: mean-monotone={}, ci_lo-monotone={}, means={:?}",
+            k_v,
+            monotone,
+            ci_lo_mono,
+            means
+                .iter()
+                .map(|&m| format!("{:.4}", m))
+                .collect::<Vec<_>>()
+        );
     }
 
     println!("\nTotal reference surface time: {:?}", t_surf.elapsed());
@@ -804,13 +1017,68 @@ fn main() {
         k_list: k_list.clone(),
         cells: all_cells,
     };
-    let surf_file = File::create(
-        "c:/Users/admir/Github/shadowspace/results/multi_seed_reference_surface.json"
-    ).unwrap();
+    let surf_file = create_output_file(&paths.surface_output);
     serde_json::to_writer_pretty(surf_file, &surf_out).unwrap();
-    println!("Saved to results/multi_seed_reference_surface.json");
+    println!("Saved to {}", paths.surface_output.display());
 
     println!("\n=========================================================================");
     println!("   TOTAL RUNTIME: {:.2?}", t0.elapsed());
     println!("=========================================================================");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn run_paths_default_to_repository_relative_locations() {
+        let paths = parse_run_paths(Vec::<OsString>::new()).unwrap();
+
+        assert_eq!(
+            paths.items,
+            PathBuf::from("data/chaosnli/processed/canonical_items_posterior.json")
+        );
+        assert_eq!(
+            paths.models,
+            PathBuf::from("research/chaosnli/rust_manifest/model_probs.json")
+        );
+        assert_eq!(
+            paths.paired_output,
+            PathBuf::from("results/paired_estimand_results.yaml")
+        );
+        assert_eq!(
+            paths.surface_output,
+            PathBuf::from("results/multi_seed_reference_surface.json")
+        );
+    }
+
+    #[test]
+    fn run_paths_accept_all_overrides() {
+        let paths = parse_run_paths(
+            [
+                "--items",
+                "input/items.json",
+                "--models",
+                "input/models.json",
+                "--paired-output",
+                "output/paired.yaml",
+                "--surface-output",
+                "output/surface.json",
+            ]
+            .map(OsString::from),
+        )
+        .unwrap();
+
+        assert_eq!(paths.items, PathBuf::from("input/items.json"));
+        assert_eq!(paths.models, PathBuf::from("input/models.json"));
+        assert_eq!(paths.paired_output, PathBuf::from("output/paired.yaml"));
+        assert_eq!(paths.surface_output, PathBuf::from("output/surface.json"));
+    }
+
+    #[test]
+    fn run_paths_reject_missing_values() {
+        let error = parse_run_paths([OsString::from("--items")]).unwrap_err();
+
+        assert_eq!(error, "missing path after --items");
+    }
 }
