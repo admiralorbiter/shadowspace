@@ -244,3 +244,44 @@ def test_api_diagnostics_clr_representation(client: FlaskClient) -> None:
     assert data["metric"] == "euclidean"
     assert "trustworthiness" in data
 
+
+def test_api_topology_endpoint(client: FlaskClient) -> None:
+    res = client.get("/api/topology?dataset=calibration_3class&representation=probability&metric=euclidean&k=3")
+    assert res.status_code == 200
+    data = json.loads(res.data)
+    assert "edges" in data
+    assert len(data["edges"]) > 0
+    first_edge = data["edges"][0]
+    assert "source" in first_edge
+    assert "target" in first_edge
+    assert first_edge["type"] in {"preserved", "torn", "false"}
+
+
+def test_api_distortion_grid_endpoint(client: FlaskClient) -> None:
+    res = client.get("/api/distortion-grid?dataset=calibration_3class&resolution=16")
+    assert res.status_code == 200
+    data = json.loads(res.data)
+    assert data["resolution"] == 16
+    assert "grid" in data
+    assert len(data["grid"]) == 16
+    assert len(data["grid"][0]) == 16
+
+
+def test_api_subspace_angles_endpoint(client: FlaskClient) -> None:
+    res = client.get("/api/subspace-angles?dataset=calibration_3class&view_a=pca_corners&view_b=fisher_lda")
+    assert res.status_code == 200
+    data = json.loads(res.data)
+    assert "theta_1_deg" in data
+    assert "theta_2_deg" in data
+    assert "grassmannian_dist_deg" in data
+    assert data["interpretation"] in {"tight", "moderate", "divergent"}
+
+
+def test_workbench_html_contains_sprint13_controls(client: FlaskClient) -> None:
+    res = client.get("/")
+    html = res.data.decode("utf-8")
+    assert "btn-topology" in html
+    assert "btn-distortion" in html
+    assert "subspace-angle-panel" in html
+
+

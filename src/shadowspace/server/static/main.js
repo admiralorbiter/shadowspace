@@ -62,6 +62,13 @@ let zoomLevelB       = 1.0;
 let panOffsetXB      = 0;
 let panOffsetYB      = 0;
 
+// Sprint 13 Geometric Analysis State
+let showTopologyGraph = false; // global k-NN edge overlay
+let showDistortionMap = false; // spatial distortion heatmap
+let topologyEdges     = null;  // cached edge list from /api/topology
+let distortionGrid    = null;  // cached grid from /api/distortion-grid
+let subspaceAngles    = null;  // cached angles from /api/subspace-angles
+
 const POINT_RADIUS        = 7;
 const POINT_RADIUS_HOVER  = 10;
 const POINT_RADIUS_SELECT = 10;
@@ -109,6 +116,7 @@ async function boot() {
   initStressHeatmapToggle();
   initTourControls();
   initDualViewControls();
+  initSprint13Controls();
   initOptimizerControls();
   initAccessibility();
   initKeyboardShortcuts();
@@ -122,6 +130,12 @@ async function boot() {
 async function loadDataset(datasetKey) {
   try {
     setStatus("loading", "Loading dataset…");
+    // Invalidate Sprint 13 overlay caches — they are dataset/view specific
+    topologyEdges  = null;
+    distortionGrid = null;
+    subspaceAngles = null;
+    updateSubspaceAnglePanel();
+
     const res = await fetch(`/api/fixture?dataset=${encodeURIComponent(datasetKey)}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     fixtureData = await res.json();
@@ -186,8 +200,14 @@ function initCatalogSelector() {
   if (catalogSelect) {
     catalogSelect.addEventListener("change", (e) => {
       currentViewId = e.target.value;
+      // Invalidate view-specific overlay caches
+      topologyEdges  = null;
+      distortionGrid = null;
       updateSemanticBadge();
       fetchDiagnostics();
+      if (showTopologyGraph) loadTopologyEdges();
+      if (showDistortionMap) loadDistortionGrid();
+      if (isDualView) loadSubspaceAngles();
     });
   }
 }
@@ -265,6 +285,8 @@ async function setRepresentation(repId) {
   if (isDualView) {
     await loadDualViewBData();
   }
+  if (showTopologyGraph) loadTopologyEdges();
+  if (showDistortionMap) loadDistortionGrid();
   await fetchDiagnostics();
   renderScatter();
 }
@@ -727,6 +749,97 @@ async function fetchDiagnostics() {
   }
 }
 
+async function loadTopologyEdges() {
+  if (!fixtureData) return;
+  const url = `/api/topology?dataset=${encodeURIComponent(currentDataset)}&representation=${encodeURIComponent(currentRep)}&metric=${encodeURIComponent(currentMetric)}&view_id=${encodeURIComponent(currentViewId)}&k=${currentK}`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const data = await res.json();
+    topologyEdges = data.edges;
+    renderScatter();
+  } catch (err) {
+    console.error("Failed to load topology edges:", err);
+  }
+}
+
+async function loadDistortionGrid() {
+  if (!fixtureData) return;
+  const url = `/api/distortion-grid?dataset=${encodeURIComponent(currentDataset)}&representation=${encodeURIComponent(currentRep)}&metric=${encodeURIComponent(currentMetric)}&view_id=${encodeURIComponent(currentViewId)}&resolution=32`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return;
+    distortionGrid = await res.json();
+    renderScatter();
+  } catch (err) {
+    console.error("Failed to load distortion grid:", err);
+  }
+}
+
+async function loadSubspaceAngles() {
+  if (!fixtureData || !isDualView) return;
+  const viewBName = "fisher_lda";
+  const url = `/api/subspace-angles?dataset=${encodeURIComponent(currentDataset)}&representation=${encodeURIComponent(currentRep)}&view_a=${encodeURIComponent(currentViewId)}&view_b=${encodeURIComponent(viewBName)}`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return;
+    subspaceAngles = await res.json();
+    updateSubspaceAnglePanel();
+  } catch (err) {
+    console.error("Failed to load subspace angles:", err);
+  }
+}
+
+function updateSubspaceAnglePanel() {
+  const panel = document.getElementById("subspace-angle-panel");
+  if (!panel) return;
+  if (!isDualView || !subspaceAngles) {
+    panel.classList.add("hidden");
+    return;
+  }
+  panel.classList.remove("hidden");
+
+  const elT1 = document.getElementById("angle-theta1");
+  const elT2 = document.getElementById("angle-theta2");
+  if (elT1) elT1.textContent = `${subspaceAngles.theta_1_deg.toFixed(1)}°`;
+  if (elT2) elT2.textContent = `${subspaceAngles.theta_2_deg.toFixed(1)}°`;
+
+  const gElem = document.getElementById("angle-grassmannian");
+  if (gElem) {
+    gElem.textContent = `${subspaceAngles.grassmannian_dist_deg.toFixed(1)}° (${subspaceAngles.interpretation})`;
+    gElem.className = `angle-val-badge ${subspaceAngles.interpretation}`;
+  }
+}
+
+function initSprint13Controls() {
+  const btnTopo = document.getElementById("btn-topology");
+  const btnDist = document.getElementById("btn-distortion");
+
+  if (btnTopo) {
+    btnTopo.addEventListener("click", () => {
+      showTopologyGraph = !showTopologyGraph;
+      btnTopo.classList.toggle("active", showTopologyGraph);
+      if (showTopologyGraph && !topologyEdges) {
+        loadTopologyEdges();
+      } else {
+        renderScatter();
+      }
+    });
+  }
+
+  if (btnDist) {
+    btnDist.addEventListener("click", () => {
+      showDistortionMap = !showDistortionMap;
+      btnDist.classList.toggle("active", showDistortionMap);
+      if (showDistortionMap && !distortionGrid) {
+        loadDistortionGrid();
+      } else {
+        renderScatter();
+      }
+    });
+  }
+}
+
 function updateIntegrityPanel(data) {
   if (!data) return;
   document.getElementById("diag-precision").textContent = (data.precision * 100).toFixed(0) + "%";
@@ -1102,6 +1215,90 @@ function renderScatter() {
   }
 }
 
+function drawDistortionHeatmap(sc2, cCtx, W, H) {
+  if (!distortionGrid || !distortionGrid.grid) return;
+  const grid   = distortionGrid.grid;
+  const res    = distortionGrid.resolution || 32;
+  const bounds = distortionGrid.bounds;
+  if (!bounds) return;
+
+  const spanX   = bounds.xMax - bounds.xMin;
+  const spanY   = bounds.yMax - bounds.yMin;
+  const cellW   = spanX / res;
+  const cellH   = spanY / res;
+
+  cCtx.save();
+  for (let r = 0; r < res; r++) {
+    const yMax = bounds.yMax - r * cellH;
+    const yMin = bounds.yMax - (r + 1) * cellH;
+    for (let c = 0; c < res; c++) {
+      const val = grid[r][c];
+      if (val === null || val === undefined) continue;
+
+      const xMin = bounds.xMin + c * cellW;
+      const xMax = bounds.xMin + (c + 1) * cellW;
+
+      const [sX1, sY1] = sc2.toScreen(xMin, yMax);
+      const [sX2, sY2] = sc2.toScreen(xMax, yMin);
+      const rectW = Math.abs(sX2 - sX1);
+      const rectH = Math.abs(sY2 - sY1);
+      const rx = Math.min(sX1, sX2);
+      const ry = Math.min(sY1, sY2);
+
+      let alpha = Math.min(0.45, Math.abs(val - 1.0) * 0.5 + 0.10);
+      let colorStr;
+      if (val < 1.0) {
+        colorStr = `rgba(56, 189, 248, ${alpha.toFixed(2)})`;   // blue = compression
+      } else {
+        colorStr = `rgba(248, 113, 113, ${alpha.toFixed(2)})`;  // red = expansion
+      }
+
+      cCtx.fillStyle = colorStr;
+      cCtx.fillRect(rx, ry, rectW + 0.5, rectH + 0.5);
+    }
+  }
+  cCtx.restore();
+}
+
+function drawTopologyGraph(coords, sc2, cCtx) {
+  if (!topologyEdges || !fixtureData) return;
+  const objectIds = fixtureData.object_ids;
+  if (!objectIds) return;
+
+  const idToIdx = {};
+  objectIds.forEach((id, i) => { idToIdx[id] = i; });
+
+  cCtx.save();
+  for (const edge of topologyEdges) {
+    const i1 = idToIdx[edge.source];
+    const i2 = idToIdx[edge.target];
+    if (i1 === undefined || i2 === undefined || i1 >= coords.length || i2 >= coords.length) continue;
+
+    const [x1, y1] = sc2.toScreen(coords[i1][0], coords[i1][1]);
+    const [x2, y2] = sc2.toScreen(coords[i2][0], coords[i2][1]);
+
+    cCtx.beginPath();
+    cCtx.moveTo(x1, y1);
+    cCtx.lineTo(x2, y2);
+
+    if (edge.type === "preserved") {
+      cCtx.strokeStyle = "rgba(52, 211, 153, 0.28)";
+      cCtx.lineWidth   = 1.2;
+      cCtx.setLineDash([]);
+    } else if (edge.type === "torn") {
+      cCtx.strokeStyle = "rgba(248, 113, 113, 0.35)";
+      cCtx.lineWidth   = 1.0;
+      cCtx.setLineDash([3, 3]);
+    } else {
+      cCtx.strokeStyle = "rgba(251, 191, 36, 0.35)";
+      cCtx.lineWidth   = 1.0;
+      cCtx.setLineDash([2, 2]);
+    }
+    cCtx.stroke();
+  }
+  cCtx.restore();
+}
+
 function renderScatterCanvas(cEl, cCtx, coords, zoom, px, py, size, isViewB) {
   if (!cEl || !cCtx || !coords) return;
   const colors = fixtureData.colors;
@@ -1120,6 +1317,11 @@ function renderScatterCanvas(cEl, cCtx, coords, zoom, px, py, size, isViewB) {
   // Background
   cCtx.fillStyle = "#111827";
   cCtx.fillRect(0, 0, W, H);
+
+  // Spatial Distortion Heatmap Background Overlay
+  if (showDistortionMap && distortionGrid) {
+    drawDistortionHeatmap(sc2, cCtx, W, H);
+  }
 
   // Grid
   cCtx.strokeStyle = "rgba(255,255,255,0.04)";
@@ -1163,6 +1365,11 @@ function renderScatterCanvas(cEl, cCtx, coords, zoom, px, py, size, isViewB) {
   cCtx.fillStyle = "rgba(148,163,184,0.4)";
   cCtx.textAlign = "right";
   cCtx.fillText(isViewB ? "Fisher LDA View B" : `${currentViewId} · ${currentRep.replace("_", " ")}`, W - 12, H - 10);
+
+  // Global k-NN Topology Graph Overlay
+  if (showTopologyGraph && topologyEdges) {
+    drawTopologyGraph(coords, sc2, cCtx);
+  }
 
   // Simplex structure lines (if 3-class calibration)
   if (coords.length === 15) {
@@ -1476,6 +1683,7 @@ async function loadDualViewBData() {
   } catch (err) {
     console.error("Failed to load dual view B coords:", err);
   }
+  await loadSubspaceAngles();
 }
 
 function onMouseDown(e) {

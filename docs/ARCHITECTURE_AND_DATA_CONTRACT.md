@@ -4,10 +4,24 @@
 **Sprint size:** approximately one focused week each; combine or split based on findings  
 **Primary gate:** prove the mathematical interaction in Python before building a custom frontend
 
-> **Status as of 2026-08-01**  
-> Sprint 0: COMPLETE — 51 tests, dtour 0.4.4 installed, conventions locked, DtourAdapter protocol confirmed.  
-> Sprint 1: COMPLETE — 60 tests, 90% coverage, ruff/mypy clean, bundle writer/reader/validator, 3-class calibration and 4-class synthetic generators, CLI (`shadowspace generate`, `shadowspace validate-bundle`), `src/shadowspace/math/clr.py` (shared CLR implementation, not in original plan).  
-> Deferred: `BundleManifest.created_at` is `str`; upgrade to Pydantic `datetime` before Sprint 2 manifest-comparison logic is added.
+> **Status as of 2026-08-01**
+> Sprint 0: COMPLETE — 51 tests, dtour 0.4.4 installed, conventions locked, DtourAdapter protocol confirmed.
+> Sprint 1: COMPLETE — 60 tests, 90% coverage, ruff/mypy clean, bundle writer/reader/validator, 3-class calibration and 4-class synthetic generators, CLI (`shadowspace generate`, `shadowspace validate-bundle`), `src/shadowspace/math/clr.py`.
+> Sprint 2: COMPLETE — probability representations (`sqrt_probability`, `clr_probability`, `logits`), metric registry (Euclidean, Hellinger, Fisher-Rao, Aitchison), `shadowspace inspect` CLI, representation/metric round-trip tests.
+> Sprint 3: COMPLETE — orthonormal basis validator, projection operation Y=XF, PCA per-representation with provenance hashing, Grassmannian distance and GLERP geodesic trajectory generation, saved-view schema, `DtourAdapter`.
+> Sprint 3b: COMPLETE — Flask workbench shell (`shadowspace serve`), scatter canvas, sidebar diagnostics panel, static data contract (`/api/fixture`), calibration fixture rendered at `http://127.0.0.1:5000`.
+> Sprint 4: COMPLETE — k-NN diagnostics (true/false/torn neighbors), trustworthiness score, per-point coloring, k-slider, `/api/diagnostics` endpoint.
+> Sprint 5: COMPLETE — dataset registry, `shadowspace.datasets` module, sklearn dataset fetchers (Iris, Wine, Breast Cancer, Digits), bundle discovery, CSV importer with schema validation, `shadowspace import-csv` CLI.
+> Sprint 6: COMPLETE — multi-representation selector UI (probability / sqrt_probability / clr / logits tabs), per-representation metric dropdown, representation switch syncs scatter + diagnostics without page reload.
+> Sprint 7: COMPLETE — Fashion-MNIST generator, 10-class belief bundle, `shadowspace generate fashion-mnist`, zoom/pan canvas interaction, zoom-level indicator.
+> Sprint 8: COMPLETE (decision: expand Flask with richer vanilla JS/CSS) — Full-screen workbench redesign, dark-mode glassmorphism UI, header status bar, sidebar panels for diagnostics and feature loadings.
+> Sprint 9: COMPLETE — Dataset selector dropdown (all registered datasets), catalog view switcher (PCA corner / optimized views), variance bars, semantic badge (linear_projection / representation_morph), legend list with class colors.
+> Sprint 10: COMPLETE — Grand Tour playback (GLERP geodesic, 180-frame paths, 20 fps), tour scrubber + speed control, fixed [-1.1, 1.1] viewport during playback, feature loadings HUD (real-time per-frame), guided subspace optimization (`/api/optimize-view`, Fisher LDA + covariance integrity solvers), canvas marquee multi-selection (Shift+Drag), representation morphing with amber validity warning badge.
+> Sprint 11: COMPLETE — Dual/split-view mode (left canvas = current view, right canvas = comparison view), independent scatter renderers sharing the same dataset, `isDualView` toggle, right-panel catalog selector.
+> Sprint 12: COMPLETE — Representation switching no longer auto-starts tour; visual sync on switch (scatter redraws immediately from correct coords); higher-order metrics update on representation change; tour scrubber stays at current frame on pause.
+> Sprint 13: COMPLETE — Topology graph overlay (`🕸️` toggle, `/api/topology` k-NN edge classification, blue=preserved/red=false/orange=torn), distortion heatmap overlay (`🌡️` toggle, `/api/distortion-grid`, blue=compression/red=expansion), subspace angle inspector panel (`/api/subspace-angles`, canonical angles + Grassmannian distance). Bug fix: distortion grid now uses actual per-dataset coordinate bounds (not hardcoded [-1.1,1.1]); topology/distortion caches invalidated on dataset or catalog view change. 159 tests, 88% coverage.
+> Deferred: `BundleManifest.created_at` is `str`; upgrade to Pydantic `datetime` before manifest-comparison logic is added.
+
 
 ## 1. Delivery strategy
 
@@ -729,7 +743,134 @@ A written architecture decision records the chosen outcome and the evidence. The
 
 ---
 
-## Sprint 9+ — Research hardening
+## Sprint 9 — Dataset breadth and workbench polish
+
+### Objective
+
+Make the workbench useful across multiple real datasets and clean up the UI shell.
+
+### Deliverables
+
+- Dataset selector dropdown exposing all registered datasets (Iris, Wine, Breast Cancer, Digits, Fashion-MNIST, calibration_3class, synthetic_4class).
+- Catalog view switcher (PCA corner view / optimized views) per-dataset.
+- Variance bars showing explained-variance ratio per PCA component.
+- Semantic badge (`linear_projection` / `representation_morph`) updating on path change.
+- Legend list with per-class color swatches.
+- `/api/datasets` endpoint returning the registry manifest.
+
+### Exit gate (COMPLETE)
+
+Any registered dataset loads without errors; variance bars and legend update correctly; catalog view switcher selects the correct 2D coordinates.
+
+---
+
+## Sprint 10 — Grand Tour and Guided Subspace Optimization
+
+### Objective
+
+Give users kinematic control over the projection plane and principled tools to find high-information views.
+
+### Deliverables
+
+- Grand Tour playback: GLERP geodesic paths, 180-frame pre-computation, 20 fps animation loop, play/pause/scrub/speed controls.
+- Fixed `[-1.1, 1.1]` viewport during tour (server globally normalizes all frames); user zoom/pan suspended and restored on pause.
+- Feature loadings HUD: real-time per-frame bar chart of `‖V_i‖ = √(V_{i,1}² + V_{i,2}²)` for each feature.
+- `/api/tour-path` endpoint: `n_frames`, `representation`, and `dataset` parameters; returns `frames` and `bases`.
+- Guided subspace optimization (`/api/optimize-view`): Fisher LDA solver (`find_discriminative_basis`) for class separability; local covariance integrity solver (`find_integrity_optimal_basis`); coincident-basis guard sweeping to minor discriminant components when top components coincide with PCA.
+- Canvas marquee multi-selection: Shift+Drag box selection triggering subset summary panel (object count, average confidence, distinct class breakdown).
+- Representation morphing: 60-frame GLERP transitions between separately fitted representation layouts; amber semantic validity warning badge (`intermediate_frames_semantically_valid: false`).
+- Path metadata: `geodesic_algorithm: "GLERP"` recorded in all paths.
+
+### Exit gate (COMPLETE)
+
+Tour plays without visual jitter; Fisher LDA view visually separates classes more than PCA view on calibration fixture; marquee selection shows correct subset statistics.
+
+---
+
+## Sprint 11 — Dual / Split-View Mode
+
+### Objective
+
+Allow side-by-side comparison of two catalog views or two representations.
+
+### Deliverables
+
+- `isDualView` toggle in the header.
+- Left canvas = current (primary) view; right canvas = independently selected comparison view.
+- Both canvases share the same dataset and object identity; each has its own catalog selector.
+- Independent scatter render loop per canvas with shared color/class palette.
+- Subspace angle inspector panel appears in the right sidebar when dual-view is active.
+
+### Exit gate (COMPLETE)
+
+Both canvases render independently without overlapping; switching catalog view on the right does not affect the left.
+
+---
+
+## Sprint 12 — Representation UX Fixes
+
+### Objective
+
+Fix confusing representation-selector behaviors discovered during manual testing.
+
+### Deliverables
+
+- Representation switching no longer auto-starts the Grand Tour.
+- Scatter canvas redraws immediately from the correct representation coordinates on switch (no stale state).
+- Higher-order metrics (diagnostics, feature loadings) update on representation change without requiring tour playback.
+- Tour scrubber stays at the current frame on pause; resume continues from where playback stopped.
+- Catalog view change triggers correct coordinate lookup for the active representation.
+
+### Exit gate (COMPLETE)
+
+Switching representations updates the visual immediately and independently of tour state on the calibration fixture and all sklearn datasets.
+
+---
+
+## Sprint 13 — Geometric Analysis Overlays
+
+### Objective
+
+Add three analytical overlays — topology graph, distortion heatmap, and subspace angle inspector — that surface geometric evidence directly on the scatter canvas and sidebar.
+
+### Deliverables
+
+- **Topology graph** (`🕸️` toggle, `/api/topology`):
+  - N×N k-NN edge classification: blue = preserved, red = false neighbor, orange = torn neighbor.
+  - Edges drawn on the scatter canvas as semi-transparent lines.
+  - Edge set recomputed when dataset, representation, metric, k, or catalog view changes.
+- **Distortion heatmap** (`🌡️` toggle, `/api/distortion-grid`):
+  - 32×32 grid of per-cell mean distortion ratios (projected pairwise distance / source pairwise distance, both normalized by their dataset-wide mean).
+  - Blue cells = compression (ratio < 1), red cells = expansion (ratio > 1).
+  - Grid bounds computed from the actual 2D coordinate extents with 12% padding — **not** hardcoded `[-1.1, 1.1]` — so the overlay works for any dataset at any scale.
+  - Response includes `bounds: {xMin, xMax, yMin, yMax}` for the frontend renderer.
+- **Subspace angle inspector** (`/api/subspace-angles`, sidebar panel):
+  - Canonical principal angles (θ₁, θ₂) between the View A and View B projection bases.
+  - Grassmannian distance `d = √(θ₁² + θ₂²)`.
+  - Shown in the right sidebar when dual-view is active.
+- **New math module** `src/shadowspace/math/subspace_angles.py`:
+  - `compute_canonical_angles(F_a, F_b)` via SVD.
+  - `grassmann_distance(F_a, F_b)`.
+  - `validate_orthonormal_basis(F)`.
+
+### Bug fixes
+
+- Distortion grid was using hardcoded `[-1.1, 1.1]` bounds; fixed to use actual per-dataset coordinate extents.
+- Topology and distortion caches (`topologyEdges`, `distortionGrid`) were not cleared on dataset or catalog view change, causing stale calibration-fixture overlays to appear on real datasets; fixed by resetting caches in `loadDataset()` and `initCatalogSelector()`.
+
+### Automated tests
+
+- `test_subspace_angles.py`: canonical angles, Grassmannian distance, orthonormality validation.
+- `test_server.py`: `/api/topology`, `/api/distortion-grid`, `/api/subspace-angles` endpoint smoke tests.
+
+### Exit gate (COMPLETE)
+
+159 tests pass, 88% coverage. Topology edges and distortion heatmap render correctly on Iris, Wine, and Breast Cancer datasets. Subspace angle panel shows non-zero angles when comparing different catalog views.
+
+---
+
+## Sprint 14+ — Research hardening
+
 
 Potential work is ordered by evidence, not novelty alone:
 

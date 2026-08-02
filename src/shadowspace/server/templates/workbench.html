@@ -123,6 +123,24 @@
         </div>
       </div>
 
+      <div class="sidebar-section hidden" id="subspace-angle-panel">
+        <h2 class="sidebar-title">Subspace Angles (Dual View)</h2>
+        <div class="angle-panel-content">
+          <div class="angle-row">
+            <span class="angle-label">Principal Angle θ₁:</span>
+            <span class="angle-val" id="angle-theta1">—</span>
+          </div>
+          <div class="angle-row">
+            <span class="angle-label">Principal Angle θ₂:</span>
+            <span class="angle-val" id="angle-theta2">—</span>
+          </div>
+          <div class="angle-row grassmannian-row">
+            <span class="angle-label">Grassmannian Dist d_G:</span>
+            <span class="angle-val-badge" id="angle-grassmannian">—</span>
+          </div>
+        </div>
+      </div>
+
       <div class="sidebar-section">
         <h2 class="sidebar-title">Legend</h2>
         <ul class="legend-list" id="legend-list">
@@ -159,6 +177,8 @@
           <span class="scatter-subtitle" id="scatter-subtitle">15 objects · 3 features</span>
         </div>
         <div class="scatter-header-controls">
+          <button id="btn-topology" class="btn-secondary btn-topology" title="Toggle Global k-NN Topology Graph Network">🕸️ Topology</button>
+          <button id="btn-distortion" class="btn-secondary btn-distortion" title="Toggle Spatial Projection Distortion Heatmap">🌡️ Distortion</button>
           <label class="toggle-sync-label" title="Synchronize camera zoom/pan between View A and View B">
             <input type="checkbox" id="chk-sync-cameras" checked />
             <span>Sync Cameras</span>

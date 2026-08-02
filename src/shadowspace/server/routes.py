@@ -24,7 +24,7 @@ from numpy.typing import NDArray
 
 from shadowspace.bundle.reader import BundleReader
 from shadowspace.data.calibration import calibration_fixture
-from shadowspace.diagnostics.knn import compute_point_diagnostics
+from shadowspace.diagnostics.knn import compute_knn, compute_point_diagnostics
 from shadowspace.diagnostics.trustworthiness import (
     compute_kruskal_stress,
     compute_view_continuity,
@@ -33,10 +33,10 @@ from shadowspace.diagnostics.trustworthiness import (
 from shadowspace.generators.fashion_mnist import FASHION_CLASSES, generate_fashion_mnist_bundle
 from shadowspace.generators.synthetic import generate_synthetic_bundle
 from shadowspace.importers.csv_importer import import_csv_bundle, import_parquet_bundle
-from shadowspace.importers.validator import ImportValidationError
 from shadowspace.math.clr import clr_transform
 from shadowspace.math.metrics import pairwise_euclidean
 from shadowspace.math.registry import MetricRegistry
+from shadowspace.math.subspace_angles import compute_canonical_angles, compute_grassmannian_distance
 from shadowspace.math.transforms import sqrt_transform
 from shadowspace.models.investigation import InvestigationRecord, SavedView
 from shadowspace.projection.basis import project, validate_orthonormal_basis
@@ -612,6 +612,251 @@ def api_diagnostics() -> Response:
     }
 
     return Response(json.dumps(payload), mimetype="application/json")
+
+
+@workbench_bp.route("/api/topology")
+def api_topology() -> Response:
+    """Compute full dataset k-NN topology graph, returning all edges classified as preserved, torn, or false."""
+    dataset_key = request.args.get("dataset", "calibration_3class")
+    rep_id = request.args.get("representation", "probability")
+    metric_id = request.args.get("metric", "euclidean")
+    view_id = request.args.get("view_id", "pca_corners")
+
+    try:
+        k = int(request.args.get("k", 3))
+    except ValueError:
+        return Response(json.dumps({"error": "Invalid k"}), status=400, mimetype="application/json")
+
+    ds_data = _get_dataset(dataset_key)
+    if ds_data is None:
+        return Response(json.dumps({"error": f"Unknown dataset '{dataset_key}'"}), status=404, mimetype="application/json")
+
+    object_ids = ds_data["object_ids"]
+    raw_matrix = np.array(ds_data["raw_matrix"], dtype=np.float64)
+
+    if rep_id == "sqrt_probability":
+        rep_matrix = sqrt_transform(raw_matrix)
+    elif rep_id == "clr_probability":
+        rep_matrix = clr_transform(raw_matrix)
+    else:
+        rep_matrix = raw_matrix
+
+    try:
+        src_dists = _METRIC_REGISTRY.compute_pairwise_distances(rep_matrix, metric_id, rep_id)
+    except (KeyError, ValueError) as err:
+        return Response(json.dumps({"error": str(err)}), status=400, mimetype="application/json")
+
+    if view_id in ds_data.get("catalog", {}):
+        coords_2d = np.array(ds_data["catalog"][view_id]["coords"], dtype=np.float64)
+    else:
+        coords_2d = np.array(ds_data["representations"].get(rep_id, {}).get("coords", []), dtype=np.float64)
+        if coords_2d.size == 0:
+            coords_2d = np.array(ds_data["representations"]["probability"]["coords"], dtype=np.float64)
+
+    proj_dists = pairwise_euclidean(coords_2d)
+
+    src_knn = compute_knn(src_dists, k, object_ids)
+    proj_knn = compute_knn(proj_dists, k, object_ids)
+
+    edges = []
+    seen = set()
+
+    for src_id in object_ids:
+        src_set = set(src_knn[src_id])
+        proj_set = set(proj_knn[src_id])
+
+        for nbr_id in src_knn[src_id]:
+            pair_key = tuple(sorted([src_id, nbr_id]))
+            edge_type = "preserved" if nbr_id in proj_set else "torn"
+            if (pair_key, edge_type) not in seen:
+                seen.add((pair_key, edge_type))
+                edges.append({"source": src_id, "target": nbr_id, "type": edge_type})
+
+        for nbr_id in proj_knn[src_id]:
+            if nbr_id not in src_set:
+                pair_key = tuple(sorted([src_id, nbr_id]))
+                if (pair_key, "false") not in seen:
+                    seen.add((pair_key, "false"))
+                    edges.append({"source": src_id, "target": nbr_id, "type": "false"})
+
+    return Response(
+        json.dumps({
+            "dataset": dataset_key,
+            "representation": rep_id,
+            "metric": metric_id,
+            "k": k,
+            "edges": edges,
+            "n_edges": len(edges),
+        }),
+        mimetype="application/json",
+    )
+
+
+@workbench_bp.route("/api/distortion-grid")
+def api_distortion_grid() -> Response:
+    """Compute spatial projection distortion grid over 2D viewport."""
+    dataset_key = request.args.get("dataset", "calibration_3class")
+    rep_id = request.args.get("representation", "probability")
+    metric_id = request.args.get("metric", "euclidean")
+    view_id = request.args.get("view_id", "pca_corners")
+
+    try:
+        res = max(8, min(64, int(request.args.get("resolution", 32))))
+    except ValueError:
+        res = 32
+
+    ds_data = _get_dataset(dataset_key)
+    if ds_data is None:
+        return Response(json.dumps({"error": f"Unknown dataset '{dataset_key}'"}), status=404, mimetype="application/json")
+
+    raw_matrix = np.array(ds_data["raw_matrix"], dtype=np.float64)
+    if rep_id == "sqrt_probability":
+        rep_matrix = sqrt_transform(raw_matrix)
+    elif rep_id == "clr_probability":
+        rep_matrix = clr_transform(raw_matrix)
+    else:
+        rep_matrix = raw_matrix
+
+    try:
+        src_dists = _METRIC_REGISTRY.compute_pairwise_distances(rep_matrix, metric_id, rep_id)
+    except (KeyError, ValueError) as err:
+        return Response(json.dumps({"error": str(err)}), status=400, mimetype="application/json")
+
+    if view_id in ds_data.get("catalog", {}):
+        coords_2d = np.array(ds_data["catalog"][view_id]["coords"], dtype=np.float64)
+    else:
+        coords_2d = np.array(ds_data["representations"].get(rep_id, {}).get("coords", []), dtype=np.float64)
+        if coords_2d.size == 0:
+            coords_2d = np.array(ds_data["representations"]["probability"]["coords"], dtype=np.float64)
+
+    proj_dists = pairwise_euclidean(coords_2d)
+
+    src_mean = float(np.mean(src_dists[src_dists > 0])) if np.any(src_dists > 0) else 1.0
+    proj_mean = float(np.mean(proj_dists[proj_dists > 0])) if np.any(proj_dists > 0) else 1.0
+
+    n_pts = len(coords_2d)
+    point_distortions = np.ones(n_pts, dtype=np.float64)
+
+    for i in range(n_pts):
+        ratios = []
+        for j in range(n_pts):
+            if i == j:
+                continue
+            s_d = src_dists[i, j] / src_mean
+            p_d = proj_dists[i, j] / proj_mean
+            if s_d > 1e-6:
+                ratios.append(p_d / s_d)
+        if ratios:
+            point_distortions[i] = float(np.mean(ratios))
+
+    # Compute actual data bounds with 10% padding (works for any dataset scale)
+    xs = coords_2d[:, 0]
+    ys = coords_2d[:, 1]
+    x_min_data, x_max_data = float(xs.min()), float(xs.max())
+    y_min_data, y_max_data = float(ys.min()), float(ys.max())
+    pad_x = max(0.05, (x_max_data - x_min_data) * 0.12)
+    pad_y = max(0.05, (y_max_data - y_min_data) * 0.12)
+    bx_min = x_min_data - pad_x
+    bx_max = x_max_data + pad_x
+    by_min = y_min_data - pad_y
+    by_max = y_max_data + pad_y
+    span_x = bx_max - bx_min
+    span_y = by_max - by_min
+
+    grid = [[None for _ in range(res)] for _ in range(res)]
+    cell_w = span_x / res
+    cell_h = span_y / res
+
+    for r in range(res):
+        cell_y_min = by_max - (r + 1) * cell_h
+        cell_y_max = by_max - r * cell_h
+        for c in range(res):
+            cell_x_min = bx_min + c * cell_w
+            cell_x_max = bx_min + (c + 1) * cell_w
+
+            cell_pts = []
+            for idx, (x, y) in enumerate(coords_2d):
+                if cell_x_min <= x <= cell_x_max and cell_y_min <= y <= cell_y_max:
+                    cell_pts.append(point_distortions[idx])
+
+            if cell_pts:
+                grid[r][c] = round(float(np.mean(cell_pts)), 3)
+
+    return Response(
+        json.dumps({
+            "dataset": dataset_key,
+            "resolution": res,
+            "grid": grid,
+            "bounds": {"xMin": round(bx_min, 4), "xMax": round(bx_max, 4), "yMin": round(by_min, 4), "yMax": round(by_max, 4)},
+        }),
+        mimetype="application/json",
+    )
+
+
+@workbench_bp.route("/api/subspace-angles")
+def api_subspace_angles() -> Response:
+    """Compute canonical principal angles between View A and View B projection bases."""
+    dataset_key = request.args.get("dataset", "calibration_3class")
+    rep_id = request.args.get("representation", "probability")
+    view_a = request.args.get("view_a", "pca_corners")
+    view_b = request.args.get("view_b", "fisher_lda")
+
+    ds_data = _get_dataset(dataset_key)
+    if ds_data is None:
+        return Response(json.dumps({"error": f"Unknown dataset '{dataset_key}'"}), status=404, mimetype="application/json")
+
+    raw_matrix = np.array(ds_data["raw_matrix"], dtype=np.float64)
+    if rep_id == "sqrt_probability":
+        rep_matrix = sqrt_transform(raw_matrix)
+    elif rep_id == "clr_probability":
+        rep_matrix = clr_transform(raw_matrix)
+    else:
+        rep_matrix = raw_matrix
+
+    def get_basis(view_name: str) -> NDArray[np.float64]:
+        if view_name == "fisher_lda":
+            from shadowspace.projection.subspace import find_discriminative_basis
+            objects_meta = ds_data.get("objects_meta", [])
+            labels = []
+            for i in range(len(raw_matrix)):
+                meta = objects_meta[i] if (isinstance(objects_meta, list) and i < len(objects_meta)) else None
+                if isinstance(meta, dict) and "generator_component" in meta and meta["generator_component"]:
+                    labels.append(meta["generator_component"])
+                elif isinstance(meta, dict) and "pred_class_name" in meta and meta["pred_class_name"]:
+                    labels.append(meta["pred_class_name"])
+                else:
+                    labels.append(f"c_{i % 3}")
+            return find_discriminative_basis(rep_matrix, labels)
+
+        cat = ds_data.get("catalog", {})
+        if view_name in cat:
+            return np.array(cat[view_name]["basis"], dtype=np.float64)
+
+        mat_centered = rep_matrix - rep_matrix.mean(axis=0)
+        _, _, vh = np.linalg.svd(mat_centered, full_matrices=False)
+        return validate_orthonormal_basis(vh[:2, :].T)
+
+    b_a = get_basis(view_a)
+    b_b = get_basis(view_b)
+
+    t1, t2 = compute_canonical_angles(b_a, b_b)
+    dist = compute_grassmannian_distance(t1, t2)
+
+    interpretation = "tight" if dist < 15.0 else ("moderate" if dist < 45.0 else "divergent")
+
+    return Response(
+        json.dumps({
+            "dataset": dataset_key,
+            "representation": rep_id,
+            "view_a": view_a,
+            "view_b": view_b,
+            "theta_1_deg": round(t1, 2),
+            "theta_2_deg": round(t2, 2),
+            "grassmannian_dist_deg": round(dist, 2),
+            "interpretation": interpretation,
+        }),
+        mimetype="application/json",
+    )
 
 
 @workbench_bp.route("/api/object-payload")

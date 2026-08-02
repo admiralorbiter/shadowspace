@@ -1044,7 +1044,7 @@ body.reduced-motion *::after {
   cursor: pointer;
 }
 
-.btn-split-view {
+.btn-split-view, .btn-topology, .btn-distortion {
   padding: 4px 10px;
   font-size: 11px;
   border-radius: 6px;
@@ -1055,10 +1055,72 @@ body.reduced-motion *::after {
   transition: all 0.15s ease;
 }
 
-.btn-split-view:hover, .btn-split-view.active {
+.btn-split-view:hover, .btn-split-view.active,
+.btn-topology:hover, .btn-topology.active,
+.btn-distortion:hover, .btn-distortion.active {
   background: rgba(52, 211, 153, 0.15);
   border-color: #34d399;
   color: #34d399;
+}
+
+.btn-distortion.active {
+  background: rgba(251, 191, 36, 0.15);
+  border-color: #fbbf24;
+  color: #fbbf24;
+}
+
+/* Subspace Angle Panel */
+.angle-panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 0;
+}
+
+.angle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+
+.angle-label {
+  color: var(--text-muted);
+}
+
+.angle-val {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+.grassmannian-row {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.angle-val-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+
+.angle-val-badge.moderate {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+.angle-val-badge.divergent {
+  background: rgba(248, 113, 113, 0.15);
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.3);
 }
 
 .canvas-wrap.dual-view {
