@@ -45,6 +45,28 @@ struct PairedEstimandResults {
     total_runtime_ms: f64,
 }
 
+#[derive(Serialize, Clone)]
+struct RefSurfaceCell {
+    n_votes: usize,
+    k: usize,
+    mean: f64,
+    sd: f64,
+    ci_lo: f64,
+    ci_hi: f64,
+    n_seeds: usize,
+    single_seed_value: f64,
+    monotone_from_prev: bool,
+}
+
+#[derive(Serialize)]
+struct ReferenceSurfaceResult {
+    description: String,
+    n_seeds: usize,
+    n_depths: Vec<usize>,
+    k_list: Vec<usize>,
+    cells: Vec<RefSurfaceCell>,
+}
+
 // ─── Core geometry ───────────────────────────────────────────────────────────
 
 #[inline(always)]
@@ -415,6 +437,40 @@ fn generate_posterior_pair(
     (p1, p2)
 }
 
+// ─── Plug-in multinomial sampler (no Dirichlet — use p_human directly) ────────
+
+/// Sample one multinomial replicate per item from observed proportions p_human.
+/// seed = n_votes * 10000 + seed_offset for reproducibility.
+fn sample_multinomial_from_p(
+    probs: &[[f64; 3]],
+    n_votes: usize,
+    seed: u64,
+    n: usize,
+) -> Vec<[f64; 3]> {
+    let mut rng = ChaCha8Rng::seed_from_u64(seed);
+    let mut result = vec![[0.0f64; 3]; n];
+    for i in 0..n {
+        let p = probs[i];
+        let mut cts = [0u32; 3];
+        for _ in 0..n_votes {
+            let u: f64 = rng.gen_range(0.0..1.0);
+            let mut cum = 0.0f64;
+            let mut chosen = 2usize;
+            for cat in 0..3 {
+                cum += p[cat];
+                if u < cum && chosen == 2 {
+                    chosen = cat;
+                }
+            }
+            cts[chosen] += 1;
+        }
+        for cat in 0..3 {
+            result[i][cat] = cts[cat] as f64 / n_votes as f64;
+        }
+    }
+    result
+}
+
 // ─── Main ────────────────────────────────────────────────────────────────────
 
 fn main() {
@@ -635,4 +691,126 @@ fn main() {
     ).unwrap();
     serde_json::to_writer_pretty(f_out, &out).unwrap();
     println!("Saved to results/paired_estimand_results.yaml");
+
+    // ════════════════════════════════════════════════════════════════════════
+    // MULTI-SEED REFERENCE SURFACE
+    // R_reference(n, k) = Q(G_n^rep, G_100^obs)   N_SEEDS=50 per cell
+    // G_n^rep: plug-in multinomial from p_human (NOT Dirichlet posterior)
+    // G_100^obs: observed empirical graph from p_human with 100 votes
+    // ════════════════════════════════════════════════════════════════════════
+    println!("\n=========================================================================");
+    println!("   MULTI-SEED REFERENCE SURFACE (N_SEEDS=50 per cell)");
+    println!("=========================================================================\n");
+
+    const N_SEEDS: usize = 50;
+    let n_depths: Vec<usize> = vec![3, 5, 10, 20, 30, 50, 75, 100];
+    let k_list: Vec<usize> = vec![5, 10, 20, 50, 100];
+
+    let t_surf = Instant::now();
+
+    // Pre-build G_emp weight matrices for each k value (reused across all seeds)
+    println!("Pre-building G_emp weight matrices for {} k values...", k_list.len());
+    let emp_weights: Vec<Vec<f64>> = k_list.iter()
+        .map(|&k_v| build_weight_matrix(&d_emp, n, k_v))
+        .collect();
+    println!("  Done in {:?}", t_surf.elapsed());
+
+    let mut all_cells: Vec<RefSurfaceCell> = Vec::new();
+
+    // Header
+    print!("\n{:<10}", "n_votes");
+    for &k_v in &k_list { print!(" {:>14}", format!("k={}", k_v)); }
+    println!();
+    println!("{}", "-".repeat(10 + 15 * k_list.len()));
+
+    // Track previous means for monotonicity check
+    let mut prev_means: Vec<f64> = vec![0.0; k_list.len()];
+
+    for &n_v in &n_depths {
+        let t_nv = Instant::now();
+
+        // Parallelize over N_SEEDS seeds — each seed draws one replicate at n_v votes
+        // Uses sequential inner functions since we're inside par_iter
+        let seed_results: Vec<Vec<f64>> = (0..N_SEEDS)
+            .into_par_iter()
+            .map(|seed_off| {
+                let base_seed = (n_v as u64) * 10000 + seed_off as u64;
+                let p_sub = sample_multinomial_from_p(&probs_human, n_v, base_seed, n);
+                let d_sub = build_dist_matrix_seq(&p_sub, n);
+
+                // Compute Q for each k (reuse d_sub across k values)
+                emp_weights.iter().zip(k_list.iter()).map(|(w_emp_k, &k_v)| {
+                    let per_item = soft_qnx_with_wa_seq(w_emp_k, &d_sub, n, k_v);
+                    per_item.iter().sum::<f64>() / n as f64
+                }).collect::<Vec<f64>>()
+            })
+            .collect();
+
+        // Aggregate per k
+        print!("{:<10}", n_v);
+        let mut row_means: Vec<f64> = Vec::new();
+
+        for (ki, &k_v) in k_list.iter().enumerate() {
+            let mut vals: Vec<f64> = seed_results.iter().map(|row| row[ki]).collect();
+            let mean = vals.iter().sum::<f64>() / vals.len() as f64;
+            let variance = vals.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / (vals.len() - 1) as f64;
+            let sd = variance.sqrt();
+            vals.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            let ci_lo = vals[(N_SEEDS as f64 * 0.025) as usize];
+            let ci_hi = vals[(N_SEEDS as f64 * 0.975) as usize];
+            let single_seed = seed_results[0][ki]; // seed_offset=0
+            let monotone = n_v == n_depths[0] || mean >= prev_means[ki] - 1e-6;
+
+            print!(" {:>7.4}({:.4})", mean, sd);
+
+            all_cells.push(RefSurfaceCell {
+                n_votes: n_v,
+                k: k_v,
+                mean: (mean * 10000.0).round() / 10000.0,
+                sd: (sd * 10000.0).round() / 10000.0,
+                ci_lo: (ci_lo * 10000.0).round() / 10000.0,
+                ci_hi: (ci_hi * 10000.0).round() / 10000.0,
+                n_seeds: N_SEEDS,
+                single_seed_value: (single_seed * 10000.0).round() / 10000.0,
+                monotone_from_prev: monotone,
+            });
+            row_means.push(mean);
+        }
+        println!("  [{:.2?}]", t_nv.elapsed());
+        prev_means = row_means;
+    }
+
+    // Monotonicity summary
+    println!("\n--- MONOTONICITY CHECK ---");
+    for (ki, &k_v) in k_list.iter().enumerate() {
+        let means: Vec<f64> = all_cells.iter().filter(|c| c.k == k_v).map(|c| c.mean).collect();
+        let monotone = means.windows(2).all(|w| w[1] >= w[0] - 1e-4);
+        let ci_lo_mono = all_cells.iter().filter(|c| c.k == k_v)
+            .collect::<Vec<_>>()
+            .windows(2)
+            .all(|w| w[1].ci_lo >= w[0].ci_lo - 1e-4);
+        println!("  k={}: mean-monotone={}, ci_lo-monotone={}, means={:?}",
+            k_v, monotone, ci_lo_mono,
+            means.iter().map(|&m| format!("{:.4}", m)).collect::<Vec<_>>());
+    }
+
+    println!("\nTotal reference surface time: {:?}", t_surf.elapsed());
+
+    // Save
+    let surf_out = ReferenceSurfaceResult {
+        description: "R_reference(n,k) = Q(G_n^rep, G_100^obs), plug-in multinomial from p_human, N_SEEDS=50 per cell".to_string(),
+        n_seeds: N_SEEDS,
+        n_depths: n_depths.clone(),
+        k_list: k_list.clone(),
+        cells: all_cells,
+    };
+    let surf_file = File::create(
+        "c:/Users/admir/Github/shadowspace/results/multi_seed_reference_surface.json"
+    ).unwrap();
+    serde_json::to_writer_pretty(surf_file, &surf_out).unwrap();
+    println!("Saved to results/multi_seed_reference_surface.json");
+
+    println!("\n=========================================================================");
+    println!("   TOTAL RUNTIME: {:.2?}", t0.elapsed());
+    println!("=========================================================================");
 }

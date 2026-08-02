@@ -74,7 +74,7 @@ Instead of asking *"Does the AI get the majority label right?"*, this project as
 
 $$\mathbf{\text{Do AI models preserve the relationships among examples implied by human judgment distributions?}}$$
 
-In plain language: **When humans judge two disputed items similarly, does the AI model also treat those items as near neighbors in its internal probability space?**
+In plain language: **When humans judge two disputed items similarly, does the AI model also treat those items as near neighbors in the space formed by its output probabilities?**
 
 ---
 
@@ -236,7 +236,7 @@ Across 500 simulated human-human pairs, average fuzzy overlap is:
 $$E[Q_{\text{fuzzy}}(G_{H1}, G_{H2})] = 0.07549 \quad (95\% \text{ CI: } [0.07000, 0.08099])$$
 
 > [!NOTE]
-> **Why is 0.07549 not 1.0?** Exact 10-nearest-neighbor recovery across 3,113 items is a strict metric. Small sampling fluctuations in vote counts shift ranks at the boundary. The value **0.07549 is the posterior-predictive human replicate reference** — the average fuzzy overlap between two independent cohorts of 100 simulated human votes — under this dataset, prior, and distance metric.
+> **Why is 0.07549 not 1.0?** Exact 10-nearest-neighbor recovery across 3,113 items is a demanding criterion. Small sampling fluctuations in vote counts shift ranks at the boundary. The value **0.07549 is the posterior-predictive human replicate reference** — the average fuzzy overlap between two independent cohorts of 100 simulated human votes — under this dataset, prior, and distance metric.
 
 ---
 
@@ -277,7 +277,7 @@ Top-performing models (BART-Large at $0.01572$) achieve a raw paired ratio of ap
 
 ---
 
-## 9. Design Asymmetry vs. Fully Paired Estimand
+> **Note for lay readers**: The section below (Appendix: How the Experimental Design Evolved) documents the historical development of the paired estimand. It is internal documentation useful for understanding the revision history. Most readers can proceed directly to Section 9.
 
 In earlier revisions of this research, model performance was evaluated asymmetrically:
 - $H_b = Q(G_{H1}^{(b)}, G_{H2}^{(b)})$ (human vs. posterior cohort)
@@ -290,18 +290,21 @@ $$M_{m,b} = \frac{1}{2}\left[Q(G_m, G_{H1}^{(b)}) + Q(G_m, G_{H2}^{(b)})\right]$
 This supports a cleaner, directly matched scientific comparison:
 > *"Given the exact same simulated human cohorts, the nine evaluated AI language models resemble those cohorts substantially less than the cohorts resemble one another."*
 
+
 ---
 
-## 10. How Annotation Depth Changes the Map
+## 9. How Annotation Depth Changes the Map
 
-We evaluate plug-in empirical reference similarity $R_{\text{reference}}(n, k) = Q(G_n^{\text{rep}}, G_{100}^{\text{obs}})$ across vote depths $n \in \{3..100\}$ and scales $k \in \{5..100\}$:
+We evaluate plug-in empirical reference similarity $R_{\text{reference}}(n, k) = Q(G_n^{\text{rep}}, G_{100}^{\text{obs}})$ across vote depths $n \in \{3..100\}$ and scales $k \in \{5..100\}$ using a 50-seed simulation (Rust/Rayon, confirmed monotone):
 
 | Votes ($n$) | $k=5$ | $k=10$ | $k=20$ | $k=50$ | $k=100$ |
 |---|---|---|---|---|---|
-| **3 votes** | 0.0061 | 0.0109 | 0.0208 | 0.0497 | **0.0952** |
-| **10 votes** | 0.0137 | 0.0248 | 0.0463 | 0.1008 | 0.1799 |
-| **50 votes** | 0.0483 | 0.0832 | 0.1436 | 0.2765 | 0.4111 |
-| **100 votes** | **0.0819** | **0.1385** | **0.2309** | **0.4030** | **0.5376** |
+| **3 votes** | $0.0060 \pm 0.0001$ | $0.0109 \pm 0.0002$ | $0.0206 \pm 0.0004$ | $0.0490 \pm 0.0008$ | $0.0940 \pm 0.0014$ |
+| **10 votes** | $0.0135 \pm 0.0005$ | $0.0242 \pm 0.0007$ | $0.0449 \pm 0.0009$ | $0.0999 \pm 0.0019$ | $0.1793 \pm 0.0032$ |
+| **50 votes** | $0.0474 \pm 0.0020$ | $0.0813 \pm 0.0018$ | $0.1424 \pm 0.0020$ | $0.2769 \pm 0.0033$ | $0.4136 \pm 0.0038$ |
+| **100 votes** | $\mathbf{0.0807 \pm 0.0025}$ | $\mathbf{0.1391 \pm 0.0033}$ | $\mathbf{0.2341 \pm 0.0041}$ | $\mathbf{0.4080 \pm 0.0039}$ | $\mathbf{0.5448 \pm 0.0038}$ |
+
+*Each entry is mean \u00b1 SD across 50 independent seeds. Monotonicity confirmed for both means and CI lower bounds across all five k-columns.*
 
 ### Two Architectural Regimes
 - **Microstructure ($k=5, 10$)**: Highly sensitive to individual vote fluctuations.
@@ -309,7 +312,7 @@ We evaluate plug-in empirical reference similarity $R_{\text{reference}}(n, k) =
 
 ---
 
-## 11. The Phase-Diagram Experiment
+## 10. The Phase-Diagram Experiment
 
 We simulate synthetic items across Dirichlet concentration regimes ($\boldsymbol{\theta}_i \sim \text{Dirichlet}(\alpha \mathbf{1}_C)$) to determine when boundary ties dominate.
 
@@ -328,7 +331,7 @@ Human response patterns are highly concentrated in specific recurring regions of
 
 ---
 
-## 12. The Level-1 and Level-2 Distinction
+## 11. The Level-1 and Level-2 Distinction
 
 The project maintains a strict conceptual separation:
 
@@ -350,7 +353,7 @@ Two items can share the exact same Level-1 vote profile for entirely different L
 
 ---
 
-## 13. The VariErr External Analysis
+## 12. The VariErr External Analysis
 
 We matched 500 ChaosNLI items with **VariErr NLI** (Weber-Genzel et al., ACL 2024), containing 7,732 human validity judgments evaluating whether disagreements represent valid variation or error:
 
@@ -364,7 +367,7 @@ The test shows a $7.8\%$ descriptive reduction in SD, but the result is **statis
 
 ---
 
-## 14. Exploratory Text-Space Work
+## 13. Exploratory Text-Space Work
 
 We evaluated operational case-routing categories combining model predictions, text distance, and human support:
 
@@ -382,16 +385,16 @@ A text-space tie-breaker slightly improves heuristic taxonomy retrieval (MAP@10 
 
 ---
 
-## 15. What Is the Main Scientific Contribution?
+## 14. What Is the Main Scientific Contribution?
 
-1. **Diagnosing Storage-Order Instability**: Exposing that standard nearest-neighbor algorithms silently resolve distance ties using file row index, altering neighbor sets for $62.1\%$ of items.
+1. **Diagnosing Storage-Order Instability**: Exposing that conventional fixed-$k$ implementations that resolve ties by index order silently distort neighbor sets for $62.1\%$ of items.
 2. **Formalizing Tie-Aware Mathematics**: Proving $Q_{\text{strict}} \le Q_{\text{expected}} \le Q_{\text{fuzzy}} \le 1.0$ and establishing six core theoretical properties (fuzzy self-identity, row-permutation invariance, etc.).
 3. **Paired Relational Model Evaluation**: Evaluating whether the nine evaluated models' **output probability distributions** preserve the *relational neighborhood structure of collective human judgment*, demonstrating a raw paired recovery of approximately $20.8\%$ (or $17.3\%$ chance-adjusted) relative to the posterior-predictive human replicate reference.
 4. **Multiscale Scale Dependence**: Disentangling volatile local microstructure ($k=5,10$) from stable regional mesostructure ($k=50,100$).
 
 ---
 
-## 16. Why Does This Matter for Language Models?
+## 15. Why Does This Matter for Language Models?
 
 A language model can achieve high majority-label accuracy while constructing a distorted map of human collective judgment.
 
@@ -404,7 +407,7 @@ Relational evaluation audits whether language models' **output probability distr
 
 ---
 
-## 17. Practical Downstream Uses
+## 16. Practical Downstream Uses
 
 - **Model Evaluation**: Report relational human-opinion recovery alongside accuracy and Brier score.
 - **Dataset Auditing**: Detect unstable item clusters, recurring disagreement profiles, and annotation guideline gaps.
@@ -414,7 +417,7 @@ Relational evaluation audits whether language models' **output probability distr
 
 ---
 
-## 18. Applications Outside Language
+## 17. Applications Outside Language
 
 The tie-aware relational methodology applies to any domain with multi-annotator categorical distributions:
 
@@ -425,7 +428,7 @@ The tie-aware relational methodology applies to any domain with multi-annotator 
 
 ---
 
-## 19. What the Research Does Not Prove
+## 18. What the Research Does Not Prove
 
 - It does **not** identify which individual human annotator is "correct."
 - It does **not** prove why annotators disagreed on specific items (Level-2 rationale drivers).
@@ -434,16 +437,16 @@ The tie-aware relational methodology applies to any domain with multi-annotator 
 
 ---
 
-## 20. Important Limitations
+## 19. Important Limitations
 
 1. **Selected Low-Agreement Population**: ChaosNLI targets disputed items; tie rates may be lower in standard corpora.
 2. **Pre-2023 Model Set**: Benchmark models reflect BERT/RoBERTa/BART-era architectures.
-3. **Single-Seed Reference Surface**: Reference surface entries are single-seed draws.
+3. **Multi-Seed Reference Surface**: 50-seed simulation completed; monotonicity confirmed for means and CI lower bounds across all $k$ values.
 4. **VariErr Power Constraints**: External test is restricted to 52 multi-item profiles ($p=0.2045$).
 
 ---
 
-## 21. Most Important Future Questions
+## 20. Most Important Future Questions
 
 1. **Modern LLMs**: Do modern generative LLM ensembles (GPT-4, Claude 3.5, Llama 3) achieve higher relational recovery?
 2. **Uncertain Graph Estimation**: Estimating edge-inclusion probabilities $P(j \in N_k(i) \mid \text{votes})$.
@@ -452,7 +455,7 @@ The tie-aware relational methodology applies to any domain with multi-annotator 
 
 ---
 
-## 22. Plain-Language Conclusion
+## 21. Plain-Language Conclusion
 
 Most AI evaluations ask whether a model gives the right answer for each example.
 
@@ -460,6 +463,6 @@ This study asks something broader:
 
 $$\mathbf{\text{Does the model organize uncertain examples into the same relational patterns people do?}}$$
 
-The research finds that human disagreement creates a structured—but noisy and scale-dependent—relational space. Standard nearest-neighbor methods distort this space because distance ties are ubiquitous ($72.4\%$). Our tie-aware framework represents these ties explicitly and invariant to file row order.
+The research finds that human disagreement creates a structured—but noisy and scale-dependent—relational space. Conventional fixed-$k$ implementations that resolve ties by index order distort this space because distance ties are ubiquitous ($72.4\%$). Our tie-aware framework represents these ties explicitly and is invariant to file row order.
 
 Under a fully paired experimental design, the nine evaluated benchmark language models recover approximately **17–21%** of human replicate overlap in the opinion relational space. Human disagreement is not merely noise—it may induce a rich neighbor-graph structure that remains a key challenge for AI systems. The tie-aware framework developed here provides a reproducible, storage-order-invariant foundation for studying these structures.

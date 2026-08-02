@@ -1,0 +1,97 @@
+H_bar_hh100_simulation_mean: 0.0755
+H_bar_h1_bootstrap_mean: 0.07549
+panel_b_Q_fuzzy_paper: 0.07522
+note_0_07522: Origin unclear - likely from older analysis. Canonical H_bar = h1_bootstrap_mean
+  = 0.07549
+direct_deltas:
+  ALBERT-xxLarge:
+    M_bar_m: 0.01124
+    direct_delta: 0.06425
+    stored_delta: 0.06426
+  BART-Large:
+    M_bar_m: 0.01572
+    direct_delta: 0.05977
+    stored_delta: 0.05977
+  BERT-Base:
+    M_bar_m: 0.00768
+    direct_delta: 0.06781
+    stored_delta: 0.06782
+  BERT-Large:
+    M_bar_m: 0.01029
+    direct_delta: 0.0652
+    stored_delta: 0.0652
+  DistilBERT:
+    M_bar_m: 0.00854
+    direct_delta: 0.06695
+    stored_delta: 0.06695
+  RoBERTa-Base:
+    M_bar_m: 0.01007
+    direct_delta: 0.06542
+    stored_delta: 0.06543
+  RoBERTa-Large:
+    M_bar_m: 0.01415
+    direct_delta: 0.06134
+    stored_delta: 0.06135
+  XLNet-Base:
+    M_bar_m: 0.00927
+    direct_delta: 0.06622
+    stored_delta: 0.06623
+  XLNet-Large:
+    M_bar_m: 0.01285
+    direct_delta: 0.06264
+    stored_delta: 0.06264
+geometry_table_Q_G_m_G_emp:
+  albert-xxlarge:
+    Hellinger: 0.01074
+    JSD: 0.01078
+    TV: 0.01146
+    Euclidean: 0.01163
+    Aitchison: 0.01217
+  bart-large:
+    Hellinger: 0.01867
+    JSD: 0.01873
+    TV: 0.01927
+    Euclidean: 0.01887
+    Aitchison: 0.01811
+  bert-base:
+    Hellinger: 0.00865
+    JSD: 0.00859
+    TV: 0.00818
+    Euclidean: 0.008
+    Aitchison: 0.00826
+  bert-large:
+    Hellinger: 0.01059
+    JSD: 0.01051
+    TV: 0.01108
+    Euclidean: 0.01086
+    Aitchison: 0.01054
+  distilbert:
+    Hellinger: 0.00854
+    JSD: 0.00842
+    TV: 0.00839
+    Euclidean: 0.00826
+    Aitchison: 0.00824
+  roberta-base:
+    Hellinger: 0.01129
+    JSD: 0.01114
+    TV: 0.01038
+    Euclidean: 0.01043
+    Aitchison: 0.01112
+  roberta-large:
+    Hellinger: 0.01821
+    JSD: 0.01785
+    TV: 0.01698
+    Euclidean: 0.01738
+    Aitchison: 0.01776
+  xlnet-base:
+    Hellinger: 0.00893
+    JSD: 0.00887
+    TV: 0.00867
+    Euclidean: 0.00867
+    Aitchison: 0.01008
+  xlnet-large:
+    Hellinger: 0.01319
+    JSD: 0.01308
+    TV: 0.01325
+    Euclidean: 0.01332
+    Aitchison: 0.01356

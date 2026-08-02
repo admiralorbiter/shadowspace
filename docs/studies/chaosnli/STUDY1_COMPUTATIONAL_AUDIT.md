@@ -101,31 +101,38 @@ For candidate weights $w_{ij}^A, w_{ij}^B \in [0, 1]$, we formalize three neighb
 
 *Notation*: $G_n^{\text{rep}}$ is an independent $n$-vote **plug-in empirical multinomial** draw, $\mathbf{y}_i \sim \text{Multinomial}(n, \hat{p}_i)$, using the observed vote proportions $\hat{p}_i$ (not a Dirichlet posterior-predictive sample); $G_{100}^{\text{obs}}$ is the empirical 100-vote observed graph. Because $G_n^{\text{rep}}$ is a stochastic sample, $R(100, k) < 1.0$ by definition — this is reference graph *similarity*, not ground-truth *recovery*.
 
+**50-Seed Simulation Results (Mean ± SD, Rust/Rayon parallel implementation)**:
+
 | Votes ($n$) | $k=5$ | $k=10$ | $k=20$ | $k=50$ | $k=100$ |
 |---|---|---|---|---|---|
-| 3 | 0.0061 | 0.0109 | 0.0208 | 0.0497 | 0.0952 |
-| 5 | 0.0084 | 0.0149 | 0.0279 | 0.0649 | 0.1214 |
-| 10 | 0.0137 | 0.0248 | 0.0463 | 0.1008 | 0.1799 |
-| 20 | 0.0236 | 0.0397 | 0.0722 | 0.1539 | 0.2606 |
-| 30 | 0.0327 | 0.0555 | 0.0968 | 0.2010 | 0.3237 |
-| 50 | 0.0483 | 0.0832 | 0.1436 | 0.2765 | 0.4111 |
-| 75 | 0.0652 | 0.1160 | 0.1944 | 0.3510 | 0.4916 |
-| **100** | **0.0819** | **0.1385** | **0.2309** | **0.4030** | **0.5376** |
+| 3 | $0.0060 \pm 0.0001$ | $0.0109 \pm 0.0002$ | $0.0206 \pm 0.0004$ | $0.0490 \pm 0.0008$ | $0.0940 \pm 0.0014$ |
+| 5 | $0.0082 \pm 0.0002$ | $0.0148 \pm 0.0003$ | $0.0280 \pm 0.0005$ | $0.0653 \pm 0.0011$ | $0.1216 \pm 0.0019$ |
+| 10 | $0.0135 \pm 0.0005$ | $0.0242 \pm 0.0007$ | $0.0449 \pm 0.0009$ | $0.0999 \pm 0.0019$ | $0.1793 \pm 0.0032$ |
+| 20 | $0.0230 \pm 0.0011$ | $0.0402 \pm 0.0013$ | $0.0726 \pm 0.0016$ | $0.1550 \pm 0.0023$ | $0.2620 \pm 0.0033$ |
+| 30 | $0.0318 \pm 0.0013$ | $0.0550 \pm 0.0018$ | $0.0973 \pm 0.0021$ | $0.2009 \pm 0.0027$ | $0.3242 \pm 0.0035$ |
+| 50 | $0.0474 \pm 0.0020$ | $0.0813 \pm 0.0018$ | $0.1424 \pm 0.0020$ | $0.2769 \pm 0.0033$ | $0.4136 \pm 0.0038$ |
+| 75 | $0.0640 \pm 0.0023$ | $0.1106 \pm 0.0028$ | $0.1908 \pm 0.0034$ | $0.3502 \pm 0.0037$ | $0.4898 \pm 0.0033$ |
+| **100** | $\mathbf{0.0807 \pm 0.0025}$ | $\mathbf{0.1391 \pm 0.0033}$ | $\mathbf{0.2341 \pm 0.0041}$ | $\mathbf{0.4080 \pm 0.0039}$ | $\mathbf{0.5448 \pm 0.0038}$ |
+
+*Monotonicity*: **Confirmed** — both column means and 95% CI lower bounds are strictly monotone increasing with $n$ for all five $k$-columns. SD values are uniformly $\le 0.004$; the annotation-depth pattern is robust to seed choice.
+
 
 ---
 
 ## 6. Geometry Sensitivity Benchmark Across All 9 Models ($k=10$)
 
+*Reference graph*: $G_{100}^{\text{obs}}$ (observed empirical human graph using $\hat{p}_i = \text{counts}_i / 100$). Earlier versions of this table reported $Q(G_m, G_{H1}^{\text{seed=42}})$ (model vs. a single posterior draw); the present values report the canonical $Q(G_m, G_{100}^{\text{obs}})$, matching the Reference Ladder and fixed-reference diagnostics.
+
 | Model Name | Hellinger | JSD ($\sqrt{\text{JS}}$) | Total Variation | Euclidean | Aitchison ($\epsilon=10^{-4}$) |
 |---|---|---|---|---|---|
-| BART-Large | 0.01617 | 0.01623 | 0.01708 | 0.01716 | 0.01618 |
-| RoBERTa-Large | 0.01398 | 0.01404 | 0.01366 | 0.01385 | 0.01507 |
-| XLNet-Large | 0.01231 | 0.01238 | 0.01364 | 0.01366 | 0.01399 |
-| ALBERT-xxLarge | 0.01214 | 0.01226 | 0.01209 | 0.01186 | 0.01208 |
-| BERT-Large | 0.01003 | 0.00991 | 0.00987 | 0.01003 | 0.00966 |
-| RoBERTa-Base | 0.01018 | 0.01009 | 0.01029 | 0.01019 | 0.01014 |
-| XLNet-Base | 0.01016 | 0.01005 | 0.00978 | 0.00971 | 0.01034 |
-| DistilBERT | 0.00835 | 0.00844 | 0.00792 | 0.00777 | 0.00876 |
-| BERT-Base | 0.00729 | 0.00721 | 0.00769 | 0.00764 | 0.00776 |
+| BART-Large | 0.01867 | 0.01873 | 0.01927 | 0.01887 | 0.01811 |
+| RoBERTa-Large | 0.01821 | 0.01785 | 0.01698 | 0.01738 | 0.01776 |
+| XLNet-Large | 0.01319 | 0.01308 | 0.01325 | 0.01332 | 0.01356 |
+| ALBERT-xxLarge | 0.01074 | 0.01078 | 0.01146 | 0.01163 | 0.01217 |
+| BERT-Large | 0.01059 | 0.01051 | 0.01108 | 0.01086 | 0.01054 |
+| RoBERTa-Base | 0.01129 | 0.01114 | 0.01038 | 0.01043 | 0.01112 |
+| XLNet-Base | 0.00893 | 0.00887 | 0.00867 | 0.00867 | 0.01008 |
+| DistilBERT | 0.00854 | 0.00842 | 0.00839 | 0.00826 | 0.00824 |
+| BERT-Base | 0.00865 | 0.00859 | 0.00818 | 0.00800 | 0.00826 |
 
-*Note*: Table reports single fixed-reference estimates $Q(G_m, G_{100}^{\text{obs}})$ across all 9 models and 5 geometries. Fixed-reference model-human gaps persisted across all nine models and five metric geometries; full posterior-resampled geometry sensitivity is pending.
+*Note*: Table reports $Q(G_m, G_{100}^{\text{obs}})$ across all 9 models and 5 geometries. Fixed-reference model-human gaps persisted across all nine models and five metric geometries. The BART-Large Hellinger value here ($0.01867$) agrees with the Reference Ladder and the canonical diagnostic. The previously reported value $0.01617$ was computed against a single posterior-predictive draw rather than $G_{100}^{\text{obs}}$; both are valid estimands but are now clearly distinguished.

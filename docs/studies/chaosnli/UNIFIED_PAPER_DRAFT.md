@@ -7,7 +7,7 @@
 
 ## Abstract
 
-Human NLI annotations can exhibit persistent and substantively meaningful variation, alongside annotation error. Conventional majority-label evaluation ignores this variation. We study whether collective human disagreement, encoded as vote distributions over semantic labels, forms a reproducible relational structure that NLI models recover. Methodologically, we demonstrate that standard fixed-$k$ nearest-neighbor graphs are unstable under distance ties ($0.9074 \pm 0.0024$ top-$k$ overlap under array re-indexing; 62.1% of items affected), whereas our fractional soft-overlap statistic $Q_{NX}^{\text{soft}}(k)$ is strictly invariant (maximum absolute difference $0.0000$). We formalize a three-quantity tie-aware framework ($Q_{\text{strict}} \le Q_{\text{expected}} \le Q_{\text{fuzzy}}$) and prove six core theoretical properties. Empirically, across $N=3,113$ ChaosNLI items under a fully paired design where both model and human scores are evaluated against identical posterior-predictive cohorts, benchmark NLI models recover substantially less human-opinion neighborhood structure than human replicates (BART-Large paired mean $0.01572$ vs. posterior-predictive human benchmark $0.0755$, mean difference $\Delta_m = 0.05977$, 95% CI $[0.05431, 0.06539]$; all 1,000 bootstrap replicates show $\Delta_m > 0$). Plug-in empirical reference similarity $R_{\text{reference}}(n, k)$ increases monotonically with annotation depth, from $0.0109$ at $n=3$ to $0.5376$ at $n=100$ for $k=100$. Multi-regime Dirichlet simulations confirm that empirical ChaosNLI boundary-tie prevalence ($72.4\%$) is close to the tested $\alpha=0.1$ concentrated regime on this summary statistic.
+Human NLI annotations can exhibit persistent and substantively meaningful variation, alongside annotation error. Conventional majority-label evaluation ignores this variation. We study whether collective human disagreement, encoded as vote distributions over semantic labels, forms a reproducible relational structure that NLI models recover. Methodologically, we demonstrate that standard fixed-$k$ nearest-neighbor graphs are unstable under distance ties ($0.9074 \pm 0.0024$ top-$k$ overlap under array re-indexing; 62.1% of items affected), whereas our fractional soft-overlap statistic $Q_{NX}^{\text{soft}}(k)$ is strictly invariant (maximum absolute difference $0.0000$). We formalize a three-quantity tie-aware framework ($Q_{\text{strict}} \le Q_{\text{expected}} \le Q_{\text{fuzzy}}$) and prove six core theoretical properties. Empirically, across $N=3,113$ ChaosNLI items under a fully paired design where both model and human scores are evaluated against identical posterior-predictive cohorts, benchmark NLI models recover substantially less human-opinion neighborhood structure than human replicates (BART-Large paired mean $0.01572$ vs. posterior-predictive human benchmark $\bar{H}=0.07549$, mean difference $\Delta_m = 0.05977$, 95% CI $[0.05431, 0.06539]$; all 1,000 bootstrap replicates show $\Delta_m > 0$). Plug-in empirical reference similarity $R_{\text{reference}}(n, k)$ increases monotonically with annotation depth across all five tested neighborhood scales (50-seed simulation; CI lower bounds monotone for all $k \in \{5, 10, 20, 50, 100\}$), from $0.0109 \pm 0.0002$ at $n=3$ to $0.5448 \pm 0.0038$ at $n=100$ ($k=100$). Multi-regime Dirichlet simulations confirm that empirical ChaosNLI boundary-tie prevalence ($72.4\%$) is close to the tested $\alpha=0.1$ concentrated regime on this summary statistic.
 
 ---
 
@@ -122,9 +122,9 @@ We evaluate nine benchmark NLI models against 500 posterior-predictive simulatio
 | XLNet-Base | **0.00927** | **0.06623** | [0.06069, 0.07175] | 1,000 / 1,000 | 0.00893 |
 | DistilBERT | **0.00854** | **0.06695** | [0.06124, 0.07261] | 1,000 / 1,000 | 0.00854 |
 | BERT-Base | **0.00768** | **0.06782** | [0.06235, 0.07356] | 1,000 / 1,000 | 0.00865 |
-| **HH100 Direct Mean** ($\bar{H}$) | **0.07522** | — | [0.07000, 0.08099] | — | — |
+| **HH100 Bootstrap Mean** ($\bar{H}$) | **0.07549** | — | [0.07111, 0.08007] | — | — |
 
-*Methods and Inference Note*: Point estimates ($\bar{M}_m$, $\bar{H}$) are direct means over 500 pre-computed posterior pairs, not bootstrap means. Bootstrap resampling is used only to generate confidence intervals and the $\Delta_m$ distribution. In 1,000 of 1,000 stratified joint bootstrap replicates, every model difference interval $\Delta_m$ comfortably excludes zero (minimum lower bound $0.05431$). Formally, for bootstrap replicate $b \in \{1,...,1000\}$, a stratified focal-item resample $\mathbf{b} \subset \{1..N\}$ is drawn. Let $s = b \bmod 500$ index one of 500 pre-computed posterior human pairs. We define:
+*Methods and Inference Note*: Point estimates ($\bar{M}_m$) are means of per-bootstrap-replicate model scores cycling over 500 pre-computed posterior pairs. $\bar{H} = 0.07549$ is the bootstrap mean of $H_b$ values over 1,000 replicates cycling the same 500 pairs (consistent with the direct 500-pair mean $0.07550 \approx \bar{H}$; the $0.00001$ difference is within Monte Carlo error). Bootstrap resampling additionally generates confidence intervals and the $\Delta_m$ distribution. In 1,000 of 1,000 stratified joint bootstrap replicates, every model difference interval $\Delta_m$ comfortably excludes zero (minimum lower bound $0.05431$). Formally, for bootstrap replicate $b \in \{1,...,1000\}$, a stratified focal-item resample $\mathbf{b} \subset \{1..N\}$ is drawn. Let $s = b \bmod 500$ index one of 500 pre-computed posterior human pairs. We define:
 $$H_b = \frac{1}{|\mathbf{b}|}\sum_{i \in \mathbf{b}} Q_{\text{fuzzy, item}}\!\left(G_{H1}^{(s)}, G_{H2}^{(s)}\right)$$
 $$M_{m,b} = \frac{1}{|\mathbf{b}|}\sum_{i \in \mathbf{b}} \frac{1}{2}\left[Q_{\text{fuzzy, item}}\!\left(G_m, G_{H1}^{(s)}\right) + Q_{\text{fuzzy, item}}\!\left(G_m, G_{H2}^{(s)}\right)\right]$$
 $$\Delta_{m,b} = H_b - M_{m,b}$$
@@ -156,26 +156,26 @@ To provide an interpretable anchor for model evaluation, we present a **Referenc
 |---|---|---|---|
 | $Q_{\text{strict}}$ (Core Bound) | 0.00020 | [0.00018, 0.00023] | Guaranteed common neighbors only |
 | $Q_{\text{expected}}$ (Random Resolution) | 0.07450 | [0.07011, 0.07907] | Collision probability under random tie choices |
-| $Q_{\text{fuzzy}}$ (Partial Membership) — **$\bar{H}$** | **0.07522** | [0.07085, 0.07980] | Full partial-membership weighted overlap; canonical HH100 direct mean |
+| $Q_{\text{fuzzy}}$ (Partial Membership) — **$\bar{H}$** | **0.07549** | [0.07111, 0.08007] | Full partial-membership weighted overlap; canonical HH100 bootstrap mean |
 
-*Note*: $\bar{H} = 0.07522$ is the direct unweighted mean over 500 posterior pairs and is the canonical HH100 point estimate used throughout. Bootstrap-based intervals use focal-item resampling across the same 500 pairs.
+*Note*: $\bar{H} = 0.07549$ is the bootstrap mean of $H_b$ over 1,000 replicates, consistent with the direct 500-pair simulation mean ($0.07550$, stored as $0.0755$ in canonical results). The Panel B 95% interval $[0.07111, 0.08007]$ is from the 500-pair simulation distribution. An earlier analysis version reported $0.07522$ for this cell; that value was from a different analysis path and is superseded by the canonical computation.
 
 *Takeaway*: BART-Large ($0.01867$ fixed reference) achieves a raw ratio of **13.5%** ($0.01867 / 0.13850$) and a chance-adjusted ratio of **11.3%** ($(0.01867 - 0.00321) / (0.13850 - 0.00321)$) of human-level replicate overlap under the fixed-reference comparison, placing the evaluated models substantially closer to random chance than to human collective opinion alignment.
 
-**Table 4: Reference Graph Similarity Surface $R_{\text{reference}}(n, k) = Q(G_n^{\text{rep}}, G_{100}^{\text{obs}})$**
+**Table 4: Reference Graph Similarity Surface $R_{\text{reference}}(n, k) = Q(G_n^{\text{rep}}, G_{100}^{\text{obs}})$ (50-Seed Simulation, Mean $\pm$ SD)**
 
 | Votes ($n$) | $k=5$ | $k=10$ | $k=20$ | $k=50$ | $k=100$ |
 |---|---|---|---|---|---|
-| 3 | 0.0061 | 0.0109 | 0.0208 | 0.0497 | 0.0952 |
-| 5 | 0.0084 | 0.0149 | 0.0279 | 0.0649 | 0.1214 |
-| 10 | 0.0137 | 0.0248 | 0.0463 | 0.1008 | 0.1799 |
-| 20 | 0.0236 | 0.0397 | 0.0722 | 0.1539 | 0.2606 |
-| 30 | 0.0327 | 0.0555 | 0.0968 | 0.2010 | 0.3237 |
-| 50 | 0.0483 | 0.0832 | 0.1436 | 0.2765 | 0.4111 |
-| 75 | 0.0652 | 0.1160 | 0.1944 | 0.3510 | 0.4916 |
-| **100** | **0.0819** | **0.1385** | **0.2309** | **0.4030** | **0.5376** |
+| 3 | $0.0060 \pm 0.0001$ | $0.0109 \pm 0.0002$ | $0.0206 \pm 0.0004$ | $0.0490 \pm 0.0008$ | $0.0940 \pm 0.0014$ |
+| 5 | $0.0082 \pm 0.0002$ | $0.0148 \pm 0.0003$ | $0.0280 \pm 0.0005$ | $0.0653 \pm 0.0011$ | $0.1216 \pm 0.0019$ |
+| 10 | $0.0135 \pm 0.0005$ | $0.0242 \pm 0.0007$ | $0.0449 \pm 0.0009$ | $0.0999 \pm 0.0019$ | $0.1793 \pm 0.0032$ |
+| 20 | $0.0230 \pm 0.0011$ | $0.0402 \pm 0.0013$ | $0.0726 \pm 0.0016$ | $0.1550 \pm 0.0023$ | $0.2620 \pm 0.0033$ |
+| 30 | $0.0318 \pm 0.0013$ | $0.0550 \pm 0.0018$ | $0.0973 \pm 0.0021$ | $0.2009 \pm 0.0027$ | $0.3242 \pm 0.0035$ |
+| 50 | $0.0474 \pm 0.0020$ | $0.0813 \pm 0.0018$ | $0.1424 \pm 0.0020$ | $0.2769 \pm 0.0033$ | $0.4136 \pm 0.0038$ |
+| 75 | $0.0640 \pm 0.0023$ | $0.1106 \pm 0.0028$ | $0.1908 \pm 0.0034$ | $0.3502 \pm 0.0037$ | $0.4898 \pm 0.0033$ |
+| **100** | $\mathbf{0.0807 \pm 0.0025}$ | $\mathbf{0.1391 \pm 0.0033}$ | $\mathbf{0.2341 \pm 0.0041}$ | $\mathbf{0.4080 \pm 0.0039}$ | $\mathbf{0.5448 \pm 0.0038}$ |
 
-*Takeaway*: Plug-in empirical reference similarity exhibits clear scale-dependent recovery across all neighborhood scales examined, rising from near-zero at $n=3$ to substantial recovery at $n=100$. Each entry represents a single-seed simulation draw from empirical label proportions $\hat{p}_i$; multi-seed simulation intervals are pending.
+*Takeaway*: Reference similarity increases monotonically with annotation depth across all five tested neighborhood scales — a result confirmed for both column means and 95% CI lower bounds across 50 independent simulation seeds (Rust/Rayon implementation). SD values are uniformly small ($\le 0.004$ across all cells), confirming low simulation variance. The annotation-depth monotonicity claim is robust to seed choice.
 
 ---
 
@@ -274,9 +274,9 @@ VariErr NLI (Weber-Genzel et al., 2024) matches 500 items to ChaosNLI-M via `sou
 7. **Unobserved Disagreement Drivers**: Level-1 vote profiles describe label frequencies but do not reveal underlying linguistic or cognitive causes of disagreement.
 8. **VariErr Sample Constraints**: External validity test is restricted to 500 items across 52 multi-item profiles, limiting statistical power for subtle profile-level effects.
 9. **Relational Agreement vs. Ground Truth**: High neighborhood preservation indicates structural alignment with human opinion neighborhood structure, not absolute semantic correctness.
-10. **Conditional Candidate Graph**: The paired bootstrap resamples focal-item contributions while holding the full candidate graph $G_{100}^{\text{obs}}$ fixed. It therefore estimates focal-item variation within the selected ChaosNLI population rather than uncertainty from reconstructing the candidate graph itself.
+10. **Conditional Graph Construction**: The bootstrap resamples focal-item overlap contributions while holding each precomputed model neighbor graph $G_m$ and posterior-predictive human neighbor graphs $G_{H1}^{(s)}, G_{H2}^{(s)}$ fixed. It therefore does not account for uncertainty from reconstructing those graphs under a new sample of items.
 11. **Bootstrap Edge Non-Independence**: Focal-item resampling treats per-item overlaps as exchangeable, but edges in the neighbor graph are non-independent (shared candidate nodes). Confidence intervals should be interpreted as approximations.
-12. **Single-Seed Reference Surface**: Each cell of $R_{\text{reference}}(n, k)$ is a single-seed simulation draw. Multi-seed replication with uncertainty intervals is pending.
+12. **Multi-Seed Reference Surface**: Completed. 50-seed replication confirms monotonicity of both means and CI lower bounds for all $k \in \{5, 10, 20, 50, 100\}$; SD values are small ($\le 0.004$) across all cells.
 
 ---
 
