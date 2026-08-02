@@ -50,7 +50,7 @@ $$O_i^{\text{soft}}(k) = \frac{1}{k} \sum_{j=1}^N \min(w_{ij}^A, w_{ij}^B), \qqu
 
 ### Three-Quantity Overlap Inequality
 
-For candidate weights $w_{ij}^A, w_{ij}^B \in [0, 1]$, we formalize three neighborhood overlap quantities:
+For candidate weights $w_{ij}^A, w_{ij}^B \in [0, 1]$ satisfying $\sum_{j \ne i} w_{ij}^A = \sum_{j \ne i} w_{ij}^B = k$ for every focal item $i$, we formalize three neighborhood overlap quantities:
 1. **$Q_{\text{strict}}$ (Strict-Core Lower Bound)**: Non-tied core boundary overlap ($\frac{1}{k}\sum_j \mathbf{1}(w_{ij}^A=1) \mathbf{1}(w_{ij}^B=1)$).
 2. **$Q_{\text{expected}}$ (Expected Random-Tie Overlap)**: Expected uniform random boundary tie resolution ($\frac{1}{k}\sum_j w_{ij}^A w_{ij}^B$).
 3. **$Q_{\text{fuzzy}}$ (Min-Based Fuzzy Overlap)**: Fuzzy set intersection membership overlap ($\frac{1}{k}\sum_j \min(w_{ij}^A, w_{ij}^B)$).
@@ -114,7 +114,7 @@ For candidate weights $w_{ij}^A, w_{ij}^B \in [0, 1]$, we formalize three neighb
 | 75 | $0.0640 \pm 0.0023$ | $0.1106 \pm 0.0028$ | $0.1908 \pm 0.0034$ | $0.3502 \pm 0.0037$ | $0.4898 \pm 0.0033$ |
 | **100** | $\mathbf{0.0807 \pm 0.0025}$ | $\mathbf{0.1391 \pm 0.0033}$ | $\mathbf{0.2341 \pm 0.0041}$ | $\mathbf{0.4080 \pm 0.0039}$ | $\mathbf{0.5448 \pm 0.0038}$ |
 
-*Monotonicity*: **Confirmed** — both column means and 95% CI lower bounds are strictly monotone increasing with $n$ for all five $k$-columns. SD values are uniformly $\le 0.004$; the annotation-depth pattern is robust to seed choice.
+*Monotonicity*: **Confirmed** — both column means and 95% normal-approximation simulation interval lower bounds ($\bar{x} - 1.96 \times \text{SD}$) are strictly monotone increasing with $n$ for all five $k$-columns. SD values are uniformly $\le 0.004$; the annotation-depth pattern is robust to seed choice.
 
 
 ---

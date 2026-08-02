@@ -191,7 +191,7 @@ Votes:      (33 E, 67 N, 0 C)  -->  d_H = 0.02284
 ### The Arbitrary Storage-Order Failure
 We need **10 neighbors total**. Since 9 items are strictly closer, we only have **1 remaining slot** ($r_i = 10 - 9 = 1$). But we have **7 tied candidates** ($|B_i| = 7$).
 
-- **Standard Nearest Neighbor Software** (the NumPy-based implementation tested here, `np.argsort` without explicit `kind`): In this run, the implementation selected **Candidate 62**. Because NumPy's default sort is not guaranteed to preserve the original row order among tied values, reordering the rows of the dataset can cause another equally valid tied candidate (Candidate 74, 194, etc.) to be selected instead.
+- **The index-resolved NumPy implementation tested here** (`np.argsort` without explicit `kind`): In this run, the implementation selected **Candidate 62**. Because NumPy's default sort is not guaranteed to preserve the original row order among tied values, reordering the rows of the dataset can cause another equally valid tied candidate (Candidate 74, 194, etc.) to be selected instead.
 - **Our Tie-Aware Solution**: Assigns each of the 7 tied candidates an exact, reproducible fractional weight:
 
 $$w_{ij} = \frac{r_i}{|B_i|} = \frac{1}{7} \approx 0.14286$$
@@ -244,7 +244,7 @@ $$E[Q_{\text{fuzzy}}(G_{H1}, G_{H2})] = 0.07549 \quad (95\% \text{ CI: } [0.0700
 
 We evaluated 9 benchmark NLI models using our **fully paired estimand**:
 
-$$M_{m,b} = \frac{1}{2} \left[ Q_{\text{fuzzy}}(G_m, G_{H1}^{(b)}) + Q_{\text{fuzzy}}(G_m, G_{H2}^{(b)}) \right]$$
+$$M_{m,b} = \frac{1}{2} \left[ Q_{\text{fuzzy}}(G_m, G_{H1}^{(s)}) + Q_{\text{fuzzy}}(G_m, G_{H2}^{(s)}) \right], \quad s = b \bmod 500$$
 $$\Delta_{m,b} = H_b - M_{m,b}$$
 
 Both model and human scores are evaluated **symmetrically against the exact same posterior human cohorts**.
@@ -269,23 +269,25 @@ Human Replicate Reference (0.07549)  ========================================|
                                                                            | Gap = 0.05977
 BART-Large Paired Score (0.01572)  ========|                               |
 BERT-Base Paired Score  (0.00768)  ====|                                   |
-Random Chance Null      (0.00321)  =|                                      |
+Random Chance Null      (0.00354)  =|                                      |
 ```
 
 ### Key Takeaway
-Top-performing models (BART-Large at $0.01572$) achieve a raw paired ratio of approximately **20.8%** relative to the posterior-predictive human reference ($0.01572 / 0.07549 \approx 0.208$), or a chance-adjusted ratio of approximately **17.3%** after subtracting the theoretical chance baseline ($[0.01572 - 0.00321] / [0.07549 - 0.00321] \approx 0.173$). Models are substantially closer to random chance ($0.00321$) than to human collective opinion alignment.
+Top-performing models (BART-Large at $0.01572$) achieve a raw paired ratio of approximately **20.8%** relative to the posterior-predictive human reference ($0.01572 / 0.07549 \approx 0.208$), or a chance-adjusted ratio of approximately **16.9%** after subtracting the empirical stratified null ($[0.01572 - 0.00354] / [0.07549 - 0.00354] \approx 0.169$). Models are substantially closer to the empirical stratified null ($0.00354$) than to human collective opinion alignment.
 
 ---
 
-> **Note for lay readers**: The section below (Appendix: How the Experimental Design Evolved) documents the historical development of the paired estimand. It is internal documentation useful for understanding the revision history. Most readers can proceed directly to Section 9.
+## Appendix: How the Experimental Design Evolved
+
+> **Note for lay readers**: This appendix documents the historical development of the paired estimand. It is internal documentation useful for understanding the revision history. Most readers can proceed directly to Section 9.
 
 In earlier revisions of this research, model performance was evaluated asymmetrically:
-- $H_b = Q(G_{H1}^{(b)}, G_{H2}^{(b)})$ (human vs. posterior cohort)
+- $H_b = Q(G_{H1}^{(s)}, G_{H2}^{(s)})$ (human vs. posterior cohort, $s = b \bmod 500$)
 - $M_{m,b} = Q(G_m, G_{100}^{\text{obs}})$ (model vs. fixed observed graph)
 
 Our current baseline resolves this asymmetry by adopting the **fully paired construction**:
 
-$$M_{m,b} = \frac{1}{2}\left[Q(G_m, G_{H1}^{(b)}) + Q(G_m, G_{H2}^{(b)})\right]$$
+$$M_{m,b} = \frac{1}{2}\left[Q(G_m, G_{H1}^{(s)}) + Q(G_m, G_{H2}^{(s)})\right]$$
 
 This supports a cleaner, directly matched scientific comparison:
 > *"Given the exact same simulated human cohorts, the nine evaluated AI language models resemble those cohorts substantially less than the cohorts resemble one another."*
@@ -304,7 +306,7 @@ We evaluate plug-in empirical reference similarity $R_{\text{reference}}(n, k) =
 | **50 votes** | $0.0474 \pm 0.0020$ | $0.0813 \pm 0.0018$ | $0.1424 \pm 0.0020$ | $0.2769 \pm 0.0033$ | $0.4136 \pm 0.0038$ |
 | **100 votes** | $\mathbf{0.0807 \pm 0.0025}$ | $\mathbf{0.1391 \pm 0.0033}$ | $\mathbf{0.2341 \pm 0.0041}$ | $\mathbf{0.4080 \pm 0.0039}$ | $\mathbf{0.5448 \pm 0.0038}$ |
 
-*Each entry is mean \u00b1 SD across 50 independent seeds. Monotonicity confirmed for both means and CI lower bounds across all five k-columns.*
+*Each entry is mean \u00b1 SD across 50 independent seeds. Monotonicity confirmed for both means and 95% normal-approximation simulation interval lower bounds ($\bar{x} - 1.96 \times \text{SD}$) across all five k-columns.*
 
 ### Two Architectural Regimes
 - **Microstructure ($k=5, 10$)**: Highly sensitive to individual vote fluctuations.
@@ -389,7 +391,7 @@ A text-space tie-breaker slightly improves heuristic taxonomy retrieval (MAP@10 
 
 1. **Diagnosing Storage-Order Instability**: Exposing that conventional fixed-$k$ implementations that resolve ties by index order silently distort neighbor sets for $62.1\%$ of items.
 2. **Formalizing Tie-Aware Mathematics**: Proving $Q_{\text{strict}} \le Q_{\text{expected}} \le Q_{\text{fuzzy}} \le 1.0$ and establishing six core theoretical properties (fuzzy self-identity, row-permutation invariance, etc.).
-3. **Paired Relational Model Evaluation**: Evaluating whether the nine evaluated models' **output probability distributions** preserve the *relational neighborhood structure of collective human judgment*, demonstrating a raw paired recovery of approximately $20.8\%$ (or $17.3\%$ chance-adjusted) relative to the posterior-predictive human replicate reference.
+3. **Paired Relational Model Evaluation**: Evaluating whether the nine evaluated models' **output probability distributions** preserve the *relational neighborhood structure of collective human judgment*, demonstrating a raw paired recovery of approximately $20.8\%$ (or $16.9\%$ chance-adjusted using the empirical stratified null) relative to the posterior-predictive human replicate reference.
 4. **Multiscale Scale Dependence**: Disentangling volatile local microstructure ($k=5,10$) from stable regional mesostructure ($k=50,100$).
 
 ---
