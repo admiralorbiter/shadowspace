@@ -41,7 +41,7 @@ def test_model_topology_evaluation_mock() -> None:
     evals = evaluate_model_topology_recovery(model_results, canonical_items_path=df, k=3, qnx_hh_soft=0.8)
     assert "mock-model" in evals
     assert "qnx_soft_hm" in evals["mock-model"]
-    assert evals["mock-model"]["h1_confirmed"] is True
+    assert evals["mock-model"]["all_point_estimates_below_human"] is True
 
     h2_curves = evaluate_hypothesis2_temperature_scaling(model_results, df, temperatures=[0.5, 1.0, 2.0], k=3)
     assert "mock-model" in h2_curves
