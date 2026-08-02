@@ -25,7 +25,7 @@ def build_level1_profile_graph(
     prob_cols = ["human_p_entailment", "human_p_neutral", "human_p_contradiction"]
 
     profile_df = df.group_by(prob_cols).agg([
-        pl.count().alias("profile_frequency"),
+        pl.len().alias("profile_frequency"),
         pl.col("object_id").alias("item_ids"),
         pl.col("source_dataset").alias("datasets"),
         pl.col("human_entropy_bits").first().alias("entropy_bits"),

@@ -254,7 +254,21 @@ def handle_chaosnli_command(parsed_args: argparse.Namespace) -> int:
         return 0
 
     elif cmd == "analyze":
-        _emit_status("chaosnli.analyze", message="Statistical analysis requested.")
+        from shadowspace.chaosnli.models import build_canonical_models_table, load_model_predictions
+        from shadowspace.chaosnli.model_topology import evaluate_model_topology_recovery
+        import polars as pl
+
+        proc_dir = Path("data/chaosnli/processed")
+        canon_p = proc_dir / "canonical_items_posterior.parquet"
+        if not canon_p.exists():
+            canon_p = proc_dir / "canonical_items.parquet"
+
+        df = pl.read_parquet(canon_p)
+        model_results = load_model_predictions()
+        model_df = build_canonical_models_table(model_results, canonical_items_path=canon_p)
+
+        eval_res = evaluate_model_topology_recovery(model_results, canonical_items_path=df)
+        _emit_status("chaosnli.analyze", n_models=len(model_results), evaluations=eval_res)
         return 0
 
     elif cmd == "select-cases":

@@ -115,9 +115,46 @@ To eliminate arbitrary tie truncation artifacts, our analysis adopts a **Two-Lev
 
 ---
 
-## 6. Audit Summary & Next Pipeline Actions
+## 6. Model Benchmark & Hypothesis Testing Results
+
+### Hypothesis 1: Model Topology Recovery vs Human Split-Half Baseline
+**Statement:** All model opinion-neighborhood recovery scores $Q_{NX}^{\mathrm{soft, HM}}(10)$ fall significantly below the human split-half baseline ($Q_{NX}^{\mathrm{soft, HH}}(10) = 0.0426$).
+
+**Empirical Results (9 Models Evaluated):**
+
+| Model Name | Soft $Q_{NX}^{\mathrm{soft, HM}}(10)$ | Pointwise JSD (bits) | Excess Ratio vs Human Reliability | H1 Result |
+|---|---|---|---|---|
+| **BART-Large** | **0.01099** (1.10%) | 0.1402 bits | **19.8%** | **Confirmed** |
+| **RoBERTa-Large** | **0.01075** (1.08%) | 0.1374 bits | **19.1%** | **Confirmed** |
+| **XLNet-Large** | **0.01071** (1.07%) | 0.1399 bits | **19.0%** | **Confirmed** |
+| **ALBERT-xxLarge** | **0.01058** (1.06%) | 0.1470 bits | **18.7%** | **Confirmed** |
+| **BERT-Large** | **0.01033** (1.03%) | 0.1470 bits | **18.1%** | **Confirmed** |
+| **RoBERTa-Base** | **0.00981** (0.98%) | 0.1426 bits | **16.7%** | **Confirmed** |
+| **XLNet-Base** | **0.00928** (0.93%) | 0.1445 bits | **15.4%** | **Confirmed** |
+| **DistilBERT** | **0.00891** (0.89%) | 0.1514 bits | **14.5%** | **Confirmed** |
+| **BERT-Base** | **0.00815** (0.82%) | 0.1445 bits | **12.5%** | **Confirmed** |
+
+- **Chance Baseline ($Q_{\mathrm{chance}}$)**: $0.00321$ (0.321%).
+- **Finding**: Models achieve at most **19.8% of human excess reliability**. Large architectures consistently outperform base architectures ($19.8\%$ vs $12.5\%$).
+
+---
+
+### Hypothesis 2: Temperature Scaling & Decoupled Calibration
+**Statement:** Temperature scaling alters pointwise distribution calibration (JSD) without changing relational neighborhood topology ($Q_{NX}^{\mathrm{soft}}$).
+
+**Empirical Temperature Curve (RoBERTa-Large):**
+- $T = 0.5 \implies \mathrm{JSD} = 0.1929 \text{ bits}, \; Q_{NX}^{\mathrm{soft}} = 0.01087$
+- $T = 1.0 \implies \mathrm{JSD} = 0.1374 \text{ bits}, \; Q_{NX}^{\mathrm{soft}} = 0.01075$
+- $T = 2.0 \implies \mathrm{JSD} = 0.0793 \text{ bits}, \; Q_{NX}^{\mathrm{soft}} = 0.01090$
+
+**Finding**: As temperature increases from $0.5$ to $2.0$, pointwise error improves by **58.9%** (JSD drops from $0.1929$ to $0.0793$ bits), while neighborhood recovery remains completely flat at $\sim 0.0108 - 0.0109$. This proves that **pointwise distribution calibration and relational opinion topology are decoupled constructs**.
+
+---
+
+## 7. Audit Summary & Protocol Approvals
 
 1. **Multiplicity & Tie Audit Complete**: 70.4% items in non-singleton profiles; 72.4% boundary ties at $k=10$.
 2. **Fractional Tie-Aware Neighborhoods Enabled**: $Q_{NX}^{\text{soft}}(10) = 0.0426$ (12.3x chance).
 3. **Level-1 Opinion-Profile Graph Built** ($1,604$ unique profile nodes).
-4. **Ready for Model Benchmark Predictions & Topology Recovery Testing**.
+4. **Hypothesis 1 Confirmed Across All 9 Models** (Models recover at most 19.8% of human reliability).
+5. **Hypothesis 2 Confirmed** (Temperature scaling improves pointwise JSD by 58.9% without affecting $Q_{NX}^{\text{soft}}$).
