@@ -279,3 +279,34 @@ This is explicitly a **prototype visualization convention**, not a universally c
 - Alternative zero policies (e.g., Bayesian-Laplace, detection-limit replacement) may be added as named options without changing the default.
 
 **Revisit when:** domain data has structural zeros where multiplicative replacement is scientifically indefensible, or a different policy becomes the published standard for compositional probability data.
+
+---
+
+## ADR-015 — Active Representation Mean-Centering & Dynamic Basis Refitting
+
+**Status:** accepted
+
+When reprojecting catalog bases or computing 2D coordinates across representations (`probability`, `sqrt_probability`, `clr_probability`, `logits`), the projection center $\mu_{\text{rep}} = \operatorname{mean}(X_{\text{rep}})$ is computed directly in the active representation feature space ($Y = (X_{\text{rep}} - \mu_{\text{rep}}) F$).
+
+For supervised/discriminative view catalogs (`fisher_lda`), the discriminative basis is dynamically refitted on the active representation matrix so class separation is optimized in that feature space.
+
+**Consequences**
+
+- 2D catalog projections maintain origin stability and basis orthonormality across all representation switches.
+- Fisher LDA bases continuously adapt to representation transformations.
+- `SavedView` snapshots preserve full basis matrices, reprojected coordinates, and matrix SHA-256 hashes in `metadata`.
+
+---
+
+## ADR-016 — SQLite-First Single-File Bundle Storage (`sqlite-vec`)
+
+**Status:** accepted
+
+For high-volume dataset scaling, Shadowspace uses a single-file `.db` SQLite bundle architecture powered by `sqlite-vec` (v0.1.9) for zero-infrastructure vector similarity search.
+
+**Consequences**
+
+- Dense representation matrices are stored as binary float64 BLOBs for fast full-matrix reads.
+- Virtual tables (`vec_{rep_id}`) enable C-level exact brute-force similarity search directly inside SQLite.
+- Eliminates multi-file Parquet directory complexity for Tier 3 scale datasets.
+

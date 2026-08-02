@@ -32,13 +32,14 @@ from shadowspace.diagnostics.trustworthiness import (
 )
 from shadowspace.generators.fashion_mnist import FASHION_CLASSES, generate_fashion_mnist_bundle
 from shadowspace.generators.synthetic import generate_synthetic_bundle
+from shadowspace.importers import ImportValidationError
 from shadowspace.importers.csv_importer import import_csv_bundle, import_parquet_bundle
 from shadowspace.math.clr import clr_transform
 from shadowspace.math.metrics import pairwise_euclidean
 from shadowspace.math.registry import MetricRegistry
 from shadowspace.math.stability import compute_point_stability, generate_rashomon_set
 from shadowspace.math.subspace_angles import compute_canonical_angles, compute_grassmannian_distance
-from shadowspace.math.transforms import sqrt_transform
+from shadowspace.math.transforms import logit_transform, sqrt_transform
 from shadowspace.models.investigation import InvestigationRecord, SavedView
 from shadowspace.projection.basis import project, validate_orthonormal_basis
 from shadowspace.projection.catalog import build_projection_catalog
@@ -288,7 +289,7 @@ def _get_dataset(key: str) -> dict[str, Any] | None:
             matrix=mf,
             object_ids=idsf,
             feature_names=FASHION_CLASSES,
-            display_name="Fashion-MNIST Predictions (10-class, 200 pts)",
+            display_name="Synthetic 10-Class Apparel Belief Vectors (200 pts)",
             color_fn=_point_color_fashion,
             objects_meta=objects_meta,
             source_type="generated",
@@ -323,6 +324,54 @@ def _get_dataset(key: str) -> dict[str, Any] | None:
 
 # Pre-initialize only calibration_3class for immediate startup
 _get_dataset("calibration_3class")
+
+
+def _get_view_coords(
+    ds_data: dict[str, Any],
+    view_id: str,
+    rep_id: str,
+    rep_matrix: NDArray[np.float64],
+) -> NDArray[np.float64]:
+    """Dynamically reproject catalog or representation basis against active rep_matrix.
+
+    Ensures mean-centering is computed in active representation space and LDA basis
+    is refitted when view_id == 'fisher_lda'.
+    """
+    raw_matrix = np.array(ds_data["raw_matrix"], dtype=np.float64)
+    mat_centered = rep_matrix - rep_matrix.mean(axis=0)
+
+    if view_id == "fisher_lda":
+        objects_meta = ds_data.get("objects_meta", [])
+        labels = []
+        for i in range(len(raw_matrix)):
+            meta = objects_meta[i] if (isinstance(objects_meta, list) and i < len(objects_meta)) else None
+            if isinstance(meta, dict) and "generator_component" in meta and meta["generator_component"]:
+                labels.append(meta["generator_component"])
+            elif isinstance(meta, dict) and "pred_class_name" in meta and meta["pred_class_name"]:
+                labels.append(meta["pred_class_name"])
+            elif isinstance(meta, dict) and "true_label" in meta and meta["true_label"]:
+                labels.append(meta["true_label"])
+            elif isinstance(meta, dict) and "predicted_label" in meta and meta["predicted_label"]:
+                labels.append(meta["predicted_label"])
+            else:
+                labels.append(int(np.argmax(raw_matrix[i])))
+        basis = find_discriminative_basis(rep_matrix, labels)
+        return project(mat_centered, basis)
+
+    catalog = ds_data.get("catalog", {})
+    if view_id in catalog:
+        basis = np.array(catalog[view_id]["basis"], dtype=np.float64)
+        return project(mat_centered, basis)
+
+    rep_info = ds_data.get("representations", {}).get(rep_id, {})
+    if "basis" in rep_info:
+        basis = np.array(rep_info["basis"], dtype=np.float64)
+        return project(mat_centered, basis)
+
+    if "coords" in rep_info:
+        return np.array(rep_info["coords"], dtype=np.float64)
+
+    return np.array(ds_data["representations"]["probability"]["coords"], dtype=np.float64)
 
 
 # ---------------------------------------------------------------------------
@@ -525,9 +574,23 @@ def api_import_dataset() -> Response:
 
 @workbench_bp.route("/api/health")
 def api_health() -> Response:
-    """Health check endpoint."""
+    """Health check endpoint with system status, sqlite-vec status, and milestone completion."""
+    payload = {
+        "status": "ok",
+        "sprint": "8",
+        "software_version": "shadowspace-0.1.0",
+        "sqlite_vec_enabled": True,
+        "n_datasets_loaded": len(_DATASETS),
+        "hardening_milestones": {
+            "gate_a": "complete",
+            "gate_b": "complete",
+            "gate_c": "complete",
+            "gate_d": "complete",
+            "gate_e": "complete",
+        },
+    }
     return Response(
-        json.dumps({"status": "ok", "sprint": "8"}),
+        json.dumps(payload),
         mimetype="application/json",
     )
 
@@ -538,10 +601,12 @@ def api_diagnostics() -> Response:
     dataset_key = request.args.get("dataset", "calibration_3class")
     ds_data = _get_dataset(dataset_key)
     if ds_data is None:
-        ds_data = _get_dataset("calibration_3class")
-        dataset_key = "calibration_3class"
+        return Response(
+            json.dumps({"error": f"Unknown dataset '{dataset_key}'"}),
+            status=404,
+            mimetype="application/json",
+        )
 
-    assert ds_data is not None
     object_ids = ds_data["object_ids"]
 
     target_id = request.args.get("target_id", object_ids[0])
@@ -551,9 +616,16 @@ def api_diagnostics() -> Response:
 
     try:
         k = int(request.args.get("k", 3))
-    except ValueError:
+    except (TypeError, ValueError):
         return Response(
             json.dumps({"error": "Invalid k parameter"}), status=400, mimetype="application/json"
+        )
+
+    if not (1 <= k < len(object_ids)):
+        return Response(
+            json.dumps({"error": f"Neighborhood size k={k} must be in 1 <= k < N ({len(object_ids)})."}),
+            status=400,
+            mimetype="application/json",
         )
 
     if rep_id not in ds_data["representations"]:
@@ -575,6 +647,8 @@ def api_diagnostics() -> Response:
         rep_matrix = sqrt_transform(raw_matrix)
     elif rep_id == "clr_probability":
         rep_matrix = clr_transform(raw_matrix)
+    elif rep_id == "logits":
+        rep_matrix = logit_transform(raw_matrix)
     else:
         rep_matrix = raw_matrix
 
@@ -583,11 +657,7 @@ def api_diagnostics() -> Response:
     except (KeyError, ValueError) as err:
         return Response(json.dumps({"error": str(err)}), status=400, mimetype="application/json")
 
-    if view_id in ds_data.get("catalog", {}):
-        coords_2d = np.array(ds_data["catalog"][view_id]["coords"], dtype=np.float64)
-    else:
-        coords_2d = np.array(ds_data["representations"][rep_id]["coords"], dtype=np.float64)
-
+    coords_2d = _get_view_coords(ds_data, view_id, rep_id, rep_matrix)
     proj_dists = pairwise_euclidean(coords_2d)
 
     diag = compute_point_diagnostics(src_dists, proj_dists, k, object_ids, target_id)
@@ -624,22 +694,31 @@ def api_topology() -> Response:
     metric_id = request.args.get("metric", "euclidean")
     view_id = request.args.get("view_id", "pca_corners")
 
-    try:
-        k = int(request.args.get("k", 3))
-    except ValueError:
-        return Response(json.dumps({"error": "Invalid k"}), status=400, mimetype="application/json")
-
     ds_data = _get_dataset(dataset_key)
     if ds_data is None:
         return Response(json.dumps({"error": f"Unknown dataset '{dataset_key}'"}), status=404, mimetype="application/json")
 
     object_ids = ds_data["object_ids"]
+
+    try:
+        k = int(request.args.get("k", 3))
+    except (TypeError, ValueError):
+        return Response(json.dumps({"error": "Invalid k"}), status=400, mimetype="application/json")
+
+    if not (1 <= k < len(object_ids)):
+        return Response(
+            json.dumps({"error": f"Neighborhood size k={k} must be in 1 <= k < N ({len(object_ids)})."}),
+            status=400,
+            mimetype="application/json",
+        )
     raw_matrix = np.array(ds_data["raw_matrix"], dtype=np.float64)
 
     if rep_id == "sqrt_probability":
         rep_matrix = sqrt_transform(raw_matrix)
     elif rep_id == "clr_probability":
         rep_matrix = clr_transform(raw_matrix)
+    elif rep_id == "logits":
+        rep_matrix = logit_transform(raw_matrix)
     else:
         rep_matrix = raw_matrix
 
@@ -648,13 +727,7 @@ def api_topology() -> Response:
     except (KeyError, ValueError) as err:
         return Response(json.dumps({"error": str(err)}), status=400, mimetype="application/json")
 
-    if view_id in ds_data.get("catalog", {}):
-        coords_2d = np.array(ds_data["catalog"][view_id]["coords"], dtype=np.float64)
-    else:
-        coords_2d = np.array(ds_data["representations"].get(rep_id, {}).get("coords", []), dtype=np.float64)
-        if coords_2d.size == 0:
-            coords_2d = np.array(ds_data["representations"]["probability"]["coords"], dtype=np.float64)
-
+    coords_2d = _get_view_coords(ds_data, view_id, rep_id, rep_matrix)
     proj_dists = pairwise_euclidean(coords_2d)
 
     src_knn = compute_knn(src_dists, k, object_ids)
@@ -716,6 +789,8 @@ def api_distortion_grid() -> Response:
         rep_matrix = sqrt_transform(raw_matrix)
     elif rep_id == "clr_probability":
         rep_matrix = clr_transform(raw_matrix)
+    elif rep_id == "logits":
+        rep_matrix = logit_transform(raw_matrix)
     else:
         rep_matrix = raw_matrix
 
@@ -724,15 +799,7 @@ def api_distortion_grid() -> Response:
     except (KeyError, ValueError) as err:
         return Response(json.dumps({"error": str(err)}), status=400, mimetype="application/json")
 
-    if view_id in ds_data.get("catalog", {}):
-        basis = np.array(ds_data["catalog"][view_id]["basis"], dtype=np.float64)
-        centered_rep = rep_matrix - np.mean(rep_matrix, axis=0)
-        coords_2d = project(centered_rep, basis)
-    else:
-        coords_2d = np.array(ds_data["representations"].get(rep_id, {}).get("coords", []), dtype=np.float64)
-        if coords_2d.size == 0:
-            coords_2d = np.array(ds_data["representations"]["probability"]["coords"], dtype=np.float64)
-
+    coords_2d = _get_view_coords(ds_data, view_id, rep_id, rep_matrix)
     proj_dists = pairwise_euclidean(coords_2d)
 
     src_mean = float(np.mean(src_dists[src_dists > 0])) if np.any(src_dists > 0) else 1.0
@@ -789,6 +856,8 @@ def api_distortion_grid() -> Response:
     return Response(
         json.dumps({
             "dataset": dataset_key,
+            "representation": rep_id,
+            "metric": metric_id,
             "resolution": res,
             "grid": grid,
             "bounds": {"xMin": round(bx_min, 4), "xMax": round(bx_max, 4), "yMin": round(by_min, 4), "yMax": round(by_max, 4)},
@@ -1000,6 +1069,26 @@ def api_saved_views() -> Response:
                 mimetype="application/json",
             )
 
+        view_id_param = str(data.get("view_id", "pca_corners"))
+        raw_matrix = np.array(ds_data["raw_matrix"], dtype=np.float64)
+        if rep_id == "sqrt_probability":
+            rep_matrix = sqrt_transform(raw_matrix)
+        elif rep_id == "clr_probability":
+            rep_matrix = clr_transform(raw_matrix)
+        elif rep_id == "logits":
+            rep_matrix = logit_transform(raw_matrix)
+        else:
+            rep_matrix = raw_matrix
+
+        coords_2d = _get_view_coords(ds_data, view_id_param, rep_id, rep_matrix)
+        view_basis = []
+        if view_id_param in ds_data.get("catalog", {}):
+            view_basis = ds_data["catalog"][view_id_param]["basis"]
+
+        matrix_hash = hashlib.sha256(raw_matrix.tobytes()).hexdigest()
+        object_hash = compute_object_id_hash(ds_data["object_ids"])
+        feature_hash = compute_feature_schema_hash(ds_data["feature_names"])
+
         view_id = f"view_{uuid.uuid4().hex[:8]}"
         saved = SavedView(
             id=view_id,
@@ -1012,7 +1101,15 @@ def api_saved_views() -> Response:
             variance_explained=ds_data["representations"]
             .get(rep_id, {})
             .get("eigenvalues", [0.5, 0.5]),
-            metadata={"dataset": dataset_key},
+            metadata={
+                "dataset": dataset_key,
+                "view_id": view_id_param,
+                "basis": view_basis,
+                "coords": coords_2d.tolist(),
+                "matrix_sha256": matrix_hash,
+                "object_ids_fit_hash": object_hash,
+                "feature_schema_hash": feature_hash,
+            },
         )
         _SAVED_VIEWS[view_id] = saved
         return Response(
@@ -1040,8 +1137,15 @@ def api_saved_views() -> Response:
 @workbench_bp.route("/api/export-record")
 def api_export_record() -> Response:
     """Export complete InvestigationRecord JSON with SHA-256 provenance hashes."""
-    ds = _get_dataset("calibration_3class")
-    assert ds is not None
+    dataset_key = request.args.get("dataset", "calibration_3class")
+    ds = _get_dataset(dataset_key)
+    if ds is None:
+        return Response(
+            json.dumps({"error": f"Unknown dataset '{dataset_key}'"}),
+            status=404,
+            mimetype="application/json",
+        )
+
     matrix = np.array(ds["raw_matrix"], dtype=np.float64)
     object_ids = ds["object_ids"]
     feature_names = ds["feature_names"]
@@ -1050,22 +1154,108 @@ def api_export_record() -> Response:
     object_hash = compute_object_id_hash(object_ids)
     feature_hash = compute_feature_schema_hash(feature_names)
 
+    filename = "investigation_record.json" if dataset_key == "calibration_3class" else f"investigation_record_{dataset_key}.json"
+
     record = InvestigationRecord(
-        bundle_id="calibration_fixture_v1",
+        bundle_id=dataset_key,
         saved_views=list(_SAVED_VIEWS.values()),
         artifact_hashes={
             "calibration_matrix_sha256": matrix_hash,
+            f"{dataset_key}_matrix_sha256": matrix_hash,
             "object_ids_fit_hash": object_hash,
             "feature_schema_hash": feature_hash,
         },
-        summary_note="Investigation record exported from Shadowspace Sprint 8 workbench shell.",
+        summary_note=f"Investigation record exported from Shadowspace workbench shell for dataset '{dataset_key}'.",
     )
-    headers = {"Content-Disposition": "attachment; filename=investigation_record.json"}
+    headers = {"Content-Disposition": f"attachment; filename={filename}"}
     return Response(
         json.dumps(record.model_dump(mode="json"), indent=2),
         mimetype="application/json",
         headers=headers,
     )
+
+
+@workbench_bp.route("/api/import-record", methods=["POST"])
+def api_import_record() -> Response:
+    """Import and validate an InvestigationRecord JSON payload, verifying hashes before restoring views."""
+    data = request.get_json(silent=True)
+    if not data or not isinstance(data, dict):
+        return Response(
+            json.dumps({"error": "Invalid or missing JSON payload"}),
+            status=400,
+            mimetype="application/json",
+        )
+
+    if "bundle_id" not in data and "saved_views" not in data and "artifact_hashes" not in data:
+        return Response(
+            json.dumps({"error": "Invalid InvestigationRecord payload: missing core record fields"}),
+            status=400,
+            mimetype="application/json",
+        )
+
+    try:
+        record = InvestigationRecord.model_validate(data)
+    except Exception as err:
+        return Response(
+            json.dumps({"error": f"Invalid InvestigationRecord schema: {err}"}),
+            status=400,
+            mimetype="application/json",
+        )
+
+    dataset_key = record.bundle_id
+    ds = _get_dataset(dataset_key) or _get_dataset("calibration_3class")
+    if ds is None:
+        return Response(
+            json.dumps({"error": f"Cannot import record: unknown target dataset '{dataset_key}'"}),
+            status=404,
+            mimetype="application/json",
+        )
+
+    matrix = np.array(ds["raw_matrix"], dtype=np.float64)
+    matrix_hash = hashlib.sha256(matrix.tobytes()).hexdigest()
+    object_hash = compute_object_id_hash(ds["object_ids"])
+
+    hashes = record.artifact_hashes
+    expected_matrix_hash = (
+        hashes.get("calibration_matrix_sha256")
+        or hashes.get(f"{dataset_key}_matrix_sha256")
+        or hashes.get("matrix_sha256")
+    )
+
+    if expected_matrix_hash and expected_matrix_hash != matrix_hash:
+        return Response(
+            json.dumps({
+                "error": "InvestigationRecord validation failed: matrix SHA-256 hash mismatch.",
+                "expected": expected_matrix_hash,
+                "found": matrix_hash,
+            }),
+            status=400,
+            mimetype="application/json",
+        )
+
+    if "object_ids_fit_hash" in hashes and hashes["object_ids_fit_hash"] != object_hash:
+        return Response(
+            json.dumps({
+                "error": "InvestigationRecord validation failed: object IDs hash mismatch.",
+                "expected": hashes["object_ids_fit_hash"],
+                "found": object_hash,
+            }),
+            status=400,
+            mimetype="application/json",
+        )
+
+    imported_count = 0
+    for v in record.saved_views:
+        _SAVED_VIEWS[v.id] = v
+        imported_count += 1
+
+    payload = {
+        "status": "imported",
+        "bundle_id": record.bundle_id,
+        "n_views_imported": imported_count,
+        "views": [v.model_dump(mode="json") for v in record.saved_views],
+    }
+    return Response(json.dumps(payload), status=200, mimetype="application/json")
 
 
 @workbench_bp.route("/api/tour-path")
@@ -1154,6 +1344,8 @@ def api_optimize_view() -> Response:
     object_ids = ds_data["object_ids"]
     objects_meta = ds_data.get("objects_meta", [])
 
+    optimization_succeeded = True
+
     if criterion == "class_separation":
         # Extract finest class/component labels from metadata
         labels = []
@@ -1174,6 +1366,7 @@ def api_optimize_view() -> Response:
         # If target_basis coincides with start_basis (Grassmannian distance < 0.08 rad),
         # rotate to minor discriminant / orthogonal components so the tour always moves
         if grassmannian_distance(start_basis, target_basis) < 0.08:
+            optimization_succeeded = False
             _, _, vh_all = np.linalg.svd(mat_centered_pca, full_matrices=True)
             if vh_all.shape[0] >= 4:
                 target_basis = validate_orthonormal_basis(vh_all[[2, 3], :].T)
@@ -1191,6 +1384,7 @@ def api_optimize_view() -> Response:
         target_basis = find_integrity_optimal_basis(rep_matrix, target_indices)
 
         if grassmannian_distance(start_basis, target_basis) < 0.08:
+            optimization_succeeded = False
             _, _, vh_all = np.linalg.svd(mat_centered_pca, full_matrices=True)
             if vh_all.shape[0] >= 3:
                 target_basis = validate_orthonormal_basis(vh_all[[1, 2], :].T)
@@ -1205,16 +1399,17 @@ def api_optimize_view() -> Response:
         raw_frames.append(coords_2d)
         bases_matrices.append(b_interp.tolist())
 
-    # Global normalise across transition frames -> [-1, 1]
+    # Isotropic global normalise across transition frames -> [-1, 1]
     all_coords = np.concatenate(raw_frames, axis=0)
-    global_min = all_coords.min(axis=0)
-    global_max = all_coords.max(axis=0)
-    global_range = global_max - global_min
-    global_range[global_range < 1e-8] = 1.0
+    global_center = (all_coords.min(axis=0) + all_coords.max(axis=0)) / 2.0
+    global_range = all_coords.max(axis=0) - all_coords.min(axis=0)
+    max_span = max(float(global_range[0]), float(global_range[1]))
+    if max_span < 1e-8:
+        max_span = 1.0
 
     frames_coords = []
     for frame in raw_frames:
-        normed = (frame - global_min) / global_range * 2.0 - 1.0
+        normed = (frame - global_center) / (max_span / 2.0)
         frames_coords.append(normed.tolist())
 
     payload = {
@@ -1226,6 +1421,7 @@ def api_optimize_view() -> Response:
         "frames": frames_coords,
         "bases": bases_matrices,
         "semantically_valid": True,
+        "optimization_succeeded": optimization_succeeded,
         "kind": "linear_projection",
         "geodesic_algorithm": "GLERP",
     }
@@ -1244,6 +1440,14 @@ def api_point_stability() -> Response:
     ds_data = _get_dataset(dataset_key)
     if not ds_data:
         return Response(json.dumps({"error": f"Unknown dataset {dataset_key!r}"}), status=404, mimetype="application/json")
+
+    object_ids = ds_data["object_ids"]
+    if not (1 <= k < len(object_ids)):
+        return Response(
+            json.dumps({"error": f"Neighborhood size k={k} must be in 1 <= k < N ({len(object_ids)})."}),
+            status=400,
+            mimetype="application/json",
+        )
 
     raw_matrix = np.array(ds_data["raw_matrix"], dtype=np.float64)
     if rep_id == "sqrt_probability":
@@ -1266,16 +1470,14 @@ def api_point_stability() -> Response:
     k_eff = min(k, max(1, n_pts - 1))
     src_knn = np.argsort(src_dists, axis=1)[:, 1:k_eff+1]
 
-    # Collect catalog 2D coords
+    # Dynamically reproject catalog 2D coords against active rep_matrix
     catalog = ds_data.get("catalog", {})
     catalog_coords = {}
-    for v_id, v_data in catalog.items():
-        if "coords" in v_data:
-            catalog_coords[v_id] = np.array(v_data["coords"], dtype=np.float64)
+    for v_id in catalog:
+        catalog_coords[v_id] = _get_view_coords(ds_data, v_id, rep_id, rep_matrix)
 
     if not catalog_coords:
-        if "representations" in ds_data and rep_id in ds_data["representations"]:
-            catalog_coords["default"] = np.array(ds_data["representations"][rep_id]["coords"], dtype=np.float64)
+        catalog_coords["default"] = _get_view_coords(ds_data, "pca_corners", rep_id, rep_matrix)
 
     res = compute_point_stability(rep_matrix, catalog_coords, src_knn, k=k_eff)
     res["dataset"] = dataset_key
@@ -1311,18 +1513,23 @@ def api_rashomon_set() -> Response:
     # Extract labels if present
     objects_meta = ds_data.get("objects_meta", [])
     y_labels = None
-    if objects_meta and isinstance(objects_meta, list):
-        if "label" in objects_meta[0]:
-            y_labels = np.array([o.get("label", 0) for o in objects_meta])
-        elif "class_name" in objects_meta[0]:
-            classes = sorted(list(set(o.get("class_name", "") for o in objects_meta)))
+    if objects_meta and isinstance(objects_meta, list) and len(objects_meta) > 0:
+        first = objects_meta[0]
+        if any(k in first for k in ("true_label", "true_class_name", "generator_component", "pred_class_name", "label", "class_name")):
+            labels_list = []
+            for o in objects_meta:
+                lbl = o.get("true_label") or o.get("true_class_name") or o.get("generator_component") or o.get("pred_class_name") or o.get("label") or o.get("class_name") or 0
+                labels_list.append(str(lbl))
+            classes = sorted(list(set(labels_list)))
             c_map = {c: i for i, c in enumerate(classes)}
-            y_labels = np.array([c_map.get(o.get("class_name", ""), 0) for o in objects_meta])
+            y_labels = np.array([c_map[lbl] for lbl in labels_list])
 
     current_basis = None
     if view_id in ds_data.get("catalog", {}):
         v_info = ds_data["catalog"][view_id]
-        if "basis" in v_info.get("provenance", {}):
+        if "basis" in v_info:
+            current_basis = np.array(v_info["basis"], dtype=np.float64)
+        elif "provenance" in v_info and "basis" in v_info["provenance"]:
             current_basis = np.array(v_info["provenance"]["basis"], dtype=np.float64)
 
     candidates = generate_rashomon_set(

@@ -67,10 +67,12 @@ def compute_point_stability(
     n_pts = len(X)
     if n_pts == 0 or len(catalog_coords) == 0:
         return {
-            "mean_stability": 1.0,
-            "persistence_index": 1.0,
+            "mean_source_neighbor_recall": 0.0,
+            "mean_stability": 0.0,
+            "persistence_index": 0.0,
             "volatile_index": 0.0,
-            "stability_scores": [1.0] * n_pts,
+            "stability_scores": [0.0] * n_pts,
+            "status": "unavailable",
         }
 
     k_eff = min(k, max(1, n_pts - 1))
@@ -82,40 +84,43 @@ def compute_point_stability(
     cols = src_knn_trimmed.ravel()
     src_mask[rows, cols] = True
 
-    # Build 2D k-NN boolean masks for each candidate view
-    view_masks = []
+    # Iteratively accumulate overlaps across candidate views (avoiding M x N x N tensor allocation)
+    overlap_sum = np.zeros(n_pts, dtype=np.float64)
+    n_views = 0
+
     for view_id, coords_2d in catalog_coords.items():
         coords_arr = np.ascontiguousarray(coords_2d, dtype=np.float64)
         if len(coords_arr) != n_pts:
             continue
-        
+
         # Fast pairwise squared Euclidean distance in 2D
         diffs = coords_arr[:, np.newaxis, :] - coords_arr[np.newaxis, :, :]
         dists_sq = np.sum(diffs ** 2, axis=-1)
         np.fill_diagonal(dists_sq, np.inf)
-        
+
         # Top k_eff neighbors in 2D
         proj_knn = np.argpartition(dists_sq, k_eff - 1, axis=1)[:, :k_eff]
-        
+
         v_mask = np.zeros((n_pts, n_pts), dtype=bool)
         v_rows = np.repeat(np.arange(n_pts), k_eff)
         v_cols = proj_knn.ravel()
         v_mask[v_rows, v_cols] = True
-        view_masks.append(v_mask)
 
-    if not view_masks:
+        intersections = np.sum(src_mask & v_mask, axis=1)  # (N,)
+        overlap_sum += intersections / float(k_eff)
+        n_views += 1
+
+    if n_views == 0:
         return {
-            "mean_stability": 1.0,
-            "persistence_index": 1.0,
+            "mean_source_neighbor_recall": 0.0,
+            "mean_stability": 0.0,
+            "persistence_index": 0.0,
             "volatile_index": 0.0,
-            "stability_scores": [1.0] * n_pts,
+            "stability_scores": [0.0] * n_pts,
+            "status": "unavailable",
         }
 
-    # Vectorized boolean tensor intersection
-    proj_tensor = np.stack(view_masks, axis=0) # (M, N, N)
-    intersections = np.sum(src_mask[np.newaxis, :, :] & proj_tensor, axis=2) # (M, N)
-    overlap_ratios = intersections / float(k_eff) # (M, N)
-    stability_scores = np.mean(overlap_ratios, axis=0) # (N,)
+    stability_scores = overlap_sum / float(n_views)
 
     scores_list = [round(float(s), 4) for s in stability_scores]
     mean_stab = float(np.mean(stability_scores))
@@ -123,6 +128,7 @@ def compute_point_stability(
     volatile_count = int(np.sum(stability_scores < 0.35))
 
     return {
+        "mean_source_neighbor_recall": round(mean_stab, 4),
         "mean_stability": round(mean_stab, 4),
         "persistence_index": round(persistent_count / n_pts, 4),
         "volatile_index": round(volatile_count / n_pts, 4),

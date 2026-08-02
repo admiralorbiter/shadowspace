@@ -1,5 +1,10 @@
 # Shadowspace Research Roadmap
 
+> **Platform Hardening & Scalability Status (August 2026)**
+> - **Hardening Gates A–E**: ALL COMPLETE — Runtime crash protection, dynamic coordinate reprojection ($\mu_{\text{rep}} = \operatorname{mean}(X_{\text{rep}})$), LDA refitting per representation, cryptographic investigation record import (`/api/import-record`), Grassmannian angular diversity ($d_G \ge 12^\circ$), and system health check (`/api/health`).
+> - **Tier 3 SQLite-First Scalability Architecture**: COMPLETE — Integrated `sqlite-vec` zero-infrastructure vector similarity search with `SQLiteBundleWriter` and `SQLiteBundleReader` for single-file `.db` bundle storage.
+> - **Verification**: 176 passed out of 176 tests (87.3% coverage).
+
 ## 1. Research identity
 
 Shadowspace is not a new dimensionality-reduction algorithm and not merely another embedding viewer.

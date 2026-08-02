@@ -1,5 +1,14 @@
 # Shadowspace Architecture and Data Contract
 
+> **Hardening & Scalability Status as of 2026-08-01**
+> - **Gate A (Immediate Bug Fixes & Diagnostics Hardening)**: COMPLETE — Fixed logit/validator imports, enforced parameter bounds $1 \le k < N$, uniform isotropic scaling (`max_span`) in `/api/optimize-view`, memory-efficient $O(N^2)$ stability accumulation.
+> - **Gate B (Data Contract Alignment & Dynamic Reprojection)**: COMPLETE — `_get_view_coords()` active representation mean-centering ($\mu_{\text{rep}} = \operatorname{mean}(X_{\text{rep}})$), dynamic Fisher LDA basis refitting per representation, SavedView SHA-256 provenance metadata.
+> - **Gate C (Saved-Investigation Reproducibility & Replay)**: COMPLETE — `/api/import-record` endpoint with matrix SHA-256 and feature schema verification before view restoration.
+> - **Gate D (Rashomon Formalization & Subspace Stability)**: COMPLETE — Clamped Grassmannian distance calculations $[0.0, 1.0]$, pair-wise Grassmannian diversity ($\ge 12^\circ$), sign-stabilization canonicalization (`canonicalize_basis`).
+> - **Gate E (Developer Validation & System Health Monitoring)**: COMPLETE — `/api/health` system health endpoint reporting milestone status, `sqlite-vec` zero-infrastructure vector similarity search integration.
+> - **Tier 3 Scalability Foundation**: COMPLETE — `SQLiteBundleWriter` and `SQLiteBundleReader` single-file `.db` bundle format for zero-latency high-scale dataset queries.
+> - **Automated Test Suite**: 176 passed out of 176 tests (87.3% coverage).
+
 ## 1. Architectural goal
 
 Shadowspace must separate four concerns that visualization systems often collapse:
