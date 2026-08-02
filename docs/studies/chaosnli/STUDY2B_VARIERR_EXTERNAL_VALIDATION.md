@@ -1,6 +1,8 @@
-# Study 2B: Exploratory External Test via VariErr NLI
+# Study 2B: Exploratory External Test Using VariErr NLI
 
-*Exploratory External Test of Level-1 Opinion Profile Homogeneity using 500 Matched Items from VariErr NLI (Weber-Genzel et al., ACL 2024) — Results are suggestive but statistically inconclusive ($p = 0.2045$)*
+- **Document type:** empirical report
+- **Status:** exploratory and statistically inconclusive ($p=0.2045$)
+- **Scope:** Level-1 opinion-profile homogeneity in 500 matched VariErr NLI items
 
 ---
 
@@ -21,7 +23,7 @@ We perform an exploratory external test of the two-level opinion architecture us
 | Metric | Value | Description |
 |---|---|---|
 | Matched Items | 500 | Items present in both VariErr and ChaosNLI-M |
-| Multi-Item Profiles ($|g| > 1$) | 52 | Distinct ChaosNLI vote profiles containing $\ge 2$ VariErr items |
+| Multi-Item Profiles ($\lvert g\rvert > 1$) | 52 | Distinct ChaosNLI vote profiles containing $\ge 2$ VariErr items |
 | Overall Item-Level Validity SD | 0.1413 | Total sample SD of explanation validity ratios ($n=500$) |
 | Overall Item-Level Validity Variance | 0.0200 | Total sample variance ($0.1413^2 = 0.0200$) |
 | Mean Within-Profile Validity SD | 0.1060 | Average sample SD across 52 multi-item profiles |

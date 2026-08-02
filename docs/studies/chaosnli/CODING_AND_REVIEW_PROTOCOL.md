@@ -1,5 +1,8 @@
 # ChaosNLI Coding and Review Protocol
 
+- **Document type:** research protocol
+- **Status:** protocol specification; completion is not reported
+
 ## 1. Purpose
 
 Human review is used to:

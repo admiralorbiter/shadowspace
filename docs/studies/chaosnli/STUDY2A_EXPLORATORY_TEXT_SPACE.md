@@ -1,6 +1,8 @@
-# Study 2A: Exploratory Text-Space and Heuristic Taxonomy Analysis
+# Study 2A: Exploratory Text-Space and Heuristic-Taxonomy Analysis
 
-*Exploratory Analysis of Level-2 Item Heterogeneity within Collective Opinion Profiles*
+- **Document type:** empirical report
+- **Status:** exploratory; not confirmatory
+- **Scope:** Level-2 item heterogeneity within collective opinion profiles
 
 ---
 
@@ -8,7 +10,10 @@
 
 This document reports exploratory analyses on Level-2 item heterogeneity within identical Level-1 human collective opinion profiles. It evaluates surface text-based heuristic taxonomies, sentence-embedding text distance, lexicographic tie resolution, and operational case-routing candidate edge classification.
 
-> **Status Note**: This analysis is exploratory and uses surface-text heuristics. For confirmatory external validation using expert-annotated human validity judgments, see [`STUDY2B_VARIERR_EXTERNAL_VALIDATION.md`](STUDY2B_VARIERR_EXTERNAL_VALIDATION.md).
+> **Interpretation note:** This analysis uses surface-text heuristics. For external analysis using
+> expert-annotated human validity judgments, see
+> [Study 2B](STUDY2B_VARIERR_EXTERNAL_VALIDATION.md); that test is also exploratory and was
+> statistically inconclusive.
 
 ---
 

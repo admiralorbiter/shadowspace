@@ -1,10 +1,16 @@
 # An Accessible Guide to the Research: Collective Opinion as a Relational Space
 
-> **One-Sentence Summary**: This research asks whether AI language models organize ambiguous language examples in the same way people do—and develops a new, mathematically rigorous way to compare them when human opinion patterns contain distance ties or uncertainty.
+- **Document type:** plain-language research guide
+- **Status:** current summary of the canonical Study 1 and exploratory Study 2 results
+
+> **One-sentence summary:** This research asks whether AI language models organize ambiguous
+> language examples in the same way people do—and develops a mathematically rigorous way to
+> compare them when human opinion patterns contain distance ties or uncertainty.
 
 ---
 
 ## Table of Contents
+
 1. [What Problem Is This Research Trying to Solve?](#1-what-problem-is-this-research-trying-to-solve)
 2. [What Dataset Does the Study Use? (Real Text Examples)](#2-what-dataset-does-the-study-use-real-text-examples)
 3. [What Does "Relational Space" Mean?](#3-what-does-relational-space-mean)
@@ -70,6 +76,7 @@ However, when 100 people evaluate this exact sentence pair, their judgments look
 Reducing this to a single label ("Neutral") discards the fact that **30% of human evaluators saw an entailment relationship**. That variation may reflect genuine ambiguity, implicit context, differing interpretations, annotation error, or a mixture of these.
 
 ### The Research Question
+
 Instead of asking *"Does the AI get the majority label right?"*, this project asks:
 
 $$\mathbf{\text{Do AI models preserve the relationships among examples implied by human judgment distributions?}}$$
@@ -89,18 +96,21 @@ $$\mathbf{p}_i = \left( \frac{\text{votes}_E}{100}, \frac{\text{votes}_N}{100}, 
 ### Real Examples Drawn Directly from the ChaosNLI Dataset
 
 #### 1. High-Agreement Clear Consensus Item (`chaosnli_snli_3980085662`)
+
 - **Premise**: *"Two young boys of opposing teams play football, while wearing full protection uniforms and helmets."*
 - **Hypothesis**: *"Boys play football."*
 - **Human Votes**: **98 Entailment, 2 Neutral, 0 Contradiction** $\rightarrow \mathbf{p} = (0.98, 0.02, 0.00)$
 - *Interpretation*: Near-unanimous consensus. Almost everyone agrees that playing football implies boys play football.
 
 #### 2. Two-Way Disagreement Item (`chaosnli_snli_2407214681`)
+
 - **Premise**: *"Two young children in blue jerseys, one with the number 9 and one with the number 2 are standing on wooden steps in a bathroom and washing their hands in a sink."*
 - **Hypothesis**: *"Two kids at a ballgame wash their hands."*
 - **Human Votes**: **30 Entailment, 70 Neutral, 0 Contradiction** $\rightarrow \mathbf{p} = (0.30, 0.70, 0.00)$
 - *Interpretation*: 70% feel "blue jerseys" doesn't guarantee they are at a ballgame (Neutral), while 30% infer from the jerseys that they are kids at a ballgame (Entailment).
 
 #### 3. Near-Even Three-Way Disagreement Item (`chaosnli_snli_3271178748`)
+
 - **Premise**: *"Number 13 kicks a soccer ball towards the goal during children's soccer game."*
 - **Hypothesis**: *"A player passing the ball in a soccer game."*
 - **Human Votes**: **36 Entailment, 33 Neutral, 31 Contradiction** $\rightarrow \mathbf{p} = (0.36, 0.33, 0.31)$
@@ -160,7 +170,8 @@ Let's look at an **exact real calculation** directly from the ChaosNLI dataset f
 
 We want to find the top $k=10$ nearest neighbors for Focal Item 0.
 
-### Step-by-Step Distance Audit from ChaosNLI:
+### Step-by-Step Distance Audit from ChaosNLI
+
 1. **9 candidate items** in the dataset have Hellinger distance strictly less than $0.02284$ ($d_{ij} < 0.02284$).
 2. **7 candidate items** are **tied exactly** at Hellinger distance $d_{ij} = 0.02284$ (all 7 having vote counts $33\text{ E}, 67\text{ N}, 0\text{ C}$)!
 
@@ -189,6 +200,7 @@ Votes:      (33 E, 67 N, 0 C)  -->  d_H = 0.02284
 ```
 
 ### The Arbitrary Storage-Order Failure
+
 We need **10 neighbors total**. Since 9 items are strictly closer, we only have **1 remaining slot** ($r_i = 10 - 9 = 1$). But we have **7 tied candidates** ($|B_i| = 7$).
 
 - **The index-resolved NumPy implementation tested here** (`np.argsort` without explicit `kind`): In this run, the implementation selected **Candidate 62**. Because NumPy's default sort is not guaranteed to preserve the original row order among tied values, reordering the rows of the dataset can cause another equally valid tied candidate (Candidate 74, 194, etc.) to be selected instead.
@@ -197,6 +209,7 @@ We need **10 neighbors total**. Since 9 items are strictly closer, we only have 
 $$w_{ij} = \frac{r_i}{|B_i|} = \frac{1}{7} \approx 0.14286$$
 
 ### Formal Weight Formula
+
 For focal item $i$ and rank $k$:
 - $A_i = \{j \neq i : d_{ij} < d_i(k)\}$ (strictly closer items, $w_{ij} = 1.0$)
 - $B_i = \{j \neq i : |d_{ij} - d_i(k)| \le \text{atol}\}$ (tied boundary items, $w_{ij} = r_i / |B_i|$)
@@ -273,25 +286,8 @@ Random Chance Null      (0.00354)  =|                                      |
 ```
 
 ### Key Takeaway
+
 Top-performing models (BART-Large at $0.01572$) achieve a raw paired ratio of approximately **20.8%** relative to the posterior-predictive human reference ($0.01572 / 0.07549 \approx 0.208$), or a chance-adjusted ratio of approximately **16.9%** after subtracting the empirical stratified null ($[0.01572 - 0.00354] / [0.07549 - 0.00354] \approx 0.169$). Models are substantially closer to the empirical stratified null ($0.00354$) than to human collective opinion alignment.
-
----
-
-## Appendix: How the Experimental Design Evolved
-
-> **Note for lay readers**: This appendix documents the historical development of the paired estimand. It is internal documentation useful for understanding the revision history. Most readers can proceed directly to Section 9.
-
-In earlier revisions of this research, model performance was evaluated asymmetrically:
-- $H_b = Q(G_{H1}^{(s)}, G_{H2}^{(s)})$ (human vs. posterior cohort, $s = b \bmod 500$)
-- $M_{m,b} = Q(G_m, G_{100}^{\text{obs}})$ (model vs. fixed observed graph)
-
-Our current baseline resolves this asymmetry by adopting the **fully paired construction**:
-
-$$M_{m,b} = \frac{1}{2}\left[Q(G_m, G_{H1}^{(s)}) + Q(G_m, G_{H2}^{(s)})\right]$$
-
-This supports a cleaner, directly matched scientific comparison:
-> *"Given the exact same simulated human cohorts, the nine evaluated AI language models resemble those cohorts substantially less than the cohorts resemble one another."*
-
 
 ---
 
@@ -309,6 +305,7 @@ We evaluate plug-in empirical reference similarity $R_{\text{reference}}(n, k) =
 *Each entry is mean \u00b1 SD across 50 independent seeds. Monotonicity confirmed for both means and 95% normal-approximation simulation interval lower bounds ($\bar{x} - 1.96 \times \text{SD}$) across all five k-columns.*
 
 ### Two Architectural Regimes
+
 - **Microstructure ($k=5, 10$)**: Highly sensitive to individual vote fluctuations.
 - **Mesostructure ($k=50, 100$)**: Broad regional opinion clusters recover smoothly ($0.5448 \pm 0.0038$ at $n=100, k=100$, 50-seed simulation).
 
@@ -325,6 +322,7 @@ Across 10,500 simulations (100 reps per cell):
 | **100 votes ($k=10$)** | **73.3% ± 3.0%** | 16.6% ± 2.9% | 9.4% ± 2.2% | **72.4%** |
 
 ### Theoretical Occupancy
+
 Out of $S = \binom{100+3-1}{3-1} = 5,151$ possible 3-class 100-vote profiles:
 - Expected occupied profiles under uniform occupancy: $\approx 2,337$
 - **Observed occupied profiles in ChaosNLI**: **1,604**
@@ -365,6 +363,7 @@ We matched 500 ChaosNLI items with **VariErr NLI** (Weber-Genzel et al., ACL 202
 - **Empirical $p$-value**: **$p = 0.2045$** ($102,248 / 500,000$)
 
 ### Scientific Takeaway
+
 The test shows a $7.8\%$ descriptive reduction in SD, but the result is **statistically inconclusive ($p = 0.2045$)**. We find no evidence that Level-1 vote profiles alone predict explanation validity. This reinforces the need for rationale-level data.
 
 ---
@@ -383,6 +382,7 @@ We evaluated operational case-routing categories combining model predictions, te
 | **Broadly Shared Relation** | 792 | 0.3% | Consensus reference edge |
 
 ### Retrieval Benchmark
+
 A text-space tie-breaker slightly improves heuristic taxonomy retrieval (MAP@10 $+0.00535$, $p \le 0.002$), but pure text embeddings discard opinion neighborhood structure ($Q_{NX}^{\text{soft}} = 0.0041$). Text similarity and opinion similarity are complementary, non-interchangeable structures.
 
 ---
@@ -468,3 +468,26 @@ $$\mathbf{\text{Does the model organize uncertain examples into the same relatio
 The research finds that human disagreement creates a structured—but noisy and scale-dependent—relational space. Conventional fixed-$k$ implementations that resolve ties by index order distort this space because distance ties are ubiquitous ($72.4\%$). Our tie-aware framework represents these ties explicitly and is invariant to file row order.
 
 Under a fully paired experimental design, the nine evaluated benchmark language models recover approximately **17–21%** of human replicate overlap in the opinion relational space. Human disagreement is not merely noise—it may induce a rich neighbor-graph structure that remains a key challenge for AI systems. The tie-aware framework developed here provides a reproducible, storage-order-invariant foundation for studying these structures.
+
+---
+
+## Appendix: How the Experimental Design Evolved
+
+> **Note for lay readers:** This appendix documents the historical development of the paired
+> estimand. It is useful for understanding the revision history but is not required for the main
+> guide.
+
+In earlier revisions of this research, model performance was evaluated asymmetrically:
+
+- $H_b = Q(G_{H1}^{(s)}, G_{H2}^{(s)})$ (human vs. posterior cohort,
+  $s = b \bmod 500$)
+- $M_{m,b} = Q(G_m, G_{100}^{\text{obs}})$ (model vs. fixed observed graph)
+
+The current baseline resolves this asymmetry with the **fully paired construction**:
+
+$$M_{m,b} = \frac{1}{2}\left[Q(G_m, G_{H1}^{(s)}) + Q(G_m, G_{H2}^{(s)})\right]$$
+
+This supports a cleaner, directly matched scientific comparison:
+
+> *Given the same simulated human cohorts, the nine evaluated AI language models resemble those
+> cohorts substantially less than the cohorts resemble one another.*

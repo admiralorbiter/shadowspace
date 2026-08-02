@@ -1,10 +1,13 @@
-# Study 1 Computational Audit & Empirical Report
+# Study 1: Computational Audit and Empirical Report
 
-**Dataset:** 3,113 Three-Class ChaosNLI Examples (1,514 SNLI + 1,599 MNLI)  
-**Date:** 2026-08-02 (Canonical Lock post Peer-Review Audit)  
-**Scope:** ChaosNLI Low-Agreement Sample, Neighborhood Structure, Dirichlet Posteriors, Fractional Tie-Aware Neighborhoods, Scale Curves, Annotation Budgeting, and Geometry Sensitivity
+- **Document type:** empirical report
+- **Status:** canonical report, locked 2026-08-02 after peer-review audit
+- **Dataset:** 3,113 three-class ChaosNLI examples (1,514 SNLI + 1,599 MNLI)
+- **Scope:** low-agreement sample, neighborhood structure, Dirichlet posteriors, fractional
+  tie-aware neighborhoods, scale curves, annotation budgeting, and geometry sensitivity
 
-> **Canonical Manifest Integration:** All quantitative values reported herein are generated directly from `results/canonical_results.yaml`.
+> **Canonical results:** Quantitative values are generated from
+> [`results/canonical_results.yaml`](../../../results/canonical_results.yaml).
 
 ---
 

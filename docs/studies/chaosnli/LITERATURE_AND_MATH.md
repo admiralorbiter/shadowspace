@@ -1,5 +1,8 @@
 # ChaosNLI Literature and Mathematical Foundations
 
+- **Document type:** research and mathematical reference
+- **Status:** living reference
+
 ## 1. Research landscape
 
 ### 1.1 Human disagreement is not one gold label plus noise

@@ -426,15 +426,17 @@ Strong at evaluating a fixed embedding. Shadowspace's opportunity is to make loc
 | stability | persistence across a declared family of assumptions or runs |
 | finding | saved view plus evidence, source identities, provenance, and note |
 
-## 14. Active Research Projects
+## 14. Active research projects
 
-- **ChaosNLI Research Package**: [`docs/studies/chaosnli/`](file:///c:/Users/admir/Github/shadowspace/docs/studies/chaosnli/README.md)
-  - Computational study comparing human opinion distributions vs model softmax distributions across 3,113 ChaosNLI items.
-  - Documents:
-    - [Research Overview](file:///c:/Users/admir/Github/shadowspace/docs/studies/chaosnli/README.md)
-    - [Literature & Math Foundations](file:///c:/Users/admir/Github/shadowspace/docs/studies/chaosnli/LITERATURE_AND_MATH.md)
-    - [Data Pipeline & Automation Plan](file:///c:/Users/admir/Github/shadowspace/docs/studies/chaosnli/DATA_PIPELINE_AND_AUTOMATION.md)
-    - [Hypotheses & Analysis Plan](file:///c:/Users/admir/Github/shadowspace/docs/studies/chaosnli/HYPOTHESES_AND_ANALYSIS_PLAN.md)
-    - [Coding & Review Protocol](file:///c:/Users/admir/Github/shadowspace/docs/studies/chaosnli/CODING_AND_REVIEW_PROTOCOL.md)
-    - [Study 1 Computational Audit Report](file:///c:/Users/admir/Github/shadowspace/docs/studies/chaosnli/STUDY1_COMPUTATIONAL_AUDIT.md)
-    - [Study 2 Joint Spaces Empirical Report](file:///c:/Users/admir/Github/shadowspace/docs/studies/chaosnli/STUDY2_JOINT_SPACES_REPORT.md)
+### ChaosNLI research package
+
+Computational research comparing human opinion distributions with model softmax distributions
+across 3,113 ChaosNLI items. Start with the
+[research package overview](studies/chaosnli/README.md), which records each document's role and
+current status.
+
+- [Accessible research guide](studies/chaosnli/ACCESSIBLE_RESEARCH_GUIDE.md)
+- [Study 1 computational audit](studies/chaosnli/STUDY1_COMPUTATIONAL_AUDIT.md)
+- [Study 2A exploratory text-space analysis](studies/chaosnli/STUDY2A_EXPLORATORY_TEXT_SPACE.md)
+- [Study 2B VariErr external validation](studies/chaosnli/STUDY2B_VARIERR_EXTERNAL_VALIDATION.md)
+- [Unified paper draft](studies/chaosnli/UNIFIED_PAPER_DRAFT.md)

@@ -1,5 +1,8 @@
 # ChaosNLI Data Pipeline and Automation Plan
 
+- **Document type:** technical design plan
+- **Status:** living plan; some components are implemented
+
 ## 1. Objective
 
 Convert third-party data and model outputs into:

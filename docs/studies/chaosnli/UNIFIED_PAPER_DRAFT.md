@@ -1,7 +1,8 @@
 # Collective Opinion as a Relational Space: Tie-Aware Neighborhood Analysis of Human and Model NLI Distributions
 
-**Draft for External Peer Review (Round 12 Final Methodological Revision)**  
-*ChaosNLI Computational Audit, Reference Graph Similarity, and Formal Tie Mathematics*
+- **Document type:** paper draft
+- **Status:** external peer-review draft; Round 12 methodological revision
+- **Scope:** ChaosNLI computational audit, reference-graph similarity, and formal tie mathematics
 
 ---
 
@@ -195,7 +196,7 @@ To model how annotation scale ($n$) and label granularity ($C$) shape boundary t
 | 50 | 79.5% ± 2.7% | 37.9% ± 3.0% | 38.6% ± 3.0% | — |
 | **100** | **73.3% ± 3.0%** | **16.6% ± 2.9%** | **9.4% ± 2.2%** | **72.4%** |
 
-### Occupancy and Simplex Concentration Analysis
+#### Occupancy and Simplex Concentration Analysis
 
 Theoretical occupancy analysis over ChaosNLI's $N=3,113$ items and $S = \binom{100+3-1}{3-1} = 5,151$ possible 100-vote 3-class profiles shows that under uniform independent occupancy, expected occupied profiles are:
 $$\mathbb{E}[U] = S \left[1 - \left(1 - \frac{1}{S}\right)^N\right] \approx 2,337$$
@@ -218,7 +219,7 @@ As a secondary exploratory analysis, we evaluated our two-level architecture aga
 | Metric | Value | Description |
 |---|---|---|
 | Matched Items | 500 | Items present in both VariErr and ChaosNLI-M |
-| Multi-Item Profiles ($|g| > 1$) | 52 | Distinct ChaosNLI vote profiles containing $\ge 2$ VariErr items |
+| Multi-Item Profiles ($\lvert g\rvert > 1$) | 52 | Distinct ChaosNLI vote profiles containing $\ge 2$ VariErr items |
 | Overall Item-Level Validity SD | 0.1413 | Total sample SD of explanation validity ratios ($n=500$) |
 | Overall Item-Level Validity Variance | 0.0200 | Total sample variance ($0.1413^2 = 0.0200$) |
 | Mean Within-Profile Validity SD | 0.1060 | Average sample SD across 52 multi-item profiles |
@@ -235,30 +236,39 @@ As a secondary exploratory analysis, we evaluated our two-level architecture aga
 ## 6. Complete Methods and Reproducibility Specifications
 
 ### 6.0 Data and Inclusion Scope
+
 ChaosNLI contains 3,113 items ($1,514$ SNLI, $1,599$ MNLI) with 100 human votes per item over 3 semantic classes (entailment, neutral, contradiction). Items were selected by Nie et al. (2020) for annotator disagreement. Selection-conditioned scope: results reflect low-agreement NLI items.
 
 ### 6.1 Distance Metrics and Floating-Point Tie Detection
+
 Distance matrices use double-precision float64 arithmetic. Hellinger distance between $p, q$ is $d_H(p, q) = \frac{1}{\sqrt{2}} \sqrt{\sum_{c=1}^C (\sqrt{p_c} - \sqrt{q_c})^2}$. Ties use exact float comparison for count vectors and $|d_{ij} - d_{ik}| < 10^{-12}$ for smoothed distributions.
 
 ### 6.2 Dirichlet Posterior Prior and Sampling Procedure
+
 Posterior distributions use a symmetric Dirichlet prior $\boldsymbol{\alpha} = (0.5, 0.5, 0.5)$ (Jeffreys prior). Posterior predictive samples draw $\boldsymbol{\theta}_i \sim \text{Dirichlet}(\mathbf{x}_i + \boldsymbol{\alpha})$, followed by independent multinomial draws $\mathbf{y}_{i,1}, \mathbf{y}_{i,2} \sim \text{Multinomial}(n, \boldsymbol{\theta}_i)$.
 
 ### 6.3 Model Predictions and Logit Conversion
-Model predictions use pre-computed logits from 9 benchmark NLI models: BART-Large, RoBERTa-Large, XLNet-Large, ALBERT-xxLarge, BERT-Large, RoBERTa-Base, XLNet-Base, DistilBERT, BERT-Base. Softmax converts logits to 3-class probability distributions $q_m = \text{softmax}(z_m)$ with label order [entailment, neutral, contradiction]. Model logits are loaded from artifact files under `research/chaosnli/models/`; exact artifact filenames, SHA-256 checksums, and HuggingFace checkpoint identifiers are recorded in `results/model_provenance.yaml`.
+
+Model predictions use pre-computed logits from 9 benchmark NLI models: BART-Large, RoBERTa-Large, XLNet-Large, ALBERT-xxLarge, BERT-Large, RoBERTa-Base, XLNet-Base, DistilBERT, BERT-Base. Softmax converts logits to 3-class probability distributions $q_m = \text{softmax}(z_m)$ with label order [entailment, neutral, contradiction]. The generated probability artifact is intentionally excluded from version control. A locked provenance manifest containing source artifact filenames, SHA-256 checksums, and exact checkpoint identifiers is still required before archival release.
 
 ### 6.4 Storage-Order Row Permutation Experiment
+
 Row-permutation tests apply 1,000 random permutations $\pi$ to distance matrix rows and columns simultaneously. Nearest neighbors are sorted using NumPy's `np.argsort` without an explicit `kind` argument (defaulting to quicksort). In the presence of exact distance ties, sorting order is determined by array memory layout index, generating storage-order instability. Inverse permutations $\pi^{-1}$ restore persistent object identities before computing top-$k$ overlap.
 
 ### 6.5 Stratified Joint Bootstrap Procedure
+
 Bootstrap resampling draws 1,000 stratified samples of focal items ($1,514$ SNLI, $1,599$ MNLI drawn with replacement). Each replicate $b$ pairs focal items with posterior pair $s = b \bmod 500$. We use a fully paired design: $H_b = Q(G_{H1}^{(s)}, G_{H2}^{(s)})$ evaluates two independent posterior-predictive cohorts, while $M_{m,b} = \tfrac{1}{2}[Q(G_m, G_{H1}^{(s)}) + Q(G_m, G_{H2}^{(s)})]$ evaluates each model symmetrically against the same two cohorts. Fixed-reference scores $Q(G_m, G_{100}^{\text{obs}})$ are reported as a secondary descriptive baseline. Difference statistics $\Delta_{m,b} = H_b - M_{m,b}$ construct 95% percentile confidence intervals.
 
 ### 6.6 Reference Graph Similarity Surface Simulation
+
 Plug-in empirical reference similarity $R_{\text{reference}}(n, k) = Q(G_n^{\text{rep}}, G_{100}^{\text{obs}})$ simulates independent $n$-vote plug-in multinomial draws $\mathbf{y}_i \sim \text{Multinomial}(n, \hat{p}_i)$ using observed proportions $\hat{p}_i$ (not posterior-predictive samples) across 8 vote depths ($n \in \{3..100\}$) and 5 scales ($k \in \{5..100\}$). The simulation used 50 independent seeds per $(n, k)$ cell (seeds 0–49, generated via NumPy `default_rng` with sequential integer seeds). Reported $\pm$ values are sample standard deviations across the 50 seed replicates. The 95% normal-approximation simulation intervals in Table 4 are computed as sample mean $\pm 1.96 \times \text{SD}$, describing variation across the 50 simulation draws (not precision of the mean). Monotonicity of simulation interval lower bounds was verified empirically across all five $k$-columns. A complementary posterior-predictive surface $R_{\text{posterior}}(n, k)$, incorporating Dirichlet sampling over latent $\boldsymbol{\theta}_i$, will be reported in a follow-up revision.
 
 ### 6.7 Phase Diagram Simulation Parameters
+
 Phase simulations evaluate 105 parameter combinations ($\alpha \in \{0.1, 0.5, 1.0\} \times C \in \{2, 3, 5, 7, 10\} \times n \in \{3..100\}$) with 100 replications per cell ($10,500$ simulations). Standard deviation bounds describe empirical variation across the 100 cell replications.
 
 ### 6.8 VariErr External Matching and Permutation Test
+
 VariErr NLI (Weber-Genzel et al., 2024) matches 500 items to ChaosNLI-M via `source_pair_id`. Validity ratio per item is $y_i = \text{valid judgments} / \text{total judgments}$. Profile-size preserved null shuffles validity ratios 500,000 times natively across 52 multi-item profiles with Bessel $n-1$ SDs and equal profile weighting. Singletons ($|g|=1$) are excluded from profile dispersion averages.
 
 ---

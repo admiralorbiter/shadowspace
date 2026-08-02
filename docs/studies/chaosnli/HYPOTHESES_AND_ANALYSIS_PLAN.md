@@ -1,5 +1,8 @@
 # ChaosNLI Hypotheses and Analysis Plan
 
+- **Document type:** analysis plan
+- **Status:** planning document; not a completed preregistration
+
 ## 1. Scope and inferential population
 
 Primary population:
@@ -88,9 +91,9 @@ Model consensus \(c_{ij}\): fraction of model graphs containing it.
 
 ## 4. Confirmatory hypotheses
 
-## H1 — Model graphs do not reach human split-half reliability
+### H1 — Model graphs do not reach human split-half reliability
 
-### Statement
+#### Statement
 
 For each preregistered model,
 
@@ -100,7 +103,7 @@ Q^{HM}_{NX}(10)
 median_b[Q^{HH,(b)}_{NX}(10)].
 \]
 
-### Test
+#### Test
 
 Item-level difference:
 
@@ -111,7 +114,7 @@ O_i^{HM}(10)-mean_b[O_i^{HH,(b)}(10)].
 
 Use paired item bootstrap stratified by dataset and majority label.
 
-### Report
+#### Report
 
 - mean difference;
 - bootstrap 95% CI;
@@ -119,15 +122,15 @@ Use paired item bootstrap stratified by dataset and majority label.
 - separate SNLI/MNLI;
 - full \(k\)-curve.
 
-### Null interpretation
+#### Null interpretation
 
 An interval around zero means the model recovers local structure about as well as two 50-vote human estimates recover each other at this scale. It does not mean the model reproduces human reasoning.
 
 ---
 
-## H2 — Pointwise calibration gains exceed topology gains
+### H2 — Pointwise calibration gains exceed topology gains
 
-### Statement
+#### Statement
 
 Temperature scaling reduces average JSD more strongly than it improves neighborhood recovery:
 
@@ -145,29 +148,29 @@ Q_{m,cal}(10)-Q_{m,raw}(10)
 
 has smaller standardized magnitude.
 
-### Test
+#### Test
 
 - paired item bootstrap for JSD change;
 - paired item bootstrap for local-overlap change;
 - compare standardized changes through bootstrap distributions.
 
-### Control
+#### Control
 
 Calibration fitted outside locked confirmatory items.
 
-### Meaning
+#### Meaning
 
 Tests whether marginal probability alignment is sufficient to recover relational human structure.
 
 ---
 
-## H3 — Human disagreement moderates graph recovery
+### H3 — Human disagreement moderates graph recovery
 
-### Statement
+#### Statement
 
 Model–human overlap decreases as human entropy rises.
 
-### Model
+#### Model
 
 \[
 shared_{im}\sim Binomial(k,\pi_{im}),
@@ -198,9 +201,9 @@ Robustness:
 
 ---
 
-## H4 — Calibration does not eliminate mismatch asymmetry
+### H4 — Calibration does not eliminate mismatch asymmetry
 
-### Statement
+#### Statement
 
 After calibration, uncertainty collapse remains more common than spurious uncertainty on high-disagreement items.
 
@@ -218,7 +221,7 @@ P(H(q_i)>H(\theta_i)\mid x_i).
 
 Classify only above posterior probability 0.95; otherwise unresolved.
 
-### Test
+#### Test
 
 Within high-entropy items, compare categories using paired item bootstrap or multinomial modeling.
 
@@ -226,9 +229,9 @@ Report every model separately.
 
 ---
 
-## H5 — Model consensus is not sufficient for human support
+### H5 — Model consensus is not sufficient for human support
 
-### Statement
+#### Statement
 
 There are recurring edges with high model consensus and low human support.
 
@@ -240,21 +243,21 @@ P(c_{ij}\ge0.80,\;s_{ij}\le0.10)
 
 among the union of model top-\(k\) edges.
 
-### Test
+#### Test
 
 Descriptive prevalence with item-clustered bootstrap intervals.
 
 Null: permute model distributions across item IDs within dataset, majority-label, and entropy strata.
 
-### Meaning
+#### Meaning
 
 Demonstrates model-family relations not explained by human judgment similarity. It does not identify their cause.
 
 ---
 
-## H6 — Externally validated disagreement types have relational signal
+### H6 — Externally validated disagreement types have relational signal
 
-### Statement
+#### Statement
 
 On externally annotated items, human-opinion neighborhoods show above-null agreement in high-level disagreement categories after controlling for majority and entropy.
 
@@ -267,23 +270,23 @@ A_i(k)
 Jaccard(T_i,T_j).
 \]
 
-### Null
+#### Null
 
 Permute taxonomy sets within majority-label, entropy, and dataset/genre strata where sample size permits.
 
-### Test
+#### Test
 
 Permutation distribution of mean \(A_i(k)\).
 
-### Limitation
+#### Limitation
 
 The taxonomy was developed on a subset of these data. Prefer held-out annotation rounds or VariErr overlap for confirmatory validation.
 
 ---
 
-## H7 — Joint opinion-and-text neighborhoods better predict shared reasons
+### H7 — Joint opinion-and-text neighborhoods better predict shared reasons
 
-### Statement
+#### Statement
 
 Edges supported in human-opinion and text-semantic space have greater taxonomy/explanation agreement than either alone.
 
@@ -296,27 +299,27 @@ text_only
 matched_neither
 ```
 
-### Test
+#### Test
 
 Compare taxonomy-set Jaccard or explanation similarity with item-clustered bootstrap and degree-preserving permutation where practical.
 
-### Meaning
+#### Meaning
 
 Supports multi-view investigation, not ground-truth status for the text encoder.
 
 ---
 
-## H8 — Reliability-aware visualization improves diagnostic accuracy
+### H8 — Reliability-aware visualization improves diagnostic accuracy
 
 Later human-subject study.
 
-### Conditions
+#### Conditions
 
 A. text + table + ternary  
 B. static comparison + neighbor list  
 C. Shadowspace reliability-aware comparison
 
-### Task labels
+#### Task labels
 
 - human-supported;
 - model-specific;
@@ -325,11 +328,11 @@ C. Shadowspace reliability-aware comparison
 - projection/metric-sensitive;
 - unresolved.
 
-### Primary outcome
+#### Primary outcome
 
 Correct/incorrect against a frozen rubric.
 
-### Secondary
+#### Secondary
 
 - confidence calibration;
 - time;
@@ -337,7 +340,7 @@ Correct/incorrect against a frozen rubric.
 - use of unresolved;
 - claim-qualification score.
 
-### Analysis
+#### Analysis
 
 Mixed-effects logistic regression with participant and item random intercepts, plus paired nonparametric sensitivity.
 
