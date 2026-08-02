@@ -25,11 +25,20 @@ htmlcov/
 # Linting
 .ruff_cache/
 
+# Rust / Cargo build artifacts
+**/target/
+target/
+*.rs.bk
+cargo-timing.html
+research/chaosnli/rust_manifest/target/
+research/chaosnli/rust_manifest/model_probs.json
+
 # Generated bundles (run `shadowspace generate` to recreate)
 data/bundles/
 
-# ChaosNLI raw data and artifacts
+# ChaosNLI raw & external data and artifacts
 data/chaosnli/
+data/external/
 research/chaosnli/artifacts/
 
 # Notebooks checkpoints

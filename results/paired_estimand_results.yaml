@@ -1,0 +1,84 @@
+estimand: paired
+description: 'Paired estimand: H_b = Q(G_H1^(b), G_H2^(b)), M_m,b = 0.5 * [Q(G_m,
+  G_H1^(b)) + Q(G_m, G_H2^(b))]. Both human and model scores evaluated against the
+  same two posterior cohorts.'
+n_pairs: 500
+n_bootstrap: 1000
+k: 10
+hh100_bootstrap_mean: 0.07549
+hh100_bootstrap_95ci:
+- 0.06999708544034756
+- 0.08098918776664024
+models:
+  albert-xxlarge:
+    q_paired_hm_mean: 0.01124
+    delta_m_mean: 0.06426
+    delta_m_95ci:
+    - 0.05896
+    - 0.06997
+    replicates_gt_zero: 1000/1000
+    q_fixed_reference: 0.01074
+  bart-large:
+    q_paired_hm_mean: 0.01572
+    delta_m_mean: 0.05977
+    delta_m_95ci:
+    - 0.05431
+    - 0.06539
+    replicates_gt_zero: 1000/1000
+    q_fixed_reference: 0.01867
+  bert-base:
+    q_paired_hm_mean: 0.00768
+    delta_m_mean: 0.06782
+    delta_m_95ci:
+    - 0.06235
+    - 0.07356
+    replicates_gt_zero: 1000/1000
+    q_fixed_reference: 0.00865
+  bert-large:
+    q_paired_hm_mean: 0.01029
+    delta_m_mean: 0.0652
+    delta_m_95ci:
+    - 0.05966
+    - 0.07076
+    replicates_gt_zero: 1000/1000
+    q_fixed_reference: 0.01059
+  distilbert:
+    q_paired_hm_mean: 0.00854
+    delta_m_mean: 0.06695
+    delta_m_95ci:
+    - 0.06124
+    - 0.07261
+    replicates_gt_zero: 1000/1000
+    q_fixed_reference: 0.00854
+  roberta-base:
+    q_paired_hm_mean: 0.01007
+    delta_m_mean: 0.06543
+    delta_m_95ci:
+    - 0.05979
+    - 0.07106
+    replicates_gt_zero: 1000/1000
+    q_fixed_reference: 0.01129
+  roberta-large:
+    q_paired_hm_mean: 0.01415
+    delta_m_mean: 0.06135
+    delta_m_95ci:
+    - 0.05557
+    - 0.06685
+    replicates_gt_zero: 1000/1000
+    q_fixed_reference: 0.01821
+  xlnet-base:
+    q_paired_hm_mean: 0.00927
+    delta_m_mean: 0.06623
+    delta_m_95ci:
+    - 0.06069
+    - 0.07175
+    replicates_gt_zero: 1000/1000
+    q_fixed_reference: 0.00893
+  xlnet-large:
+    q_paired_hm_mean: 0.01285
+    delta_m_mean: 0.06264
+    delta_m_95ci:
+    - 0.05711
+    - 0.06846
+    replicates_gt_zero: 1000/1000
+    q_fixed_reference: 0.01319
