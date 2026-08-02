@@ -13,20 +13,20 @@
 6. [Three Ways to Compare Tied Neighborhoods](#6-three-ways-to-compare-tied-neighborhoods)
 7. [Human Judgment Is Uncertain Too](#7-human-judgment-is-uncertain-too)
 8. [The AI Model Experiment and Paired Results](#8-the-ai-model-experiment-and-paired-results)
-9. [Design Asymmetry vs. Fully Paired Estimand](#9-design-asymmetry-vs-fully-paired-estimand)
-10. [How Annotation Depth Changes the Map](#10-how-annotation-depth-changes-the-map)
-11. [The Phase-Diagram Experiment](#11-the-phase-diagram-experiment)
-12. [The Level-1 and Level-2 Distinction](#12-the-level-1-and-level-2-distinction)
-13. [The VariErr External Analysis](#13-the-varierr-external-analysis)
-14. [Exploratory Text-Space Work](#14-exploratory-text-space-work)
-15. [What Is the Main Scientific Contribution?](#15-what-is-the-main-scientific-contribution)
-16. [Why Does This Matter for Language Models?](#16-why-does-this-matter-for-language-models)
-17. [Practical Downstream Uses](#17-practical-downstream-uses)
-18. [Applications Outside Language](#18-applications-outside-language)
-19. [What the Research Does Not Prove](#19-what-the-research-does-not-prove)
-20. [Important Limitations](#20-important-limitations)
-21. [Most Important Future Questions](#21-most-important-future-questions)
-22. [Plain-Language Conclusion](#22-plain-language-conclusion)
+9. [How Annotation Depth Changes the Map](#9-how-annotation-depth-changes-the-map)
+10. [The Phase-Diagram Experiment](#10-the-phase-diagram-experiment)
+11. [The Level-1 and Level-2 Distinction](#11-the-level-1-and-level-2-distinction)
+12. [The VariErr External Analysis](#12-the-varierr-external-analysis)
+13. [Exploratory Text-Space Work](#13-exploratory-text-space-work)
+14. [What Is the Main Scientific Contribution?](#14-what-is-the-main-scientific-contribution)
+15. [Why Does This Matter for Language Models?](#15-why-does-this-matter-for-language-models)
+16. [Practical Downstream Uses](#16-practical-downstream-uses)
+17. [Applications Outside Language](#17-applications-outside-language)
+18. [What the Research Does Not Prove](#18-what-the-research-does-not-prove)
+19. [Important Limitations](#19-important-limitations)
+20. [Most Important Future Questions](#20-most-important-future-questions)
+21. [Plain-Language Conclusion](#21-plain-language-conclusion)
+* [Appendix: Design Evolution](#appendix-how-the-experimental-design-evolved)
 
 ---
 
@@ -191,7 +191,7 @@ Votes:      (33 E, 67 N, 0 C)  -->  d_H = 0.02284
 ### The Arbitrary Storage-Order Failure
 We need **10 neighbors total**. Since 9 items are strictly closer, we only have **1 remaining slot** ($r_i = 10 - 9 = 1$). But we have **7 tied candidates** ($|B_i| = 7$).
 
-- **Standard Nearest Neighbor Software** (`scikit-learn`, `np.argsort`): In this run, the implementation selected **Candidate 62**. Because NumPy's default sort is not guaranteed to preserve the original row order among tied values, reordering the rows of the dataset can cause another equally valid tied candidate (Candidate 74, 194, etc.) to be selected instead.
+- **Standard Nearest Neighbor Software** (the NumPy-based implementation tested here, `np.argsort` without explicit `kind`): In this run, the implementation selected **Candidate 62**. Because NumPy's default sort is not guaranteed to preserve the original row order among tied values, reordering the rows of the dataset can cause another equally valid tied candidate (Candidate 74, 194, etc.) to be selected instead.
 - **Our Tie-Aware Solution**: Assigns each of the 7 tied candidates an exact, reproducible fractional weight:
 
 $$w_{ij} = \frac{r_i}{|B_i|} = \frac{1}{7} \approx 0.14286$$
@@ -308,7 +308,7 @@ We evaluate plug-in empirical reference similarity $R_{\text{reference}}(n, k) =
 
 ### Two Architectural Regimes
 - **Microstructure ($k=5, 10$)**: Highly sensitive to individual vote fluctuations.
-- **Mesostructure ($k=50, 100$)**: Broad regional opinion clusters recover smoothly ($0.5376$ at $n=100$).
+- **Mesostructure ($k=50, 100$)**: Broad regional opinion clusters recover smoothly ($0.5448 \pm 0.0038$ at $n=100, k=100$, 50-seed simulation).
 
 ---
 
@@ -441,7 +441,7 @@ The tie-aware relational methodology applies to any domain with multi-annotator 
 
 1. **Selected Low-Agreement Population**: ChaosNLI targets disputed items; tie rates may be lower in standard corpora.
 2. **Pre-2023 Model Set**: Benchmark models reflect BERT/RoBERTa/BART-era architectures.
-3. **Multi-Seed Reference Surface**: 50-seed simulation completed; monotonicity confirmed for means and CI lower bounds across all $k$ values.
+3. **Plug-in Surface vs. Posterior-Predictive Surface**: Reference surface $R_{\text{reference}}(n, k)$ conditions on observed proportions $\hat{p}_i$ and does not include posterior uncertainty over latent human distributions.
 4. **VariErr Power Constraints**: External test is restricted to 52 multi-item profiles ($p=0.2045$).
 
 ---

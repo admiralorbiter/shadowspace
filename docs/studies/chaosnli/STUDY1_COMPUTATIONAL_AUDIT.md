@@ -2,7 +2,7 @@
 
 **Dataset:** 3,113 Three-Class ChaosNLI Examples (1,514 SNLI + 1,599 MNLI)  
 **Date:** 2026-08-02 (Canonical Lock post Peer-Review Audit)  
-**Scope:** ChaosNLI Low-Agreement Sample, Human-Opinion Topology, Dirichlet Posteriors, Fractional Tie-Aware Neighborhoods, Scale Curves, Annotation Budgeting, and Geometry Sensitivity
+**Scope:** ChaosNLI Low-Agreement Sample, Neighborhood Structure, Dirichlet Posteriors, Fractional Tie-Aware Neighborhoods, Scale Curves, Annotation Budgeting, and Geometry Sensitivity
 
 > **Canonical Manifest Integration:** All quantitative values reported herein are generated directly from `results/canonical_results.yaml`.
 
@@ -21,7 +21,7 @@
 | **Posterior Mean Composition Entropy ($H(E[\theta\mid x])$)** | **0.9534 bits** | Regularized under Dirichlet $\boldsymbol{\alpha}=(0.5, 0.5, 0.5)$ |
 | **Deterministic Storage-Order Overlap Artifact** | **0.9074 $\pm$ 0.0024** | Deterministic overlap across **1,000** random row permutations (SD $= 0.0024$) |
 | **Fractional Soft Overlap Invariance** | **1.0000 $\pm$ 0.0000** | Strictly row-order invariant across all 1,000 permutations |
-| **500-Pair Posterior Predictive Reference ($Q_{NX}^{\text{soft, HH100}}$)** | **0.07522** ($\bar{H}$) | Direct unweighted mean of 500 posterior-predictive simulation pairs ($\bar{H} = 0.07522$); Median $0.07548$, SD $0.00227$, 95% Joint Bootstrap Interval $[0.07000, 0.08099]$ |
+| **500-Pair Posterior Predictive Reference (`hh100`)** | **0.07550** (direct) / **0.07549** ($\bar{H}$) | Direct unweighted mean of 500 posterior-predictive simulation pairs (`hh100.direct_pair_mean`: 0.07550, simulation interval `[0.07111, 0.08007]`); canonical bootstrap mean `hh100.focal_bootstrap_mean`: $\bar{H} = 0.07549$, 95% Joint Bootstrap Interval `[0.07000, 0.08099]`. Monte Carlo difference is 0.00001 (within simulation error).
 | **Theoretical Chance Baseline Overlap ($k/(N-1)$)** | **0.00321 (0.321%)** | Expected random overlap for $k=10, N=3113$ |
 | **Empirical Stratified Null Mean** | **0.00354 (0.354%)** | Mean overlap under 100 stratified item-identity permutations |
 
@@ -93,7 +93,7 @@ For candidate weights $w_{ij}^A, w_{ij}^B \in [0, 1]$, we formalize three neighb
 | **XLNet-Base** | **0.00927** | **0.06623** | **[0.06069, 0.07175]** | **1,000 / 1,000** | **0.00893** |
 | **DistilBERT** | **0.00854** | **0.06695** | **[0.06124, 0.07261]** | **1,000 / 1,000** | **0.00854** |
 | **BERT-Base** | **0.00768** | **0.06782** | **[0.06235, 0.07356]** | **1,000 / 1,000** | **0.00865** |
-| **HH100 Direct Mean** ($\bar{H}$) | **0.07522** | — | **[0.07000, 0.08099]** | — | — |
+| **HH100 Bootstrap Mean** ($\bar{H}$) | **0.07549** | — | **[0.07000, 0.08099]** | — | — |
 
 ---
 

@@ -46,10 +46,10 @@ We evaluate 307,662 candidate directed edges (where either $w_{\text{human}} > 0
 
 **Table 1: Heuristic Proxy-Taxonomy Tie Resolution ($k=10$)**
 
-| Strategy | MAP@10 | 95% Monte Carlo CI | Delta MAP@10 (vs Random) | Monte Carlo $p$-value |
+| Strategy | MAP@10 | 95% Randomization Interval | Delta MAP@10 (vs Random) | Monte Carlo $p$-value |
 |---|---|---|---|---|
 | 500-Pass Random Tie Baseline | 0.52967 | [0.52714, 0.53217] | — | — |
 | Lexicographic $(d_H, d_{\text{text}})$ | **0.53502** | — | **+0.00535** | **$p \le 0.002$** |
 | Pure Text Space | 0.59650 | — | +0.06683 | $p \le 0.002$ |
 
-*Observation*: Pure Text achieves highest retrieval against text-derived heuristic categories, but discards opinion topology ($Q_{NX}^{\text{soft}} = 0.0041$). Lexicographic tie-breaking achieves a modest $+0.00535$ MAP@10 improvement over random tie resolution ($p \le 0.002$, minimum one-sided Monte Carlo bound for $N_{\text{perm}} = 500$) while preserving exact opinion rank order.
+*Observation*: Pure Text achieves highest retrieval against text-derived heuristic categories, but discards opinion neighborhood structure ($Q_{NX}^{\text{soft}} = 0.0041$). Lexicographic tie-breaking achieves a modest $+0.00535$ MAP@10 improvement over random tie resolution ($p \le 0.002$, minimum one-sided Monte Carlo bound for $N_{\text{perm}} = 500$) while preserving exact opinion rank order.
