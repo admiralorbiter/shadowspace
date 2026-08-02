@@ -123,6 +123,7 @@ async function boot() {
   initDualViewControls();
   initSprint13Controls();
   initOptimizerControls();
+  initSprint15UIControls();
   initAccessibility();
   initKeyboardShortcuts();
   initCanvasInteraction();
@@ -307,6 +308,7 @@ async function setRepresentation(repId) {
 function initMetricSelector() {
   metricSelect.addEventListener("change", async (e) => {
     currentMetric = e.target.value;
+    if (showDistortionMap) loadDistortionGrid();
     await fetchDiagnostics();
     renderScatter();
   });
@@ -629,8 +631,8 @@ function updateVarianceBars() {
 }
 
 function updateLegendList() {
-  const legendList = document.getElementById("legend-list");
-  if (!legendList || !fixtureData) return;
+  const legendStrip = document.getElementById("canvas-legend-strip");
+  if (!legendStrip || !fixtureData) return;
 
   const palette = [
     "#6ee7b7", "#93c5fd", "#c4b5fd", "#f472b6", "#fbbf24",
@@ -639,21 +641,21 @@ function updateLegendList() {
 
   if (currentDataset === "synthetic_4class" || currentDataset === "calibration_3class") {
     const isSynth = currentDataset === "synthetic_4class";
-    legendList.innerHTML = `
-      <li><span class="legend-dot" style="background:#6ee7b7"></span>Corner cluster</li>
-      <li><span class="legend-dot" style="background:#93c5fd"></span>Midpoint / Ambiguity</li>
-      <li><span class="legend-dot" style="background:#fbbf24"></span>Uniform center</li>
-      <li><span class="legend-dot" style="background:${isSynth ? '#f472b6' : '#c4b5fd'}"></span>${isSynth ? 'Planted bridge / Outlier' : 'Interior distribution'}</li>
+    legendStrip.innerHTML = `
+      <div class="canvas-legend-item"><span class="canvas-legend-dot" style="background:#6ee7b7"></span>Corner cluster</div>
+      <div class="canvas-legend-item"><span class="canvas-legend-dot" style="background:#93c5fd"></span>Midpoint</div>
+      <div class="canvas-legend-item"><span class="canvas-legend-dot" style="background:#fbbf24"></span>Uniform center</div>
+      <div class="canvas-legend-item"><span class="canvas-legend-dot" style="background:${isSynth ? '#f472b6' : '#c4b5fd'}"></span>${isSynth ? 'Outlier' : 'Interior'}</div>
     `;
     return;
   }
 
   const featNames = fixtureData.feature_names || [];
-  legendList.innerHTML = featNames
+  legendStrip.innerHTML = featNames
     .map((name, i) => {
       const cleanName = name.replace(/^p_/, '');
       const color = palette[i % palette.length];
-      return `<li><span class="legend-dot" style="background:${color}"></span>${escapeHtml(cleanName)}</li>`;
+      return `<div class="canvas-legend-item"><span class="canvas-legend-dot" style="background:${color}"></span>${escapeHtml(cleanName)}</div>`;
     })
     .join("");
 }
@@ -862,10 +864,10 @@ function updateStabilityPanel() {
 
   if (pointStabilityData) {
     const pIdxLabel = document.getElementById("stability-index-label");
-    if (pIdxLabel) {
-      const pct = Math.round((pointStabilityData.persistence_index || 0) * 100);
-      pIdxLabel.textContent = `${pct}% Persistent`;
-    }
+    const gaugeBar  = document.getElementById("stability-gauge-bar");
+    const pct       = Math.round((pointStabilityData.persistence_index || 0) * 100);
+    if (pIdxLabel) pIdxLabel.textContent = `${pct}% Persistent`;
+    if (gaugeBar)  gaugeBar.style.width   = `${pct}%`;
   }
 
   updateSelectedPointStabilityCard();
@@ -931,6 +933,85 @@ function updateRashomonListUI() {
       </div>
     </div>
   `).join("");
+}
+
+function updateIntegrityPanel(data) {
+  if (!data) return;
+  document.getElementById("diag-precision").textContent = (data.precision * 100).toFixed(0) + "%";
+  document.getElementById("diag-recall").textContent    = (data.recall * 100).toFixed(0) + "%";
+  
+  const trustElem = document.getElementById("diag-trust");
+  const trustGauge = document.getElementById("trust-gauge-bar");
+  const trustPct  = (data.trustworthiness * 100).toFixed(0);
+  trustElem.textContent = `${trustPct}%`;
+  if (trustGauge) trustGauge.style.width = `${trustPct}%`;
+
+  if (data.trustworthiness >= 0.90) {
+    trustElem.style.color = "#6ee7b7";
+    if (trustGauge) trustGauge.style.backgroundColor = "#34d399";
+  } else if (data.trustworthiness < 0.80) {
+    trustElem.style.color = "#f87171";
+    if (trustGauge) trustGauge.style.backgroundColor = "#f43f5e";
+  } else {
+    trustElem.style.color = "#fbbf24";
+    if (trustGauge) trustGauge.style.backgroundColor = "#fbbf24";
+  }
+
+  document.getElementById("diag-stress").textContent = data.stress.toFixed(2);
+
+  const nPreserved = data.preserved.length;
+  const nTorn      = data.torn.length;
+  const nFalse     = data.false_neighbors.length;
+  const totalBreakdown = nPreserved + nTorn + nFalse || 1;
+
+  document.getElementById("count-preserved").textContent = nPreserved;
+  document.getElementById("count-torn").textContent      = nTorn ? `${nTorn} (${data.torn.join(", ")})` : "0";
+  document.getElementById("count-false").textContent     = nFalse ? `${nFalse} (${data.false_neighbors.join(", ")})` : "0";
+
+  const barPreserved = document.getElementById("bar-seg-preserved");
+  const barTorn      = document.getElementById("bar-seg-torn");
+  const barFalse     = document.getElementById("bar-seg-false");
+
+  if (barPreserved) barPreserved.style.width = `${(nPreserved / totalBreakdown) * 100}%`;
+  if (barTorn)      barTorn.style.width      = `${(nTorn / totalBreakdown) * 100}%`;
+  if (barFalse)     barFalse.style.width     = `${(nFalse / totalBreakdown) * 100}%`;
+}
+
+function initSprint15UIControls() {
+  const btnTabSetup = document.getElementById("tab-btn-setup");
+  const btnTabAnalysis = document.getElementById("tab-btn-analysis");
+  const tabContentSetup = document.getElementById("sidebar-tab-setup");
+  const tabContentAnalysis = document.getElementById("sidebar-tab-analysis");
+
+  if (btnTabSetup && btnTabAnalysis) {
+    btnTabSetup.addEventListener("click", () => {
+      btnTabSetup.classList.add("active");
+      btnTabAnalysis.classList.remove("active");
+      if (tabContentSetup) tabContentSetup.classList.remove("hidden");
+      if (tabContentAnalysis) tabContentAnalysis.classList.add("hidden");
+    });
+    btnTabAnalysis.addEventListener("click", () => {
+      btnTabAnalysis.classList.add("active");
+      btnTabSetup.classList.remove("active");
+      if (tabContentAnalysis) tabContentAnalysis.classList.remove("hidden");
+      if (tabContentSetup) tabContentSetup.classList.add("hidden");
+    });
+  }
+
+
+
+  document.querySelectorAll(".panel.collapsible .panel-header").forEach((header) => {
+    header.addEventListener("click", () => {
+      const panel = header.closest(".panel");
+      if (panel) {
+        panel.classList.toggle("collapsed");
+        const icon = panel.querySelector(".panel-toggle-icon");
+        if (icon) {
+          icon.textContent = panel.classList.contains("collapsed") ? "▶" : "▼";
+        }
+      }
+    });
+  });
 }
 
 function toggleSplitView(forceState) {
@@ -1404,18 +1485,66 @@ function updateTourFrameLabel() {
 
 // ─── Scatter renderer ─────────────────────────────────────────────────────────
 
+function computeViewCoords(repId, viewId) {
+  if (!fixtureData) return [];
+
+  let basis = null;
+  if (fixtureData.catalog && fixtureData.catalog[viewId]) {
+    basis = fixtureData.catalog[viewId].basis;
+  } else if (fixtureData.representations && fixtureData.representations[repId]) {
+    basis = fixtureData.representations[repId].basis;
+  }
+
+  if (!basis || !fixtureData.raw_matrix) {
+    if (fixtureData.representations && fixtureData.representations[repId]) {
+      return fixtureData.representations[repId].coords;
+    }
+    return [];
+  }
+
+  let mat = fixtureData.raw_matrix;
+  if (repId === "sqrt_probability") {
+    mat = mat.map(row => row.map(v => Math.sqrt(Math.max(0, v))));
+  } else if (repId === "clr_probability") {
+    mat = mat.map(row => {
+      const floor = row.map(v => Math.max(v, 1e-300));
+      const logVec = floor.map(v => Math.log(v));
+      const meanLog = logVec.reduce((a, b) => a + b, 0) / logVec.length;
+      return logVec.map(v => v - meanLog);
+    });
+  }
+
+  const n = mat.length;
+  const k = mat[0].length;
+  const means = new Array(k).fill(0);
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < k; j++) {
+      means[j] += mat[i][j];
+    }
+  }
+  for (let j = 0; j < k; j++) {
+    means[j] /= n;
+  }
+
+  const coords = new Array(n);
+  for (let i = 0; i < n; i++) {
+    let x = 0, y = 0;
+    for (let j = 0; j < k; j++) {
+      const cVal = mat[i][j] - means[j];
+      x += cVal * basis[j][0];
+      y += cVal * basis[j][1];
+    }
+    coords[i] = [x, y];
+  }
+  return coords;
+}
+
 function getCoords() {
   if (!fixtureData) return [];
   if (tourFrames && tourFrameIdx < tourFrames.length && (isTourPlaying || tourFrameIdx > 0)) {
     return tourFrames[tourFrameIdx];
   }
-  if (currentRep !== "probability" && fixtureData.representations && fixtureData.representations[currentRep]) {
-    return fixtureData.representations[currentRep].coords;
-  }
-  if (fixtureData.catalog && fixtureData.catalog[currentViewId]) {
-    return fixtureData.catalog[currentViewId].coords;
-  }
-  return fixtureData.representations[currentRep].coords;
+  return computeViewCoords(currentRep, currentViewId);
 }
 
 function computeScale(coords, targetCanvas = canvas, zoom = zoomLevel, px = panOffsetX, py = panOffsetY) {
@@ -1653,56 +1782,74 @@ function renderScatterCanvas(cEl, cCtx, coords, zoom, px, py, size, isViewB) {
     drawDiagnosticOverlay(coords, sc2, cCtx);
   }
 
+  const stabVolatileCutoff = 0.40;
+
   // Draw points
-  for (let i = 0; i < coords.length; i++) {
-    const [sx, sy] = sc2.toScreen(coords[i][0], coords[i][1]);
-
-    if (sx < -20 || sx > W + 20 || sy < -20 || sy > H + 20) continue;
-
-    const isSelected = i === selectedIdx || selectedIndices.includes(i);
-    const isHovered  = i === hoveredIdx;
-    const r    = isSelected ? POINT_RADIUS_SELECT : (isHovered ? POINT_RADIUS_HOVER : POINT_RADIUS);
-    const col  = colors[i] || "#94a3b8";
-
-    if (isSelected || isHovered) {
-      cCtx.shadowColor = isSelected ? "#34d399" : col;
-      cCtx.shadowBlur  = 16;
-    } else {
-      cCtx.shadowBlur = 0;
-    }
+  coords.forEach((c, i) => {
+    const [sx, sy] = sc2.toScreen(c[0], c[1]);
+    const color    = (colors && colors[i]) ? colors[i] : "#6ee7b7";
+    const isSel    = (i === selectedIdx);
+    const isHov    = (i === hoveredIdx);
+    const r        = (isSel || isHov) ? POINT_RADIUS_HOVER : POINT_RADIUS;
 
     cCtx.beginPath();
     cCtx.arc(sx, sy, r, 0, Math.PI * 2);
-    cCtx.fillStyle = col;
+
+    if (isSel) {
+      cCtx.fillStyle   = color;
+      cCtx.shadowColor = color;
+      cCtx.shadowBlur  = 16;
+    } else if (isHov) {
+      cCtx.fillStyle   = color;
+      cCtx.shadowColor = color;
+      cCtx.shadowBlur  = 10;
+    } else {
+      cCtx.fillStyle   = color;
+      cCtx.shadowBlur  = 0;
+    }
     cCtx.fill();
 
-    cCtx.strokeStyle = isSelected ? "#34d399" : (isHovered ? "#ffffff" : "rgba(255,255,255,0.15)");
-    cCtx.lineWidth   = isSelected ? 2.5 : 1.5;
+    cCtx.strokeStyle = isSel ? "#ffffff" : (isHov ? "#ffffff" : "rgba(255,255,255,0.15)");
+    cCtx.lineWidth   = isSel ? 2.5 : 1.0;
     cCtx.stroke();
 
-    // Volatile & Persistent point stability rim strokes
+    // High-Performance Volatile & Persistent Point Stability Aura
     if (showStabilityMap && pointStabilityData && pointStabilityData.stability_scores) {
       const stabScore = pointStabilityData.stability_scores[i] ?? 1.0;
-      if (stabScore < 0.35) {
+      if (stabScore <= stabVolatileCutoff) {
+        // Volatile / Unstable Points: Fast Electric Orange Pulsing Hazard Ring
         cCtx.save();
         cCtx.beginPath();
-        cCtx.arc(sx, sy, r + 3, 0, Math.PI * 2);
-        cCtx.strokeStyle = "#f43f5e";
-        cCtx.lineWidth = 1.5;
-        cCtx.setLineDash([3, 2]);
+        cCtx.arc(sx, sy, r + 4, 0, Math.PI * 2);
+        cCtx.strokeStyle = "#f97316";
+        cCtx.lineWidth = 2.2;
+        cCtx.setLineDash([4, 3]);
+        cCtx.stroke();
+
+        cCtx.beginPath();
+        cCtx.arc(sx, sy, r + 7, 0, Math.PI * 2);
+        cCtx.strokeStyle = "rgba(249, 115, 22, 0.5)";
+        cCtx.lineWidth = 1.0;
         cCtx.stroke();
         cCtx.restore();
-      } else if (stabScore >= 0.75) {
+      } else if (stabScore >= 0.70) {
+        // Persistent / Highly Stable Points: Fast Cyber Cyan Shield Ring
         cCtx.save();
         cCtx.beginPath();
-        cCtx.arc(sx, sy, r + 2.5, 0, Math.PI * 2);
-        cCtx.strokeStyle = "rgba(52, 211, 153, 0.6)";
-        cCtx.lineWidth = 1.2;
+        cCtx.arc(sx, sy, r + 3.5, 0, Math.PI * 2);
+        cCtx.strokeStyle = "#38bdf8";
+        cCtx.lineWidth = 1.8;
+        cCtx.stroke();
+
+        cCtx.beginPath();
+        cCtx.arc(sx, sy, r + 6.5, 0, Math.PI * 2);
+        cCtx.strokeStyle = "rgba(56, 189, 248, 0.4)";
+        cCtx.lineWidth = 1.0;
         cCtx.stroke();
         cCtx.restore();
       }
     }
-  }
+  });
   cCtx.shadowBlur = 0;
 
   // ID & Label on hover or select
@@ -1710,9 +1857,16 @@ function renderScatterCanvas(cEl, cCtx, coords, zoom, px, py, size, isViewB) {
   if (activeIdx !== null && activeIdx < coords.length) {
     const [sx, sy] = sc2.toScreen(coords[activeIdx][0], coords[activeIdx][1]);
     const pMeta = getPointMeta(activeIdx);
-    const labelText = pMeta.trueClassName
+    let labelText = pMeta.trueClassName
       ? `${pMeta.id} • ${pMeta.trueClassName} (${(pMeta.confidence * 100).toFixed(0)}% ${pMeta.predClassName})`
       : `${pMeta.id} • ${pMeta.predClassName} (${(pMeta.confidence * 100).toFixed(0)}%)`;
+
+    if (showStabilityMap && pointStabilityData && pointStabilityData.stability_scores) {
+      const sVal = pointStabilityData.stability_scores[activeIdx];
+      if (sVal !== undefined) {
+        labelText += ` • 🛡️ ${(sVal * 100).toFixed(0)}% Stable`;
+      }
+    }
 
     cCtx.font      = "10px 'JetBrains Mono', monospace";
     cCtx.fillStyle = "rgba(255,255,255,0.95)";

@@ -55,6 +55,6 @@ def clr_transform(probabilities: NDArray[np.float64]) -> NDArray[np.float64]:
     mat[mask_zero] = CLR_ZERO_DELTA
     mat[~mask_zero] = (scale * probabilities)[~mask_zero]
 
-    log_mat = np.log(mat)
+    log_mat = np.log(np.maximum(mat, 1e-300))
     gm = log_mat.mean(axis=1, keepdims=True)
     return np.asarray(log_mat - gm, dtype=np.float64)

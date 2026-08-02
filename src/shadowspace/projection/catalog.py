@@ -134,23 +134,106 @@ def create_entropy_view(matrix: NDArray[np.float64]) -> CatalogView:
     )
 
 
+def create_minor_pca_view(matrix: NDArray[np.float64]) -> CatalogView:
+    """Create 2D PCA view using PC3 & PC4 for higher dimensional datasets."""
+    n_features = matrix.shape[1]
+    if n_features < 4:
+        raise ValueError("PCA minor view requires at least 4 features.")
+
+    mean_vec = np.mean(matrix, axis=0)
+    centered = matrix - mean_vec
+    _, _, vt = np.linalg.svd(centered, full_matrices=False)
+
+    raw_basis = vt[2:4, :].T
+    basis_canon = canonicalize_basis(raw_basis)
+    validated_basis = validate_orthonormal_basis(basis_canon)
+
+    return CatalogView(
+        view_id="pca_minor",
+        display_name="PCA Minor View (PC3–PC4)",
+        basis=validated_basis,
+        semantically_valid=True,
+        is_misleading=False,
+        description="Orthographic 2D projection onto 3rd and 4th principal components.",
+    )
+
+
+def create_fisher_lda_view(matrix: NDArray[np.float64]) -> CatalogView:
+    """Create 2D Linear Discriminant view optimizing class separation."""
+    n_features = matrix.shape[1]
+    pseudo_labels = np.argmax(matrix, axis=1) if n_features >= 3 else np.zeros(matrix.shape[0], dtype=int)
+    classes = np.unique(pseudo_labels)
+
+    if len(classes) >= 2:
+        overall_mean = np.mean(matrix, axis=0)
+        s_b = np.zeros((n_features, n_features), dtype=np.float64)
+        s_w = np.zeros((n_features, n_features), dtype=np.float64)
+
+        for c in classes:
+            c_mask = pseudo_labels == c
+            n_c = np.sum(c_mask)
+            if n_c == 0:
+                continue
+            c_mean = np.mean(matrix[c_mask], axis=0)
+            mean_diff = (c_mean - overall_mean).reshape(-1, 1)
+            s_b += n_c * (mean_diff @ mean_diff.T)
+
+            class_diffs = matrix[c_mask] - c_mean
+            s_w += class_diffs.T @ class_diffs
+
+        s_w += 1e-4 * np.eye(n_features)
+        try:
+            eigvals, eigvecs = np.linalg.eig(np.linalg.pinv(s_w) @ s_b)
+            sorted_idx = np.argsort(np.real(eigvals))[::-1]
+            top_vecs = np.real(eigvecs[:, sorted_idx[:2]])
+            q_mat, _ = np.linalg.qr(top_vecs)
+            raw_basis = q_mat[:, :2]
+        except Exception:
+            raw_basis = np.eye(n_features)[:, :2]
+    else:
+        raw_basis = np.eye(n_features)[:, :2]
+
+    basis_canon = canonicalize_basis(raw_basis)
+    validated_basis = validate_orthonormal_basis(basis_canon)
+
+    return CatalogView(
+        view_id="fisher_lda",
+        display_name="Fisher LDA View (Max Separation)",
+        basis=validated_basis,
+        semantically_valid=True,
+        is_misleading=False,
+        description="Linear Discriminant projection optimized for maximum class separability.",
+    )
+
+
 def build_projection_catalog(
     matrix: NDArray[np.float64],
     object_ids: list[str],
     feature_names: list[str],
     representation_id: str = "probability",
 ) -> dict[str, CatalogView]:
-    """Build full Projection Catalog for a matrix dataset.
+    """Build full Projection Catalog tailored for a dataset matrix.
 
     Returns:
         Dict mapping view_id -> CatalogView.
     """
-    v_corner = create_corner_view(matrix, object_ids, feature_names, representation_id)
-    v_bridge = create_collapsed_bridge_view(matrix)
-    v_entropy = create_entropy_view(matrix)
+    n_features = matrix.shape[1]
 
-    return {
-        v_corner.view_id: v_corner,
-        v_bridge.view_id: v_bridge,
-        v_entropy.view_id: v_entropy,
-    }
+    v_corner = create_corner_view(matrix, object_ids, feature_names, representation_id)
+    catalog = {v_corner.view_id: v_corner}
+
+    if n_features >= 4:
+        v_minor = create_minor_pca_view(matrix)
+        catalog[v_minor.view_id] = v_minor
+
+    if n_features >= 3:
+        v_lda = create_fisher_lda_view(matrix)
+        catalog[v_lda.view_id] = v_lda
+
+    v_bridge = create_collapsed_bridge_view(matrix)
+    catalog[v_bridge.view_id] = v_bridge
+
+    v_entropy = create_entropy_view(matrix)
+    catalog[v_entropy.view_id] = v_entropy
+
+    return catalog

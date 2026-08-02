@@ -70,7 +70,7 @@ def compute_view_trustworthiness(
 
         for j in proj_knn_indices:
             if j not in src_knn_set:
-                r_ij = src_ranks[i, j] + 1  # 1-indexed rank
+                r_ij = src_ranks[i, j]  # 1-indexed rank among non-self points (self is rank 0)
                 penalty_sum += r_ij - k
 
     trustworthiness = 1.0 - (normalization * penalty_sum)
@@ -117,7 +117,7 @@ def compute_view_continuity(
 
         for j in src_knn_indices:
             if j not in proj_knn_set:
-                rhat_ij = proj_ranks[i, j] + 1  # 1-indexed rank
+                rhat_ij = proj_ranks[i, j]  # 1-indexed rank among non-self points (self is rank 0)
                 penalty_sum += rhat_ij - k
 
     continuity = 1.0 - (normalization * penalty_sum)
@@ -128,9 +128,10 @@ def compute_kruskal_stress(
     source_dists: NDArray[np.float64],
     proj_dists: NDArray[np.float64],
 ) -> float:
-    """Compute Kruskal's Normalized Stress-1 between high-D and 2D distances.
+    """Compute Kruskal's Normalized Stress-1 between high-D and 2D distances with optimal scaling.
 
-    Stress-1 = sqrt( sum_{i < j} (d_ij - dhat_ij)^2 / sum_{i < j} d_ij^2 )
+    Stress-1 = sqrt( sum_{i < j} (d_ij - alpha * dhat_ij)^2 / sum_{i < j} d_ij^2 )
+    where alpha = sum(d_ij * dhat_ij) / sum(dhat_ij^2) optimal uniform scale factor.
 
     Args:
         source_dists: Shape (N, N) high-D distance matrix.
@@ -147,5 +148,10 @@ def compute_kruskal_stress(
     if denom == 0.0:
         return 0.0
 
-    num = np.sum((high_d - proj_d) ** 2)
+    proj_denom = np.sum(proj_d**2)
+    if proj_denom == 0.0:
+        return 1.0
+
+    alpha = np.sum(high_d * proj_d) / proj_denom
+    num = np.sum((high_d - alpha * proj_d) ** 2)
     return float(np.sqrt(num / denom))

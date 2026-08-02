@@ -185,8 +185,9 @@ def _build_dataset_entry(
     catalog_views = build_projection_catalog(matrix, object_ids, feature_names)
     catalog_payload: dict[str, Any] = {}
 
+    centered_matrix = matrix - np.mean(matrix, axis=0)
     for vid, cat_view in catalog_views.items():
-        proj_coords = project(matrix, cat_view.basis)
+        proj_coords = project(centered_matrix, cat_view.basis)
         catalog_payload[vid] = {
             "view_id": cat_view.view_id,
             "display_name": cat_view.display_name,
@@ -724,7 +725,9 @@ def api_distortion_grid() -> Response:
         return Response(json.dumps({"error": str(err)}), status=400, mimetype="application/json")
 
     if view_id in ds_data.get("catalog", {}):
-        coords_2d = np.array(ds_data["catalog"][view_id]["coords"], dtype=np.float64)
+        basis = np.array(ds_data["catalog"][view_id]["basis"], dtype=np.float64)
+        centered_rep = rep_matrix - np.mean(rep_matrix, axis=0)
+        coords_2d = project(centered_rep, basis)
     else:
         coords_2d = np.array(ds_data["representations"].get(rep_id, {}).get("coords", []), dtype=np.float64)
         if coords_2d.size == 0:

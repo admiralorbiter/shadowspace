@@ -6,7 +6,7 @@ Read in this order:
 
 1. [Project README](../README.md)
 2. [Architecture and Data Contract](RESEARCH_ROADMAP.md) — system boundaries, domain model, bundle format, core interfaces
-3. [Implementation Plan](ARCHITECTURE_AND_DATA_CONTRACT.md) — sprint plan, deliverables, exit gates (Sprints 0–14 complete)
+3. [Implementation Plan](ARCHITECTURE_AND_DATA_CONTRACT.md) — sprint plan, deliverables, exit gates (Sprints 0–15 complete)
 4. [Testing and Validation](PROJECT_DECISIONS.md) — test layers, fixtures, invariant tests, manual scripts
 5. [Mathematical and Research Knowledge Base](docs/README.md) — probability geometry, tours, reliability references
 6. [Research Roadmap](README.md) — research questions, hypotheses, experiment sequence

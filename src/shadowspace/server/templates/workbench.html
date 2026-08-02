@@ -57,142 +57,130 @@
   ═══════════════════════════════════════════════════════════════ -->
   <main class="workbench-layout">
 
-    <!-- LEFT SIDEBAR — controls -->
+    <!-- LEFT SIDEBAR — controls & analysis -->
     <aside class="sidebar" id="sidebar-controls">
-      <div class="sidebar-section">
-        <h2 class="sidebar-title">Projection Catalog</h2>
-        <select id="catalog-select" class="sidebar-select">
-          <option value="pca_corners">PCA Corner View</option>
-          <option value="collapsed_bridge">Collapsed Bridge View (Misleading)</option>
-          <option value="entropy_axis">Entropy Emphasis View</option>
-        </select>
+      <!-- Mode Tabs -->
+      <div class="sidebar-tab-bar">
+        <button id="tab-btn-setup" class="sidebar-tab-btn active" title="Projection & representation setup">⚙️ Setup</button>
+        <button id="tab-btn-analysis" class="sidebar-tab-btn" title="Variance, Stability & Rashomon Atlas">📊 Analysis</button>
       </div>
 
-      <div class="sidebar-section">
-        <h2 class="sidebar-title">Representation</h2>
-        <div class="control-group" id="rep-selector">
-          <label class="radio-card active" id="rep-probability">
-            <input type="radio" name="representation" value="probability" checked />
-            <span class="radio-label">Probability</span>
-            <span class="radio-hint">Raw simplex <em>P</em></span>
-          </label>
-          <label class="radio-card" id="rep-sqrt_probability">
-            <input type="radio" name="representation" value="sqrt_probability" />
-            <span class="radio-label">√ Probability</span>
-            <span class="radio-hint">Fisher-Rao geometry</span>
-          </label>
-          <label class="radio-card" id="rep-clr_probability">
-            <input type="radio" name="representation" value="clr_probability" />
-            <span class="radio-label">CLR (Log-Ratio)</span>
-            <span class="radio-hint">Aitchison geometry</span>
-          </label>
+      <!-- TAB 1: SETUP -->
+      <div id="sidebar-tab-setup" class="sidebar-tab-content active">
+        <div class="sidebar-section">
+          <h2 class="sidebar-title">Projection Catalog <span class="dr-help-badge" title="Pre-calculated 2D projection planes for this dataset. Different datasets offer different catalog views (e.g. PCA, Fisher LDA, Collapsed Bridge benchmark).">?</span></h2>
+          <select id="catalog-select" class="sidebar-select">
+            <option value="pca_corners">PCA Corner View</option>
+            <option value="collapsed_bridge">Collapsed Bridge View (Misleading)</option>
+            <option value="entropy_axis">Entropy Emphasis View</option>
+          </select>
         </div>
-      </div>
 
-      <div class="sidebar-section">
-        <h2 class="sidebar-title">High-D Metric</h2>
-        <select id="metric-select" class="sidebar-select">
-          <option value="euclidean">Euclidean</option>
-          <option value="hellinger">Hellinger</option>
-          <option value="fisher_rao">Fisher-Rao</option>
-          <option value="aitchison">Aitchison</option>
-        </select>
-      </div>
-
-      <div class="sidebar-section">
-        <h2 class="sidebar-title">Subspace Optimizer</h2>
-        <div class="optimizer-btn-group">
-          <button id="btn-opt-lda" class="btn-secondary btn-opt" title="GLERP transition to max class separability basis (Fisher LDA)">🎯 Max Class Separation</button>
-          <button id="btn-opt-integrity" class="btn-secondary btn-opt" title="GLERP transition to max local integrity basis for selected point">⚡ Max Local Integrity</button>
-        </div>
-      </div>
-
-      <div class="sidebar-section">
-        <h2 class="sidebar-title">PCA Variance</h2>
-        <div class="variance-bar-wrap" id="variance-display">
-          <div class="variance-row">
-            <span class="variance-axis">PC1</span>
-            <div class="variance-track"><div class="variance-fill" id="var-pc1" style="width:0%"></div></div>
-            <span class="variance-pct" id="var-pc1-label">—</span>
+        <div class="sidebar-section">
+          <h2 class="sidebar-title">Representation</h2>
+          <div class="control-group" id="rep-selector">
+            <label class="radio-card active" id="rep-probability">
+              <input type="radio" name="representation" value="probability" checked />
+              <span class="radio-label">Probability</span>
+              <span class="radio-hint">Raw simplex <em>P</em></span>
+            </label>
+            <label class="radio-card" id="rep-sqrt_probability">
+              <input type="radio" name="representation" value="sqrt_probability" />
+              <span class="radio-label">√ Probability</span>
+              <span class="radio-hint">Fisher-Rao geometry</span>
+            </label>
+            <label class="radio-card" id="rep-clr_probability">
+              <input type="radio" name="representation" value="clr_probability" />
+              <span class="radio-label">CLR (Log-Ratio) <span class="dr-help-badge" title="Centered Log-Ratio (Aitchison geometry): Transforms probabilities into unbounded real coordinates by log-ratio against geometric mean.">?</span></span>
+              <span class="radio-hint">Aitchison geometry</span>
+            </label>
           </div>
-          <div class="variance-row">
-            <span class="variance-axis">PC2</span>
-            <div class="variance-track"><div class="variance-fill" id="var-pc2" style="width:0%"></div></div>
-            <span class="variance-pct" id="var-pc2-label">—</span>
+        </div>
+
+        <div class="sidebar-section">
+          <h2 class="sidebar-title">High-D Metric</h2>
+          <select id="metric-select" class="sidebar-select">
+            <option value="euclidean">Euclidean</option>
+            <option value="hellinger">Hellinger</option>
+            <option value="fisher_rao">Fisher-Rao</option>
+            <option value="aitchison">Aitchison</option>
+          </select>
+        </div>
+
+        <div class="sidebar-section">
+          <h2 class="sidebar-title">Subspace Optimizer</h2>
+          <div class="optimizer-btn-group">
+            <button id="btn-opt-lda" class="btn-secondary btn-opt" title="GLERP transition to max class separability basis (Fisher LDA)">🎯 Max Class Separation <span class="dr-help-badge" title="Fisher LDA: Maximizes between-class variance relative to within-class variance.">?</span></button>
+            <button id="btn-opt-integrity" class="btn-secondary btn-opt" title="GLERP transition to max local integrity basis for selected point">⚡ Max Local Integrity</button>
           </div>
         </div>
       </div>
 
-      <div class="sidebar-section hidden" id="stability-panel">
-        <h2 class="sidebar-title">Stability & Rashomon Atlas</h2>
-        <div class="stability-panel-content">
-          <div class="stability-metric-row">
-            <span class="stability-label">Persistence Index:</span>
-            <span class="stability-val-badge" id="stability-index-label">—</span>
-          </div>
-          <div class="stability-subtext" id="stability-summary-label">
-            Percentage of points with persistent 2D neighborhoods across projection views.
-          </div>
-          <div class="selected-stability-card hidden" id="selected-stability-card">
-            <div class="card-status-row">
-              <span class="card-status-title">Selected Point:</span>
-              <span class="card-status-tag" id="selected-point-stab-tag">Perspective-Invariant</span>
+      <!-- TAB 2: ANALYSIS -->
+      <div id="sidebar-tab-analysis" class="sidebar-tab-content hidden">
+        <div class="sidebar-section">
+          <h2 class="sidebar-title">PCA Variance</h2>
+          <div class="variance-bar-wrap" id="variance-display">
+            <div class="variance-row">
+              <span class="variance-axis">PC1</span>
+              <div class="variance-track"><div class="variance-fill pc1-fill" id="var-pc1" style="width:0%"></div></div>
+              <span class="variance-pct" id="var-pc1-label">—</span>
             </div>
-            <div class="card-status-desc" id="selected-point-stab-desc">
-              Neighborhood persists across candidate projection planes.
-            </div>
-          </div>
-          <div class="rashomon-candidates-group">
-            <h3 class="rashomon-subtitle">Rashomon Candidate Views</h3>
-            <div class="rashomon-list" id="rashomon-list">
-              <div class="rashomon-empty">Click 🛡️ Stability to compute Rashomon set.</div>
+            <div class="variance-row">
+              <span class="variance-axis">PC2</span>
+              <div class="variance-track"><div class="variance-fill pc2-fill" id="var-pc2" style="width:0%"></div></div>
+              <span class="variance-pct" id="var-pc2-label">—</span>
             </div>
           </div>
         </div>
-      </div>
 
-      <div class="sidebar-section hidden" id="subspace-angle-panel">
-        <h2 class="sidebar-title">Subspace Angles (Dual View)</h2>
-        <div class="angle-panel-content">
-          <div class="angle-row">
-            <span class="angle-label">Principal Angle θ₁:</span>
-            <span class="angle-val" id="angle-theta1">—</span>
-          </div>
-          <div class="angle-row">
-            <span class="angle-label">Principal Angle θ₂:</span>
-            <span class="angle-val" id="angle-theta2">—</span>
-          </div>
-          <div class="angle-row grassmannian-row">
-            <span class="angle-label">Grassmannian Dist d_G:</span>
-            <span class="angle-val-badge" id="angle-grassmannian">—</span>
+        <div class="sidebar-section" id="stability-panel">
+          <h2 class="sidebar-title">Stability &amp; Rashomon Atlas <span class="dr-help-badge" title="Rashomon Atlas: Explores candidate 2D projection planes to separate perspective-invariant high-D structures from 2D orthographic projection artifacts.">?</span></h2>
+          <div class="stability-panel-content">
+            <div class="stability-metric-row">
+              <span class="stability-label">Persistence Index: <span class="dr-help-badge" title="Persistence Index: Percentage of points whose 2D k-NN neighborhood persists across candidate projection planes.">?</span></span>
+              <span class="stability-val-badge" id="stability-index-label">—</span>
+            </div>
+            <div class="stability-gauge-track">
+              <div class="stability-gauge-fill" id="stability-gauge-bar" style="width: 0%"></div>
+            </div>
+            <div class="stability-subtext" id="stability-summary-label">
+              Percentage of points with persistent 2D neighborhoods.
+            </div>
+            <div class="selected-stability-card hidden" id="selected-stability-card">
+              <div class="card-status-row">
+                <span class="card-status-title">Selected Point:</span>
+                <span class="card-status-tag" id="selected-point-stab-tag">Perspective-Invariant</span>
+              </div>
+              <div class="card-status-desc" id="selected-point-stab-desc">
+                Neighborhood persists across candidate projection planes.
+              </div>
+            </div>
+            <div class="rashomon-candidates-group">
+              <h3 class="rashomon-subtitle">Rashomon Candidate Views</h3>
+              <div class="rashomon-list" id="rashomon-list">
+                <div class="rashomon-empty">Click 🛡️ Stability to compute Rashomon set.</div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="sidebar-section">
-        <h2 class="sidebar-title">Legend</h2>
-        <ul class="legend-list" id="legend-list">
-          <li><span class="legend-dot" style="background:#6ee7b7"></span>Corner cluster</li>
-          <li><span class="legend-dot" style="background:#93c5fd"></span>Midpoint / Ambiguity</li>
-          <li><span class="legend-dot" style="background:#fbbf24"></span>Uniform center</li>
-          <li><span class="legend-dot" style="background:#f472b6"></span>Planted bridge / Outlier</li>
-        </ul>
-      </div>
-
-      <div class="sidebar-section">
-        <h2 class="sidebar-title">Overlay Legend</h2>
-        <ul class="legend-list">
-          <li><span class="legend-line solid-green"></span>Preserved (True k-NN)</li>
-          <li><span class="legend-line dashed-red"></span>Torn (Missing in 2D)</li>
-          <li><span class="legend-line dotted-amber"></span>False (Artifact in 2D)</li>
-        </ul>
-      </div>
-
-      <div class="sidebar-section">
-        <h2 class="sidebar-title">Shortcuts</h2>
-        <div class="keyboard-hints">
-          <p><code>← / →</code> : Select Object</p>
-          <p><code>1 / 2</code> : Toggle Rep</p>
+        <div class="sidebar-section hidden" id="subspace-angle-panel">
+          <h2 class="sidebar-title">Subspace Angles (Dual View) <span class="dr-help-badge" title="Principal Angles (θ₁, θ₂) & Grassmannian Distance: Measure the canonical angular separation between two 2D projection subspaces in high-D space.">?</span></h2>
+          <div class="angle-panel-content">
+            <div class="angle-row">
+              <span class="angle-label">Principal Angle θ₁:</span>
+              <span class="angle-val" id="angle-theta1">—</span>
+            </div>
+            <div class="angle-row">
+              <span class="angle-label">Principal Angle θ₂:</span>
+              <span class="angle-val" id="angle-theta2">—</span>
+            </div>
+            <div class="angle-row grassmannian-row">
+              <span class="angle-label">Grassmannian Dist d_G:</span>
+              <span class="angle-val-badge" id="angle-grassmannian">—</span>
+            </div>
+          </div>
         </div>
       </div>
     </aside>
@@ -215,6 +203,7 @@
           <button id="btn-split-view" class="btn-secondary btn-split-view" title="Toggle Split-Screen Dual-View Comparison">🗖 Split View</button>
         </div>
       </div>
+
       <div class="canvas-wrap" id="canvas-wrap">
         <div class="canvas-container canvas-container-a" id="canvas-container-a">
           <div class="view-tag" id="view-tag-a">View A: PCA</div>
@@ -230,6 +219,8 @@
           <button id="btn-zoom-focus" class="canvas-btn" title="Focus selected neighborhood">🔍 Focus</button>
           <button id="btn-zoom-reset" class="canvas-btn" title="Reset view (1.0x)">↺ Reset</button>
         </div>
+        <!-- Floating In-Canvas Class Legend Strip -->
+        <div id="canvas-legend-strip" class="canvas-legend-strip"></div>
         <div class="canvas-tooltip hidden" id="canvas-tooltip"></div>
       </div>
 
@@ -252,10 +243,10 @@
     <aside class="sidebar sidebar-right" id="sidebar-panels">
 
       <!-- Panel 1: Integrity Overlay -->
-      <section class="panel" id="panel-integrity-overlay">
-        <div class="panel-header">
-          <span class="panel-badge badge-active">Active</span>
-          <h3 class="panel-title">Integrity Overlay</h3>
+      <section class="panel collapsible" id="panel-integrity-overlay">
+        <div class="panel-header" title="Click to collapse / expand panel">
+          <h3 class="panel-title">Integrity Overlay <span class="dr-help-badge" title="Local Integrity: Measures local k-NN neighborhood preservation in 2D space. Trust (T) measures freedom from false neighbors; Stress measures metric distortion.">?</span></h3>
+          <span class="panel-toggle-icon">▼</span>
         </div>
         <div class="panel-body">
           <div class="k-control-row">
@@ -274,12 +265,20 @@
             </div>
             <div class="diag-card">
               <span class="diag-value" id="diag-trust">—</span>
-              <span class="diag-label">Trust (T)</span>
+              <span class="diag-label">Trust (T) <span class="dr-help-badge" title="Trustworthiness: Score in [0, 1] measuring freedom from false 2D neighbors.">?</span></span>
+              <div class="gauge-bar-track"><div class="gauge-bar-fill" id="trust-gauge-bar" style="width: 0%"></div></div>
             </div>
             <div class="diag-card">
               <span class="diag-value" id="diag-stress">—</span>
-              <span class="diag-label">Stress</span>
+              <span class="diag-label">Stress <span class="dr-help-badge" title="Kruskal Stress-1: Normalized isometric metric distortion (0 = perfect isometric preservation).">?</span></span>
             </div>
+          </div>
+
+          <!-- Compact Segmented Integrity Mini-Bar -->
+          <div class="diag-mini-bar-wrap" title="Green: Preserved | Red: Torn | Amber: False">
+            <div class="mini-bar-segment seg-preserved" id="bar-seg-preserved" style="width: 100%"></div>
+            <div class="mini-bar-segment seg-torn" id="bar-seg-torn" style="width: 0%"></div>
+            <div class="mini-bar-segment seg-false" id="bar-seg-false" style="width: 0%"></div>
           </div>
 
           <div class="diag-breakdown">
@@ -304,10 +303,11 @@
       </section>
 
       <!-- Panel 1b: Multi-Selection Subset Summary -->
-      <section class="panel hidden" id="panel-multi-selection">
-        <div class="panel-header">
+      <section class="panel collapsible hidden" id="panel-multi-selection">
+        <div class="panel-header" title="Click to collapse / expand panel">
           <span class="panel-badge badge-active" id="multi-select-badge">Subset</span>
           <h3 class="panel-title">Selected Subset</h3>
+          <span class="panel-toggle-icon">▼</span>
         </div>
         <div class="panel-body">
           <div class="diag-metrics-grid">
@@ -330,10 +330,11 @@
       </section>
 
       <!-- Panel 2: Semantic Badge -->
-      <section class="panel" id="panel-semantic-badge">
-        <div class="panel-header">
+      <section class="panel collapsible" id="panel-semantic-badge">
+        <div class="panel-header" title="Click to collapse / expand panel">
           <span class="panel-badge badge-active" id="semantic-status-badge">Valid</span>
           <h3 class="panel-title">Semantic Badge</h3>
+          <span class="panel-toggle-icon">▼</span>
         </div>
         <div class="panel-body">
           <div class="semantic-info">
@@ -346,13 +347,13 @@
       </section>
 
       <!-- Panel 3: Source Inspector -->
-      <section class="panel" id="panel-source-inspector">
-        <div class="panel-header">
-          <span class="panel-badge badge-active">Active</span>
+      <section class="panel collapsible" id="panel-source-inspector">
+        <div class="panel-header" title="Click to collapse / expand panel">
           <h3 class="panel-title">Source Inspector</h3>
+          <span class="panel-toggle-icon">▼</span>
         </div>
         <div class="panel-body">
-          <p class="panel-hint">Click a point to inspect it.</p>
+          <p class="panel-hint" id="inspector-hint">Click a point on the scatter canvas to inspect its feature loadings and predictions.</p>
           <dl class="inspector-list" id="inspector-list">
             <dt>Object ID</dt><dd id="insp-id">—</dd>
           </dl>
@@ -361,10 +362,10 @@
       </section>
 
       <!-- Panel 4: Saved-View Atlas -->
-      <section class="panel" id="panel-saved-view-atlas">
-        <div class="panel-header">
-          <span class="panel-badge badge-active">Active</span>
+      <section class="panel collapsible collapsed" id="panel-saved-view-atlas">
+        <div class="panel-header" title="Click to collapse / expand panel">
           <h3 class="panel-title">Saved-View Atlas</h3>
+          <span class="panel-toggle-icon">▶</span>
         </div>
         <div class="panel-body">
           <div class="atlas-input-group">
@@ -401,6 +402,16 @@
         <section class="help-section">
           <h3>What is Shadowspace?</h3>
           <p>Shadowspace is an interactive visualization tool for exploring <strong>high-dimensional model belief distributions</strong> (like 10-class softmax probabilities). Because 10D data cannot be directly drawn on a 2D screen, linear PCA projection squishes space down—which can introduce geometric distortions.</p>
+        </section>
+
+        <section class="help-section">
+          <h3>Projection Catalog &amp; 2D Views</h3>
+          <p>Each dataset contains a <strong>Projection Catalog</strong> of 2D perspective planes ($Y = X \cdot \mathbf{V}$):</p>
+          <ul class="help-legend-list">
+            <li><strong>📐 PCA Corner View</strong>: Standard orthographic projection onto top principal components (PC1–PC2). Captures maximal global variance.</li>
+            <li><strong>🎯 Fisher LDA / Entropy View</strong>: Linear Discriminant projection optimized for maximum class separability.</li>
+            <li><strong>⚠️ Collapsed Bridge View (Misleading)</strong>: Benchmark view designed to intentionally compress distinct clusters in 2D to test diagnostic integrity tools.</li>
+          </ul>
         </section>
 
         <section class="help-section">
