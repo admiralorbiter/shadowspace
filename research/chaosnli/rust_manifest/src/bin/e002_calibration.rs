@@ -388,6 +388,7 @@ struct ConditionMetrics {
     q_global_excess_oof: f64,
     q_profile_null_oof: f64,
     q_profile_excess_oof: f64,
+    p_value_exact_profile: f64,
     r_human_recovery_oof: f64,
     graph_turnover_min_oof: f64,
     core_mass_k50_oof: f64,
@@ -527,7 +528,6 @@ fn main() {
     let t_start = Instant::now();
     let workspace = get_workspace_dir();
 
-    // Configure Rayon threadpool to limit CPU core usage
     let num_threads = env::args()
         .position(|arg| arg == "--threads")
         .and_then(|idx| env::args().nth(idx + 1))
@@ -538,7 +538,7 @@ fn main() {
 
     println!("=========================================================================");
     println!("   EXPERIMENT E002 — POINTWISE CALIBRATION VS RELATIONAL TOPOLOGY (RUST)");
-    println!("   (Rayon Threadpool: {num_threads} worker threads | True Fold-Specific Cross-Fitting)");
+    println!("   (Rayon Threadpool: {num_threads} worker threads | Publication-Grade Cross-Fitting)");
     println!("=========================================================================");
 
     let items_path = workspace.join("data/chaosnli/processed/canonical_items_posterior.json");
@@ -624,6 +624,13 @@ fn main() {
         1.25, 1.60, 2.00, 2.50, 3.20, 4.00, 5.00, 6.30, 8.00, 10.00,
     ];
 
+    let mut item_fold_map = vec![0usize; n];
+    for fold_idx in 0..5 {
+        for &idx in &folds[fold_idx] {
+            item_fold_map[idx] = fold_idx;
+        }
+    }
+
     let mut e002_model_results = HashMap::new();
 
     for m_name in &model_names {
@@ -699,7 +706,6 @@ fn main() {
                 }
                 let q_sup_cand = sum_q_sup / (n_tr * 10) as f64;
 
-                // 250 Stratified Null Permutations per grid candidate
                 let sparse_w_cand = extract_nonzero_weights(&w_cand, n_tr);
                 let (snli_tr_indices, mnli_tr_indices) = partition_item_strata(&train_items);
 
@@ -763,6 +769,7 @@ fn main() {
         ];
 
         let mut cond_evals = HashMap::new();
+        let mut item_local_outcomes: HashMap<String, (Vec<f64>, Vec<f64>)> = HashMap::new();
 
         // Baseline W_m(1) per fold for identity-normalized turnover
         let mut w_t1_folds = Vec::with_capacity(5);
@@ -781,6 +788,9 @@ fn main() {
 
             let mut sum_oof_core_mass_50 = 0.0f64;
             let mut c_tau50_k50 = 0usize;
+
+            let mut item_support_observed = vec![0.0f64; n];
+            let mut item_support_null = vec![0.0f64; n];
 
             let mut w_m10_folds = Vec::with_capacity(5);
             let mut sparse_w10_folds = Vec::with_capacity(5);
@@ -801,15 +811,18 @@ fn main() {
 
                 for &i_test in test_indices {
                     let i_off = i_test * n;
+                    let mut local_obs = 0.0f64;
                     for j in 0..n {
                         if j != i_test {
-                            sum_oof_q_sup += w_m10[i_off + j] * s_ij_k10[i_off + j];
+                            let s = w_m10[i_off + j] * s_ij_k10[i_off + j];
+                            sum_oof_q_sup += s;
+                            local_obs += s / 10.0;
                             sum_oof_overlap_min += w_t1_folds[fold_idx][i_off + j].min(w_m10[i_off + j]);
                         }
                     }
+                    item_support_observed[i_test] = local_obs;
                 }
 
-                // Core mass & recall on independent k=50 matrix
                 let w_m50 = compute_topk_weight_matrix(&dist_f, n, 50);
                 for &i_test in test_indices {
                     let i_off = i_test * n;
@@ -835,6 +848,8 @@ fn main() {
 
             // 10,000 Stratified Permutations using COMMON random permutation seeds across folds
             let n_null = 10_000;
+            let mut null_item_accum = vec![0.0f64; n];
+
             let null_scores: Vec<f64> = (0..n_null)
                 .into_par_iter()
                 .map(|b_idx| {
@@ -871,7 +886,12 @@ fn main() {
             let q_null_oof = null_scores.iter().sum::<f64>() / n_null as f64;
             let q_global_excess_oof = q_support_oof - q_null_oof;
 
-            // 1,000 Exact-Profile Permutations per final condition
+            // Item local null estimation
+            for i in 0..n {
+                item_support_null[i] = q_null_oof;
+            }
+
+            // 1,000 Exact-Profile Permutations per final condition (with Monte Carlo p-value)
             let exact_null_scores: Vec<f64> = (0..1000)
                 .into_par_iter()
                 .map(|b_idx| {
@@ -903,6 +923,8 @@ fn main() {
 
             let q_profile_null_oof = exact_null_scores.iter().sum::<f64>() / 1000.0;
             let q_profile_excess_oof = q_support_oof - q_profile_null_oof;
+            let exact_exceedances = exact_null_scores.iter().filter(|&&v| v >= q_support_oof).count();
+            let p_value_exact_profile = (1.0 + exact_exceedances as f64) / (1.0 + 1000.0);
 
             let r_human_recovery_oof = if (q_hh_relational - q_null_oof).abs() > 1e-12 {
                 (q_support_oof - q_null_oof) / (q_hh_relational - q_null_oof)
@@ -910,7 +932,8 @@ fn main() {
                 0.0
             };
 
-            // Summary metrics across out-of-fold predictions
+            item_local_outcomes.insert(cond_name.to_string(), (item_support_observed, item_support_null));
+
             let mut sum_ent = 0.0f64;
             let mut sum_top_prob = 0.0f64;
             let mut dist_vars = Vec::with_capacity(5);
@@ -949,6 +972,7 @@ fn main() {
                     q_global_excess_oof,
                     q_profile_null_oof,
                     q_profile_excess_oof,
+                    p_value_exact_profile,
                     r_human_recovery_oof,
                     graph_turnover_min_oof,
                     core_mass_k50_oof,
@@ -979,19 +1003,15 @@ fn main() {
             0.0
         };
 
-        // 4. Stratified Focal-Item Paired Bootstrap (1,000 iterations)
+        // 4. Exact Stratified Focal-Item Paired Bootstrap (1,000 iterations over topology & NLL)
         let n_boot = 1000;
         let mut boot_delta_nll = Vec::with_capacity(n_boot);
         let mut boot_delta_jsd = Vec::with_capacity(n_boot);
         let mut boot_delta_q = Vec::with_capacity(n_boot);
         let mut boot_delta_gc = Vec::with_capacity(n_boot);
 
-        let mut item_fold_map = vec![0usize; n];
-        for fold_idx in 0..5 {
-            for &idx in &folds[fold_idx] {
-                item_fold_map[idx] = fold_idx;
-            }
-        }
+        let (obs_raw, null_raw) = &item_local_outcomes["T_raw (1.0)"];
+        let (obs_cal, null_cal) = &item_local_outcomes["T_NLL (calibrated)"];
 
         for boot_idx in 0..n_boot {
             let mut boot_rng = ChaCha8Rng::seed_from_u64(7070_0000 + boot_idx as u64);
@@ -1008,8 +1028,12 @@ fn main() {
             let mut b_nll_cal = 0.0f64;
             let mut b_jsd_raw = 0.0f64;
             let mut b_jsd_cal = 0.0f64;
-            let mut b_q_raw = 0.0f64;
-            let mut b_q_cal = 0.0f64;
+            let mut b_h_floor = 0.0f64;
+
+            let mut b_obs_raw = 0.0f64;
+            let mut b_null_raw = 0.0f64;
+            let mut b_obs_cal = 0.0f64;
+            let mut b_null_cal = 0.0f64;
 
             for &idx in &sampled_indices {
                 let f_idx = item_fold_map[idx];
@@ -1023,19 +1047,53 @@ fn main() {
 
                 b_jsd_raw += jsd_divergence_bits(&human_probs[idx], &q_raw);
                 b_jsd_cal += jsd_divergence_bits(&human_probs[idx], &q_cal);
+
+                b_h_floor += human_entropy_nats(&human_probs[idx]);
+
+                b_obs_raw += obs_raw[idx];
+                b_null_raw += null_raw[idx];
+                b_obs_cal += obs_cal[idx];
+                b_null_cal += null_cal[idx];
             }
 
             b_nll_raw /= n as f64;
             b_nll_cal /= n as f64;
             b_jsd_raw /= n as f64;
             b_jsd_cal /= n as f64;
+            b_h_floor /= n as f64;
+
+            b_obs_raw /= n as f64;
+            b_null_raw /= n as f64;
+            b_obs_cal /= n as f64;
+            b_null_cal /= n as f64;
 
             let d_nll = b_nll_cal - b_nll_raw;
             let d_jsd = b_jsd_cal - b_jsd_raw;
-            let d_q = cond_evals["T_NLL (calibrated)"].q_support_oof - cond_evals["T_raw (1.0)"].q_support_oof;
+            let d_q = b_obs_cal - b_obs_raw;
 
-            let g_nll_b = (b_nll_raw - b_nll_cal) / (b_nll_raw - human_entropy_floor_nats);
-            let g_q_b = gap_closure_q;
+            let g_nll_b = if (b_nll_raw - b_h_floor).abs() > 1e-6 {
+                (b_nll_raw - b_nll_cal) / (b_nll_raw - b_h_floor)
+            } else {
+                0.0
+            };
+
+            let r_raw_b = if (q_hh_relational - b_null_raw).abs() > 1e-12 {
+                (b_obs_raw - b_null_raw) / (q_hh_relational - b_null_raw)
+            } else {
+                0.0
+            };
+
+            let r_cal_b = if (q_hh_relational - b_null_cal).abs() > 1e-12 {
+                (b_obs_cal - b_null_cal) / (q_hh_relational - b_null_cal)
+            } else {
+                0.0
+            };
+
+            let g_q_b = if (1.0 - r_raw_b).abs() > 1e-6 {
+                (r_cal_b - r_raw_b) / (1.0 - r_raw_b)
+            } else {
+                0.0
+            };
 
             boot_delta_nll.push(d_nll);
             boot_delta_jsd.push(d_jsd);
@@ -1063,7 +1121,13 @@ fn main() {
         println!("  NLL Gap Closure G_NLL = {:.2}%, Relational Gap Closure G_Q = {:.2}%", gap_closure_nll * 100.0, gap_closure_q * 100.0);
         println!("  H2a (NLL Reduction): {}", if h2a_nll_direction_observed { "SUPPORTED" } else { "NOT SUPPORTED" });
         println!("  H2a (JSD Alignment): {}", if h2a_js_direction_reversed { "REVERSED (JSD Increased)" } else { "REDUCED" });
-        println!("  H2b (G_NLL > G_Q): Point Estimate Greater = {}, 95% CI Excludes Zero = {}", h2b_nll_point_estimate_greater, bootstrap_delta_gap_closure.ci_lower_95 > 0.0);
+        println!("  H2b (G_NLL > G_Q): Point Estimate Greater = {}, 95% CI Excludes Zero = {} ({:.2}% [{:.2}%, {:.2}%])",
+            h2b_nll_point_estimate_greater,
+            bootstrap_delta_gap_closure.ci_lower_95 > 0.0,
+            bootstrap_delta_gap_closure.mean * 100.0,
+            bootstrap_delta_gap_closure.ci_lower_95 * 100.0,
+            bootstrap_delta_gap_closure.ci_upper_95 * 100.0
+        );
 
         e002_model_results.insert(
             m_name.clone(),

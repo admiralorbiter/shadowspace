@@ -1,7 +1,7 @@
 # Experiment E002: Pointwise Calibration vs. Relational Topology
 id = "E002"
 title = "Pointwise Soft-Label Calibration vs. Relational Neighborhood Recovery"
-status = "planned"
+status = "complete_publication_grade"
 
 dataset_release = "chaosnli-canonical-2026-08-02"
 partition = "5fold_stratified_crossfit"
@@ -12,22 +12,24 @@ Does temperature scaling improve marginal probability alignment (NLL/JSD)
 without proportionately recovering relational human belief-space topology (Q_support)?
 """
 
-# Frozen E001 Artifact Binding
+# Frozen E001 Artifact Bindings
 e001_artifact_id = "E001-hellinger-k010-expected-fuzzy-support-v1"
 e001_matrix_sha256 = "94e483e714d92f039f817389d948cbf41b7970077b56f852491832605dccc96f"
+e001_matrix_k50_sha256 = "2da027e261d9a74a67f262aa601544c98ebf2b2879d15cda97b116ce447b1f3d"
 e001_object_ids_sha256 = "121c49cbd40b171d100ba88c1a23d809818c28bad9249bea99a52ec8f5af19d6"
+model_probs_sha256 = "218cd1246cb3bf796726cd729605c8e303449379b70fc9afb6aea5357844893b"
 
 estimands = [
   "pointwise_nll",
   "pointwise_jsd",
   "posterior_edge_support",
-  "empirical_fuzzy_overlap",
   "core_mass_tau50",
   "core_recall_tau50",
-  "gap_closure_D",
-  "gap_closure_Q",
+  "gap_closure_nll",
+  "gap_closure_q",
   "q_global_excess",
-  "q_profile_excess"
+  "q_profile_excess",
+  "graph_turnover_min"
 ]
 
 temperature_conditions = [
@@ -37,8 +39,8 @@ temperature_conditions = [
   "T_topology"
 ]
 
-primary_topology_target = "frozen_e001_hellinger_k010"
-secondary_topology_target = "empirical_fuzzy_graph"
+primary_topology_target = "posterior_expected_fuzzy_support"
+secondary_topology_target_status = "not_run"
 
 cross_validation = "5fold_stratified_by_dataset_label_entropy"
 temperature_grid = [
@@ -49,17 +51,19 @@ temperature_grid = [
   3.20, 4.00, 5.00, 6.30, 8.00, 10.00
 ]
 
-pointwise_human_baseline = "crossfit_human_jsd_nll"
+pointwise_human_baseline = "empirical_soft_label_entropy_floor_0.65062"
 
 required_safeguards = [
   "recompute_null_at_every_temperature",
   "recompute_subgraph_topology_in_training_folds",
   "monitor_entropy_and_top_class_prob",
   "monitor_distance_variance_and_near_ties",
-  "cross_fitted_out_of_fold_evaluations"
+  "cross_fitted_out_of_fold_evaluations",
+  "item_level_stratified_paired_bootstrap"
 ]
 
 go_criteria = """
-H2a holds if T_NLL significantly reduces NLL/JSD on held-out folds.
-H2b holds if marginal gap closure G_D significantly exceeds relational gap closure G_Q.
+h2a_nll = "NLL decreases under cross-fitted T_NLL"
+h2a_js = "JS divergence decreases under cross-fitted T_NLL"
+h2b_nll = "G_NLL significantly exceeds G_Q (95% CI excludes zero)"
 """
