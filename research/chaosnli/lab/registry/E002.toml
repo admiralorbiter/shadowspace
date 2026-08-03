@@ -1,0 +1,55 @@
+# Experiment E002: Pointwise Calibration vs. Relational Topology
+id = "E002"
+title = "Pointwise Soft-Label Calibration vs. Relational Neighborhood Recovery"
+status = "planned"
+
+dataset_release = "chaosnli-canonical-2026-08-02"
+partition = "5fold_stratified_crossfit"
+
+unit_of_analysis = "item_and_edge"
+question = """
+Does temperature scaling improve marginal probability alignment (NLL/JSD)
+without proportionately recovering relational human belief-space topology (Q_support)?
+"""
+
+estimands = [
+  "pointwise_nll",
+  "pointwise_jsd",
+  "posterior_edge_support",
+  "empirical_fuzzy_overlap",
+  "core_mass_tau50",
+  "core_recall_tau50",
+  "gap_closure_D",
+  "gap_closure_Q"
+]
+
+temperature_conditions = [
+  "T_raw",
+  "T_NLL",
+  "T_JSD",
+  "T_topology"
+]
+
+primary_topology_target = "frozen_e001_hellinger_k010"
+secondary_topology_target = "empirical_fuzzy_graph"
+
+cross_validation = "5fold_stratified_by_dataset_label_entropy"
+temperature_grid = [
+  0.10, 0.125, 0.16, 0.20, 0.25,
+  0.32, 0.40, 0.50, 0.63, 0.80,
+  1.00,
+  1.25, 1.60, 2.00, 2.50,
+  3.20, 4.00, 5.00, 6.30, 8.00, 10.00
+]
+
+required_safeguards = [
+  "recompute_null_at_every_temperature",
+  "monitor_entropy_and_top_class_prob",
+  "monitor_distance_variance_and_near_ties",
+  "cross_fitted_out_of_fold_evaluations"
+]
+
+go_criteria = """
+H2a holds if T_NLL significantly reduces NLL/JSD on held-out folds.
+H2b holds if marginal gap closure G_D significantly exceeds relational gap closure G_Q.
+"""
