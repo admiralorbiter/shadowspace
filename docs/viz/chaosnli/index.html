@@ -28,6 +28,7 @@
   --green:#10b981;
   --teal:#06b6d4;
   --nav-h:60px;
+  --scope-h:34px;
   --font:'Inter',sans-serif;
   --mono:'JetBrains Mono',monospace;
 }
@@ -60,6 +61,17 @@ nav{
   display:flex;align-items:center;justify-content:space-between;
   padding:0 24px;gap:16px;
 }
+.study-lens{
+  position:fixed;top:var(--nav-h);left:0;right:0;z-index:998;
+  height:var(--scope-h);padding:6px 24px;
+  background:rgba(13,13,31,.94);border-bottom:1px solid var(--border);
+  backdrop-filter:blur(14px);display:flex;justify-content:center;
+  align-items:center;gap:14px;flex-wrap:nowrap;overflow-x:auto;white-space:nowrap;
+  color:var(--text2);font-size:10px;letter-spacing:.25px;
+}
+.study-lens::-webkit-scrollbar{display:none}
+.study-lens strong{color:var(--text);font-weight:600}
+.study-lens .scope-warning{color:var(--gold)}
 .nav-brand{
   font-weight:700;font-size:14px;letter-spacing:.3px;
   color:var(--text);white-space:nowrap;flex-shrink:0;
@@ -89,9 +101,10 @@ nav{
 .toggle-pill{
   position:relative;width:72px;height:28px;
   background:rgba(255,255,255,0.08);border-radius:14px;
-  cursor:pointer;border:1px solid var(--border);
+  cursor:pointer;border:1px solid var(--border);padding:0;
   transition:background .3s;
 }
+.toggle-pill:focus-visible,.btn:focus-visible,.item-card:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
 .toggle-pill::after{
   content:'';position:absolute;top:3px;left:3px;
   width:22px;height:22px;border-radius:50%;
@@ -112,7 +125,7 @@ html.research-mode .tl-r{opacity:1}
 
 /* ── Section layouts ──────────────────────────────────────────────────────── */
 section{
-  min-height:100vh;padding:calc(var(--nav-h) + 48px) 24px 64px;
+  min-height:auto;padding:calc(var(--nav-h) + var(--scope-h) + 56px) 24px 72px;
   max-width:1200px;margin:0 auto;
 }
 section:first-of-type{max-width:none;padding-left:0;padding-right:0}
@@ -132,6 +145,38 @@ h2{
   line-height:1.7;margin-bottom:40px;
 }
 .section-desc .r-only{font-size:14px}
+.evidence-row{display:flex;gap:8px;flex-wrap:wrap;margin:-18px 0 24px}
+.evidence-tag{
+  display:inline-flex;align-items:center;gap:5px;padding:4px 9px;
+  border:1px solid var(--border);border-radius:999px;background:var(--surface);
+  color:var(--text2);font-size:10px;font-family:var(--mono);
+}
+.evidence-tag.status{color:var(--green);border-color:rgba(16,185,129,.28);background:rgba(16,185,129,.08)}
+.evidence-tag.exploratory{color:var(--gold);border-color:rgba(245,158,11,.28);background:rgba(245,158,11,.08)}
+.analysis-tools{margin-top:22px;padding-top:18px;border-top:1px solid var(--border)}
+.analysis-prompt{color:var(--text2);font-size:13px;line-height:1.6;margin-bottom:12px}
+.analysis-prompt strong{color:var(--text);font-weight:600}
+.analysis-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.source-link{font-size:11px;color:var(--blue);text-decoration:none}
+.source-link:hover{text-decoration:underline}
+.interpretation-panel{
+  margin-top:14px;padding:18px 20px;border-left:3px solid var(--blue);
+  background:rgba(59,130,246,.06);border-radius:0 10px 10px 0;
+}
+.interpretation-panel[hidden],.comparison-wrap[hidden]{display:none}
+.interpretation-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.interpretation-block h3{
+  font-size:10px;letter-spacing:1.2px;text-transform:uppercase;
+  color:var(--blue);margin-bottom:6px;font-weight:700;
+}
+.interpretation-block p{font-size:13px;color:var(--text2);line-height:1.6}
+.comparison-intro{max-width:760px;color:var(--text2);margin-bottom:24px}
+.comparison-wrap{margin-top:20px;overflow-x:auto}
+.comparison-table{width:100%;border-collapse:collapse;font-size:12px;line-height:1.55}
+.comparison-table th,.comparison-table td{padding:12px;text-align:left;vertical-align:top;border-bottom:1px solid var(--border)}
+.comparison-table th{color:var(--text);font-size:10px;letter-spacing:.8px;text-transform:uppercase}
+.comparison-table td{color:var(--text2);min-width:180px}
+.comparison-table td:first-child{color:var(--text);font-weight:600;min-width:150px}
 
 /* ── Glass card ───────────────────────────────────────────────────────────── */
 .glass{
@@ -146,7 +191,7 @@ h2{
 #hero{
   min-height:100vh;display:flex;flex-direction:column;
   justify-content:center;align-items:center;text-align:center;
-  padding:var(--nav-h) 24px 0;
+  padding:calc(var(--nav-h) + var(--scope-h)) 24px 0;
   background:
     radial-gradient(ellipse 80% 60% at 50% 0%,rgba(59,130,246,0.06) 0%,transparent 70%),
     radial-gradient(ellipse 60% 40% at 80% 100%,rgba(139,92,246,0.05) 0%,transparent 60%),
@@ -180,8 +225,8 @@ h2{
   line-height:1.7;margin-bottom:48px;
 }
 .stat-grid{
-  display:grid;grid-template-columns:repeat(3,1fr);
-  gap:16px;width:100%;max-width:680px;
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:16px;width:100%;max-width:780px;
 }
 .stat-card{
   background:var(--surface);border:1px solid var(--border);
@@ -286,7 +331,7 @@ svg{width:100%;overflow:visible}
 .item-card{
   padding:16px;border-radius:12px;cursor:pointer;
   border:1px solid var(--border);background:var(--surface);
-  transition:all .2s;
+  transition:all .2s;font-family:var(--font);text-align:left;color:var(--text);
 }
 .item-card:hover{border-color:rgba(255,255,255,0.15);background:rgba(255,255,255,0.06)}
 .item-card.active{border-color:var(--blue);background:rgba(59,130,246,0.08)}
@@ -312,21 +357,7 @@ svg{width:100%;overflow:visible}
 .ternary-title{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:12px;text-align:center}
 
 /* ── Panel 7: Bootstrap ───────────────────────────────────────────────────── */
-.boot-grid{
-  display:grid;grid-template-columns:repeat(40,1fr);
-  gap:3px;margin:24px 0;
-}
-.boot-dot{
-  aspect-ratio:1;border-radius:2px;
-  background:rgba(16,185,129,0.15);
-  transition:all .3s;
-}
-.boot-dot.lit{background:var(--green);box-shadow:0 0 4px rgba(16,185,129,0.5)}
-.boot-counter{
-  font-size:48px;font-weight:800;font-family:var(--mono);
-  color:var(--green);text-align:center;
-  text-shadow:0 0 32px rgba(16,185,129,0.4);
-}
+.bootstrap-chart-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px}
 .boot-summary{
   display:flex;justify-content:center;gap:32px;margin-top:24px;flex-wrap:wrap;
 }
@@ -360,6 +391,9 @@ footer a:hover{text-decoration:underline}
   .stat-grid{grid-template-columns:1fr 1fr}
   .nav-links{display:none}
   h2{font-size:28px}
+  .study-lens{padding:5px 10px;gap:9px;font-size:9px;justify-content:flex-start}
+  .interpretation-grid{grid-template-columns:1fr}
+  section{padding-left:16px;padding-right:16px}
 }
 
 /* ── Animations ───────────────────────────────────────────────────────────── */
@@ -377,25 +411,34 @@ footer a:hover{text-decoration:underline}
     <span class="r-only">Q<sub>NX</sub><sup>soft</sup> — ChaosNLI Study</span>
   </div>
   <div class="nav-links">
-    <a href="#gap">The Gap</a>
-    <a href="#ties">Tie Problem</a>
-    <a href="#surface">Depth Surface</a>
-    <a href="#phase">Phase Diagram</a>
-    <a href="#geometry">Geometry</a>
-    <a href="#examples">Examples</a>
-    <a href="#bootstrap">Validation</a>
+    <a href="#gap">Recovery</a>
+    <a href="#ties">Ties</a>
+    <a href="#surface">Depth × Scale</a>
+    <a href="#phase">Regimes</a>
+    <a href="#geometry">Sensitivity</a>
+    <a href="#examples">Items</a>
+    <a href="#bootstrap">Resampling</a>
+    <a href="#comparison">Compare</a>
   </div>
   <div class="mode-toggle">
-    <div class="toggle-pill" id="modeToggle" title="Switch audience mode" role="button" aria-pressed="false">
+    <button class="toggle-pill" id="modeToggle" type="button" aria-label="Switch between general and research detail" aria-pressed="false">
       <div class="toggle-labels">
         <span class="tl-g">G</span>
         <span class="tl-r">R</span>
       </div>
-    </div>
+    </button>
     <span class="mode-label g-only" id="modeLabel">General</span>
     <span class="mode-label r-only" id="modeLabelR">Research</span>
   </div>
 </nav>
+
+<aside class="study-lens" aria-label="Persistent study scope">
+  <span><strong>Population:</strong> selected low-agreement ChaosNLI items</span>
+  <span><strong>Votes:</strong> 100/item</span>
+  <span><strong>Primary lens:</strong> Hellinger · k=10</span>
+  <span><strong>Models:</strong> pre-2023 benchmarks</span>
+  <span class="scope-warning">Relational alignment ≠ semantic ground truth</span>
+</aside>
 
 <!-- ── Hero ───────────────────────────────────────────────────────────────── -->
 <section id="hero">
@@ -404,29 +447,30 @@ footer a:hover{text-decoration:underline}
       <div class="pulse"></div>
       ChaosNLI · N = 3,113 items · 9 Models
     </div>
-    <h1 class="g-only">When AI Tries to Read<br/>Human Disagreement</h1>
+    <h1 class="g-only">How Do Models Organize<br/>Human Disagreement?</h1>
     <h1 class="r-only">Collective Opinion as<br/>a Relational Space</h1>
     <p class="hero-sub g-only">
-      Language is full of ambiguity. When 100 people read the same sentence pair and vote on how they relate, their disagreements tell a story — one that's surprisingly consistent across different groups of readers. The patterns aren't random noise; they reflect structure in the language itself. This visualization explores what happens when we ask AI models to capture that same structure.
+      This study compares relationships among human vote distributions with relationships among model output distributions. Explore the measurements first, then reveal the study's interpretation and limits for each panel.
     </p>
     <p class="hero-sub r-only">
       Tie-aware neighborhood analysis of human and model NLI distributions using fractional soft-overlap Q<sub>NX</sub><sup>soft</sup>(k) under a fully paired posterior-predictive estimand across 500 simulated cohort pairs.
     </p>
     <div class="stat-grid">
       <div class="stat-card">
-        <div class="stat-val gold" id="heroHbar">0.0755</div>
-        <div class="stat-label g-only">Human Coherence Score</div>
-        <div class="stat-label r-only">H̄ (HH100 focal-bootstrap mean)</div>
+        <div class="stat-val gold">3,113</div>
+        <div class="stat-label">Selected NLI Items</div>
       </div>
       <div class="stat-card">
-        <div class="stat-val blue">~0.012</div>
-        <div class="stat-label g-only">Best AI Model Score</div>
-        <div class="stat-label r-only">Max M̂<sub>m</sub> (BART-Large)</div>
+        <div class="stat-val blue">100</div>
+        <div class="stat-label">Judgments per Item</div>
       </div>
       <div class="stat-card">
-        <div class="stat-val violet">49.1%</div>
-        <div class="stat-label g-only">Items With Ambiguous Neighbors</div>
-        <div class="stat-label r-only">Boundary-tie affected at k=10</div>
+        <div class="stat-val violet">9</div>
+        <div class="stat-label">Benchmark Models</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val gold">k=10</div>
+        <div class="stat-label">Primary Neighborhood</div>
       </div>
     </div>
     <div class="scroll-hint">
@@ -439,16 +483,22 @@ footer a:hover{text-decoration:underline}
 <!-- ── Panel 1: The Gap ────────────────────────────────────────────────────── -->
 <section id="gap">
   <div class="section-label">Panel 01 · Model Recovery</div>
-  <h2 class="g-only">AI Models Score 4–10× Lower Than Humans</h2>
-  <h2 class="r-only">Focal-Bootstrap Paired Estimand: M̂<sub>m</sub> vs. H̄</h2>
+  <h2 class="g-only">How Much Neighborhood Structure Do Models Recover?</h2>
+  <h2 class="r-only">How Does M̂<sub>m</sub> Compare With the Paired Human Reference H̄?</h2>
   <p class="section-desc g-only">
     This task is called Natural Language Inference (NLI). Given a premise — say, <em style="color:var(--text);font-style:italic">"A woman is running"</em> — and a hypothesis — <em style="color:var(--text);font-style:italic">"Someone is exercising"</em> — annotators vote on whether the hypothesis is entailed, neutral, or contradicted.
     <br/><br/>
-    For ambiguous sentences, votes split in consistent ways: two independent groups of 100 annotators tend to disagree in similar patterns. Our score measures that consistency. Human groups score around 0.075. We tested 9 AI models. The best scored 0.016 — less than a quarter of human level, and the gap held without exception across 1,000 different random checks.
+    Each item becomes a point defined by its three-label distribution. The score asks whether a model and an independent human cohort place the same items in the same local neighborhoods. Compare the nine model scores with the paired human reference and the empirical identity-permutation null.
   </p>
   <p class="section-desc r-only">
     Fully paired estimand: M̂<sub>m</sub> = (1/1000)·Σ<sub>b</sub> M<sub>m,b</sub>, where both H<sub>b</sub> and M<sub>m,b</sub> are evaluated against identical posterior-predictive cohorts (G<sub>H1</sub><sup>(s)</sup>, G<sub>H2</sub><sup>(s)</sup>). Point estimates are focal-bootstrap means; 95% bootstrap intervals shown for Δ<sub>m</sub>.
   </p>
+  <div class="evidence-row">
+    <span class="evidence-tag status">Canonical · Study 1</span>
+    <span class="evidence-tag">N=3,113</span>
+    <span class="evidence-tag">Hellinger · k=10</span>
+    <span class="evidence-tag">Paired posterior cohorts</span>
+  </div>
   <div class="legend-row">
     <div class="legend-item"><div class="legend-swatch" style="background:var(--gold)"></div><span class="g-only">Human reference (H̄ = 0.0755)</span><span class="r-only">H̄ = 0.07549 (HH100 bootstrap mean)</span></div>
     <div class="legend-item"><div class="legend-swatch" style="background:var(--red);opacity:.7"></div><span class="g-only">Random chance floor (score = 0.004)</span><span class="r-only">Empirical stratified null (0.00354)</span></div>
@@ -458,26 +508,40 @@ footer a:hover{text-decoration:underline}
     <div id="tooltip-gap" class="tooltip"></div>
     <svg id="chart-gap" class="chart-svg" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid meet"></svg>
   </div>
+  <div class="analysis-tools" data-panel="gap">
+    <p class="analysis-prompt"><strong>Analyze first:</strong> Where do the model scores sit relative to both references? Does a raw ratio tell the same story as a chance-adjusted comparison?</p>
+    <div class="analysis-actions">
+      <button class="btn btn-ghost interpretation-toggle" type="button" data-interpretation="gap" aria-expanded="false">Show study interpretation</button>
+      <a class="source-link" href="../../studies/chaosnli/STUDY1_COMPUTATIONAL_AUDIT.md#4-model-benchmark--stratified-95-joint-bootstrap">Sources and methods ↗</a>
+    </div>
+    <div class="interpretation-panel" id="interpretation-gap" hidden></div>
+  </div>
 </section>
 
 <!-- ── Panel 2: The Tie Problem ───────────────────────────────────────────── -->
 <section id="ties">
   <div class="section-label">Panel 02 · Stability Analysis</div>
-  <h2 class="g-only">49% of Items Have Ambiguous Neighbors</h2>
-  <h2 class="r-only">Storage-Index Boundary Tie Instability</h2>
+  <h2 class="g-only">What Happens When Candidate Neighbors Are Tied?</h2>
+  <h2 class="r-only">How Does Storage-Index Tie Resolution Affect Fixed-k Neighborhoods?</h2>
   <p class="section-desc g-only">
     To measure how similar two groups' opinions are, we find the "nearest neighbors" of each item — the other sentence pairs that are most similar in how people disagreed about them. Think of it as asking: which sentences in the dataset are closest relatives of this one, based on how voters reacted?
     <br/><br/>
-    The problem: when multiple items are exactly the same distance away, you have a tie. Standard tools silently pick whichever tied item appears first in the data file. Reorder the file, and a different item wins — your analysis changes without warning. We found that <strong style="color:var(--red)">49% of items</strong> in this dataset hit this issue. Our fix assigns each tied item an equal fractional share of credit, making the score always identical regardless of how the data is ordered.
+    When multiple candidates share the boundary distance, an index-resolved implementation must choose which candidates enter a fixed-size neighborhood. The tested implementation resolves that choice using storage order. Reindex the demonstration and compare its selected neighbor with the fractional boundary representation.
   </p>
   <p class="section-desc r-only">
     When multiple candidates share the exact k-th boundary distance, index-resolved methods select by storage order, producing unstable neighborhood graphs. Q̄<sub>hard</sub> = 0.955 ± 0.0015 at k=10 under random row permutation. The fractional soft statistic Q<sub>NX</sub><sup>soft</sup> is provably invariant to any permutation: Q<sub>soft</sub> = 1.000 ± 0.000.
   </p>
+  <div class="evidence-row">
+    <span class="evidence-tag status">Canonical · Study 1</span>
+    <span class="evidence-tag">1,000 row permutations</span>
+    <span class="evidence-tag">Boundary ties · k∈{5,10,20,50}</span>
+    <span class="evidence-tag">Identity-matched comparison</span>
+  </div>
   <div class="tie-grid">
     <div class="glass chart-wrap fade-in">
       <div style="font-size:13px;font-weight:600;margin-bottom:16px">
-        <span class="g-only">Overlap stability at different neighborhood sizes</span>
-        <span class="r-only">Q̄<sub>overlap</sub> by k (index-resolved vs. fractional)</span>
+        <span class="g-only">Overlap after reindexing by neighborhood size (axis: 0.88–1.00)</span>
+        <span class="r-only">Q̄<sub>overlap</sub> by k (displayed domain: 0.88–1.00)</span>
       </div>
       <div id="tooltip-tie" class="tooltip"></div>
       <svg id="chart-ties" class="chart-svg" viewBox="0 0 360 260" preserveAspectRatio="xMidYMid meet"></svg>
@@ -500,94 +564,150 @@ footer a:hover{text-decoration:underline}
       </div>
     </div>
   </div>
+  <div class="analysis-tools" data-panel="ties">
+    <p class="analysis-prompt"><strong>Analyze first:</strong> How often does a tie cross the boundary, and how large is the resulting overlap change at each k? Which quantity captures prevalence versus magnitude?</p>
+    <div class="analysis-actions">
+      <button class="btn btn-ghost interpretation-toggle" type="button" data-interpretation="ties" aria-expanded="false">Show study interpretation</button>
+      <a class="source-link" href="../../studies/chaosnli/STUDY1_COMPUTATIONAL_AUDIT.md#2-failure-analysis-of-deterministic-top-k-sorting">Sources and methods ↗</a>
+    </div>
+    <div class="interpretation-panel" id="interpretation-ties" hidden></div>
+  </div>
 </section>
 
 <!-- ── Panel 3: Annotation Depth Surface ─────────────────────────────────── -->
 <section id="surface">
   <div class="section-label">Panel 03 · Reference Surface</div>
-  <h2 class="g-only">More Annotators = Better Structure — But Slowly</h2>
-  <h2 class="r-only">R<sub>ref</sub>(n,k) = Q(G<sub>n</sub><sup>rep</sup>, G<sub>100</sub><sup>obs</sup>) — 50-Seed Plug-In Surface</h2>
+  <h2 class="g-only">How Do Annotation Depth and Neighborhood Scale Interact?</h2>
+  <h2 class="r-only">How Does R<sub>ref</sub>(n,k) Change Across n and k?</h2>
   <p class="section-desc g-only">
-    Here's a practical question: how many annotators do you actually need? With just 3 votes per item, you get a rough sketch of opinion structure. With 100 votes, a much richer picture — but even then, how close are you to the real thing?
+    How many judgments are needed to reproduce the relationships in the observed 100-vote graph, and does that answer depend on how broadly a neighborhood is defined?
     <br/><br/>
-    We simulated this at 8 different annotator counts (3 to 100) and 5 different neighborhood scales (how broadly you define "similar"). Each cell in the grid shows how similar a simulated partial sample is to the full 100-annotator ground truth. Brighter yellow = more similar. Darker purple = less similar. Every column strictly increases as you add more annotators — a result confirmed across <strong style="color:var(--green)">50 independent simulation runs</strong>.
+    Each cell compares a simulated n-vote sample with the observed 100-vote reference graph at one neighborhood size k. Brighter cells indicate greater similarity. The observed graph is a finite reference—not semantic ground truth—and the simulation conditions on its observed proportions.
   </p>
   <p class="section-desc r-only">
     Plug-in empirical reference similarity using G<sub>n</sub><sup>rep</sup> drawn from y<sub>i</sub> ~ Multinomial(n, p̂<sub>i</sub>) with observed label proportions p̂<sub>i</sub> (not Dirichlet posterior draws). Strict monotonicity confirmed for column means and 95% CI lower bounds across all 50 seeds and all k ∈ {5, 10, 20, 50, 100}.
   </p>
+  <div class="evidence-row">
+    <span class="evidence-tag status">Canonical · Study 1</span>
+    <span class="evidence-tag">Plug-in multinomial</span>
+    <span class="evidence-tag">50 seeds/cell</span>
+    <span class="evidence-tag">Observed G<sub>100</sub> reference</span>
+  </div>
   <div class="surface-controls">
     <button class="btn btn-primary" id="playBtn">▶ Animate</button>
     <button class="btn btn-ghost" id="resetSurface">Reset</button>
-    <div class="mono-badge">✓ Monotone · All 50 Seeds</div>
+    <div class="mono-badge">50 seeds per cell</div>
     <span class="g-only" style="font-size:12px;color:var(--text3)">Hover cells for mean ± SD</span>
   </div>
   <div class="glass chart-wrap fade-in">
     <div id="tooltip-surface" class="tooltip"></div>
     <svg id="chart-surface" class="chart-svg" viewBox="0 0 800 340" preserveAspectRatio="xMidYMid meet"></svg>
   </div>
+  <div class="analysis-tools" data-panel="surface">
+    <p class="analysis-prompt"><strong>Analyze first:</strong> Compare changes down a column with changes across a row. At which k does additional annotation depth appear most consequential?</p>
+    <div class="analysis-actions">
+      <button class="btn btn-ghost interpretation-toggle" type="button" data-interpretation="surface" aria-expanded="false">Show study interpretation</button>
+      <a class="source-link" href="../../studies/chaosnli/STUDY1_COMPUTATIONAL_AUDIT.md#5-reference-graph-similarity-surface-r_textreferencenk--qg_ntextrep-g_100textobs">Sources and methods ↗</a>
+    </div>
+    <div class="interpretation-panel" id="interpretation-surface" hidden></div>
+  </div>
 </section>
 
 <!-- ── Panel 4: Phase Diagram ─────────────────────────────────────────────── -->
 <section id="phase">
   <div class="section-label">Panel 04 · Phase Analysis</div>
-  <h2 class="g-only">ChaosNLI Has a Specific Disagreement Fingerprint</h2>
-  <h2 class="r-only">Dirichlet Concentration Phase Diagram (C=3, Boundary Tie Rate)</h2>
+  <h2 class="g-only">Where Does the Observed Tie Rate Fall Among Simulated Regimes?</h2>
+  <h2 class="r-only">How Does the C=3 Boundary-Tie Rate Vary With α and n?</h2>
   <p class="section-desc g-only">
-    Where does ChaosNLI's disagreement pattern sit in the broader space of possible datasets? To answer this, we used a mathematical model called a Dirichlet distribution — essentially a "disagreement engine" that can simulate everything from near-perfect consensus (everyone votes the same) to pure random noise (every label equally likely).
+    This phase diagram compares the observed boundary-tie rate with simplified synthetic datasets generated under three symmetric Dirichlet concentration settings.
     <br/><br/>
-    The concentration parameter α controls how much opinions cluster. Low α (top rows) = very concentrated opinions, high tie rates. High α (bottom rows) = spread-out opinions, fewer ties. Each cell shows the tie rate at a given annotation depth. The real ChaosNLI data (49.1% boundary ties at n=100 votes) lands between two regimes — precisely located, but consistent with a range of underlying processes.
+    The concentration parameter α controls how probability mass tends to occupy the three-label simplex. Each cell shows the simulated tie rate at a given annotation depth. The observed 49.1% rate is one summary statistic; matching or bracketing it does not identify a unique data-generating process.
   </p>
   <p class="section-desc r-only">
     P[tie at boundary] across Dirichlet concentration α and annotation depth n for C=3 labels, estimated via Monte Carlo simulation. Empirical ChaosNLI rate (49.1% at n=100) lies between α=0.1 (80.2%) and α=0.5 (35.7%) — compatible with both, uniquely identified by neither. The diagram is descriptive, not a parameter identification.
   </p>
+  <div class="evidence-row">
+    <span class="evidence-tag status">Canonical · Study 1</span>
+    <span class="evidence-tag">Descriptive simulation</span>
+    <span class="evidence-tag">C=3 · k=10</span>
+    <span class="evidence-tag">100 replications/cell</span>
+  </div>
   <div class="glass chart-wrap fade-in">
     <div id="tooltip-phase" class="tooltip"></div>
     <svg id="chart-phase" class="chart-svg" viewBox="0 0 800 280" preserveAspectRatio="xMidYMid meet"></svg>
   </div>
   <p class="phase-note g-only">
-    ★ The pulsing circle marks where the real ChaosNLI dataset lands (49.1% ties). It falls between the highly concentrated α=0.1 row (80% ties) and the moderate α=0.5 row (36% ties). This tells us the data has structured disagreement — not random noise, not pure consensus.
+    ★ The marker shows the observed 49.1% rate at n=100. It lies between the tested α=0.1 and α=0.5 cells; no α point estimate is implied.
   </p>
   <p class="phase-note r-only">
     ★ Empirical marker at (n=100, α ∈ (0.1, 0.5)). Boundary-tie rate alone is insufficient to uniquely identify α — the diagram places the data within a regime, not at a point estimate.
   </p>
+  <div class="analysis-tools" data-panel="phase">
+    <p class="analysis-prompt"><strong>Analyze first:</strong> Which combinations bracket the observed rate? Could different distributions produce the same boundary-tie percentage?</p>
+    <div class="analysis-actions">
+      <button class="btn btn-ghost interpretation-toggle" type="button" data-interpretation="phase" aria-expanded="false">Show study interpretation</button>
+      <a class="source-link" href="../../studies/chaosnli/UNIFIED_PAPER_DRAFT.md#43-phase-diagram-tie-prevalence-under-synthetic-annotation-regimes">Sources and methods ↗</a>
+    </div>
+    <div class="interpretation-panel" id="interpretation-phase" hidden></div>
+  </div>
 </section>
 
 <!-- ── Panel 5: Geometry Robustness ──────────────────────────────────────── -->
 <section id="geometry">
   <div class="section-label">Panel 05 · Robustness Check</div>
-  <h2 class="g-only">The Finding Holds Across Every Distance Measure</h2>
-  <h2 class="r-only">Fixed-Reference Geometry Sensitivity: 5 Distance Metrics</h2>
+  <h2 class="g-only">How Sensitive Are Scores and Rankings to Distance Geometry?</h2>
+  <h2 class="r-only">What Changes Under Five Fixed-Reference Distance Metrics?</h2>
   <p class="section-desc g-only">
-    A fair skeptic might ask: did we pick a measurement method that happens to make AI models look bad? We tested 5 completely different mathematical definitions of "similarity" between opinion distributions, ranging from classical statistics to information theory to methods designed specifically for percentage-based data:
+    Distance metrics define which opinion distributions count as nearby. This panel recomputes the fixed-reference model scores under five alternatives:
     <br/><br/>
     <strong>Hellinger</strong> (main measure) · <strong>Jensen-Shannon</strong> (information theory) · <strong>Total Variation</strong> (maximum label difference) · <strong>Euclidean</strong> (straight-line distance) · <strong>Aitchison</strong> (compositional data geometry)
     <br/><br/>
-    Each model's scores across these 5 methods is shown as a line. If the lines stay roughly parallel, it means the ranking is stable regardless of measurement choice — and they do.
+    Each line follows one model. Inspect both whether model–human overlap remains above the null and whether individual model rankings exchange positions across metrics.
   </p>
   <p class="section-desc r-only">
-    Fixed-reference Q(G<sub>m</sub>, G<sub>100</sub><sup>obs</sup>) under Hellinger, Jensen-Shannon divergence, total variation distance, Euclidean norm, and Aitchison distance. Ordinal ranking of all 9 models is preserved across all 5 metrics; absolute values differ by ~5–15%. This is the fixed-reference estimand, not the paired bootstrap estimand used in Panel 01.
+    Fixed-reference Q(G<sub>m</sub>, G<sub>100</sub><sup>obs</sup>) under Hellinger, Jensen-Shannon distance, total variation, Euclidean norm, and Aitchison distance. Model–human gaps persist under all five specifications, while some middle and lower model ranks change. This is not the paired estimand used in Panel 01.
   </p>
-  <p class="pc-hint g-only">Each colored line = one AI model. Hover to highlight. Parallel lines = ranking doesn't change with measurement method.</p>
+  <div class="evidence-row">
+    <span class="evidence-tag status">Canonical · Study 1</span>
+    <span class="evidence-tag">Fixed observed reference</span>
+    <span class="evidence-tag">5 geometries · k=10</span>
+    <span class="evidence-tag">Aitchison ε=10<sup>−4</sup></span>
+  </div>
+  <p class="pc-hint g-only">Each colored line represents one model. Hover to isolate it; crossings indicate rank changes.</p>
   <p class="pc-hint r-only">Parallel-coordinate plot. Each vertical axis = one distance metric. Hover to isolate a model. Note: these are fixed-reference scores, not paired scores from Table 2.</p>
   <div class="glass chart-wrap fade-in" style="overflow:visible">
     <div id="tooltip-geo" class="tooltip"></div>
     <svg id="chart-geo" class="chart-svg" viewBox="0 0 800 320" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+  <div class="analysis-tools" data-panel="geometry">
+    <p class="analysis-prompt"><strong>Analyze first:</strong> Which comparisons are stable, and which models cross? Does robustness of the overall gap imply robustness of every rank?</p>
+    <div class="analysis-actions">
+      <button class="btn btn-ghost interpretation-toggle" type="button" data-interpretation="geometry" aria-expanded="false">Show study interpretation</button>
+      <a class="source-link" href="../../studies/chaosnli/STUDY1_COMPUTATIONAL_AUDIT.md#6-geometry-sensitivity-benchmark-across-all-9-models-k10">Sources and methods ↗</a>
+    </div>
+    <div class="interpretation-panel" id="interpretation-geometry" hidden></div>
   </div>
 </section>
 
 <!-- ── Panel 6: What Disagreement Looks Like ─────────────────────────────── -->
 <section id="examples">
   <div class="section-label">Panel 06 · Item-Level View</div>
-  <h2 class="g-only">What Does Human Disagreement Actually Look Like?</h2>
-  <h2 class="r-only">Item-Level Vote Distributions — Ternary Simplex</h2>
+  <h2 class="g-only">What Vote-Distribution Patterns Occur at the Item Level?</h2>
+  <h2 class="r-only">How Do Selected Items Occupy the Empirical Ternary Simplex?</h2>
   <p class="section-desc g-only">
-    All the statistics above describe patterns in 3,113 sentence pairs. But what do those patterns actually feel like at the item level? Below are four real examples from the dataset — each rated by 100 people.
+    The aggregate statistics above describe 3,113 sentence pairs. These four selected items show how individual 100-vote distributions occupy the three-label simplex.
     <br/><br/>
-    The triangle on the right (called a <em style="color:var(--text)">ternary plot</em>) shows how votes split across three labels: Entailment (E), Neutral (N), and Contradiction (C). A dot near a corner means near-consensus. A dot in the center means genuine three-way disagreement. <strong>Click any card</strong> to update the triangle. Notice how the ambiguous examples have a specific character — it's not random noise, but a real conceptual question that different people genuinely answer differently.
+    A dot near a corner records concentrated votes; a dot near the center records a more even split. <strong>Select any card</strong> to update the plot. The vote pattern is a Level-1 outcome: it does not by itself identify ambiguity, annotation error, guideline effects, or another Level-2 cause.
   </p>
   <p class="section-desc r-only">
     Ternary simplex plot of empirical vote distributions (e, n, c) where e+n+c=100, converted to barycentric coordinates. Items span the entropy range H ∈ [0.0, 1.583] (max possible for 3 labels ≈ 1.585). Click a card to update the diagram.
   </p>
+  <div class="evidence-row">
+    <span class="evidence-tag status">Canonical dataset examples</span>
+    <span class="evidence-tag">100 empirical votes/item</span>
+    <span class="evidence-tag">Level 1: distribution</span>
+    <span class="evidence-tag exploratory">Level 2: unresolved</span>
+  </div>
   <div class="examples-layout">
     <div class="item-cards" id="itemCards"></div>
     <div class="ternary-wrap glass chart-wrap fade-in">
@@ -597,59 +717,114 @@ footer a:hover{text-decoration:underline}
       <div id="ternary-info" style="text-align:center;margin-top:12px;font-size:12px;color:var(--text2)"></div>
     </div>
   </div>
+  <div class="analysis-tools" data-panel="examples">
+    <p class="analysis-prompt"><strong>Analyze first:</strong> What does the distribution establish directly? Which competing Level-2 explanations would require rationale-level evidence?</p>
+    <div class="analysis-actions">
+      <button class="btn btn-ghost interpretation-toggle" type="button" data-interpretation="examples" aria-expanded="false">Show study interpretation</button>
+      <a class="source-link" href="../../studies/chaosnli/ACCESSIBLE_RESEARCH_GUIDE.md#11-the-level-1-and-level-2-distinction">Sources and methods ↗</a>
+    </div>
+    <div class="interpretation-panel" id="interpretation-examples" hidden></div>
+  </div>
 </section>
 
 <!-- ── Panel 7: Bootstrap Validation ─────────────────────────────────────── -->
 <section id="bootstrap">
   <div class="section-label">Panel 07 · Robustness</div>
-  <h2 class="g-only">1,000 Random Checks — All Confirmed the Gap</h2>
-  <h2 class="r-only">Stratified Focal-Item Bootstrap: Δ<sub>m,b</sub> &gt; 0 for all 1,000 replicates</h2>
+  <h2 class="g-only">How Variable Is the Paired Difference Across Focal-Item Resamples?</h2>
+  <h2 class="r-only">What Do the Stratified Focal-Item Bootstrap Intervals Show?</h2>
   <p class="section-desc g-only">
-    A natural concern in any analysis: what if the result depends on which specific items happened to be in the dataset? Maybe with a slightly different sample of sentences, the AI models would score higher.
+    The paired difference Δ compares the human reference with each model under the same posterior-predictive cohorts. The interval chart shows variation from resampling focal-item overlap contributions within the fixed ChaosNLI candidate population.
     <br/><br/>
-    We addressed this with <em style="color:var(--text)">bootstrapping</em>: we drew 1,000 different random sub-samples of the 3,113 items and re-ran the comparison from scratch each time. Every dot below represents one check. Every dot is green. The smallest gap across all 1,000 checks was still +0.054 — about 15× larger than our measurement precision. The finding is not sensitive to which sentences you look at.
+    This procedure does not rebuild the candidate set or neighbor graphs from each resample. It estimates focal-item sampling variation conditional on those precomputed graphs; shared graph edges also make contributions non-independent.
   </p>
   <p class="section-desc r-only">
     Stratified focal-item bootstrap across SNLI and MNLI sub-corpora (proportional strata). For all 1,000 replicates b, Δ<sub>m,b</sub> = H<sub>b</sub> − M<sub>m,b</sub> &gt; 0 for every evaluated model. Minimum 95% CI lower bound across all models: +0.054 (BART-Large, [0.054, 0.065]). Bootstrap resamples items within the fixed ChaosNLI candidate population — it does not re-draw candidates or re-build the neighbor graph.
   </p>
+  <div class="evidence-row">
+    <span class="evidence-tag status">Canonical · Study 1</span>
+    <span class="evidence-tag">1,000 stratified resamples</span>
+    <span class="evidence-tag">95% bootstrap intervals</span>
+    <span class="evidence-tag">Graphs held fixed</span>
+  </div>
   <div class="glass chart-wrap fade-in">
-    <div class="boot-counter" id="bootCounter">0 / 1000</div>
-    <div class="boot-grid" id="bootGrid"></div>
+    <div class="bootstrap-chart-title">Paired difference Δ = human reference − model score</div>
+    <div id="tooltip-bootstrap" class="tooltip"></div>
+    <svg id="chart-bootstrap" class="chart-svg" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid meet"></svg>
     <div class="boot-summary">
       <div class="boot-stat-item">
         <div class="boot-stat-val">1,000 / 1,000</div>
-        <div class="boot-stat-lab g-only">Checks confirming the gap</div>
+        <div class="boot-stat-lab g-only">Resamples with Δ &gt; 0</div>
         <div class="boot-stat-lab r-only">Replicates with Δ<sub>m</sub> &gt; 0</div>
       </div>
       <div class="boot-stat-item">
         <div class="boot-stat-val">+0.054</div>
-        <div class="boot-stat-lab g-only">Smallest gap observed (BART-Large)</div>
+        <div class="boot-stat-lab g-only">Smallest 95% interval lower bound</div>
         <div class="boot-stat-lab r-only">Min 95% CI lower bound</div>
       </div>
       <div class="boot-stat-item">
-        <div class="boot-stat-val">p &lt; 0.001</div>
-        <div class="boot-stat-lab g-only">Statistical confidence</div>
-        <div class="boot-stat-lab r-only">All bootstrap CIs exclude zero</div>
+        <div class="boot-stat-val">Fixed graphs</div>
+        <div class="boot-stat-lab g-only">Scope of the resampling analysis</div>
+        <div class="boot-stat-lab r-only">Candidate and neighbor graphs not reconstructed</div>
       </div>
     </div>
+  </div>
+  <div class="analysis-tools" data-panel="bootstrap">
+    <p class="analysis-prompt"><strong>Analyze first:</strong> Compare interval position and width across models. What uncertainty is represented here, and what uncertainty is outside the procedure?</p>
+    <div class="analysis-actions">
+      <button class="btn btn-ghost interpretation-toggle" type="button" data-interpretation="bootstrap" aria-expanded="false">Show study interpretation</button>
+      <a class="source-link" href="../../studies/chaosnli/UNIFIED_PAPER_DRAFT.md#41-nine-model-hellinger-benchmark-k10">Sources and methods ↗</a>
+    </div>
+    <div class="interpretation-panel" id="interpretation-bootstrap" hidden></div>
   </div>
 
   <!-- VariErr note -->
   <div style="margin-top:40px" class="fade-in">
     <div class="section-label" style="margin-bottom:12px">Appendix · Exploratory Finding</div>
     <div class="glass chart-wrap varierr-note">
-      <strong class="g-only">Bonus question: do individual annotators have a personal style?</strong>
-      <strong class="r-only">VariErr External Validation (Study 2A) — Exploratory / Inconclusive</strong>
+      <strong class="g-only">Exploratory question: do identical vote profiles share explanation-validity structure?</strong>
+      <strong class="r-only">VariErr External Validation (Study 2B) — Exploratory / Inconclusive</strong>
       <br/><br/>
+      <div class="evidence-row" style="margin:0 0 16px">
+        <span class="evidence-tag exploratory">Exploratory · Study 2B</span>
+        <span class="evidence-tag">500 matched items</span>
+        <span class="evidence-tag">52 multi-item profiles</span>
+      </div>
       <span class="g-only">
-        We also explored whether specific annotators have consistent personal tendencies — for example, does Annotator #47 tend to pick "neutral" more often than average, and does that pattern persist across completely different sentence pairs?
+        Do items with the same ChaosNLI vote distribution also have similar explanation-validity profiles in VariErr? This tests whether a Level-1 vote pattern carries information about a Level-2 property.
         <br/><br/>
-        We found 52 annotator groups that appeared in multiple items and compared how consistent they were internally versus what chance would predict (using 500,000 random permutations). The within-group variation was 7.8% lower than chance — a suggestive pattern, but not statistically significant (p = 0.20). This is an honest preliminary result: interesting enough to investigate further, not strong enough to claim as a confirmed finding.
+        Across 52 multi-item vote profiles, within-profile validity variation was 7.8% below the profile-size-preserved permutation null mean. The empirical permutation result was p=0.2045, so the analysis is statistically inconclusive.
       </span>
       <span class="r-only">
         Matched 500 items across 52 multi-item annotator profiles from the VariErr external dataset. Within-profile SD = 0.106 vs. permutation null mean = 0.115 (7.8% reduction, 25% below overall SD). Permutation p-value = 0.2045 across 500,000 permutations. Inconclusive: consistent with either a small signal or sampling limitations of the 52-profile restriction.
       </span>
+      <div class="analysis-actions" style="margin-top:16px">
+        <button class="btn btn-ghost interpretation-toggle" type="button" data-interpretation="varierr" aria-expanded="false">Show exploratory interpretation</button>
+        <a class="source-link" href="../../studies/chaosnli/STUDY2B_VARIERR_EXTERNAL_VALIDATION.md">Sources and methods ↗</a>
+      </div>
+      <div class="interpretation-panel" id="interpretation-varierr" hidden></div>
     </div>
+  </div>
+</section>
+
+<section id="comparison">
+  <div class="section-label">Synthesis · Cross-Panel Comparison</div>
+  <h2>Compare the Study Interpretations and Their Limits</h2>
+  <p class="comparison-intro">
+    Reveal this table after exploring the panels independently. It separates direct observations from the study's interpretation and keeps sensitivities and unresolved questions visible beside each claim.
+  </p>
+  <button class="btn btn-primary" id="comparisonToggle" type="button" aria-expanded="false" aria-controls="comparisonWrap">Compare all study interpretations</button>
+  <div class="comparison-wrap" id="comparisonWrap" hidden>
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Panel</th>
+          <th>Direct observation</th>
+          <th>Study interpretation</th>
+          <th>Limits / unresolved</th>
+        </tr>
+      </thead>
+      <tbody id="comparisonBody"></tbody>
+    </table>
   </div>
 </section>
 
@@ -725,14 +900,14 @@ const PHASE = {
 
 const GEO = [
   {name:"BART-Large",     H:0.01867,JSD:0.01873,TV:0.01927,Eu:0.01887,Ai:0.01811},
-  {name:"RoBERTa-Large",  H:0.01821,JSD:0.01827,TV:0.01856,Eu:0.01798,Ai:0.01744},
-  {name:"XLNet-Large",    H:0.01319,JSD:0.01329,TV:0.01379,Eu:0.01321,Ai:0.01261},
+  {name:"RoBERTa-Large",  H:0.01821,JSD:0.01785,TV:0.01698,Eu:0.01738,Ai:0.01776},
+  {name:"XLNet-Large",    H:0.01319,JSD:0.01308,TV:0.01325,Eu:0.01332,Ai:0.01356},
   {name:"ALBERT-xxLarge", H:0.01074,JSD:0.01078,TV:0.01146,Eu:0.01163,Ai:0.01217},
-  {name:"BERT-Large",     H:0.01059,JSD:0.01063,TV:0.01145,Eu:0.01082,Ai:0.01089},
-  {name:"RoBERTa-Base",   H:0.01129,JSD:0.01133,TV:0.01205,Eu:0.01147,Ai:0.01098},
-  {name:"XLNet-Base",     H:0.00893,JSD:0.00899,TV:0.00965,Eu:0.00901,Ai:0.00858},
-  {name:"DistilBERT",     H:0.00854,JSD:0.00858,TV:0.00912,Eu:0.00867,Ai:0.00812},
-  {name:"BERT-Base",      H:0.00865,JSD:0.00869,TV:0.00934,Eu:0.00878,Ai:0.00831},
+  {name:"BERT-Large",     H:0.01059,JSD:0.01051,TV:0.01108,Eu:0.01086,Ai:0.01054},
+  {name:"RoBERTa-Base",   H:0.01129,JSD:0.01114,TV:0.01038,Eu:0.01043,Ai:0.01112},
+  {name:"XLNet-Base",     H:0.00893,JSD:0.00887,TV:0.00867,Eu:0.00867,Ai:0.01008},
+  {name:"DistilBERT",     H:0.00854,JSD:0.00842,TV:0.00839,Eu:0.00826,Ai:0.00824},
+  {name:"BERT-Base",      H:0.00865,JSD:0.00859,TV:0.00818,Eu:0.00800,Ai:0.00826},
 ];
 
 const EXAMPLES = [
@@ -741,30 +916,81 @@ const EXAMPLES = [
     premise:"An elderly woman crafts a design on a loom.",
     hypothesis:"The woman is sewing.",
     E:35,N:31,C:34,
-    note:"Nearly equal three-way disagreement — is weaving the same as sewing?"
+    note:"What evidence would distinguish lexical interpretation from task or annotation effects?"
   },
   {
     label:"Two-way disagreement",type:"high",entropy:1.557,
     premise:"A photographer snaps a midair action shot of a snowboarder.",
     hypothesis:"The midair shot snaps at a boarder of snow.",
     E:42,N:26,C:32,
-    note:"Entailment leads, but contradiction is strong — reworded hypothesis causes splits"
+    note:"Which features of the unusual wording might different readers treat as decisive?"
   },
   {
-    label:"Majority opinion",type:"mid",entropy:0.78,
+    label:"Majority opinion",type:"mid",entropy:0.799,
     premise:"A woman stands at a podium with a slide show behind her.",
     hypothesis:"A woman is giving a presentation at work.",
     E:20,N:79,C:1,
-    note:"Strong neutral majority — public speaking doesn't necessarily mean 'at work'"
+    note:"Does the added phrase ‘at work’ explain the distribution, or would rationale data be needed?"
   },
   {
     label:"Unanimous",type:"low",entropy:0.0,
     premise:"A little girl in a pink jacket is walking.",
     hypothesis:"The little girl can walk.",
     E:100,N:0,C:0,
-    note:"Perfect consensus — logical entailment that is obvious to everyone"
+    note:"The votes are unanimous; what does that establish about this sample versus semantic truth?"
   },
 ];
+
+const INTERPRETATIONS = {
+  gap:{
+    title:"01 · Model recovery",
+    observed:"The nine paired model scores range from 0.00768 to 0.01572, compared with the paired human reference 0.07549 and empirical stratified null 0.00354.",
+    interpretation:"Under the declared Hellinger, k=10 paired estimand, these benchmark models preserve substantially less human-opinion neighborhood structure than independent human cohorts.",
+    limits:"The population is selected for low agreement, the models predate modern generative LLMs, and relational alignment is not semantic correctness or general task utility."
+  },
+  ties:{
+    title:"02 · Boundary ties",
+    observed:"At k=10, 49.1% of focal items have an exact distance tie crossing the neighborhood boundary. Index-resolved overlap averages 0.9554 after row permutation; fractional fuzzy overlap remains 1.0000.",
+    interpretation:"Storage-index tie resolution introduces a reproducibility artifact in this highly discrete empirical-distribution space; fractional boundary membership removes that row-order dependence.",
+    limits:"The failure concerns the tested index-resolved policy. Tie prevalence does not reveal why annotators disagreed, and other software may use different tie policies."
+  },
+  surface:{
+    title:"03 · Depth × scale",
+    observed:"Reference similarity increases with annotation depth in every tested k column; absolute similarity is also much higher for broader neighborhoods.",
+    interpretation:"Fine local neighborhoods are more sensitive to finite vote sampling than broader regional structure, so annotation requirements depend on the relational scale of interest.",
+    limits:"This is a plug-in simulation conditioned on observed proportions and an observed 100-vote reference—not a posterior-predictive surface or ground-truth recovery estimate."
+  },
+  phase:{
+    title:"04 · Simulated regimes",
+    observed:"At n=100, the observed 49.1% boundary-tie rate lies below the α=0.1 cell (80.2%) and above the α=0.5 and α=1.0 cells (35.7% and 25.5%).",
+    interpretation:"Concentration of empirical vote profiles plausibly contributes to the frequency of tied neighborhoods in ChaosNLI.",
+    limits:"One summary statistic cannot identify α or a unique generating process; the symmetric Dirichlet regimes are simplified descriptive comparisons."
+  },
+  geometry:{
+    title:"05 · Geometry sensitivity",
+    observed:"All fixed-reference model scores remain low across five distance metrics, while several middle and lower model ranks exchange positions.",
+    interpretation:"The overall model–human fixed-reference gap is not specific to one tested geometry, but detailed model ordering is partly geometry-sensitive.",
+    limits:"This analysis uses one observed reference graph, one Aitchison zero policy, and no full posterior-averaged sensitivity calculation."
+  },
+  examples:{
+    title:"06 · Item-level patterns",
+    observed:"Selected empirical profiles range from unanimous votes to near-even three-way splits and occupy correspondingly different simplex locations.",
+    interpretation:"Vote distributions retain information discarded by a majority label and can support relational comparison and diagnostic case selection.",
+    limits:"A Level-1 distribution does not identify the Level-2 cause, determine which annotator is correct, or distinguish valid variation from error."
+  },
+  bootstrap:{
+    title:"07 · Focal-item bootstrap",
+    observed:"Every model's mean paired difference is positive; the smallest reported 95% interval lower bound is 0.05431 for BART-Large.",
+    interpretation:"The paired model–human difference is large relative to focal-item sampling variation within the fixed ChaosNLI candidate population.",
+    limits:"The bootstrap holds candidate and neighbor graphs fixed, does not sample an unselected NLI population, and treats edge-dependent focal contributions as approximately exchangeable."
+  },
+  varierr:{
+    title:"Appendix · VariErr",
+    observed:"Mean within-profile validity SD is 0.1060 versus a profile-size-preserved null mean of 0.1150; the permutation p-value is 0.2045 across 500,000 permutations.",
+    interpretation:"The selected test provides no evidence that exact Level-1 vote-profile identity predicts explanation-validity composition.",
+    limits:"Only 52 multi-item profiles are available. The inconclusive result does not establish a zero effect and motivates larger rationale-level datasets."
+  }
+};
 </script>
 
 <!-- ── Chart Code ──────────────────────────────────────────────────────────── -->
@@ -1331,8 +1557,11 @@ function initExamples() {
     const container = document.getElementById('itemCards');
     container.innerHTML = '';
     EXAMPLES.forEach((ex, i) => {
-      const card = document.createElement('div');
+      const card = document.createElement('button');
+      card.type = 'button';
       card.className = `item-card ${ex.type} ${i===selected?'active':''}`;
+      card.setAttribute('aria-pressed', i===selected ? 'true' : 'false');
+      card.setAttribute('aria-label', `${ex.label}: ${ex.E}% entailment, ${ex.N}% neutral, ${ex.C}% contradiction`);
       const total = ex.E+ex.N+ex.C;
       const ep = ex.E, np = ex.N, cp = ex.C;
       card.innerHTML = `
@@ -1454,29 +1683,85 @@ function initExamples() {
 }
 
 // ── Panel 7: Bootstrap dots ───────────────────────────────────────────────── 
-function initBootstrap() {
-  const grid = document.getElementById('bootGrid');
-  const counter = document.getElementById('bootCounter');
-  const dots = [];
-  for(let i=0;i<1000;i++){
-    const d = document.createElement('div');
-    d.className='boot-dot';
-    grid.appendChild(d);
-    dots.push(d);
-  }
-  let lit=0;
-  const observer = new IntersectionObserver(entries=>{
-    if(entries[0].isIntersecting && lit===0){
-      const interval = setInterval(()=>{
-        const batch=Math.min(20,1000-lit);
-        for(let i=0;i<batch;i++) dots[lit+i].classList.add('lit');
-        lit+=batch;
-        counter.textContent = `${lit.toLocaleString()} / 1,000`;
-        if(lit>=1000) clearInterval(interval);
-      },30);
-    }
-  },{threshold:0.3});
-  observer.observe(grid);
+function drawBootstrap() {
+  const svg = d3.select('#chart-bootstrap');
+  const tip = document.getElementById('tooltip-bootstrap');
+  const W=800, H=400;
+  const m={top:20,right:86,bottom:52,left:145};
+  const iW=W-m.left-m.right, iH=H-m.top-m.bottom;
+  const x=d3.scaleLinear().domain([0,0.08]).range([0,iW]);
+  const y=d3.scaleBand().domain(MODELS.map(d=>d.key)).range([0,iH]).padding(.42);
+  const g=svg.append('g').attr('transform',`translate(${m.left},${m.top})`);
+
+  svg.attr('role','img').attr('aria-label','Mean paired human minus model difference with 95 percent bootstrap intervals for nine models');
+  svg.append('title').text('Paired difference bootstrap intervals');
+
+  g.append('g').attr('class','grid')
+    .call(d3.axisBottom(x).ticks(8).tickSize(iH).tickFormat(''))
+    .call(gr=>{gr.select('.domain').remove();gr.selectAll('.tick line').attr('y1',-iH)});
+  g.append('line').attr('x1',x(0)).attr('x2',x(0)).attr('y1',0).attr('y2',iH)
+    .attr('stroke','#f87171').attr('stroke-width',1.5);
+
+  MODELS.forEach(mod=>{
+    const cy=y(mod.key)+y.bandwidth()/2;
+    g.append('line').attr('x1',x(mod.ciLo)).attr('x2',x(mod.ciHi)).attr('y1',cy).attr('y2',cy)
+      .attr('stroke','#64748b').attr('stroke-width',2);
+    [mod.ciLo,mod.ciHi].forEach(v=>g.append('line')
+      .attr('x1',x(v)).attr('x2',x(v)).attr('y1',cy-5).attr('y2',cy+5)
+      .attr('stroke','#64748b').attr('stroke-width',1.5));
+    g.append('circle').attr('cx',x(mod.delta)).attr('cy',cy).attr('r',5)
+      .attr('fill','#3b82f6').attr('stroke','#f1f5f9').attr('stroke-width',1)
+      .style('cursor','pointer')
+      .on('mouseenter',ev=>{
+        showTip(tip,`<strong>${mod.name}</strong><br/>Mean Δ: <span style="font-family:monospace">${mod.delta.toFixed(5)}</span><br/>95% interval: <span style="font-family:monospace">[${mod.ciLo.toFixed(5)}, ${mod.ciHi.toFixed(5)}]</span>`,ev);
+        moveTip(tip,ev);
+      })
+      .on('mousemove',ev=>moveTip(tip,ev))
+      .on('mouseleave',()=>hideTip(tip));
+    g.append('text').attr('x',x(mod.ciHi)+7).attr('y',cy+4)
+      .attr('fill','#94a3b8').attr('font-size',10).attr('font-family','JetBrains Mono,monospace')
+      .text(mod.delta.toFixed(3));
+  });
+
+  g.append('g').call(d3.axisLeft(y).tickFormat(k=>MODELS.find(d=>d.key===k)?.name||k))
+    .call(ax=>{ax.select('.domain').remove();ax.selectAll('.tick line').remove();ax.selectAll('.tick text').attr('fill','#94a3b8').attr('font-size',12)});
+  g.append('g').attr('transform',`translate(0,${iH})`).call(d3.axisBottom(x).ticks(8).tickFormat(d3.format('.2f')))
+    .call(ax=>{ax.select('.domain').attr('stroke','rgba(255,255,255,.1)');ax.selectAll('.tick text').attr('fill','#64748b').attr('font-size',10)});
+  g.append('text').attr('x',iW/2).attr('y',iH+42).attr('text-anchor','middle')
+    .attr('fill','#64748b').attr('font-size',11).text('Paired difference Δ (human reference − model score)');
+}
+
+function initInterpretations() {
+  document.querySelectorAll('.interpretation-toggle').forEach(button=>{
+    const key=button.dataset.interpretation;
+    const panel=document.getElementById(`interpretation-${key}`);
+    const item=INTERPRETATIONS[key];
+    button.setAttribute('aria-controls',panel.id);
+    panel.innerHTML=`<div class="interpretation-grid">
+      <div class="interpretation-block"><h3>Observed</h3><p>${item.observed}</p></div>
+      <div class="interpretation-block"><h3>Study interpretation</h3><p>${item.interpretation}</p></div>
+      <div class="interpretation-block"><h3>Limits</h3><p>${item.limits}</p></div>
+    </div>`;
+    button.addEventListener('click',()=>{
+      const willOpen=panel.hidden;
+      panel.hidden=!willOpen;
+      button.setAttribute('aria-expanded',String(willOpen));
+      button.textContent=willOpen?'Hide study interpretation':(key==='varierr'?'Show exploratory interpretation':'Show study interpretation');
+    });
+  });
+
+  const body=document.getElementById('comparisonBody');
+  body.innerHTML=Object.values(INTERPRETATIONS).map(item=>`<tr>
+    <td>${item.title}</td><td>${item.observed}</td><td>${item.interpretation}</td><td>${item.limits}</td>
+  </tr>`).join('');
+  const toggle=document.getElementById('comparisonToggle');
+  const wrap=document.getElementById('comparisonWrap');
+  toggle.addEventListener('click',()=>{
+    const willOpen=wrap.hidden;
+    wrap.hidden=!willOpen;
+    toggle.setAttribute('aria-expanded',String(willOpen));
+    toggle.textContent=willOpen?'Hide comparison':'Compare all study interpretations';
+  });
 }
 
 // ── Scroll animations ─────────────────────────────────────────────────────── 
@@ -1492,6 +1777,7 @@ document.getElementById('modeToggle').addEventListener('click', function() {
   const html = document.documentElement;
   html.classList.toggle('research-mode');
   html.classList.toggle('general-mode');
+  this.setAttribute('aria-pressed',String(html.classList.contains('research-mode')));
 });
 
 // ── Nav active state ──────────────────────────────────────────────────────── 
@@ -1519,7 +1805,8 @@ window.addEventListener('DOMContentLoaded', () => {
   drawPhase();
   drawGeo();
   initExamples();
-  initBootstrap();
+  drawBootstrap();
+  initInterpretations();
   initScrollAnimations();
   initNav();
 });
