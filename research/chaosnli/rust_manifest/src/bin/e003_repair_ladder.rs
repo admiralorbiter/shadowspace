@@ -531,19 +531,39 @@ fn optimize_convex_ensemble_nll(
     best_alpha
 }
 
-fn optimize_ensemble_topology(
+/// Training-only topology simplex optimizer.
+/// Builds N_tr × N_tr Hellinger graph and support target strictly within each
+/// training fold. Permutation nulls are stratified within the training subset.
+fn optimize_ensemble_topology_training_only(
     items: &[ItemRecord],
     s_ij_k10: &[f64],
     model_probs_pool: &[Vec<[f64; 3]>],
-    indices: &[usize],
-    n: usize,
+    train_indices: &[usize],
+    n_full: usize,
 ) -> Vec<f64> {
     let m = model_probs_pool.len();
+    let n_tr = train_indices.len();
+
+    // Partition training indices by dataset for stratified permutations
+    let mut snli_train_pos = Vec::new();
+    let mut mnli_train_pos = Vec::new();
+    for (pos, &idx) in train_indices.iter().enumerate() {
+        match items[idx].source_dataset {
+            Some(SourceDataset::ChaosnliSnli) => snli_train_pos.push(pos),
+            _ => mnli_train_pos.push(pos),
+        }
+    }
+
+    // Extract training-only S_ij submatrix (N_tr × N_tr)
+    let mut s_train = vec![0.0f64; n_tr * n_tr];
+    for (ti, &i) in train_indices.iter().enumerate() {
+        for (tj, &j) in train_indices.iter().enumerate() {
+            s_train[ti * n_tr + tj] = s_ij_k10[i * n_full + j];
+        }
+    }
+
     let mut best_alpha = vec![1.0 / m as f64; m];
     let mut max_excess = -1e9f64;
-
-    let n_tr = indices.len();
-    let (snli_tr_indices, mnli_tr_indices) = partition_item_strata(items);
 
     let grid = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0];
     for &a0 in &grid {
@@ -554,55 +574,60 @@ fn optimize_ensemble_topology(
                     continue;
                 }
                 let alpha = vec![a0 / sum_a, a1 / sum_a, a2 / sum_a];
-                let mut q_blend = vec![[0.0f64; 3]; n];
-                for i in 0..n {
+
+                // Build training-only blended probabilities (N_tr items)
+                let mut q_train = vec![[0.0f64; 3]; n_tr];
+                for (ti, &idx) in train_indices.iter().enumerate() {
                     for k in 0..m {
-                        q_blend[i][0] += alpha[k] * model_probs_pool[k][i][0];
-                        q_blend[i][1] += alpha[k] * model_probs_pool[k][i][1];
-                        q_blend[i][2] += alpha[k] * model_probs_pool[k][i][2];
+                        q_train[ti][0] += alpha[k] * model_probs_pool[k][idx][0];
+                        q_train[ti][1] += alpha[k] * model_probs_pool[k][idx][1];
+                        q_train[ti][2] += alpha[k] * model_probs_pool[k][idx][2];
                     }
                 }
 
-                let dist = build_dist_matrix_seq(&q_blend, n);
-                let w = compute_topk_weight_matrix(&dist, n, 10);
+                // Build training-only N_tr × N_tr distance and weight matrices
+                let dist_train = build_dist_matrix_seq(&q_train, n_tr);
+                let w_train = compute_topk_weight_matrix(&dist_train, n_tr, 10);
 
+                // Compute training-only Q_support
                 let mut sum_q = 0.0f64;
-                for &i_tr in indices {
-                    let i_off = i_tr * n;
-                    for &j_tr in indices {
-                        if j_tr != i_tr {
-                            sum_q += w[i_off + j_tr] * s_ij_k10[i_off + j_tr];
+                for ti in 0..n_tr {
+                    let ti_off = ti * n_tr;
+                    for tj in 0..n_tr {
+                        if tj != ti {
+                            sum_q += w_train[ti_off + tj] * s_train[ti_off + tj];
                         }
                     }
                 }
                 let q_sup_cand = sum_q / (n_tr * 10) as f64;
 
-                let sparse_w = extract_nonzero_weights(&w, n);
+                // Training-only null with stratified permutations within training subset
+                let sparse_w_train = extract_nonzero_weights(&w_train, n_tr);
                 let sum_null: f64 = (0..50)
                     .into_par_iter()
                     .map(|b_idx| {
                         let mut null_rng = ChaCha8Rng::seed_from_u64(6060_0000 + b_idx as u64);
-                        let mut perm = (0..n).collect::<Vec<_>>();
-                        let mut snli_shuffled = snli_tr_indices.clone();
-                        let mut mnli_shuffled = mnli_tr_indices.clone();
+                        let mut perm = (0..n_tr).collect::<Vec<_>>();
+
+                        // Stratified shuffle within training positions
+                        let mut snli_shuffled = snli_train_pos.clone();
+                        let mut mnli_shuffled = mnli_train_pos.clone();
                         snli_shuffled.shuffle(&mut null_rng);
                         mnli_shuffled.shuffle(&mut null_rng);
 
-                        for (orig_idx, &shuf_idx) in snli_tr_indices.iter().zip(snli_shuffled.iter()) {
-                            perm[*orig_idx] = shuf_idx;
+                        for (i, &shuf) in snli_train_pos.iter().zip(snli_shuffled.iter()) {
+                            perm[*i] = shuf;
                         }
-                        for (orig_idx, &shuf_idx) in mnli_tr_indices.iter().zip(mnli_shuffled.iter()) {
-                            perm[*orig_idx] = shuf_idx;
+                        for (i, &shuf) in mnli_train_pos.iter().zip(mnli_shuffled.iter()) {
+                            perm[*i] = shuf;
                         }
 
                         let mut s_null = 0.0f64;
-                        for &i_tr in indices {
-                            let i_perm = perm[i_tr];
-                            for &(j, w_val) in &sparse_w[i_tr] {
-                                if indices.contains(&j) {
-                                    let j_perm = perm[j];
-                                    s_null += w_val * s_ij_k10[i_perm * n + j_perm];
-                                }
+                        for ti in 0..n_tr {
+                            let ti_perm = perm[ti];
+                            for &(tj, w_val) in &sparse_w_train[ti] {
+                                let tj_perm = perm[tj];
+                                s_null += w_val * s_train[ti_perm * n_tr + tj_perm];
                             }
                         }
                         s_null / (n_tr * 10) as f64
@@ -620,6 +645,37 @@ fn optimize_ensemble_topology(
         }
     }
     best_alpha
+}
+
+/// Blend probabilities for a given simplex alpha, with a debug assertion
+/// that the output sums to 1.
+fn blend_ensemble_probs(
+    ensemble_pool: &[Vec<[f64; 3]>],
+    alpha: &[f64],
+    n: usize,
+) -> Vec<[f64; 3]> {
+    let m = ensemble_pool.len();
+    (0..n)
+        .map(|i| {
+            let mut q = [0.0f64; 3];
+            for k in 0..m {
+                q[0] += alpha[k] * ensemble_pool[k][i][0];
+                q[1] += alpha[k] * ensemble_pool[k][i][1];
+                q[2] += alpha[k] * ensemble_pool[k][i][2];
+            }
+            debug_assert!(
+                (q[0] + q[1] + q[2] - 1.0).abs() < 1e-9,
+                "Ensemble blend does not sum to 1.0: sum = {}",
+                q[0] + q[1] + q[2]
+            );
+            debug_assert!(
+                q.iter().all(|&x| x.is_finite() && x >= 0.0),
+                "Ensemble blend has invalid values: {:?}",
+                q
+            );
+            q
+        })
+        .collect()
 }
 
 // ─── Output Structs for E003 Summary ────────────────────────────────────────
@@ -849,11 +905,11 @@ fn main() {
         ("Level 0: Raw Model Baseline", "Level 0: Raw Model Baseline"),
         ("Level 1: Scalar Temperature", "Level 1: Global Isotropic Scalar Temperature"),
         ("Level 2: Vector Scaling + Bias", "Level 2: Class-Wise Vector Scaling + Bias"),
-        ("Level 3: Full Affine Matrix", "Level 3: Full 8-Parameter Affine Matrix Scaling"),
-        ("Level 4: Full Dirichlet Calibration", "Level 4: Full 8-Parameter Multinomial Dirichlet Calibration"),
+        ("Level 3: Full Affine Matrix", "Level 3: Coarse-Grid Identifiable 8-Parameter Affine Calibration"),
+        ("Level 4: Full Dirichlet Calibration", "Level 4: Coarse-Grid Identifiable 8-Parameter Dirichlet Calibration"),
         ("Level 5a: Equal Weight Ensemble", "Level 5a: Equal-Weight Multi-Model Ensemble"),
         ("Level 5b: Convex NLL Ensemble", "Level 5b: Convex NLL-Optimized Simplex Ensemble"),
-        ("Level 6a: Topology Ensemble", "Level 6a: Topology-Optimized Simplex Ensemble"),
+        ("Level 6a: Topology Ensemble", "Level 6a: Training-Only Topology-Optimized Simplex Ensemble"),
     ];
 
     let mut ladder_results = HashMap::new();
@@ -954,27 +1010,18 @@ fn main() {
                     (0..n).map(|i| dirichlet_calibration_8param(&raw_probs_all[i], &a_opt, &b_opt)).collect()
                 }
                 "Level 5a: Equal Weight Ensemble" => {
-                    (0..n).map(|i| [
-                        (ensemble_pool[0][i][0] + ensemble_pool[1][i][0] + ensemble_pool[2][i][0]) / 3.0,
-                        (ensemble_pool[0][i][1] + ensemble_pool[1][i][1] + ensemble_pool[2][i][1]) / 3.0,
-                        (ensemble_pool[0][i][2] + ensemble_pool[1][i][2] + ensemble_pool[2][i][2]) / 3.0,
-                    ]).collect()
+                    let alpha_eq = vec![1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0];
+                    blend_ensemble_probs(&ensemble_pool, &alpha_eq, n)
                 }
                 "Level 5b: Convex NLL Ensemble" => {
                     let alpha_opt = optimize_convex_ensemble_nll(&human_probs, &ensemble_pool, &train_indices);
-                    (0..n).map(|i| [
-                        alpha_opt[0] * ensemble_pool[0][i][0] + alpha_opt[1] * ensemble_pool[1][i][0] + alpha_opt[2] * ensemble_pool[2][i][0],
-                        alpha_opt[0] * ensemble_pool[0][i][1] + alpha_opt[1] * ensemble_pool[1][i][1] + alpha_opt[2] * ensemble_pool[2][i][2],
-                        alpha_opt[0] * ensemble_pool[0][i][2] + alpha_opt[1] * ensemble_pool[1][i][2] + alpha_opt[2] * ensemble_pool[2][i][2],
-                    ]).collect()
+                    println!("    Fold {fold_idx} NLL weights: [{:.3}, {:.3}, {:.3}]", alpha_opt[0], alpha_opt[1], alpha_opt[2]);
+                    blend_ensemble_probs(&ensemble_pool, &alpha_opt, n)
                 }
                 "Level 6a: Topology Ensemble" => {
-                    let alpha_topo = optimize_ensemble_topology(&items, &s_ij_k10, &ensemble_pool, &train_indices, n);
-                    (0..n).map(|i| [
-                        alpha_topo[0] * ensemble_pool[0][i][0] + alpha_topo[1] * ensemble_pool[1][i][0] + alpha_topo[2] * ensemble_pool[2][i][0],
-                        alpha_topo[0] * ensemble_pool[0][i][1] + alpha_topo[1] * ensemble_pool[1][i][1] + alpha_topo[2] * ensemble_pool[2][i][1],
-                        alpha_topo[0] * ensemble_pool[0][i][2] + alpha_topo[1] * ensemble_pool[1][i][2] + alpha_topo[2] * ensemble_pool[2][i][2],
-                    ]).collect()
+                    let alpha_topo = optimize_ensemble_topology_training_only(&items, &s_ij_k10, &ensemble_pool, &train_indices, n);
+                    println!("    Fold {fold_idx} Topo weights: [{:.3}, {:.3}, {:.3}]", alpha_topo[0], alpha_topo[1], alpha_topo[2]);
+                    blend_ensemble_probs(&ensemble_pool, &alpha_topo, n)
                 }
                 _ => raw_probs_all.clone(),
             };
