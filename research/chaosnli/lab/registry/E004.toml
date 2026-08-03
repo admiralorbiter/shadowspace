@@ -1,0 +1,60 @@
+# Experiment E004: Relational Alignment of Generative LLM Judgment Distributions
+id = "E004"
+title = "Relational Alignment of Generative LLM Judgment Distributions"
+status = "stage1a_preflight"
+analysis_status = "pending_preflight"
+methodological_audit = "pending_preflight"
+manuscript_status = "drafting"
+submission_status = "pre_submission"
+
+dataset_release = "chaosnli-canonical-2026-08-02"
+partition = "5fold_stratified_crossfit"
+
+unit_of_analysis = "item_and_edge"
+question = """
+Do modern instruction-tuned generative LLMs exhibit non-random relational alignment
+with human judgment distribution geometry, how do log-probability (LPE) and repeated-sampling (MCE)
+estimates compare, and does pointwise calibration improve relational recovery?
+"""
+
+stage = 1
+model_panel = ["gemma3:12b"]
+elicitation_methods = ["lpe", "mce", "self_report_exploratory"]
+label_symbol_sets = [["A", "B", "C"], ["1", "2", "3"], ["X", "Y", "Z"]]
+n_permutations = 6
+
+pilot_n = 600
+preflight_n = 60
+mce_samples_per_item = 30
+mce_samples_convergence = 100
+
+practical_margins = { nll = 0.02, jsd = 0.01, normalized_recovery_r = 0.05, gap_closure_gq = 0.03 }
+
+# Provenance lock
+model_digest = "f4031aab637d1ffae40e28e08d6d678ad94dbe15951d2ea1ebc441c9df48ed92"
+model_sha256 = "2274d7d84a797265a6f2ea309bc0c50ebdc2a7a40b991ee7e28b12f628042fa9"
+
+estimands = [
+  "pointwise_nll",
+  "pointwise_jsd",
+  "posterior_edge_support",
+  "core_mass_tau50",
+  "core_recall_tau50",
+  "gap_closure_nll",
+  "gap_closure_q",
+  "q_global_excess",
+  "q_profile_excess",
+  "label_order_sensitivity"
+]
+
+cross_validation = "5fold_stratified_by_dataset_label_entropy"
+
+required_safeguards = [
+  "six_permutation_label_averaging",
+  "training_only_temperature_fitting",
+  "no_prompt_modification_after_pilot_inspection",
+  "recompute_null_at_every_level",
+  "training_only_human_support_target",
+  "held_out_focal_row_scoring",
+  "literal_30strata_item_level_paired_bootstrap"
+]
