@@ -117,11 +117,12 @@ fn softmax_vector_scaling(logits: &[f64; 3], v: &[f64; 3], b: &[f64; 3]) -> [f64
     [e0 / sum_e, e1 / sum_e, e2 / sum_e]
 }
 
+/// Identifiable 8-Parameter Affine Matrix Scaling (z2' = 0 reference class)
 #[inline(always)]
-fn softmax_matrix_scaling(logits: &[f64; 3], w: &[[f64; 3]; 3], b: &[f64; 3]) -> [f64; 3] {
-    let z0 = w[0][0] * logits[0] + w[0][1] * logits[1] + w[0][2] * logits[2] + b[0];
-    let z1 = w[1][0] * logits[0] + w[1][1] * logits[1] + w[1][2] * logits[2] + b[1];
-    let z2 = w[2][0] * logits[0] + w[2][1] * logits[1] + w[2][2] * logits[2] + b[2];
+fn softmax_affine_matrix_8param(logits: &[f64; 3], a: &[[f64; 3]; 2], b: &[f64; 2]) -> [f64; 3] {
+    let z0 = a[0][0] * logits[0] + a[0][1] * logits[1] + a[0][2] * logits[2] + b[0];
+    let z1 = a[1][0] * logits[0] + a[1][1] * logits[1] + a[1][2] * logits[2] + b[1];
+    let z2 = 0.0f64;
     let max_z = z0.max(z1).max(z2);
     let e0 = (z0 - max_z).exp();
     let e1 = (z1 - max_z).exp();
@@ -130,14 +131,15 @@ fn softmax_matrix_scaling(logits: &[f64; 3], w: &[[f64; 3]; 3], b: &[f64; 3]) ->
     [e0 / sum_e, e1 / sum_e, e2 / sum_e]
 }
 
+/// Identifiable 8-Parameter Multinomial Dirichlet Calibration (logp transform)
 #[inline(always)]
-fn dirichlet_calibration(probs: &[f64; 3], w: &[[f64; 3]; 3], b: &[f64; 3]) -> [f64; 3] {
+fn dirichlet_calibration_8param(probs: &[f64; 3], a: &[[f64; 3]; 2], b: &[f64; 2]) -> [f64; 3] {
     let l0 = probs[0].max(1e-12).ln();
     let l1 = probs[1].max(1e-12).ln();
     let l2 = probs[2].max(1e-12).ln();
-    let z0 = w[0][0] * l0 + w[0][1] * l1 + w[0][2] * l2 + b[0];
-    let z1 = w[1][0] * l0 + w[1][1] * l1 + w[1][2] * l2 + b[1];
-    let z2 = w[2][0] * l0 + w[2][1] * l1 + w[2][2] * l2 + b[2];
+    let z0 = a[0][0] * l0 + a[0][1] * l1 + a[0][2] * l2 + b[0];
+    let z1 = a[1][0] * l0 + a[1][1] * l1 + a[1][2] * l2 + b[1];
+    let z2 = 0.0f64;
     let max_z = z0.max(z1).max(z2);
     let e0 = (z0 - max_z).exp();
     let e1 = (z1 - max_z).exp();
@@ -239,6 +241,19 @@ fn partition_item_strata(items: &[ItemRecord]) -> (Vec<usize>, Vec<usize>) {
     })
 }
 
+fn partition_exact_profiles(items: &[ItemRecord]) -> Vec<Vec<usize>> {
+    let mut map: HashMap<(i32, i32, i32), Vec<usize>> = HashMap::new();
+    for (idx, item) in items.iter().enumerate() {
+        let key = (
+            item.human_count_entailment,
+            item.human_count_neutral,
+            item.human_count_contradiction,
+        );
+        map.entry(key).or_default().push(idx);
+    }
+    map.into_values().collect()
+}
+
 fn build_stratified_30groups_empirical(items: &[ItemRecord]) -> Vec<Vec<usize>> {
     let n = items.len();
     let mut entropies = Vec::with_capacity(n);
@@ -315,7 +330,7 @@ fn build_stratified_5folds_empirical(items: &[ItemRecord], seed: u64) -> Vec<Vec
     folds
 }
 
-// ─── Optimizers for Vector Scaling, Matrix Scaling, Dirichlet, and Ensembling
+// ─── Optimizers for Vector, Full Affine Matrix, Dirichlet, & Ensembles ────────
 
 fn optimize_temperature_nll(
     human_probs: &[[f64; 3]],
@@ -389,37 +404,39 @@ fn optimize_vector_scaling_with_bias(
     (best_v, best_b)
 }
 
-fn optimize_full_affine_matrix(
+fn optimize_full_affine_matrix_8param(
     human_probs: &[[f64; 3]],
     logits: &[[f64; 3]],
     indices: &[usize],
-) -> ([[f64; 3]; 3], [f64; 3]) {
-    let mut best_w = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
-    let mut best_b = [0.0, 0.0, 0.0];
+) -> ([[f64; 3]; 2], [f64; 2]) {
+    let mut best_a = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]];
+    let mut best_b = [0.0, 0.0];
     let mut min_loss = 1e9f64;
 
-    let d_grid = [0.5, 1.0, 1.8, 3.0];
+    let d_grid = [0.4, 0.8, 1.2, 1.8, 2.8];
     let o_grid = [-0.3, 0.0, 0.3];
     let b_grid = [-0.2, 0.0, 0.2];
 
-    for &d0 in &d_grid {
-        for &d1 in &d_grid {
-            for &d2 in &d_grid {
-                for &o01 in &o_grid {
-                    for &o12 in &o_grid {
-                        for &b0 in &b_grid {
-                            for &b1 in &b_grid {
-                                let w = [[d0, o01, 0.0], [0.0, d1, o12], [0.0, 0.0, d2]];
-                                let b = [b0, b1, 0.0];
-                                let mut sum_loss = 0.0f64;
-                                for &idx in indices {
-                                    let q = softmax_matrix_scaling(&logits[idx], &w, &b);
-                                    sum_loss += soft_label_nll_single(&human_probs[idx], &q);
-                                }
-                                if sum_loss < min_loss {
-                                    min_loss = sum_loss;
-                                    best_w = w;
-                                    best_b = b;
+    for &a00 in &d_grid {
+        for &a11 in &d_grid {
+            for &a01 in &o_grid {
+                for &a02 in &o_grid {
+                    for &a10 in &o_grid {
+                        for &a12 in &o_grid {
+                            for &b0 in &b_grid {
+                                for &b1 in &b_grid {
+                                    let a = [[a00, a01, a02], [a10, a11, a12]];
+                                    let b = [b0, b1];
+                                    let mut sum_loss = 0.0f64;
+                                    for &idx in indices {
+                                        let q = softmax_affine_matrix_8param(&logits[idx], &a, &b);
+                                        sum_loss += soft_label_nll_single(&human_probs[idx], &q);
+                                    }
+                                    if sum_loss < min_loss {
+                                        min_loss = sum_loss;
+                                        best_a = a;
+                                        best_b = b;
+                                    }
                                 }
                             }
                         }
@@ -428,41 +445,43 @@ fn optimize_full_affine_matrix(
             }
         }
     }
-    (best_w, best_b)
+    (best_a, best_b)
 }
 
-fn optimize_full_dirichlet_calibration(
+fn optimize_full_dirichlet_calibration_8param(
     human_probs: &[[f64; 3]],
     logits: &[[f64; 3]],
     indices: &[usize],
-) -> ([[f64; 3]; 3], [f64; 3]) {
+) -> ([[f64; 3]; 2], [f64; 2]) {
     let raw_probs: Vec<[f64; 3]> = indices.iter().map(|&idx| softmax_temperature(&logits[idx], 1.0)).collect();
-    let mut best_w = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
-    let mut best_b = [0.0, 0.0, 0.0];
+    let mut best_a = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]];
+    let mut best_b = [0.0, 0.0];
     let mut min_loss = 1e9f64;
 
-    let d_grid = [0.4, 0.8, 1.4, 2.2];
+    let d_grid = [0.3, 0.6, 1.0, 1.6, 2.4];
     let o_grid = [-0.2, 0.0, 0.2];
     let b_grid = [-0.15, 0.0, 0.15];
 
-    for &d0 in &d_grid {
-        for &d1 in &d_grid {
-            for &d2 in &d_grid {
-                for &o01 in &o_grid {
-                    for &o12 in &o_grid {
-                        for &b0 in &b_grid {
-                            for &b1 in &b_grid {
-                                let w = [[d0, o01, 0.0], [0.0, d1, o12], [0.0, 0.0, d2]];
-                                let b = [b0, b1, 0.0];
-                                let mut sum_loss = 0.0f64;
-                                for (i, &idx) in indices.iter().enumerate() {
-                                    let q = dirichlet_calibration(&raw_probs[i], &w, &b);
-                                    sum_loss += soft_label_nll_single(&human_probs[idx], &q);
-                                }
-                                if sum_loss < min_loss {
-                                    min_loss = sum_loss;
-                                    best_w = w;
-                                    best_b = b;
+    for &a00 in &d_grid {
+        for &a11 in &d_grid {
+            for &a01 in &o_grid {
+                for &a02 in &o_grid {
+                    for &a10 in &o_grid {
+                        for &a12 in &o_grid {
+                            for &b0 in &b_grid {
+                                for &b1 in &b_grid {
+                                    let a = [[a00, a01, a02], [a10, a11, a12]];
+                                    let b = [b0, b1];
+                                    let mut sum_loss = 0.0f64;
+                                    for (i, &idx) in indices.iter().enumerate() {
+                                        let q = dirichlet_calibration_8param(&raw_probs[i], &a, &b);
+                                        sum_loss += soft_label_nll_single(&human_probs[idx], &q);
+                                    }
+                                    if sum_loss < min_loss {
+                                        min_loss = sum_loss;
+                                        best_a = a;
+                                        best_b = b;
+                                    }
                                 }
                             }
                         }
@@ -471,7 +490,7 @@ fn optimize_full_dirichlet_calibration(
             }
         }
     }
-    (best_w, best_b)
+    (best_a, best_b)
 }
 
 fn optimize_convex_ensemble_nll(
@@ -504,6 +523,97 @@ fn optimize_convex_ensemble_nll(
                 }
                 if sum_loss < min_loss {
                     min_loss = sum_loss;
+                    best_alpha = alpha;
+                }
+            }
+        }
+    }
+    best_alpha
+}
+
+fn optimize_ensemble_topology(
+    items: &[ItemRecord],
+    s_ij_k10: &[f64],
+    model_probs_pool: &[Vec<[f64; 3]>],
+    indices: &[usize],
+    n: usize,
+) -> Vec<f64> {
+    let m = model_probs_pool.len();
+    let mut best_alpha = vec![1.0 / m as f64; m];
+    let mut max_excess = -1e9f64;
+
+    let n_tr = indices.len();
+    let (snli_tr_indices, mnli_tr_indices) = partition_item_strata(items);
+
+    let grid = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0];
+    for &a0 in &grid {
+        for &a1 in &grid {
+            for &a2 in &grid {
+                let sum_a = a0 + a1 + a2;
+                if sum_a < 1e-6 {
+                    continue;
+                }
+                let alpha = vec![a0 / sum_a, a1 / sum_a, a2 / sum_a];
+                let mut q_blend = vec![[0.0f64; 3]; n];
+                for i in 0..n {
+                    for k in 0..m {
+                        q_blend[i][0] += alpha[k] * model_probs_pool[k][i][0];
+                        q_blend[i][1] += alpha[k] * model_probs_pool[k][i][1];
+                        q_blend[i][2] += alpha[k] * model_probs_pool[k][i][2];
+                    }
+                }
+
+                let dist = build_dist_matrix_seq(&q_blend, n);
+                let w = compute_topk_weight_matrix(&dist, n, 10);
+
+                let mut sum_q = 0.0f64;
+                for &i_tr in indices {
+                    let i_off = i_tr * n;
+                    for &j_tr in indices {
+                        if j_tr != i_tr {
+                            sum_q += w[i_off + j_tr] * s_ij_k10[i_off + j_tr];
+                        }
+                    }
+                }
+                let q_sup_cand = sum_q / (n_tr * 10) as f64;
+
+                let sparse_w = extract_nonzero_weights(&w, n);
+                let sum_null: f64 = (0..50)
+                    .into_par_iter()
+                    .map(|b_idx| {
+                        let mut null_rng = ChaCha8Rng::seed_from_u64(6060_0000 + b_idx as u64);
+                        let mut perm = (0..n).collect::<Vec<_>>();
+                        let mut snli_shuffled = snli_tr_indices.clone();
+                        let mut mnli_shuffled = mnli_tr_indices.clone();
+                        snli_shuffled.shuffle(&mut null_rng);
+                        mnli_shuffled.shuffle(&mut null_rng);
+
+                        for (orig_idx, &shuf_idx) in snli_tr_indices.iter().zip(snli_shuffled.iter()) {
+                            perm[*orig_idx] = shuf_idx;
+                        }
+                        for (orig_idx, &shuf_idx) in mnli_tr_indices.iter().zip(mnli_shuffled.iter()) {
+                            perm[*orig_idx] = shuf_idx;
+                        }
+
+                        let mut s_null = 0.0f64;
+                        for &i_tr in indices {
+                            let i_perm = perm[i_tr];
+                            for &(j, w_val) in &sparse_w[i_tr] {
+                                if indices.contains(&j) {
+                                    let j_perm = perm[j];
+                                    s_null += w_val * s_ij_k10[i_perm * n + j_perm];
+                                }
+                            }
+                        }
+                        s_null / (n_tr * 10) as f64
+                    })
+                    .sum();
+
+                let q_null_cand = sum_null / 50.0;
+                let q_excess_cand = q_sup_cand - q_null_cand;
+
+                if q_excess_cand > max_excess {
+                    max_excess = q_excess_cand;
                     best_alpha = alpha;
                 }
             }
@@ -676,6 +786,11 @@ fn main() {
     let items = load_items(&items_path);
     let n = items.len();
 
+    let object_ids: Vec<String> = items.iter().map(|item| item.object_id.clone()).collect();
+    let object_ids_bytes = serde_json::to_vec(&object_ids).unwrap();
+    let actual_object_ids_sha256 = compute_bytes_sha256(&object_ids_bytes);
+    assert_eq!(actual_object_ids_sha256, expected_object_ids_sha256, "Item ordering SHA-256 mismatch!");
+
     let s_ij_k10 = load_and_verify_matrix_f64(&bin_k10_path, expected_k10_sha256, n * n);
     let s_ij_k50 = load_and_verify_matrix_f64(&bin_k50_path, expected_k50_sha256, n * n);
 
@@ -722,7 +837,6 @@ fn main() {
 
     let lead_model_name = "bart-large";
     let lead_logits = &model_logits[lead_model_name];
-
     let raw_probs_all: Vec<[f64; 3]> = (0..n).map(|i| softmax_temperature(&lead_logits[i], 1.0)).collect();
 
     let ensemble_pool = vec![
@@ -735,8 +849,8 @@ fn main() {
         ("Level 0: Raw Model Baseline", "Level 0: Raw Model Baseline"),
         ("Level 1: Scalar Temperature", "Level 1: Global Isotropic Scalar Temperature"),
         ("Level 2: Vector Scaling + Bias", "Level 2: Class-Wise Vector Scaling + Bias"),
-        ("Level 3: Full Affine Matrix", "Level 3: Full Unconstrained Affine Matrix Scaling"),
-        ("Level 4: Full Dirichlet Calibration", "Level 4: Full Multinomial Dirichlet Calibration"),
+        ("Level 3: Full Affine Matrix", "Level 3: Full 8-Parameter Affine Matrix Scaling"),
+        ("Level 4: Full Dirichlet Calibration", "Level 4: Full 8-Parameter Multinomial Dirichlet Calibration"),
         ("Level 5a: Equal Weight Ensemble", "Level 5a: Equal-Weight Multi-Model Ensemble"),
         ("Level 5b: Convex NLL Ensemble", "Level 5b: Convex NLL-Optimized Simplex Ensemble"),
         ("Level 6a: Topology Ensemble", "Level 6a: Topology-Optimized Simplex Ensemble"),
@@ -744,9 +858,11 @@ fn main() {
 
     let mut ladder_results = HashMap::new();
 
-    // Baseline O_i_raw and O_i_null_raw arrays for true paired bootstrap CIs
+    // Baseline O_i_raw and O_i_null_raw pre-computation using actual 10,000 stratified perms
     let dist_raw_ref = build_dist_matrix_seq(&raw_probs_all, n);
     let w_raw_ref = compute_topk_weight_matrix(&dist_raw_ref, n, 10);
+    let sparse_w_raw = extract_nonzero_weights(&w_raw_ref, n);
+
     let mut o_i_raw = vec![0.0f64; n];
     let mut o_i_null_raw = vec![0.0f64; n];
 
@@ -759,8 +875,51 @@ fn main() {
             }
         }
         o_i_raw[i] = sum_s / 10.0;
-        o_i_null_raw[i] = 0.00329; // E001 baseline null reference
     }
+
+    let n_null_raw = 10_000;
+    let (item_null_scores_raw, _): (Vec<Vec<f64>>, Vec<f64>) = (0..n_null_raw)
+        .into_par_iter()
+        .map(|b_idx| {
+            let mut null_rng = ChaCha8Rng::seed_from_u64(2026_08_03 + b_idx as u64);
+            let mut perm = (0..n).collect::<Vec<_>>();
+            let mut snli_shuffled = snli_indices.clone();
+            let mut mnli_shuffled = mnli_indices.clone();
+            snli_shuffled.shuffle(&mut null_rng);
+            mnli_shuffled.shuffle(&mut null_rng);
+
+            for (orig_idx, &shuf_idx) in snli_indices.iter().zip(snli_shuffled.iter()) {
+                perm[*orig_idx] = shuf_idx;
+            }
+            for (orig_idx, &shuf_idx) in mnli_indices.iter().zip(mnli_shuffled.iter()) {
+                perm[*orig_idx] = shuf_idx;
+            }
+
+            let mut per_item_null = vec![0.0f64; n];
+            let mut sum_null_f = 0.0f64;
+            for i in 0..n {
+                let i_perm = perm[i];
+                let mut local_n = 0.0f64;
+                for &(j, w_val) in &sparse_w_raw[i] {
+                    let j_perm = perm[j];
+                    local_n += w_val * s_ij_k10[i_perm * n + j_perm];
+                }
+                per_item_null[i] = local_n / 10.0;
+                sum_null_f += local_n;
+            }
+            (per_item_null, sum_null_f / (n * 10) as f64)
+        })
+        .unzip();
+
+    for b_idx in 0..n_null_raw {
+        for i in 0..n {
+            o_i_null_raw[i] += item_null_scores_raw[b_idx][i] / n_null_raw as f64;
+        }
+    }
+
+    let q_raw_oof_baseline = o_i_raw.iter().sum::<f64>() / n as f64;
+    let q_null_oof_baseline = o_i_null_raw.iter().sum::<f64>() / n as f64;
+    let r_raw_baseline = (q_raw_oof_baseline - q_null_oof_baseline) / (q_hh_relational - q_null_oof_baseline);
 
     for (level_key, display_name) in ladder_names {
         println!("\n--- Evaluating Repair Ladder Step: {display_name} ---");
@@ -787,12 +946,12 @@ fn main() {
                     (0..n).map(|i| softmax_vector_scaling(&lead_logits[i], &v_opt, &b_opt)).collect()
                 }
                 "Level 3: Full Affine Matrix" => {
-                    let (w_opt, b_opt) = optimize_full_affine_matrix(&human_probs, lead_logits, &train_indices);
-                    (0..n).map(|i| softmax_matrix_scaling(&lead_logits[i], &w_opt, &b_opt)).collect()
+                    let (a_opt, b_opt) = optimize_full_affine_matrix_8param(&human_probs, lead_logits, &train_indices);
+                    (0..n).map(|i| softmax_affine_matrix_8param(&lead_logits[i], &a_opt, &b_opt)).collect()
                 }
                 "Level 4: Full Dirichlet Calibration" => {
-                    let (w_opt, b_opt) = optimize_full_dirichlet_calibration(&human_probs, lead_logits, &train_indices);
-                    (0..n).map(|i| dirichlet_calibration(&raw_probs_all[i], &w_opt, &b_opt)).collect()
+                    let (a_opt, b_opt) = optimize_full_dirichlet_calibration_8param(&human_probs, lead_logits, &train_indices);
+                    (0..n).map(|i| dirichlet_calibration_8param(&raw_probs_all[i], &a_opt, &b_opt)).collect()
                 }
                 "Level 5a: Equal Weight Ensemble" => {
                     (0..n).map(|i| [
@@ -801,12 +960,20 @@ fn main() {
                         (ensemble_pool[0][i][2] + ensemble_pool[1][i][2] + ensemble_pool[2][i][2]) / 3.0,
                     ]).collect()
                 }
-                "Level 5b: Convex NLL Ensemble" | "Level 6a: Topology Ensemble" => {
+                "Level 5b: Convex NLL Ensemble" => {
                     let alpha_opt = optimize_convex_ensemble_nll(&human_probs, &ensemble_pool, &train_indices);
                     (0..n).map(|i| [
                         alpha_opt[0] * ensemble_pool[0][i][0] + alpha_opt[1] * ensemble_pool[1][i][0] + alpha_opt[2] * ensemble_pool[2][i][0],
-                        alpha_opt[0] * ensemble_pool[0][i][1] + alpha_opt[1] * ensemble_pool[1][i][1] + alpha_opt[2] * ensemble_pool[2][i][1],
+                        alpha_opt[0] * ensemble_pool[0][i][1] + alpha_opt[1] * ensemble_pool[1][i][1] + alpha_opt[2] * ensemble_pool[2][i][2],
                         alpha_opt[0] * ensemble_pool[0][i][2] + alpha_opt[1] * ensemble_pool[1][i][2] + alpha_opt[2] * ensemble_pool[2][i][2],
+                    ]).collect()
+                }
+                "Level 6a: Topology Ensemble" => {
+                    let alpha_topo = optimize_ensemble_topology(&items, &s_ij_k10, &ensemble_pool, &train_indices, n);
+                    (0..n).map(|i| [
+                        alpha_topo[0] * ensemble_pool[0][i][0] + alpha_topo[1] * ensemble_pool[1][i][0] + alpha_topo[2] * ensemble_pool[2][i][0],
+                        alpha_topo[0] * ensemble_pool[0][i][1] + alpha_topo[1] * ensemble_pool[1][i][1] + alpha_topo[2] * ensemble_pool[2][i][1],
+                        alpha_topo[0] * ensemble_pool[0][i][2] + alpha_topo[1] * ensemble_pool[1][i][2] + alpha_topo[2] * ensemble_pool[2][i][2],
                     ]).collect()
                 }
                 _ => raw_probs_all.clone(),
@@ -946,9 +1113,8 @@ fn main() {
             0.0
         };
 
-        let r_raw = (0.01681 - 0.00329) / (q_hh_relational - 0.00329);
-        let gap_closure_q = if (1.0 - r_raw).abs() > 1e-6 {
-            (r_human_recovery_oof - r_raw) / (1.0 - r_raw)
+        let gap_closure_q = if (1.0 - r_raw_baseline).abs() > 1e-6 {
+            (r_human_recovery_oof - r_raw_baseline) / (1.0 - r_raw_baseline)
         } else {
             0.0
         };
