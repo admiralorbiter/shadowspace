@@ -7,7 +7,7 @@ use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::env;
 use std::fs::{create_dir_all, File};
-use std::io::{BufReader, Read, Write};
+use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -38,7 +38,7 @@ struct ArtifactManifest {
     object_count: usize,
 }
 
-// ─── Distance Metrics ────────────────────────────────────────────────────────
+// ─── Distance & Divergence Metrics ──────────────────────────────────────────
 
 #[inline(always)]
 fn distance_hellinger(p: &[f64; 3], q: &[f64; 3]) -> f64 {
@@ -48,8 +48,9 @@ fn distance_hellinger(p: &[f64; 3], q: &[f64; 3]) -> f64 {
     (0.5 * (d0 * d0 + d1 * d1 + d2 * d2)).sqrt()
 }
 
+/// Jensen-Shannon Divergence in bits (no square root)
 #[inline(always)]
-fn distance_jsd(p: &[f64; 3], q: &[f64; 3]) -> f64 {
+fn jsd_divergence_bits(p: &[f64; 3], q: &[f64; 3]) -> f64 {
     let mut sum = 0.0f64;
     for i in 0..3 {
         let m = 0.5 * (p[i] + q[i]);
@@ -62,7 +63,7 @@ fn distance_jsd(p: &[f64; 3], q: &[f64; 3]) -> f64 {
             }
         }
     }
-    (0.5 * sum).max(0.0).sqrt()
+    (0.5 * sum).max(0.0)
 }
 
 #[inline(always)]
@@ -72,6 +73,17 @@ fn soft_label_nll_single(p_human: &[f64; 3], q_model: &[f64; 3]) -> f64 {
         if p_human[i] > 1e-12 {
             let q_safe = q_model[i].max(1e-12);
             sum -= p_human[i] * q_safe.ln();
+        }
+    }
+    sum
+}
+
+#[inline(always)]
+fn human_entropy_nats(p_human: &[f64; 3]) -> f64 {
+    let mut sum = 0.0f64;
+    for i in 0..3 {
+        if p_human[i] > 1e-12 {
+            sum -= p_human[i] * p_human[i].ln();
         }
     }
     sum
@@ -170,7 +182,7 @@ fn extract_nonzero_weights(w: &[f64], n: usize) -> Vec<Vec<(usize, f64)>> {
     nonzero
 }
 
-// ─── Stratified Fold Partitioning ───────────────────────────────────────────
+// ─── Empirical Percentile-Based Entropy Stratification ────────────────────────
 
 fn partition_item_strata(items: &[ItemRecord]) -> (Vec<usize>, Vec<usize>) {
     (0..items.len()).partition(|&index| {
@@ -196,8 +208,32 @@ fn partition_exact_profiles(items: &[ItemRecord]) -> Vec<Vec<usize>> {
     map.into_values().collect()
 }
 
-fn build_stratified_5folds(items: &[ItemRecord], seed: u64) -> Vec<Vec<usize>> {
+fn build_stratified_5folds_empirical(items: &[ItemRecord], seed: u64) -> Vec<Vec<usize>> {
+    let n = items.len();
+    let mut entropies = Vec::with_capacity(n);
+
+    for item in items {
+        let total = (item.human_count_entailment + item.human_count_neutral + item.human_count_contradiction) as f64;
+        let p_e = item.human_count_entailment as f64 / total;
+        let p_n = item.human_count_neutral as f64 / total;
+        let p_c = item.human_count_contradiction as f64 / total;
+
+        let ent = -(if p_e > 1e-6 { p_e * p_e.log2() } else { 0.0 })
+            - (if p_n > 1e-6 { p_n * p_n.log2() } else { 0.0 })
+            - (if p_c > 1e-6 { p_c * p_c.log2() } else { 0.0 });
+        entropies.push(ent);
+    }
+
+    let mut sorted_ent = entropies.clone();
+    sorted_ent.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+    let q20 = sorted_ent[(0.20 * n as f64) as usize];
+    let q40 = sorted_ent[(0.40 * n as f64) as usize];
+    let q60 = sorted_ent[(0.60 * n as f64) as usize];
+    let q80 = sorted_ent[(0.80 * n as f64) as usize];
+
     let mut strata_map: HashMap<(u8, u8, u8), Vec<usize>> = HashMap::new();
+
     for (idx, item) in items.iter().enumerate() {
         let total = (item.human_count_entailment + item.human_count_neutral + item.human_count_contradiction) as f64;
         let p_e = item.human_count_entailment as f64 / total;
@@ -211,13 +247,20 @@ fn build_stratified_5folds(items: &[ItemRecord], seed: u64) -> Vec<Vec<usize>> {
 
         let maj = if p_e >= p_n && p_e >= p_c { 0u8 } else if p_n >= p_c { 1u8 } else { 2u8 };
 
-        // Simple entropy binning (0..5)
-        let ent = -(if p_e > 1e-6 { p_e * p_e.log2() } else { 0.0 })
-            - (if p_n > 1e-6 { p_n * p_n.log2() } else { 0.0 })
-            - (if p_c > 1e-6 { p_c * p_c.log2() } else { 0.0 });
-        let ent_bin = ((ent / 1.585) * 4.99) as u8;
+        let ent = entropies[idx];
+        let eq = if ent <= q20 {
+            0u8
+        } else if ent <= q40 {
+            1u8
+        } else if ent <= q60 {
+            2u8
+        } else if ent <= q80 {
+            3u8
+        } else {
+            4u8
+        };
 
-        strata_map.entry((is_snli, maj, ent_bin)).or_default().push(idx);
+        strata_map.entry((is_snli, maj, eq)).or_default().push(idx);
     }
 
     let mut folds = vec![Vec::new(); 5];
@@ -252,7 +295,6 @@ fn optimize_temperature_nll(
         sum_loss / indices.len() as f64
     };
 
-    // Golden section search on t in [0.05, 20.0]
     let mut a = 0.05f64;
     let mut b = 20.0f64;
     let phi = (5.0f64.sqrt() - 1.0) / 2.0;
@@ -281,7 +323,7 @@ fn optimize_temperature_jsd(
         let mut sum_loss = 0.0f64;
         for &idx in indices {
             let q = softmax_temperature(&logits[idx], t);
-            sum_loss += distance_jsd(&human_probs[idx], &q);
+            sum_loss += jsd_divergence_bits(&human_probs[idx], &q);
         }
         sum_loss / indices.len() as f64
     };
@@ -310,14 +352,15 @@ fn optimize_temperature_jsd(
 #[derive(Serialize)]
 struct ConditionMetrics {
     nll: f64,
-    jsd: f64,
-    q_support: f64,
-    q_null: f64,
+    jsd_bits: f64,
+    q_support_heldout: f64,
+    q_null_heldout: f64,
     q_global_excess: f64,
     q_profile_null: f64,
     q_profile_excess: f64,
-    core_mass_tau50: f64,
-    core_recall_tau50: f64,
+    graph_turnover_rel_t1: f64,
+    core_mass_k50: f64,
+    core_recall_k50: f64,
     avg_entropy_bits: f64,
     avg_top_prob: f64,
     distance_variance: f64,
@@ -329,9 +372,11 @@ struct ModelE002Result {
     t_nll_fitted: f64,
     t_jsd_fitted: f64,
     t_topology_fitted: f64,
-    gap_closure_D: f64,
-    gap_closure_Q: f64,
-    h2b_confirmed: bool,
+    gap_closure_nll: f64,
+    gap_closure_q: f64,
+    h2a_nll_supported: bool,
+    h2a_jsd_contradicted: bool,
+    h2b_nll_confirmed: bool,
     conditions: HashMap<String, ConditionMetrics>,
 }
 
@@ -339,9 +384,11 @@ struct ModelE002Result {
 struct E002Summary {
     experiment_id: String,
     title: String,
+    status: String,
     e001_artifact_id: String,
-    e001_matrix_sha256: String,
-    d_hh_pointwise_jsd: f64,
+    e001_matrix_k10_sha256: String,
+    e001_matrix_k50_sha256: String,
+    human_entropy_floor_nats: f64,
     q_hh_relational: f64,
     models: HashMap<String, ModelE002Result>,
     total_runtime_ms: f64,
@@ -407,6 +454,30 @@ fn compute_bytes_sha256(data: &[u8]) -> String {
     format!("{:x}", hasher.finalize())
 }
 
+fn load_and_verify_matrix_f64(bin_path: &Path, expected_sha256: &str, expected_len: usize) -> Vec<f64> {
+    let mut file = File::open(bin_path).unwrap_or_else(|e| panic!("Failed to open {}: {e}", bin_path.display()));
+    let mut bytes = Vec::new();
+    file.read_to_end(&mut bytes).unwrap();
+
+    let actual_sha256 = compute_bytes_sha256(&bytes);
+    assert_eq!(
+        actual_sha256, expected_sha256,
+        "Binary SHA-256 mismatch for {}: expected {}, got {}",
+        bin_path.display(),
+        expected_sha256,
+        actual_sha256
+    );
+
+    assert_eq!(bytes.len(), expected_len * 4, "Binary length mismatch");
+
+    let mut mat = Vec::with_capacity(expected_len);
+    for chunk in bytes.chunks_exact(4) {
+        let val_f32 = f32::from_le_bytes(chunk.try_into().unwrap());
+        mat.push(val_f32 as f64);
+    }
+    mat
+}
+
 // ─── Main Execution ──────────────────────────────────────────────────────────
 
 fn main() {
@@ -424,39 +495,48 @@ fn main() {
 
     println!("=========================================================================");
     println!("   EXPERIMENT E002 — POINTWISE CALIBRATION VS RELATIONAL TOPOLOGY (RUST)");
-    println!("   (Rayon Threadpool: {num_threads} worker threads | 5-Fold Stratified CV)");
+    println!("   (Rayon Threadpool: {num_threads} worker threads | 5-Fold Coherent Cross-Fitting)");
     println!("=========================================================================");
 
     let items_path = workspace.join("data/chaosnli/processed/canonical_items_posterior.json");
     let models_path = workspace.join("research/chaosnli/rust_manifest/model_probs.json");
-    let manifest_path = workspace.join("research/chaosnli/artifacts/E001/S_hellinger_k010.manifest.json");
-    let bin_path = workspace.join("research/chaosnli/artifacts/E001/S_hellinger_k010.bin");
+    
+    let manifest_k10_path = workspace.join("research/chaosnli/artifacts/E001/S_hellinger_k010.manifest.json");
+    let bin_k10_path = workspace.join("research/chaosnli/artifacts/E001/S_hellinger_k010.bin");
+    let bin_k50_path = workspace.join("research/chaosnli/artifacts/E001/S_hellinger_k050.bin");
 
-    // 1. Verify and load frozen E001 matrix artifact
-    let manifest_file = File::open(&manifest_path).expect("Failed to open E001 manifest");
+    let expected_k10_sha256 = "94e483e714d92f039f817389d948cbf41b7970077b56f852491832605dccc96f";
+    let expected_k50_sha256 = "2da027e261d9a74a67f262aa601544c98ebf2b2879d15cda97b116ce447b1f3d";
+    let expected_object_ids_sha256 = "121c49cbd40b171d100ba88c1a23d809818c28bad9249bea99a52ec8f5af19d6";
+
+    // 1. Runtime Artifact Integrity Lock
+    let manifest_file = File::open(&manifest_k10_path).expect("Failed to open E001 k10 manifest");
     let manifest: ArtifactManifest = serde_json::from_reader(BufReader::new(manifest_file)).expect("Failed to parse E001 manifest");
 
-    let mut bin_file = File::open(&bin_path).expect("Failed to open E001 bin artifact");
-    let mut bin_bytes = Vec::new();
-    bin_file.read_to_end(&mut bin_bytes).expect("Failed to read E001 bin artifact");
-
-    let actual_hash = compute_bytes_sha256(&bin_bytes);
-    assert_eq!(actual_hash, manifest.matrix_sha256, "E001 Matrix SHA-256 hash mismatch!");
-
-    let n = manifest.object_count;
-    let f32_slice: &[f32] = unsafe {
-        std::slice::from_raw_parts(bin_bytes.as_ptr() as *const f32, bin_bytes.len() / 4)
-    };
-    let s_ij: Vec<f64> = f32_slice.iter().map(|&v| v as f64).collect();
-
-    println!("Loaded & verified frozen E001 artifact '{}' (SHA-256: {})", manifest.artifact_id, &actual_hash[..16]);
+    assert_eq!(manifest.matrix_sha256, expected_k10_sha256, "Manifest k10 matrix_sha256 mismatch!");
+    assert_eq!(manifest.object_ids_sha256, expected_object_ids_sha256, "Manifest object_ids_sha256 mismatch!");
 
     let items = load_items(&items_path);
-    let raw_models = load_models(&models_path);
+    let n = items.len();
+    assert_eq!(n, manifest.object_count, "Item count mismatch!");
+
+    let object_ids: Vec<String> = items.iter().map(|item| item.object_id.clone()).collect();
+    let object_ids_bytes = serde_json::to_vec(&object_ids).unwrap();
+    let actual_object_ids_sha256 = compute_bytes_sha256(&object_ids_bytes);
+    assert_eq!(actual_object_ids_sha256, expected_object_ids_sha256, "Item ordering SHA-256 mismatch!");
+
+    let s_ij_k10 = load_and_verify_matrix_f64(&bin_k10_path, expected_k10_sha256, n * n);
+    let s_ij_k50 = load_and_verify_matrix_f64(&bin_k50_path, expected_k50_sha256, n * n);
+
+    println!("Runtime Artifact Lock VERIFIED:");
+    println!("  - k=10 Target: {} (SHA-256: {})", manifest.artifact_id, &expected_k10_sha256[..16]);
+    println!("  - k=50 Target: S_hellinger_k050.bin (SHA-256: {})", &expected_k50_sha256[..16]);
+    println!("  - Object Order SHA-256: {}", &expected_object_ids_sha256[..16]);
+
     let (snli_indices, mnli_indices) = partition_item_strata(&items);
     let exact_profiles = partition_exact_profiles(&items);
 
-    // Compute human empirical probability vectors
+    // Compute human empirical probability vectors and entropy floor
     let human_probs: Vec<[f64; 3]> = items
         .iter()
         .map(|item| {
@@ -469,33 +549,18 @@ fn main() {
         })
         .collect();
 
-    // Compute human split-half pointwise baseline (D_HH)
-    println!("\nComputing human split-half pointwise baseline (D_HH)...");
-    let draws_a = (0..250).map(|b| generate_posterior_probs(&items, 0.5, 42 + b as u64)).collect::<Vec<_>>();
-    let draws_b = (0..250).map(|b| generate_posterior_probs(&items, 0.5, 1001 + b as u64)).collect::<Vec<_>>();
-
-    let mut mean_p_a = vec![[0.0f64; 3]; n];
-    let mut mean_p_b = vec![[0.0f64; 3]; n];
-    for b in 0..250 {
-        for i in 0..n {
-            for c in 0..3 {
-                mean_p_a[i][c] += draws_a[b][i][c] / 250.0;
-                mean_p_b[i][c] += draws_b[b][i][c] / 250.0;
-            }
-        }
-    }
-
-    let mut sum_d_hh = 0.0f64;
+    let mut sum_human_entropy_nats = 0.0f64;
     for i in 0..n {
-        sum_d_hh += distance_jsd(&mean_p_a[i], &mean_p_b[i]);
+        sum_human_entropy_nats += human_entropy_nats(&human_probs[i]);
     }
-    let d_hh_pointwise = sum_d_hh / n as f64;
+    let human_entropy_floor_nats = sum_human_entropy_nats / n as f64;
     let q_hh_relational = 0.07228f64;
 
-    println!("  Human-Human Pointwise JSD Floor D_HH = {:.5}", d_hh_pointwise);
-    println!("  Human-Human Relational Reference Q_HH = {:.5}", q_hh_relational);
+    println!("\n  Human Soft-Label NLL Floor H(p) = {:.5} nats", human_entropy_floor_nats);
+    println!("  Human Relational Reference Q_HH = {:.5}", q_hh_relational);
 
     // Convert raw model probabilities to synthetic logits z = ln(p) for temperature scaling
+    let raw_models = load_models(&models_path);
     let mut model_logits: HashMap<String, Vec<[f64; 3]>> = HashMap::new();
     for (m_name, m_probs) in &raw_models {
         let logits: Vec<[f64; 3]> = m_probs
@@ -508,7 +573,7 @@ fn main() {
     let mut model_names: Vec<String> = model_logits.keys().cloned().collect();
     model_names.sort();
 
-    let folds = build_stratified_5folds(&items, 20260803);
+    let folds = build_stratified_5folds_empirical(&items, 20260803);
     let temp_grid = vec![
         0.10, 0.125, 0.16, 0.20, 0.25, 0.32, 0.40, 0.50, 0.63, 0.80, 1.00,
         1.25, 1.60, 2.00, 2.50, 3.20, 4.00, 5.00, 6.30, 8.00, 10.00,
@@ -524,14 +589,9 @@ fn main() {
         let mut t_jsd_folds = Vec::new();
         let mut t_topo_folds = Vec::new();
 
-        let mut oof_probs_raw = vec![[0.0f64; 3]; n];
-        let mut oof_probs_nll = vec![[0.0f64; 3]; n];
-        let mut oof_probs_jsd = vec![[0.0f64; 3]; n];
-        let mut oof_probs_topo = vec![[0.0f64; 3]; n];
-
         for fold_idx in 0..5 {
             let test_indices = &folds[fold_idx];
-            let mut train_indices = Vec::new();
+            let mut train_indices = Vec::with_capacity(n - test_indices.len());
             for i in 0..n {
                 if !test_indices.contains(&i) {
                     train_indices.push(i);
@@ -541,30 +601,81 @@ fn main() {
             let t_nll_opt = optimize_temperature_nll(&human_probs, logits, &train_indices);
             let t_jsd_opt = optimize_temperature_jsd(&human_probs, logits, &train_indices);
 
-            // Subgraph top-k search for T_topology on train fold
+            // 2. Training-Only Posterior Support Target (S_ij_train) constructed over training items ONLY
             let n_tr = train_indices.len();
+            let train_items: Vec<ItemRecord> = train_indices.iter().map(|&i| ItemRecord {
+                object_id: items[i].object_id.clone(),
+                source_dataset: items[i].source_dataset,
+                human_count_entailment: items[i].human_count_entailment,
+                human_count_neutral: items[i].human_count_neutral,
+                human_count_contradiction: items[i].human_count_contradiction,
+            }).collect();
+
+            // Compute expected edge support matrix S_train over training items (200 draws)
+            let draws_tr_a = (0..100).map(|b| generate_posterior_probs(&train_items, 0.5, 42 + b as u64)).collect::<Vec<_>>();
+            let draws_tr_b = (0..100).map(|b| generate_posterior_probs(&train_items, 0.5, 1001 + b as u64)).collect::<Vec<_>>();
+
+            let mut sum_sup_tr_a = vec![0.0f64; n_tr * n_tr];
+            let mut sum_sup_tr_b = vec![0.0f64; n_tr * n_tr];
+
+            for b in 0..100 {
+                let dist_a = build_dist_matrix_seq(&draws_tr_a[b], n_tr);
+                let w_a = compute_topk_weight_matrix(&dist_a, n_tr, 10);
+                let dist_b = build_dist_matrix_seq(&draws_tr_b[b], n_tr);
+                let w_b = compute_topk_weight_matrix(&dist_b, n_tr, 10);
+
+                for idx_cell in 0..(n_tr * n_tr) {
+                    sum_sup_tr_a[idx_cell] += w_a[idx_cell] / 100.0;
+                    sum_sup_tr_b[idx_cell] += w_b[idx_cell] / 100.0;
+                }
+            }
+
+            let mut s_ij_tr = vec![0.0f64; n_tr * n_tr];
+            for idx_cell in 0..(n_tr * n_tr) {
+                s_ij_tr[idx_cell] = 0.5 * (sum_sup_tr_a[idx_cell] + sum_sup_tr_b[idx_cell]);
+            }
+
+            // Grid search T_topology maximizing Q_excess_train(T) = Q_support_train(T) - Q_null_train(T)
             let mut best_t_topo = 1.0f64;
-            let mut best_q_topo = -1.0f64;
+            let mut best_q_excess = -1e9f64;
 
             for &t_cand in &temp_grid {
                 let q_train: Vec<[f64; 3]> = train_indices.iter().map(|&i| softmax_temperature(&logits[i], t_cand)).collect();
-                let dist_train = build_dist_matrix_seq(&q_train, n_tr);
-                let w_train = compute_topk_weight_matrix(&dist_train, n_tr, 10);
-                
-                let mut sum_q_tr = 0.0f64;
+                let dist_cand = build_dist_matrix_seq(&q_train, n_tr);
+                let w_cand = compute_topk_weight_matrix(&dist_cand, n_tr, 10);
+
+                let mut sum_q_sup = 0.0f64;
                 for i_tr in 0..n_tr {
-                    let orig_i = train_indices[i_tr];
                     let i_off = i_tr * n_tr;
                     for j_tr in 0..n_tr {
                         if j_tr != i_tr {
-                            let orig_j = train_indices[j_tr];
-                            sum_q_tr += w_train[i_off + j_tr] * s_ij[orig_i * n + orig_j];
+                            sum_q_sup += w_cand[i_off + j_tr] * s_ij_tr[i_off + j_tr];
                         }
                     }
                 }
-                let q_sup_cand = sum_q_tr / (n_tr * 10) as f64;
-                if q_sup_cand > best_q_topo {
-                    best_q_topo = q_sup_cand;
+                let q_sup_cand = sum_q_sup / (n_tr * 10) as f64;
+
+                // Fast 50-permutation training null at candidate T
+                let sparse_w_cand = extract_nonzero_weights(&w_cand, n_tr);
+                let mut sum_null_cand = 0.0f64;
+                for b_idx in 0..50 {
+                    let mut null_rng = ChaCha8Rng::seed_from_u64(5050_0000 + b_idx as u64);
+                    let mut perm_tr = (0..n_tr).collect::<Vec<_>>();
+                    perm_tr.shuffle(&mut null_rng);
+
+                    for i_tr in 0..n_tr {
+                        let i_perm = perm_tr[i_tr];
+                        for &(j_tr, w) in &sparse_w_cand[i_tr] {
+                            let j_perm = perm_tr[j_tr];
+                            sum_null_cand += w * s_ij_tr[i_perm * n_tr + j_perm];
+                        }
+                    }
+                }
+                let q_null_cand = sum_null_cand / (50 * n_tr * 10) as f64;
+                let q_excess_cand = q_sup_cand - q_null_cand;
+
+                if q_excess_cand > best_q_excess {
+                    best_q_excess = q_excess_cand;
                     best_t_topo = t_cand;
                 }
             }
@@ -572,13 +683,6 @@ fn main() {
             t_nll_folds.push(t_nll_opt);
             t_jsd_folds.push(t_jsd_opt);
             t_topo_folds.push(best_t_topo);
-
-            for &idx in test_indices {
-                oof_probs_raw[idx] = softmax_temperature(&logits[idx], 1.0);
-                oof_probs_nll[idx] = softmax_temperature(&logits[idx], t_nll_opt);
-                oof_probs_jsd[idx] = softmax_temperature(&logits[idx], t_jsd_opt);
-                oof_probs_topo[idx] = softmax_temperature(&logits[idx], best_t_topo);
-            }
         }
 
         let t_nll_mean = t_nll_folds.iter().sum::<f64>() / 5.0;
@@ -587,21 +691,29 @@ fn main() {
 
         println!("  Fitted Temperatures: T_NLL = {t_nll_mean:.4}, T_JSD = {t_jsd_mean:.4}, T_topology = {t_topo_mean:.4}");
 
-        let cond_probs = vec![
-            ("T_raw (1.0)", oof_probs_raw),
-            ("T_NLL (calibrated)", oof_probs_nll),
-            ("T_JSD (pointwise oracle)", oof_probs_jsd),
-            ("T_topology (relational oracle)", oof_probs_topo),
+        // 3. Coherent Full-Dataset Graph Evaluation (Single Temperature applied to all N items)
+        let cond_temps = vec![
+            ("T_raw (1.0)", 1.0f64),
+            ("T_NLL (calibrated)", t_nll_mean),
+            ("T_JSD (pointwise oracle)", t_jsd_mean),
+            ("T_topology (relational oracle)", t_topo_mean),
         ];
 
         let mut cond_evals = HashMap::new();
 
-        for (cond_name, q_probs) in cond_probs {
+        // Baseline W_m(1) at T=1.0 for graph turnover calculation
+        let q_probs_t1: Vec<[f64; 3]> = (0..n).map(|i| softmax_temperature(&logits[i], 1.0)).collect();
+        let dist_t1 = build_dist_matrix_seq(&q_probs_t1, n);
+        let w_t1 = compute_topk_weight_matrix(&dist_t1, n, 10);
+
+        for (cond_name, t_val) in cond_temps {
+            let q_probs: Vec<[f64; 3]> = (0..n).map(|i| softmax_temperature(&logits[i], t_val)).collect();
+
             let mut sum_nll = 0.0f64;
             let mut sum_jsd = 0.0f64;
             for i in 0..n {
                 sum_nll += soft_label_nll_single(&human_probs[i], &q_probs[i]);
-                sum_jsd += distance_jsd(&human_probs[i], &q_probs[i]);
+                sum_jsd += jsd_divergence_bits(&human_probs[i], &q_probs[i]);
             }
             let nll_val = sum_nll / n as f64;
             let jsd_val = sum_jsd / n as f64;
@@ -610,19 +722,30 @@ fn main() {
             let w_m10 = compute_topk_weight_matrix(&dist_m, n, 10);
             let sparse_w10 = extract_nonzero_weights(&w_m10, n);
 
-            let mut sum_obs = 0.0f64;
-            for i in 0..n {
-                let i_off = i * n;
-                for j in 0..n {
-                    if j != i {
-                        sum_obs += w_m10[i_off + j] * s_ij[i_off + j];
+            // Compute held-out topology score across 5 coherent fold evaluations
+            let mut sum_q_heldout = 0.0f64;
+            for fold_idx in 0..5 {
+                let test_indices = &folds[fold_idx];
+                for &i_test in test_indices {
+                    let i_off = i_test * n;
+                    for j in 0..n {
+                        if j != i_test {
+                            sum_q_heldout += w_m10[i_off + j] * s_ij_k10[i_off + j];
+                        }
                     }
                 }
             }
-            let q_support = sum_obs / (n * 10) as f64;
+            let q_support_heldout = sum_q_heldout / (n * 10) as f64;
 
-            // Recompute Stratified Permutation Null at temperature T (1,000 perms)
-            let n_null = 1000;
+            // Compute Graph Turnover relative to T=1.0: Turnover(T) = 1 - (1/Nk) sum W(1) * W(T)
+            let mut sum_overlap = 0.0f64;
+            for idx_cell in 0..(n * n) {
+                sum_overlap += w_t1[idx_cell] * w_m10[idx_cell];
+            }
+            let graph_turnover_rel_t1 = 1.0 - (sum_overlap / (n * 10) as f64);
+
+            // 10,000 Stratified Permutations per final condition via Rayon
+            let n_null = 10_000;
             let null_scores: Vec<f64> = (0..n_null)
                 .into_par_iter()
                 .map(|b_idx| {
@@ -645,17 +768,17 @@ fn main() {
                         let i_perm = perm[i];
                         for &(j, w) in &sparse_w10[i] {
                             let j_perm = perm[j];
-                            sum_null += w * s_ij[i_perm * n + j_perm];
+                            sum_null += w * s_ij_k10[i_perm * n + j_perm];
                         }
                     }
                     sum_null / (n * 10) as f64
                 })
                 .collect();
 
-            let q_null = null_scores.iter().sum::<f64>() / n_null as f64;
-            let q_global_excess = q_support - q_null;
+            let q_null_heldout = null_scores.iter().sum::<f64>() / n_null as f64;
+            let q_global_excess = q_support_heldout - q_null_heldout;
 
-            // Recompute Exact-Profile Permutation Null at temperature T
+            // 1,000 Exact-Profile Permutations per final condition
             let exact_null_scores: Vec<f64> = (0..1000)
                 .into_par_iter()
                 .map(|b_idx| {
@@ -674,7 +797,7 @@ fn main() {
                         let i_perm = perm[i];
                         for &(j, w) in &sparse_w10[i] {
                             let j_perm = perm[j];
-                            sum_null += w * s_ij[i_perm * n + j_perm];
+                            sum_null += w * s_ij_k10[i_perm * n + j_perm];
                         }
                     }
                     sum_null / (n * 10) as f64
@@ -682,25 +805,25 @@ fn main() {
                 .collect();
 
             let q_profile_null = exact_null_scores.iter().sum::<f64>() / 1000.0;
-            let q_profile_excess = q_support - q_profile_null;
+            let q_profile_excess = q_support_heldout - q_profile_null;
 
-            // Core mass & recall at k=50
+            // Core mass & recall computed against independent k=50 support matrix (S_hellinger_k050.bin)
             let w_m50 = compute_topk_weight_matrix(&dist_m, n, 50);
-            let mut sum_core_mass = 0.0f64;
-            let mut c_tau50 = 0usize;
+            let mut sum_core_mass_50 = 0.0f64;
+            let mut c_tau50_k50 = 0usize;
             for i in 0..n {
                 let i_off = i * n;
                 for j in 0..n {
-                    if j != i && s_ij[i_off + j] >= 0.50 {
-                        c_tau50 += 1;
-                        sum_core_mass += w_m50[i_off + j];
+                    if j != i && s_ij_k50[i_off + j] >= 0.50 {
+                        c_tau50_k50 += 1;
+                        sum_core_mass_50 += w_m50[i_off + j];
                     }
                 }
             }
-            let core_mass_tau50 = sum_core_mass / (n * 50) as f64;
-            let core_recall_tau50 = sum_core_mass / c_tau50.max(1) as f64;
+            let core_mass_k50 = sum_core_mass_50 / (n * 50) as f64;
+            let core_recall_k50 = sum_core_mass_50 / c_tau50_k50.max(1) as f64;
 
-            // Degeneracy safeguards
+            // Degeneracy & summary metrics
             let mut sum_ent = 0.0f64;
             let mut sum_top_prob = 0.0f64;
             for i in 0..n {
@@ -721,14 +844,15 @@ fn main() {
                 cond_name.to_string(),
                 ConditionMetrics {
                     nll: nll_val,
-                    jsd: jsd_val,
-                    q_support,
-                    q_null,
+                    jsd_bits: jsd_val,
+                    q_support_heldout,
+                    q_null_heldout,
                     q_global_excess,
                     q_profile_null,
                     q_profile_excess,
-                    core_mass_tau50,
-                    core_recall_tau50,
+                    graph_turnover_rel_t1,
+                    core_mass_k50,
+                    core_recall_k50,
                     avg_entropy_bits,
                     avg_top_prob,
                     distance_variance,
@@ -736,25 +860,33 @@ fn main() {
             );
         }
 
-        let d_raw = cond_evals["T_raw (1.0)"].jsd;
-        let d_cal = cond_evals["T_NLL (calibrated)"].jsd;
-        let g_d = if (d_raw - d_hh_pointwise).abs() > 1e-6 {
-            (d_raw - d_cal) / (d_raw - d_hh_pointwise)
+        let nll_raw = cond_evals["T_raw (1.0)"].nll;
+        let nll_cal = cond_evals["T_NLL (calibrated)"].nll;
+        let gap_closure_nll = if (nll_raw - human_entropy_floor_nats).abs() > 1e-6 {
+            (nll_raw - nll_cal) / (nll_raw - human_entropy_floor_nats)
         } else {
             0.0
         };
 
-        let q_raw = cond_evals["T_raw (1.0)"].q_support;
-        let q_cal = cond_evals["T_NLL (calibrated)"].q_support;
-        let g_q = if (q_hh_relational - q_raw).abs() > 1e-6 {
+        let jsd_raw = cond_evals["T_raw (1.0)"].jsd_bits;
+        let jsd_cal = cond_evals["T_NLL (calibrated)"].jsd_bits;
+
+        let q_raw = cond_evals["T_raw (1.0)"].q_support_heldout;
+        let q_cal = cond_evals["T_NLL (calibrated)"].q_support_heldout;
+        let gap_closure_q = if (q_hh_relational - q_raw).abs() > 1e-6 {
             (q_cal - q_raw) / (q_hh_relational - q_raw)
         } else {
             0.0
         };
 
-        let h2b_confirmed = g_d > g_q;
-        println!("  Pointwise Gap Closure G_D = {:.2}%, Relational Gap Closure G_Q = {:.2}%", g_d * 100.0, g_q * 100.0);
-        println!("  H2b Result: G_D > G_Q --> {}", if h2b_confirmed { "CONFIRMED" } else { "REJECTED" });
+        let h2a_nll_supported = nll_cal < nll_raw;
+        let h2a_jsd_contradicted = jsd_cal > jsd_raw;
+        let h2b_nll_confirmed = gap_closure_nll > gap_closure_q;
+
+        println!("  NLL Gap Closure G_NLL = {:.2}%, Relational Gap Closure G_Q = {:.2}%", gap_closure_nll * 100.0, gap_closure_q * 100.0);
+        println!("  H2a (NLL Reduction): {}", if h2a_nll_supported { "SUPPORTED" } else { "NOT SUPPORTED" });
+        println!("  H2a (JSD Contradiction): {}", if h2a_jsd_contradicted { "CONTRADICTED (JSD Increased)" } else { "REDUCED" });
+        println!("  H2b (G_NLL > G_Q): {}", if h2b_nll_confirmed { "CONFIRMED" } else { "REJECTED" });
 
         e002_model_results.insert(
             m_name.clone(),
@@ -763,9 +895,11 @@ fn main() {
                 t_nll_fitted: t_nll_mean,
                 t_jsd_fitted: t_jsd_mean,
                 t_topology_fitted: t_topo_mean,
-                gap_closure_D: g_d,
-                gap_closure_Q: g_q,
-                h2b_confirmed,
+                gap_closure_nll,
+                gap_closure_q,
+                h2a_nll_supported,
+                h2a_jsd_contradicted,
+                h2b_nll_confirmed,
                 conditions: cond_evals,
             },
         );
@@ -776,9 +910,11 @@ fn main() {
     let summary = E002Summary {
         experiment_id: "E002".to_string(),
         title: "Pointwise Soft-Label Calibration vs. Relational Neighborhood Recovery".to_string(),
+        status: "pilot_requires_graph_crossfit_rerun".to_string(),
         e001_artifact_id: manifest.artifact_id.clone(),
-        e001_matrix_sha256: manifest.matrix_sha256.clone(),
-        d_hh_pointwise_jsd: d_hh_pointwise,
+        e001_matrix_k10_sha256: expected_k10_sha256.to_string(),
+        e001_matrix_k50_sha256: expected_k50_sha256.to_string(),
+        human_entropy_floor_nats,
         q_hh_relational,
         models: e002_model_results,
         total_runtime_ms,

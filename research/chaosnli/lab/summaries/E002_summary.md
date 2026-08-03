@@ -1,99 +1,104 @@
-# E002: Pointwise Soft-Label Calibration vs. Relational Topology (Rust Pass)
+# E002: Pointwise Soft-Label Calibration vs. Relational Topology (Coherent Cross-Fitted Pass)
 
 **Experiment ID**: E002  
 **Title**: Pointwise Soft-Label Calibration vs. Relational Neighborhood Recovery  
+**Status**: `pilot_requires_graph_crossfit_rerun`  
 Dataset Release: `chaosnli-canonical-2026-08-02` (N = 3,113 items)  
-Cross-Validation: 5-Fold Stratified Cross-Fitting by (Dataset, Majority Label, Entropy Quintile)  
-Bound E001 Artifact: `E001-hellinger-k010-expected-fuzzy-support-v1` (SHA-256: `94e483e714d92f03...`)  
-Human Pointwise Baseline ($D_{HH}$): 0.00466 JSD bits  
+Cross-Validation: 5-Fold Stratified Coherent Cross-Fitting by (Dataset, Majority Label, Empirical Entropy Quintile)  
+Bound E001 Artifact (k=10): `E001-hellinger-k010-expected-fuzzy-support-v1` (SHA-256: `94e483e714d92f03...`)  
+Bound E001 Artifact (k=50): `S_hellinger_k050.bin` (SHA-256: `2da027e261d9a74a...`)  
+Human Soft-Label Entropy Floor ($H(p)$): 0.65062 nats  
 Human Relational Reference ($Q_{HH}$): 0.07228  
 
 ---
 
 ## Executive Summary
 
-Experiment **E002** evaluates **Hypothesis H2**: *Does temperature scaling improve marginal probability alignment (NLL/JSD) without proportionately recovering relational human belief-space topology ($Q_{\text{support}}$)?*
+Experiment **E002** evaluates **Hypothesis H2**: *Does temperature scaling improve marginal probability alignment (NLL) without proportionately recovering relational human belief-space topology ($Q_{\text{support}}$)?*
+
+### Key Methodological Fixes Applied
+
+1. **Coherent Single-Temperature Full-Dataset Graphs**: For each fold, $T_f$ is fitted on training items, then applied across ALL $N=3,113$ items to construct a single coherent graph $W^{f, T_f}$, scoring held-out rows $i \in H_f$.
+2. **Strict Training-Only Topology Target**: Training topology search optimizes $Q_{\text{excess, train}}(T) = Q_{\text{support, train}}(T) - Q_{\text{null, train}}(T)$ against posterior support matrices constructed over training items ONLY ($N_{\text{train}} \approx 2,490$).
+3. **Independent $k=50$ Core Target**: Core mass and recall metrics are evaluated against the true $k=50$ expected support matrix (`S_hellinger_k050.bin`).
+4. **NLL Gap Closure ($G_{\text{NLL}}$)**: Defined relative to the empirical human soft-label entropy floor $H(p) = 0.65062$ nats: $G_{\text{NLL}} = \frac{\text{NLL}_{\text{raw}} - \text{NLL}_{\text{cal}}}{\text{NLL}_{\text{raw}} - H(p)}$.
 
 ### Key Scientific Findings
 
-1. **Relational Topology Invariance Under Temperature Scaling ($G_Q < 0.75\%$)**:
-   - Across all 9 models, standard temperature scaling ($T_{\text{NLL}} \approx 1.86 - 3.93$) closes **less than 0.75% of the relational topology gap** ($G_Q = 0.06\% - 0.74\%$).
-   - Relational neighborhood alignment ($Q_{\text{support}}$) is virtually invariant to scalar logit transformations. Softening probabilities changes local distances uniformly without altering nearest-neighbor graph topology.
-
-2. **$Q_{\text{profile-excess}}(T)$ Remains Zero at All Temperatures**:
-   - Conditioning on exact vote profiles, $Q_{\text{profile-excess}}(T) = Q_{\text{support}}(T) - Q_{\text{exact-profile-null}}(T)$ remains $\approx 0.0000$ across all candidate temperatures $T \in [0.10, 10.00]$.
-   - *Conclusion*: Temperature scaling refines coarse marginal entropy, but fails to recover fine-grained within-profile relational identity alignment.
-
-3. **Pointwise NLL Reduction vs. JSD Optimization**:
-   - Fitting $T_{\text{NLL}}$ significantly reduces soft-label cross-entropy (e.g. BART-Large NLL drops from $0.912 \to 0.781$), but increases prediction entropy above 1.2 bits, creating a divergence between likelihood calibration ($T_{\text{NLL}}$) and pointwise JSD distance ($T_{\text{JSD}} \approx 0.83 - 0.88$).
-
-4. **Objective Disconnect ($T_{\text{NLL}}$ vs $T_{\text{topology}}$)**:
-   - Optimal temperature for pointwise NLL ($T_{\text{NLL}} \approx 1.8 - 3.9$) differs dramatically from the relational topology search ($T_{\text{topology}} \approx 3.3 - 8.1$), demonstrating that scalar temperature scaling cannot simultaneously optimize pointwise calibration and neighborhood topology.
+1. **$H2a_{\text{NLL}}$ Supported ($G_{\text{NLL}} \approx 24.9\% - 56.6\%$)**:
+   - Soft-label cross-entropy NLL improves consistently under $T_{\text{NLL}} \approx 1.86 - 3.93$ across all 9 models.
+2. **$H2a_{\text{JS}}$ Contradicted (JS Divergence Increases)**:
+   - Temperature calibration ($T_{\text{NLL}}$) softens probabilities, increasing prediction entropy above 1.2 bits and increasing symmetric JS divergence relative to human targets across all 9 models.
+3. **$H2b_{\text{NLL}}$ Confirmed ($G_{\text{NLL}} \gg G_Q < 0.70\%$)**:
+   - While pointwise likelihood gap closure $G_{\text{NLL}}$ reaches **24.9% to 56.6%**, relational topology gap closure $G_Q$ is **$< 0.70\%$** across all models ($0.16\% - 0.70\%$).
+4. **$Q_{\text{profile-excess}}(T)$ Remains Zero at All Temperatures**:
+   - $Q_{\text{profile-excess}}(T) = Q_{\text{support}}(T) - Q_{\text{exact-profile-null}}(T)$ remains $\approx 0.0000$ across all candidate temperatures $T \in [0.10, 10.00]$.
 
 ---
 
-## Detailed 5-Fold Cross-Fitted Model Calibration Results
+## Detailed 5-Fold Coherent Cross-Fitted Model Calibration Results
 
-| Model | $T_{\text{NLL}}$ | $T_{\text{JSD}}$ | $T_{\text{topology}}$ | NLL ($T_{\text{raw}}$) | NLL ($T_{\text{cal}}$) | JSD ($T_{\text{raw}}$) | JSD ($T_{\text{cal}}$) | $Q_{\text{raw}}$ | $Q_{\text{cal}}$ | Relational Gap Closure $G_Q$ | $Q_{\text{profile-excess}}$ |
+| Model | $T_{\text{NLL}}$ | $T_{\text{JSD}}$ | $T_{\text{topology}}$ | NLL ($T_{\text{raw}}$) | NLL ($T_{\text{cal}}$) | $G_{\text{NLL}}$ | JSD ($T_{\text{raw}}$) | JSD ($T_{\text{cal}}$) | $Q_{\text{raw}}$ | $Q_{\text{cal}}$ | Relational Gap Closure $G_Q$ | $Q_{\text{profile-excess}}$ |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **bart-large** | 1.86 | 0.83 | 5.20 | 0.8627 | **0.8099** | **24.91%** | 0.0420 | 0.0578 | **0.01681** | **0.01714** | **0.59%** | `0.000034` |
+| **roberta-large** | 2.16 | 0.85 | 4.70 | 0.9082 | **0.8258** | **31.98%** | 0.0489 | 0.0659 | **0.01492** | **0.01521** | **0.51%** | `-0.000002` |
+| **xlnet-large** | 2.35 | 0.83 | 4.42 | 0.9474 | **0.8451** | **34.48%** | 0.0567 | 0.0748 | **0.01334** | **0.01372** | **0.65%** | `-0.000018` |
+| **albert-xxlarge** | 2.59 | 0.86 | 6.85 | 0.9892 | **0.8577** | **38.83%** | 0.0636 | 0.0804 | **0.01153** | **0.01178** | **0.41%** | `0.000002` |
+| **bert-large** | 3.00 | 0.86 | 4.90 | 1.0658 | **0.8773** | **45.41%** | 0.0739 | 0.0892 | **0.01053** | **0.01074** | **0.33%** | `0.000032` |
+| **roberta-base** | 3.12 | 0.90 | 3.65 | 1.0938 | **0.8848** | **47.15%** | 0.0808 | 0.0929 | **0.01033** | **0.01043** | **0.16%** | `-0.000052` |
+| **xlnet-base** | 3.53 | 0.94 | 7.04 | 1.1806 | **0.8975** | **53.43%** | 0.0891 | 0.0980 | **0.00934** | **0.00978** | **0.70%** | `-0.000005` |
+| **distilbert** | 3.67 | 0.97 | 4.20 | 1.2114 | **0.9087** | **53.98%** | 0.0954 | 0.1025 | **0.00865** | **0.00886** | **0.34%** | `-0.000034` |
+| **bert-base** | 3.93 | 2.72 | 3.72 | 1.2696 | **0.9193** | **56.59%** | 0.1062 | 0.1075 | **0.00786** | **0.00809** | **0.36%** | `-0.000036` |
+
+---
+
+## Condition Comparison & Structural Graph Turnover (k=10 Hellinger & k=50 Core)
+
+| Model | Condition | NLL (nats) | JSD (bits) | $Q_{\text{support}}$ | $Q_{\text{null}}$ | $Q_{\text{global-excess}}$ | Graph Turnover | Core Mass ($k=50$) | Core Recall ($k=50$) | Avg Entropy | Distance Var |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| **bart-large** | 1.86 | 0.83 | 4.78 | 0.8627 | **0.8100** | 0.1818 | 0.2145 | **0.01681** | **0.01702** | **0.37%** | `0.000008` |
-| **roberta-large** | 2.16 | 0.85 | 5.66 | 0.9082 | **0.8260** | 0.1957 | 0.2279 | **0.01492** | **0.01506** | **0.24%** | `0.000005` |
-| **xlnet-large** | 2.35 | 0.82 | 5.30 | 0.9474 | **0.8452** | 0.2118 | 0.2448 | **0.01334** | **0.01358** | **0.39%** | `-0.000021` |
-| **albert-xxlarge** | 2.59 | 0.85 | 8.06 | 0.9892 | **0.8578** | 0.2242 | 0.2548 | **0.01153** | **0.01184** | **0.52%** | `0.000011` |
-| **bert-large** | 3.00 | 0.83 | 5.10 | 1.0658 | **0.8774** | 0.2412 | 0.2685 | **0.01053** | **0.01078** | **0.40%** | `0.000008` |
-| **roberta-base** | 3.12 | 0.86 | 5.80 | 1.0938 | **0.8849** | 0.2524 | 0.2753 | **0.01033** | **0.01036** | **0.06%** | `-0.000061` |
-| **xlnet-base** | 3.53 | 0.87 | 7.36 | 1.1806 | **0.8975** | 0.2642 | 0.2827 | **0.00934** | **0.00981** | **0.74%** | `-0.000001` |
-| **distilbert** | 3.67 | 0.89 | 5.44 | 1.2114 | **0.9088** | 0.2740 | 0.2909 | **0.00865** | **0.00884** | **0.31%** | `0.000004` |
-| **bert-base** | 3.93 | 2.24 | 3.33 | 1.2696 | **0.9194** | 0.2909 | 0.2987 | **0.00786** | **0.00793** | **0.11%** | `-0.000037` |
-
----
-
-## Condition Comparison: Raw vs. Pointwise Calibrated vs. Relational Oracle
-
-| Model | Condition | NLL | JSD (bits) | $Q_{\text{support}}$ | $Q_{\text{null}}$ | $Q_{\text{global-excess}}$ | Avg Entropy (bits) | Top Class Prob | Distance Var |
-|---|---|---|---|---|---|---|---|---|---|
-| **bart-large** | T_raw (1.0) | 0.8627 | 0.1818 | **0.01681** | 0.00329 | 0.01352 | 0.960 | 0.687 | 0.04873 |
-| **bart-large** | T_NLL (calibrated) | 0.8100 | 0.2145 | **0.01702** | 0.00329 | 0.01372 | 1.168 | 0.586 | 0.03620 |
-| **bart-large** | T_JSD (pointwise oracle) | 0.9074 | 0.1787 | **0.01666** | 0.00329 | 0.01337 | 0.884 | 0.719 | 0.05345 |
-| **bart-large** | T_topology (relational oracle) | 0.8704 | 0.2771 | **0.01576** | 0.00329 | 0.01246 | 1.398 | 0.479 | 0.01829 |
-| **roberta-large** | T_raw (1.0) | 0.9082 | 0.1957 | **0.01492** | 0.00329 | 0.01163 | 0.945 | 0.688 | 0.05078 |
-| **roberta-large** | T_NLL (calibrated) | 0.8260 | 0.2279 | **0.01506** | 0.00329 | 0.01177 | 1.191 | 0.570 | 0.03479 |
-| **roberta-large** | T_JSD (pointwise oracle) | 0.9577 | 0.1939 | **0.01481** | 0.00330 | 0.01151 | 0.879 | 0.716 | 0.05479 |
-| **roberta-large** | T_topology (relational oracle) | 0.8919 | 0.2940 | **0.01427** | 0.00328 | 0.01099 | 1.442 | 0.459 | 0.01291 |
-| **xlnet-large** | T_raw (1.0) | 0.9474 | 0.2118 | **0.01334** | 0.00327 | 0.01007 | 0.953 | 0.685 | 0.05009 |
-| **xlnet-large** | T_NLL (calibrated) | 0.8452 | 0.2448 | **0.01358** | 0.00328 | 0.01030 | 1.219 | 0.557 | 0.03283 |
-| **xlnet-large** | T_JSD (pointwise oracle) | 1.0141 | 0.2094 | **0.01340** | 0.00327 | 0.01013 | 0.877 | 0.719 | 0.05458 |
-| **xlnet-large** | T_topology (relational oracle) | 0.8937 | 0.2914 | **0.01279** | 0.00327 | 0.00952 | 1.401 | 0.475 | 0.01908 |
-| **albert-xxlarge** | T_raw (1.0) | 0.9892 | 0.2242 | **0.01153** | 0.00327 | 0.00826 | 0.947 | 0.685 | 0.05115 |
-| **albert-xxlarge** | T_NLL (calibrated) | 0.8578 | 0.2548 | **0.01184** | 0.00328 | 0.00856 | 1.237 | 0.547 | 0.03118 |
-| **albert-xxlarge** | T_JSD (pointwise oracle) | 1.0532 | 0.2226 | **0.01154** | 0.00327 | 0.00828 | 0.884 | 0.713 | 0.05474 |
-| **albert-xxlarge** | T_topology (relational oracle) | 0.9409 | 0.3276 | **0.01161** | 0.00327 | 0.00834 | 1.506 | 0.425 | 0.00685 |
-| **bert-large** | T_raw (1.0) | 1.0658 | 0.2412 | **0.01053** | 0.00328 | 0.00725 | 0.935 | 0.686 | 0.05262 |
-| **bert-large** | T_NLL (calibrated) | 0.8774 | 0.2685 | **0.01078** | 0.00328 | 0.00750 | 1.266 | 0.534 | 0.02827 |
-| **bert-large** | T_JSD (pointwise oracle) | 1.1555 | 0.2396 | **0.01054** | 0.00328 | 0.00726 | 0.869 | 0.716 | 0.05635 |
-| **bert-large** | T_topology (relational oracle) | 1.5816 | 0.3210 | **0.01031** | 0.00327 | 0.00704 | 1.043 | 0.616 | 0.06672 |
-| **roberta-base** | T_raw (1.0) | 1.0938 | 0.2524 | **0.01033** | 0.00326 | 0.00707 | 0.931 | 0.687 | 0.05266 |
-| **roberta-base** | T_NLL (calibrated) | 0.8849 | 0.2753 | **0.01036** | 0.00326 | 0.00710 | 1.277 | 0.531 | 0.02697 |
-| **roberta-base** | T_JSD (pointwise oracle) | 1.1705 | 0.2516 | **0.01031** | 0.00325 | 0.00706 | 0.878 | 0.711 | 0.05566 |
-| **roberta-base** | T_topology (relational oracle) | 0.9680 | 0.3033 | **0.00994** | 0.00325 | 0.00669 | 1.338 | 0.503 | 0.03078 |
-| **xlnet-base** | T_raw (1.0) | 1.1806 | 0.2642 | **0.00934** | 0.00325 | 0.00609 | 0.905 | 0.693 | 0.05503 |
-| **xlnet-base** | T_NLL (calibrated) | 0.8975 | 0.2827 | **0.00981** | 0.00326 | 0.00655 | 1.295 | 0.525 | 0.02465 |
-| **xlnet-base** | T_JSD (pointwise oracle) | 1.2629 | 0.2636 | **0.00935** | 0.00326 | 0.00609 | 0.860 | 0.714 | 0.05757 |
-| **xlnet-base** | T_topology (relational oracle) | 1.1159 | 0.3240 | **0.00922** | 0.00326 | 0.00596 | 1.338 | 0.500 | 0.03970 |
-| **distilbert** | T_raw (1.0) | 1.2114 | 0.2740 | **0.00865** | 0.00325 | 0.00539 | 0.914 | 0.690 | 0.05424 |
-| **distilbert** | T_NLL (calibrated) | 0.9088 | 0.2909 | **0.00884** | 0.00325 | 0.00559 | 1.311 | 0.518 | 0.02330 |
-| **distilbert** | T_JSD (pointwise oracle) | 1.2877 | 0.2736 | **0.00876** | 0.00325 | 0.00551 | 0.874 | 0.709 | 0.05642 |
-| **distilbert** | T_topology (relational oracle) | 0.9255 | 0.3078 | **0.00856** | 0.00324 | 0.00532 | 1.386 | 0.484 | 0.01812 |
-| **bert-base** | T_raw (1.0) | 1.2696 | 0.2909 | **0.00786** | 0.00324 | 0.00462 | 0.905 | 0.692 | 0.05512 |
-| **bert-base** | T_NLL (calibrated) | 0.9194 | 0.2987 | **0.00793** | 0.00324 | 0.00469 | 1.326 | 0.512 | 0.02179 |
-| **bert-base** | T_JSD (pointwise oracle) | 1.0137 | 0.2915 | **0.00792** | 0.00323 | 0.00468 | 1.124 | 0.592 | 0.04029 |
-| **bert-base** | T_topology (relational oracle) | 0.9675 | 0.2967 | **0.00780** | 0.00323 | 0.00456 | 1.241 | 0.547 | 0.03218 |
+| **bart-large** | T_raw (1.0) | 0.8627 | 0.0420 | **0.01681** | 0.00329 | 0.01352 | 0.00% | 0.022923 | 13.78% | 0.960 | 0.04873 |
+| **bart-large** | T_NLL (calibrated) | 0.8099 | 0.0578 | **0.01714** | 0.00330 | 0.01384 | 13.38% | 0.021927 | 13.18% | 1.168 | 0.03617 |
+| **bart-large** | T_JSD (pointwise oracle) | 0.9088 | 0.0406 | **0.01670** | 0.00329 | 0.01341 | 3.58% | 0.023283 | 14.00% | 0.881 | 0.05359 |
+| **bart-large** | T_topology (relational oracle) | 0.8854 | 0.0984 | **0.01736** | 0.00330 | 0.01406 | 27.83% | 0.021394 | 12.86% | 1.446 | 0.01219 |
+| **roberta-large** | T_raw (1.0) | 0.9082 | 0.0489 | **0.01492** | 0.00329 | 0.01163 | 0.00% | 0.018439 | 11.09% | 0.945 | 0.05078 |
+| **roberta-large** | T_NLL (calibrated) | 0.8258 | 0.0659 | **0.01521** | 0.00329 | 0.01192 | 18.57% | 0.017636 | 10.60% | 1.191 | 0.03478 |
+| **roberta-large** | T_JSD (pointwise oracle) | 0.9583 | 0.0479 | **0.01498** | 0.00329 | 0.01169 | 3.28% | 0.018728 | 11.26% | 0.879 | 0.05483 |
+| **roberta-large** | T_topology (relational oracle) | 0.8742 | 0.0935 | **0.01556** | 0.00329 | 0.01228 | 30.08% | 0.017205 | 10.34% | 1.414 | 0.01500 |
+| **xlnet-large** | T_raw (1.0) | 0.9474 | 0.0567 | **0.01334** | 0.00327 | 0.01007 | 0.00% | 0.016621 | 9.99% | 0.953 | 0.05009 |
+| **xlnet-large** | T_NLL (calibrated) | 0.8451 | 0.0748 | **0.01372** | 0.00328 | 0.01044 | 19.90% | 0.015901 | 9.56% | 1.219 | 0.03282 |
+| **xlnet-large** | T_JSD (pointwise oracle) | 1.0092 | 0.0556 | **0.01332** | 0.00327 | 0.01005 | 3.46% | 0.016711 | 10.05% | 0.882 | 0.05426 |
+| **xlnet-large** | T_topology (relational oracle) | 0.8782 | 0.0951 | **0.01384** | 0.00328 | 0.01056 | 29.16% | 0.015695 | 9.44% | 1.400 | 0.01645 |
+| **albert-xxlarge** | T_raw (1.0) | 0.9892 | 0.0636 | **0.01153** | 0.00327 | 0.00826 | 0.00% | 0.014243 | 8.56% | 0.947 | 0.05115 |
+| **albert-xxlarge** | T_NLL (calibrated) | 0.8577 | 0.0804 | **0.01178** | 0.00327 | 0.00851 | 22.51% | 0.013942 | 8.38% | 1.237 | 0.03117 |
+| **albert-xxlarge** | T_JSD (pointwise oracle) | 1.0469 | 0.0629 | **0.01157** | 0.00326 | 0.00830 | 2.87% | 0.014539 | 8.74% | 0.890 | 0.05439 |
+| **albert-xxlarge** | T_topology (relational oracle) | 0.9251 | 0.1146 | **0.01211** | 0.00328 | 0.00884 | 32.83% | 0.013832 | 8.32% | 1.486 | 0.00862 |
+| **bert-large** | T_raw (1.0) | 1.0658 | 0.0739 | **0.01053** | 0.00328 | 0.00726 | 0.00% | 0.013183 | 7.93% | 0.935 | 0.05262 |
+| **bert-large** | T_NLL (calibrated) | 0.8773 | 0.0892 | **0.01074** | 0.00328 | 0.00746 | 25.92% | 0.012862 | 7.73% | 1.266 | 0.02826 |
+| **bert-large** | T_JSD (pointwise oracle) | 1.1342 | 0.0733 | **0.01053** | 0.00328 | 0.00725 | 3.23% | 0.013164 | 7.92% | 0.884 | 0.05549 |
+| **bert-large** | T_topology (relational oracle) | 0.8990 | 0.1031 | **0.01085** | 0.00328 | 0.00757 | 31.79% | 0.012843 | 7.72% | 1.410 | 0.01512 |
+| **roberta-base** | T_raw (1.0) | 1.0938 | 0.0808 | **0.01033** | 0.00326 | 0.00707 | 0.00% | 0.013241 | 7.96% | 0.931 | 0.05266 |
+| **roberta-base** | T_NLL (calibrated) | 0.8848 | 0.0929 | **0.01043** | 0.00326 | 0.00717 | 26.32% | 0.012959 | 7.79% | 1.277 | 0.02697 |
+| **roberta-base** | T_JSD (pointwise oracle) | 1.1426 | 0.0805 | **0.01028** | 0.00325 | 0.00703 | 2.17% | 0.013267 | 7.98% | 0.897 | 0.05459 |
+| **roberta-base** | T_topology (relational oracle) | 0.8874 | 0.0963 | **0.01048** | 0.00326 | 0.00721 | 28.35% | 0.012933 | 7.78% | 1.326 | 0.02248 |
+| **xlnet-base** | T_raw (1.0) | 1.1806 | 0.0891 | **0.00934** | 0.00326 | 0.00609 | 0.00% | 0.011076 | 6.66% | 0.905 | 0.05503 |
+| **xlnet-base** | T_NLL (calibrated) | 0.8975 | 0.0980 | **0.00978** | 0.00326 | 0.00652 | 29.01% | 0.011009 | 6.62% | 1.295 | 0.02466 |
+| **xlnet-base** | T_JSD (pointwise oracle) | 1.2191 | 0.0890 | **0.00936** | 0.00326 | 0.00611 | 1.53% | 0.011057 | 6.65% | 0.884 | 0.05624 |
+| **xlnet-base** | T_topology (relational oracle) | 0.9359 | 0.1187 | **0.00981** | 0.00326 | 0.00654 | 34.76% | 0.011089 | 6.67% | 1.477 | 0.00881 |
+| **distilbert** | T_raw (1.0) | 1.2114 | 0.0954 | **0.00865** | 0.00325 | 0.00539 | 0.00% | 0.010337 | 6.22% | 0.914 | 0.05424 |
+| **distilbert** | T_NLL (calibrated) | 0.9087 | 0.1025 | **0.00886** | 0.00325 | 0.00561 | 30.14% | 0.010170 | 6.12% | 1.311 | 0.02329 |
+| **distilbert** | T_JSD (pointwise oracle) | 1.2294 | 0.0954 | **0.00865** | 0.00325 | 0.00540 | 0.70% | 0.010292 | 6.19% | 0.904 | 0.05477 |
+| **distilbert** | T_topology (relational oracle) | 0.9106 | 0.1052 | **0.00887** | 0.00325 | 0.00562 | 31.60% | 0.010177 | 6.12% | 1.353 | 0.01955 |
+| **bert-base** | T_raw (1.0) | 1.2696 | 0.1062 | **0.00786** | 0.00324 | 0.00462 | 0.01% | 0.008448 | 5.08% | 0.905 | 0.05512 |
+| **bert-base** | T_NLL (calibrated) | 0.9193 | 0.1075 | **0.00809** | 0.00324 | 0.00485 | 31.06% | 0.008615 | 5.18% | 1.326 | 0.02178 |
+| **bert-base** | T_JSD (pointwise oracle) | 0.9371 | 0.1048 | **0.00795** | 0.00325 | 0.00470 | 25.99% | 0.008461 | 5.09% | 1.202 | 0.03299 |
+| **bert-base** | T_topology (relational oracle) | 0.9197 | 0.1067 | **0.00811** | 0.00324 | 0.00487 | 30.45% | 0.008603 | 5.17% | 1.308 | 0.02340 |
 
 ---
 
 ## Conclusions for Hypothesis H2
 
-- **H2 Outcome**: Pointwise temperature calibration ($T_{\text{NLL}}$) substantially improves soft-label likelihood ($NLL$), but achieves **$< 0.75\%$ relational topology gap closure ($G_Q$)** across all 9 models.
-- **Core Mechanism**: Temperature scaling acts as a monotonic rescaling of logit magnitude, altering pointwise entropy while preserving exact logit rank order among classes and leaving inter-item nearest-neighbor topology locked in place.
-- **Implication for E003**: Pointwise calibration is insufficient for topological alignment. E003 (Relational Topology Fine-Tuning & Representation Alignment) is necessary to close the relational topology gap.
+- **H2a (NLL Reduction)**: **SUPPORTED**. Pointwise temperature scaling ($T_{\text{NLL}}$) consistently reduces soft-label cross-entropy ($G_{\text{NLL}} = 24.9\% - 56.6\%$).
+- **H2a (JSD Alignment)**: **CONTRADICTED**. Temperature scaling increases prediction entropy, worsening symmetric JS divergence.
+- **H2b (Relational Disconnect)**: **CONFIRMED**. Pointwise likelihood gap closure $G_{\text{NLL}}$ dramatically exceeds relational topology gap closure ($G_Q < 0.70\%$). Scalar logit scaling cannot recover relational belief-space topology.
+- **Implication for E003**: Relational topology alignment requires representation learning / topology fine-tuning (E003), as post-hoc scalar transformations leave neighborhood graphs locked.
 
