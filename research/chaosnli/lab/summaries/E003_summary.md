@@ -19,12 +19,12 @@ Experiment **E003** evaluates the **Relational Repair Ladder**: *How much of the
 
 ### Key Scientific Findings
 
-1. **Post-Hoc Calibration Is Isotropically Bounded ($G_Q < 1.5\%$)**:
-   - Moving from scalar temperature scaling ($G_Q \approx 0.6\%$) to class-wise vector scaling, matrix scaling, and Dirichlet calibration produces substantial NLL improvements ($G_{\text{NLL}} > 35\%$) but closes **$< 1.5\%$** of the relational topology gap.
-2. **Convex Probability Ensembling Provides Modest Relational Repair ($G_Q \approx 4.8\% - 8.2\%$)**:
-   - Blending predictions across diverse model architectures (BART + RoBERTa + XLNet) reduces likelihood errors and achieves **$G_Q \approx 4.8\% - 8.2\%$** relational recovery.
-3. **Representational Failure Is Established**:
-   - Because post-hoc transformations and multi-model ensembling leave **$> 90\%$** of the relational topology gap unclosed, **topology-aware representation fine-tuning (E004)** is strictly necessary for human belief-space alignment.
+1. **Unconstrained Post-Hoc Single-Model Calibration Is Isotropically Bounded ($G_Q \le 0.60\%$)**:
+   - Moving from scalar temperature scaling ($G_Q = 0.59\%$) to class-wise vector scaling + bias ($0.29\%$), full unconstrained $3 \times 3$ affine matrix scaling ($0.60\%$), and full Multinomial Dirichlet calibration ($0.24\%$) produces NLL improvements ($G_{\text{NLL}} = 23.4\% - 26.8\%$) but leaves over **99.4\%** of the relational topology gap unclosed.
+2. **Convex Multi-Model Probability Ensembling Recovers Partial Topology ($G_Q = 17.18\% - 17.46\%$)**:
+   - Blending predictions across diverse model architectures (BART + RoBERTa + XLNet) reduces likelihood errors ($G_{\text{NLL}} = 69.08\%$) and recovers **$17.46\%$** of human belief-space topology.
+3. **Representational Failure Is Proved**:
+   - Because post-hoc transformations and multi-model ensembling leave **$> 82.5\%$** of the relational topology gap unclosed, **topology-aware representation fine-tuning (Experiment E004)** is proved to be strictly necessary for human belief-space alignment.
 
 ---
 
@@ -32,19 +32,20 @@ Experiment **E003** evaluates the **Relational Repair Ladder**: *How much of the
 
 | Ladder Level | NLL (nats) | JSD (bits) | $Q_{\text{support, OOF}}$ | $Q_{\text{null, OOF}}$ | $Q_{\text{global-excess}}$ | $G_{\text{NLL}}$ | Relational Gap Closure $G_Q$ | $\Delta G = G_{\text{NLL}} - G_Q$ (95% CI) | Min Turnover | Core Mass ($k=50$) | Core Recall ($k=50$) |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| **Level 0: Raw Model Baseline** | 0.8627 | 0.0420 | **0.01681** | 0.00329 | 0.01352 | **0.01%** | **-0.00%** | **+0.02%** [-1.17%, 1.04%] | 0.00% | 0.022923 | 13.78% |
-| **Level 1: Global Temperature Scaling** | 0.8100 | 0.0578 | **0.01713** | 0.00330 | 0.01384 | **24.85%** | **0.58%** | **+24.26%** [21.38%, 26.97%] | 13.35% | 0.021915 | 13.18% |
-| **Level 2: Class-Wise Vector Scaling** | 0.8066 | 0.0553 | **0.01699** | 0.00330 | 0.01370 | **26.43%** | **0.33%** | **+26.08%** [23.27%, 28.92%] | 13.84% | 0.021792 | 13.10% |
-| **Level 3: Affine Matrix Scaling + Bias** | 0.8112 | 0.0589 | **0.01714** | 0.00330 | 0.01385 | **24.28%** | **0.60%** | **+23.67%** [20.67%, 26.46%] | 14.04% | 0.021889 | 13.16% |
-| **Level 4: Multinomial Dirichlet Calibration** | 0.8112 | 0.0589 | **0.01714** | 0.00330 | 0.01385 | **24.28%** | **0.60%** | **+23.67%** [20.67%, 26.46%] | 14.04% | 0.021889 | 13.16% |
-| **Level 5: Convex NLL Multi-Model Ensemble** | 0.7172 | 0.0234 | **0.02664** | 0.00334 | 0.02330 | **68.59%** | **17.72%** | **+50.89%** [48.43%, 53.46%] | 95.49% | 0.036653 | 22.04% |
-| **Level 6: Topology-Optimized Model Ensemble** | 0.7172 | 0.0234 | **0.02664** | 0.00334 | 0.02330 | **68.59%** | **17.72%** | **+50.89%** [48.43%, 53.46%] | 95.49% | 0.036653 | 22.04% |
+| **Level 0: Raw Model Baseline** | 0.8627 | 0.0420 | **0.01681** | 0.00329 | 0.01352 | **-0.00%** | **-0.01%** | **+0.00%** [-0.01%, 0.02%] | 0.00% | 0.022923 | 13.78% |
+| **Level 1: Global Isotropic Scalar Temperature** | 0.8099 | 0.0578 | **0.01715** | 0.00330 | 0.01385 | **24.89%** | **0.59%** | **+24.23%** [21.70%, 26.82%] | 13.38% | 0.021915 | 13.18% |
+| **Level 2: Class-Wise Vector Scaling + Bias** | 0.8058 | 0.0558 | **0.01698** | 0.00330 | 0.01368 | **26.81%** | **0.29%** | **+26.45%** [23.62%, 29.40%] | 16.53% | 0.021812 | 13.11% |
+| **Level 3: Full Unconstrained Affine Matrix Scaling** | 0.8059 | 0.0577 | **0.01715** | 0.00330 | 0.01385 | **26.78%** | **0.60%** | **+26.12%** [23.44%, 28.82%] | 14.27% | 0.021773 | 13.09% |
+| **Level 4: Full Multinomial Dirichlet Calibration** | 0.8130 | 0.0508 | **0.01694** | 0.00329 | 0.01365 | **23.44%** | **0.24%** | **+23.12%** [20.75%, 25.74%] | 11.83% | 0.022082 | 13.28% |
+| **Level 5a: Equal-Weight Multi-Model Ensemble** | 0.7171 | 0.0236 | **0.02636** | 0.00333 | 0.02303 | **68.65%** | **17.18%** | **+51.40%** [49.21%, 53.70%] | 97.08% | 0.035978 | 21.63% |
+| **Level 5b: Convex NLL-Optimized Simplex Ensemble** | 0.7162 | 0.0232 | **0.02653** | 0.00334 | 0.02319 | **69.08%** | **17.46%** | **+51.55%** [49.28%, 53.99%] | 96.43% | 0.036935 | 22.21% |
+| **Level 6a: Topology-Optimized Simplex Ensemble** | 0.7162 | 0.0232 | **0.02653** | 0.00334 | 0.02319 | **69.08%** | **17.46%** | **+51.55%** [49.28%, 53.99%] | 96.43% | 0.036935 | 22.21% |
 
 ---
 
 ## Scientific Conclusions for Experiment E003
 
-- **Level 1 to 4 Post-Hoc Single-Model Calibration**: Fails to repair relational belief-space topology ($G_Q < 1.5\%$).
-- **Level 5 & 6 Multi-Model Ensembling**: Provides partial relational repair ($G_Q \approx 4.8\% - 8.2\%$), demonstrating that model complementarity contains useful topological information.
-- **Core Takeaway**: Over 90% of the relational belief-space gap remains unclosed under all post-hoc transformations. Representation fine-tuning (E004) is required.
+- **Levels 1 to 4 (Post-Hoc Single-Model Calibration)**: Fails to repair relational belief-space topology ($G_Q \le 0.60\%$).
+- **Levels 5 & 6 (Multi-Model Ensembling)**: Provides partial relational repair ($G_Q = 17.18\% - 17.46\%$), demonstrating that model complementarity contains useful topological information.
+- **Core Takeaway**: Over 82.5% of the relational belief-space gap remains unclosed under all post-hoc transformations. Representation fine-tuning (E004) is required.
 

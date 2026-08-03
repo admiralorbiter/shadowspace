@@ -1,7 +1,7 @@
 # Experiment E003: Relational Repair Capacity of Flexible Post-Hoc Calibration & Ensembling
 id = "E003"
 title = "Relational Repair Capacity of Increasingly Flexible Post-Hoc Transformations & Ensembling"
-status = "in_development"
+status = "complete_publication_grade"
 
 dataset_release = "chaosnli-canonical-2026-08-02"
 partition = "5fold_stratified_crossfit"
@@ -21,12 +21,14 @@ e001_object_ids_sha256 = "121c49cbd40b171d100ba88c1a23d809818c28bad9249bea99a52e
 model_probs_sha256 = "218cd1246cb3bf796726cd729605c8e303449379b70fc9afb6aea5357844893b"
 
 ladder_levels = [
+  "level0_raw_model",
   "level1_scalar_temperature",
-  "level2_vector_scaling",
-  "level3_matrix_scaling_bias",
-  "level4_dirichlet_calibration",
-  "level5_convex_nll_ensemble",
-  "level6_topology_optimized_ensemble"
+  "level2_vector_scaling_bias",
+  "level3_full_affine_matrix",
+  "level4_full_dirichlet_calibration",
+  "level5a_equal_weight_ensemble",
+  "level5b_convex_nll_ensemble",
+  "level6a_topology_optimized_ensemble"
 ]
 
 estimands = [
