@@ -54,9 +54,9 @@ def generate_e004_markdown() -> None:
     if order_an:
         lines.append("\n---\n")
         lines.append("## Label-Order Sensitivity Analysis\n")
-        lines.append(f"- **Mean Label Order Sensitivity ($S_{\\text{order}}$)**: {order_an.get('mean_s_order_bits', 0.0):.6f} bits\n")
-        lines.append(f"- **Correlation with Human Entropy ($H_{\\text{human}}$)**: Pearson $r = {order_an.get('pearson_r_human_entropy', 0.0):+.4f}$\n")
-        lines.append(f"- **Correlation with Model Entropy ($H_{\\text{model}}$)**: Pearson $r = {order_an.get('pearson_r_model_entropy', 0.0):+.4f}$\n")
+        lines.append(fr"- **Mean Label Order Sensitivity ($S_{{\text{{order}}}}$)**: {order_an.get('mean_s_order_bits', 0.0):.6f} bits\n")
+        lines.append(fr"- **Correlation with Human Entropy ($H_{{\text{{human}}}}$)**: Pearson $r = {order_an.get('pearson_r_human_entropy', 0.0):+.4f}$\n")
+        lines.append(fr"- **Correlation with Model Entropy ($H_{{\text{{model}}}}$)**: Pearson $r = {order_an.get('pearson_r_model_entropy', 0.0):+.4f}$\n")
 
     lines.append("\n---\n")
     lines.append("## Stage 2 Progression Gate Criteria\n")

@@ -1,6 +1,7 @@
-"""E004 Ollama Multi-Worker Parallel Inference Runner.
+"""E004 Ollama High-Throughput Parallel Inference Runner.
 
-Optimized for system hardware using ThreadPoolExecutor parallel workers.
+Optimized with persistent HTTP connection pooling (requests.Session) and system-prompt
+KV-cache separation for maximum throughput on local GPU/Ollama server.
 Executes Log Probability Estimation (LPE) and Monte Carlo Estimation (MCE)
 over specified item manifests using Ollama's OpenAI-compatible chat completion API.
 """
@@ -16,18 +17,19 @@ from pathlib import Path
 import sys
 import time
 from typing import Dict, List, Optional, Tuple
-import urllib.request
-import urllib.error
+
+import requests
+from requests.adapters import HTTPAdapter
 
 API_URL = "http://localhost:11434/v1/chat/completions"
 RAW_RESPONSES_DIR = Path("research/chaosnli/artifacts/E004/raw_responses")
 MANIFEST_DIR = Path("research/chaosnli/artifacts/E004/manifests")
 
-PROMPT_TEMPLATE = """Assume the premise is true.
+SYSTEM_PROMPT = """Assume the premise is true.
 
-Determine the relationship of the hypothesis to the premise.
+Determine the relationship of the hypothesis to the premise."""
 
-Premise:
+USER_PROMPT_TEMPLATE = """Premise:
 {premise}
 
 Hypothesis:
@@ -55,6 +57,20 @@ S3_PERMUTATIONS = [
     (2, 0, 1),  # perm 4: E->s3, N->s1, C->s2
     (2, 1, 0),  # perm 5: E->s3, N->s2, C->s1
 ]
+
+# Thread-local HTTP session storage for connection pooling
+_THREAD_LOCAL_SESSIONS: Dict[int, requests.Session] = {}
+
+def get_session() -> requests.Session:
+    import threading
+    tid = threading.get_ident()
+    if tid not in _THREAD_LOCAL_SESSIONS:
+        session = requests.Session()
+        adapter = HTTPAdapter(pool_connections=32, pool_maxsize=32)
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+        _THREAD_LOCAL_SESSIONS[tid] = session
+    return _THREAD_LOCAL_SESSIONS[tid]
 
 def make_request_id(
     model_tag: str,
@@ -94,18 +110,19 @@ def prewarm_model(model_tag: str = "gemma3:12b") -> None:
         "max_tokens": 1,
         "temperature": 1.0,
     }
-    req = urllib.request.Request(API_URL, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"})
+    session = get_session()
     try:
-        with urllib.request.urlopen(req) as resp:
-            resp.read()
+        resp = session.post(API_URL, json=payload, timeout=30)
+        resp.raise_for_status()
         print("  Pre-warming complete.", flush=True)
     except Exception as e:
         print(f"  Warning: Pre-warming failed: {e}", flush=True)
 
 def send_chat_completion(payload: dict) -> dict:
-    req = urllib.request.Request(API_URL, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(req) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+    session = get_session()
+    resp = session.post(API_URL, json=payload, timeout=180)
+    resp.raise_for_status()
+    return resp.json()
 
 def process_single_lpe_task(task_args: Tuple) -> Optional[dict]:
     model_tag, item, perm_idx, perm, symbols, symbol_set_name, existing_ids = task_args
@@ -115,8 +132,7 @@ def process_single_lpe_task(task_args: Tuple) -> Optional[dict]:
 
     sym_e, sym_n, sym_c = symbols[perm[0]], symbols[perm[1]], symbols[perm[2]]
 
-    # Fix: symbol_1, symbol_2, symbol_3 must match the permuted symbols sym_e, sym_n, sym_c
-    prompt = PROMPT_TEMPLATE.format(
+    user_prompt = USER_PROMPT_TEMPLATE.format(
         premise=premise,
         hypothesis=hypothesis,
         symbol_1=sym_e,
@@ -125,9 +141,9 @@ def process_single_lpe_task(task_args: Tuple) -> Optional[dict]:
     )
 
     # Automated prompt-consistency verification
-    assert f"{sym_e} = Entailment" in prompt, f"Prompt mapping error for Entailment: {sym_e}"
-    assert f"{sym_n} = Neutral" in prompt, f"Prompt mapping error for Neutral: {sym_n}"
-    assert f"{sym_c} = Contradiction" in prompt, f"Prompt mapping error for Contradiction: {sym_c}"
+    assert f"{sym_e} = Entailment" in user_prompt, f"Prompt mapping error for Entailment: {sym_e}"
+    assert f"{sym_n} = Neutral" in user_prompt, f"Prompt mapping error for Neutral: {sym_n}"
+    assert f"{sym_c} = Contradiction" in user_prompt, f"Prompt mapping error for Contradiction: {sym_c}"
     
     req_id = make_request_id(model_tag, object_id, "v1", perm_idx, "lpe", 1.0, 42, 0, symbol_set_name)
     if req_id in existing_ids:
@@ -135,13 +151,16 @@ def process_single_lpe_task(task_args: Tuple) -> Optional[dict]:
 
     payload = {
         "model": model_tag,
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt}
+        ],
         "max_tokens": 1,
         "temperature": 1.0,
         "top_p": 1.0,
         "seed": 42,
         "logprobs": True,
-        "top_logprobs": 20,
+        "top_logprobs": 10,
     }
 
     try:
@@ -179,7 +198,7 @@ def run_lpe(manifest_path: Path, output_path: Path, max_workers: int = 4, model_
             task_list.append((model_tag, item, perm_idx, perm, symbols, symbol_set_name, existing_ids))
 
     total_tasks = len(task_list)
-    print(f"Starting Multi-Worker LPE run (workers={max_workers}) over {len(items)} items x 6 perms ({total_tasks} tasks)...", flush=True)
+    print(f"Starting High-Throughput Multi-Worker LPE run (workers={max_workers}) over {len(items)} items x 6 perms ({total_tasks} tasks)...", flush=True)
     print(f"  Existing completed requests: {len(existing_ids)}", flush=True)
 
     completed = 0
@@ -207,7 +226,7 @@ def process_single_mce_task(task_args: Tuple) -> Optional[dict]:
 
     sym_e, sym_n, sym_c = symbols[perm[0]], symbols[perm[1]], symbols[perm[2]]
 
-    prompt = PROMPT_TEMPLATE.format(
+    user_prompt = USER_PROMPT_TEMPLATE.format(
         premise=premise,
         hypothesis=hypothesis,
         symbol_1=sym_e,
@@ -222,7 +241,10 @@ def process_single_mce_task(task_args: Tuple) -> Optional[dict]:
 
     payload = {
         "model": model_tag,
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt}
+        ],
         "max_tokens": 1,
         "temperature": temperature,
         "top_p": 1.0,
@@ -248,7 +270,7 @@ def process_single_mce_task(task_args: Tuple) -> Optional[dict]:
         print(f"  Error on item {object_id} perm {perm_idx} rep {rep}: {e}", flush=True)
         return None
 
-def run_mce(manifest_path: Path, output_path: Path, max_workers: int = 4, replicates_per_perm: int = 5, temperature: float = 1.0, model_tag: str = "gemma3:12b", symbol_set_name: str = "ABC") -> None:
+def run_mce(manifest_path: Path, output_path: Path, max_workers: int = 8, replicates_per_perm: int = 5, temperature: float = 1.0, model_tag: str = "gemma3:12b", symbol_set_name: str = "ABC") -> None:
     existing_ids = get_existing_request_ids(output_path)
     symbols = LABEL_SETS[symbol_set_name]
 
@@ -287,10 +309,10 @@ def run_mce(manifest_path: Path, output_path: Path, max_workers: int = 4, replic
                         print(f"  Completed {completed}/{total_tasks} MCE requests ({rate:.2f} req/sec | Elapsed: {elapsed:.1f}s)", flush=True)
 
 def main():
-    parser = argparse.ArgumentParser(description="E004 Optimized Multi-Worker Ollama Runner")
+    parser = argparse.ArgumentParser(description="E004 Optimized High-Throughput Ollama Runner")
     parser.add_argument("--mode", choices=["preflight", "lpe", "mce", "mce_convergence", "mce_temp"], required=True)
     parser.add_argument("--subset", choices=["preflight", "pilot", "convergence", "temp_sensitivity"], default="preflight")
-    parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--model", default="gemma3:12b")
     parser.add_argument("--symbol-set", choices=["ABC", "123", "XYZ"], default="ABC")
 

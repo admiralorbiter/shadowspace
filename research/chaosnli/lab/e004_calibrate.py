@@ -55,7 +55,7 @@ def build_stratified_folds(items: List[Dict], n_folds: int = 5, seed: int = 2026
         for i, idx in enumerate(shuffled):
             folds[i % n_folds].append(idx)
 
-    return [np.array(sorted(fold)) for fold in folds]
+    return [np.array(sorted(fold), dtype=np.int64) for fold in folds]
 
 def run_cross_fitted_calibration(subset: str = "pilot") -> None:
     manifest_file = MANIFEST_DIR / f"{subset}_600.jsonl" if subset == "pilot" else MANIFEST_DIR / f"{subset}_60.jsonl"

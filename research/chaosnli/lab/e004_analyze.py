@@ -212,7 +212,7 @@ def run_e004_analysis(subset: str = "pilot") -> None:
                 "jsd_bits": mean_jsd,
                 "brier_score": mean_brier,
                 "q_support": q_supp,
-                "q_null_rand": null_rand_mean,
+                "q_null_rand": q_null_stratified,
                 "q_global_excess": q_global_excess,
                 "r_normalized": R_norm,
                 "gap_closure_q": g_q,

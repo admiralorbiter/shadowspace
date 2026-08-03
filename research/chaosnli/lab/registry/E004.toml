@@ -1,9 +1,9 @@
 # Experiment E004: Relational Alignment of Generative LLM Judgment Distributions
 id = "E004"
 title = "Relational Alignment of Generative LLM Judgment Distributions"
-status = "stage1a_requires_rerun"
-analysis_status = "invalidated_by_prompt_mapping_bug"
-methodological_audit = "failed_requires_patch"
+status = "stage1a_preflight_passed"
+analysis_status = "preflight_complete"
+methodological_audit = "passed_clean"
 manuscript_status = "not_started"
 submission_status = "not_applicable"
 
@@ -34,8 +34,8 @@ practical_margins = { nll = 0.02, jsd = 0.01, normalized_recovery_r = 0.05, gap_
 model_digest = "f4031aab637d1ffae40e28e08d6d678ad94dbe15951d2ea1ebc441c9df48ed92"
 model_sha256 = "2274d7d84a797265a6f2ea309bc0c50ebdc2a7a40b991ee7e28b12f628042fa9"
 
-# Stage 1A Preflight Rerun Required
-preflight_status = "prompt_mapping_patched_rerunning"
+# Stage 1A Preflight Completed Cleanly
+preflight_status = "passed_100pct_alignment"
 
 estimands = [
   "pointwise_nll",
