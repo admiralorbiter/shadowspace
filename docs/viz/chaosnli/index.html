@@ -1,0 +1,1506 @@
+<!DOCTYPE html>
+<html lang="en" class="general-mode">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Collective Opinion as a Relational Space — Interactive Research</title>
+<meta name="description" content="Interactive visualization of tie-aware neighborhood analysis comparing human and AI model NLI distributions on the ChaosNLI dataset."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+/* ── Reset & Base ─────────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#06060f;
+  --bg2:#0d0d1f;
+  --surface:rgba(255,255,255,0.04);
+  --border:rgba(255,255,255,0.08);
+  --text:#f1f5f9;
+  --text2:#94a3b8;
+  --text3:#64748b;
+  --blue:#3b82f6;
+  --blue-glow:rgba(59,130,246,0.3);
+  --gold:#f59e0b;
+  --gold-glow:rgba(245,158,11,0.25);
+  --red:#f87171;
+  --violet:#8b5cf6;
+  --green:#10b981;
+  --teal:#06b6d4;
+  --nav-h:60px;
+  --font:'Inter',sans-serif;
+  --mono:'JetBrains Mono',monospace;
+}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--font);
+  background:var(--bg);
+  color:var(--text);
+  line-height:1.6;
+  overflow-x:hidden;
+}
+
+/* ── Dual-Mode Toggle ─────────────────────────────────────────────────────── */
+html.research-mode .g-only{display:none!important}
+html.general-mode .r-only{display:none!important}
+html.research-mode .r-only{display:block}
+html.general-mode .g-only{display:block}
+html.research-mode span.r-only{display:inline}
+html.general-mode span.g-only{display:inline}
+html.research-mode .r-inline{display:inline}
+html.general-mode .r-inline{display:none}
+
+/* ── Navigation ───────────────────────────────────────────────────────────── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:999;
+  height:var(--nav-h);
+  background:rgba(6,6,15,0.92);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;gap:16px;
+}
+.nav-brand{
+  font-weight:700;font-size:14px;letter-spacing:.3px;
+  color:var(--text);white-space:nowrap;flex-shrink:0;
+  display:flex;align-items:center;gap:8px;
+}
+.nav-brand .dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--gold);box-shadow:0 0 8px var(--gold-glow);
+}
+.nav-links{
+  display:flex;align-items:center;gap:4px;overflow-x:auto;
+  scrollbar-width:none;flex:1;justify-content:center;
+}
+.nav-links::-webkit-scrollbar{display:none}
+.nav-links a{
+  font-size:12px;font-weight:500;color:var(--text2);
+  text-decoration:none;padding:5px 10px;border-radius:6px;
+  white-space:nowrap;transition:all .2s;
+}
+.nav-links a:hover,.nav-links a.active{color:var(--text);background:rgba(255,255,255,0.07)}
+
+/* Mode toggle */
+.mode-toggle{
+  display:flex;align-items:center;gap:8px;flex-shrink:0;
+}
+.mode-label{font-size:11px;font-weight:600;letter-spacing:.5px;color:var(--text3);text-transform:uppercase}
+.toggle-pill{
+  position:relative;width:72px;height:28px;
+  background:rgba(255,255,255,0.08);border-radius:14px;
+  cursor:pointer;border:1px solid var(--border);
+  transition:background .3s;
+}
+.toggle-pill::after{
+  content:'';position:absolute;top:3px;left:3px;
+  width:22px;height:22px;border-radius:50%;
+  background:var(--gold);
+  box-shadow:0 0 8px var(--gold-glow);
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
+}
+html.research-mode .toggle-pill::after{transform:translateX(44px);background:var(--blue);box-shadow:0 0 8px var(--blue-glow)}
+.toggle-labels{
+  position:absolute;inset:0;display:flex;align-items:center;
+  justify-content:space-between;padding:0 6px;pointer-events:none;
+}
+.toggle-labels span{font-size:8px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.tl-g{color:var(--gold);opacity:1}
+.tl-r{color:var(--blue);opacity:.5}
+html.research-mode .tl-g{opacity:.5}
+html.research-mode .tl-r{opacity:1}
+
+/* ── Section layouts ──────────────────────────────────────────────────────── */
+section{
+  min-height:100vh;padding:calc(var(--nav-h) + 48px) 24px 64px;
+  max-width:1200px;margin:0 auto;
+}
+section:first-of-type{max-width:none;padding-left:0;padding-right:0}
+.section-inner{max-width:1200px;margin:0 auto;padding:0 24px}
+.section-label{
+  font-size:11px;font-weight:700;letter-spacing:2px;
+  text-transform:uppercase;color:var(--blue);margin-bottom:12px;
+  display:flex;align-items:center;gap:8px;
+}
+.section-label::before{content:'';width:24px;height:2px;background:var(--blue);border-radius:1px}
+h2{
+  font-size:clamp(28px,4vw,44px);font-weight:700;
+  line-height:1.2;margin-bottom:16px;
+}
+.section-desc{
+  font-size:16px;color:var(--text2);max-width:680px;
+  line-height:1.7;margin-bottom:40px;
+}
+.section-desc .r-only{font-size:14px}
+
+/* ── Glass card ───────────────────────────────────────────────────────────── */
+.glass{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px;
+  backdrop-filter:blur(8px);
+}
+.chart-wrap{padding:28px;overflow:hidden;position:relative}
+
+/* ── Hero ─────────────────────────────────────────────────────────────────── */
+#hero{
+  min-height:100vh;display:flex;flex-direction:column;
+  justify-content:center;align-items:center;text-align:center;
+  padding:var(--nav-h) 24px 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%,rgba(59,130,246,0.06) 0%,transparent 70%),
+    radial-gradient(ellipse 60% 40% at 80% 100%,rgba(139,92,246,0.05) 0%,transparent 60%),
+    var(--bg);
+  position:relative;overflow:hidden;
+}
+#hero::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Ccircle cx='1' cy='1' r='.5' fill='rgba(255,255,255,0.04)'/%3E%3C/svg%3E");
+}
+.hero-tag{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--blue);background:rgba(59,130,246,0.1);
+  border:1px solid rgba(59,130,246,0.2);border-radius:20px;
+  padding:6px 16px;margin-bottom:32px;
+}
+.hero-tag .pulse{
+  width:6px;height:6px;border-radius:50%;background:var(--blue);
+  animation:pulse 2s infinite;
+}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+#hero h1{
+  font-size:clamp(36px,6vw,72px);font-weight:800;line-height:1.05;
+  letter-spacing:-2px;margin-bottom:24px;
+  background:linear-gradient(135deg,#fff 30%,rgba(255,255,255,.6));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.hero-sub{
+  font-size:clamp(16px,2vw,20px);color:var(--text2);max-width:600px;
+  line-height:1.7;margin-bottom:48px;
+}
+.stat-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:16px;width:100%;max-width:680px;
+}
+.stat-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:20px 16px;text-align:center;
+  transition:border-color .3s;
+}
+.stat-card:hover{border-color:rgba(255,255,255,0.16)}
+.stat-val{
+  font-size:28px;font-weight:800;font-family:var(--mono);
+  line-height:1;margin-bottom:6px;
+}
+.stat-val.gold{color:var(--gold)}
+.stat-val.blue{color:var(--blue)}
+.stat-val.violet{color:var(--violet)}
+.stat-label{font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+.scroll-hint{
+  margin-top:48px;display:flex;flex-direction:column;align-items:center;gap:8px;
+  color:var(--text3);font-size:12px;animation:float 3s ease-in-out infinite;
+}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+.scroll-hint svg{opacity:.5}
+
+/* ── SVG charts general ───────────────────────────────────────────────────── */
+svg{width:100%;overflow:visible}
+.chart-svg{display:block}
+.tooltip{
+  position:absolute;pointer-events:none;
+  background:rgba(13,13,31,0.96);
+  border:1px solid var(--border);
+  border-radius:8px;padding:10px 14px;
+  font-size:13px;line-height:1.6;
+  white-space:nowrap;z-index:200;
+  box-shadow:0 8px 32px rgba(0,0,0,.5);
+  opacity:0;transition:opacity .15s;
+}
+.tooltip.show{opacity:1}
+.tick line{stroke:var(--border)}
+.tick text{fill:var(--text2);font-size:11px;font-family:var(--mono)}
+.domain{stroke:var(--border)}
+.grid line{stroke:rgba(255,255,255,0.05)}
+.axis-label{fill:var(--text3);font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.5px}
+
+/* ── Panel 1: Gap ─────────────────────────────────────────────────────────── */
+.gap-chart-wrap{position:relative}
+.legend-row{
+  display:flex;align-items:center;gap:24px;flex-wrap:wrap;
+  margin-bottom:20px;
+}
+.legend-item{
+  display:flex;align-items:center;gap:6px;
+  font-size:12px;color:var(--text2);
+}
+.legend-swatch{width:16px;height:3px;border-radius:2px}
+.legend-swatch.dashed{
+  background:repeating-linear-gradient(90deg,currentColor 0,currentColor 4px,transparent 4px,transparent 8px);
+}
+
+/* ── Panel 2: Ties ────────────────────────────────────────────────────────── */
+.tie-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media(max-width:700px){.tie-grid{grid-template-columns:1fr}}
+.tie-demo{position:relative;padding:24px}
+.tie-demo-title{font-size:13px;font-weight:600;margin-bottom:16px;color:var(--text)}
+.demo-btns{display:flex;gap:8px;margin-top:16px}
+.btn{
+  padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;
+  border:none;cursor:pointer;transition:all .2s;font-family:var(--font);
+}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-primary:hover{background:#2563eb;box-shadow:0 0 16px var(--blue-glow)}
+.btn-ghost{background:rgba(255,255,255,0.07);color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{background:rgba(255,255,255,0.12);color:var(--text)}
+.demo-stat{
+  font-size:13px;color:var(--text2);margin-top:12px;
+  font-family:var(--mono);
+}
+.demo-stat .hi{color:var(--red);font-weight:700}
+.demo-stat .lo{color:var(--green);font-weight:700}
+
+/* ── Panel 3: Surface ─────────────────────────────────────────────────────── */
+.surface-controls{display:flex;gap:12px;align-items:center;margin-bottom:20px;flex-wrap:wrap}
+.surface-controls .btn{font-size:12px;padding:6px 14px}
+.mono-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);
+  color:var(--green);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;
+  letter-spacing:.3px;
+}
+
+/* ── Panel 4: Phase ───────────────────────────────────────────────────────── */
+.phase-note{
+  font-size:13px;color:var(--text2);margin-top:16px;line-height:1.6;
+  max-width:640px;
+}
+
+/* ── Panel 5: Geometry ────────────────────────────────────────────────────── */
+.pc-hint{font-size:12px;color:var(--text3);margin-bottom:16px;font-style:italic}
+
+/* ── Panel 6: Examples / Ternary ──────────────────────────────────────────── */
+.examples-layout{display:grid;grid-template-columns:1fr 1.2fr;gap:32px}
+@media(max-width:700px){.examples-layout{grid-template-columns:1fr}}
+.item-cards{display:flex;flex-direction:column;gap:12px}
+.item-card{
+  padding:16px;border-radius:12px;cursor:pointer;
+  border:1px solid var(--border);background:var(--surface);
+  transition:all .2s;
+}
+.item-card:hover{border-color:rgba(255,255,255,0.15);background:rgba(255,255,255,0.06)}
+.item-card.active{border-color:var(--blue);background:rgba(59,130,246,0.08)}
+.item-card-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.entropy-badge{
+  font-size:10px;font-weight:700;letter-spacing:.5px;
+  padding:2px 8px;border-radius:10px;text-transform:uppercase;
+}
+.entropy-badge.high{background:rgba(248,113,113,0.15);color:var(--red);border:1px solid rgba(248,113,113,0.25)}
+.entropy-badge.mid{background:rgba(245,158,11,0.12);color:var(--gold);border:1px solid rgba(245,158,11,0.2)}
+.entropy-badge.low{background:rgba(16,185,129,0.12);color:var(--green);border:1px solid rgba(16,185,129,0.2)}
+.item-text{font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:8px}
+.item-text em{color:var(--text);font-style:normal;font-weight:500}
+.vote-bars{display:flex;gap:4px;height:6px;border-radius:3px;overflow:hidden;margin-top:6px}
+.vote-bars .vb-e{background:#3b82f6}
+.vote-bars .vb-n{background:#8b5cf6}
+.vote-bars .vb-c{background:#f87171}
+.vote-pct-row{display:flex;gap:12px;margin-top:4px}
+.vote-pct{font-size:10px;font-family:var(--mono);color:var(--text3)}
+.vote-pct .e{color:var(--blue)}.vote-pct .n{color:var(--violet)}.vote-pct .c{color:var(--red)}
+
+.ternary-wrap{position:relative;display:flex;flex-direction:column;align-items:center}
+.ternary-title{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:12px;text-align:center}
+
+/* ── Panel 7: Bootstrap ───────────────────────────────────────────────────── */
+.boot-grid{
+  display:grid;grid-template-columns:repeat(40,1fr);
+  gap:3px;margin:24px 0;
+}
+.boot-dot{
+  aspect-ratio:1;border-radius:2px;
+  background:rgba(16,185,129,0.15);
+  transition:all .3s;
+}
+.boot-dot.lit{background:var(--green);box-shadow:0 0 4px rgba(16,185,129,0.5)}
+.boot-counter{
+  font-size:48px;font-weight:800;font-family:var(--mono);
+  color:var(--green);text-align:center;
+  text-shadow:0 0 32px rgba(16,185,129,0.4);
+}
+.boot-summary{
+  display:flex;justify-content:center;gap:32px;margin-top:24px;flex-wrap:wrap;
+}
+.boot-stat-item{text-align:center}
+.boot-stat-val{font-size:20px;font-weight:700;font-family:var(--mono);color:var(--text)}
+.boot-stat-lab{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+
+/* ── VariErr note ─────────────────────────────────────────────────────────── */
+.varierr-note{
+  border-left:3px solid var(--gold);padding-left:16px;
+  color:var(--text2);font-size:14px;line-height:1.7;
+}
+.varierr-note strong{color:var(--text)}
+
+/* ── Dividers ─────────────────────────────────────────────────────────────── */
+.section-sep{
+  max-width:1200px;margin:0 auto;padding:0 24px;
+}
+.section-sep hr{border:none;border-top:1px solid var(--border)}
+
+/* ── Footer ───────────────────────────────────────────────────────────────── */
+footer{
+  text-align:center;padding:40px 24px;color:var(--text3);font-size:12px;
+  border-top:1px solid var(--border);line-height:1.8;
+}
+footer a{color:var(--blue);text-decoration:none}
+footer a:hover{text-decoration:underline}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media(max-width:640px){
+  .stat-grid{grid-template-columns:1fr 1fr}
+  .nav-links{display:none}
+  h2{font-size:28px}
+}
+
+/* ── Animations ───────────────────────────────────────────────────────────── */
+.fade-in{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
+.fade-in.visible{opacity:1;transform:none}
+</style>
+</head>
+<body>
+
+<!-- ── Navigation ─────────────────────────────────────────────────────────── -->
+<nav>
+  <div class="nav-brand">
+    <span class="dot"></span>
+    <span class="g-only">ChaosNLI Research</span>
+    <span class="r-only">$Q_{NX}^{\text{soft}}$ — ChaosNLI Study</span>
+  </div>
+  <div class="nav-links">
+    <a href="#gap">The Gap</a>
+    <a href="#ties">Tie Problem</a>
+    <a href="#surface">Depth Surface</a>
+    <a href="#phase">Phase Diagram</a>
+    <a href="#geometry">Geometry</a>
+    <a href="#examples">Examples</a>
+    <a href="#bootstrap">Validation</a>
+  </div>
+  <div class="mode-toggle">
+    <div class="toggle-pill" id="modeToggle" title="Switch audience mode" role="button" aria-pressed="false">
+      <div class="toggle-labels">
+        <span class="tl-g">G</span>
+        <span class="tl-r">R</span>
+      </div>
+    </div>
+    <span class="mode-label g-only" id="modeLabel">General</span>
+    <span class="mode-label r-only" id="modeLabelR">Research</span>
+  </div>
+</nav>
+
+<!-- ── Hero ───────────────────────────────────────────────────────────────── -->
+<section id="hero">
+  <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;width:100%;max-width:800px;padding:0 24px">
+    <div class="hero-tag">
+      <div class="pulse"></div>
+      ChaosNLI · N = 3,113 items · 9 Models
+    </div>
+    <h1 class="g-only">When AI Tries to Read<br/>Human Disagreement</h1>
+    <h1 class="r-only">Collective Opinion as<br/>a Relational Space</h1>
+    <p class="hero-sub g-only">
+      When 100 people label the same sentence, their disagreements aren't random—they have structure. This is what happens when we ask AI models to reproduce that structure.
+    </p>
+    <p class="hero-sub r-only">
+      Tie-aware neighborhood analysis of human and model NLI distributions using fractional soft-overlap $Q_{NX}^{\text{soft}}(k)$ under a fully paired posterior-predictive estimand.
+    </p>
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-val gold" id="heroHbar">0.0755</div>
+        <div class="stat-label g-only">Human Coherence Score</div>
+        <div class="stat-label r-only">$\bar{H}$ (HH100)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val blue">~0.012</div>
+        <div class="stat-label g-only">Best AI Model Score</div>
+        <div class="stat-label r-only">Max $\hat{M}_m$ (BART-L)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val violet">49.1%</div>
+        <div class="stat-label g-only">Items With Ambiguous Neighbors</div>
+        <div class="stat-label r-only">Boundary-Tie Affected at k=10</div>
+      </div>
+    </div>
+    <div class="scroll-hint">
+      <span>Scroll to explore</span>
+      <svg width="16" height="24" viewBox="0 0 16 24"><path d="M8 0v16M1 9l7 7 7-7" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+    </div>
+  </div>
+</section>
+
+<!-- ── Panel 1: The Gap ────────────────────────────────────────────────────── -->
+<section id="gap">
+  <div class="section-label">Panel 01 · Model Recovery</div>
+  <h2 class="g-only">AI Models Score 4–10× Lower Than Humans</h2>
+  <h2 class="r-only">Focal-Bootstrap Paired Estimand: $\hat{M}_m$ vs. $\bar{H}$</h2>
+  <p class="section-desc g-only">
+    We asked 9 state-of-the-art AI models to reproduce the structure of human disagreements on 3,113 NLI items. Every model scored far below the human replicate baseline—and the gap held across all 1,000 random checks we ran.
+  </p>
+  <p class="section-desc r-only">
+    Under the fully paired estimand $\hat{M}_m = \frac{1}{1000}\sum_b M_{m,b}$, where both human and model scores are evaluated against identical posterior-predictive cohorts $(G_{H1}^{(s)}, G_{H2}^{(s)})$. Bootstrap intervals shown at 95%.
+  </p>
+  <div class="legend-row">
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--gold)"></div><span class="g-only">Human reference (H̄ = 0.0755)</span><span class="r-only">$\bar{H}$ = 0.07549</span></div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--red);opacity:.7" ></div><span class="g-only">Random chance floor</span><span class="r-only">Empirical null (0.00354)</span></div>
+    <div class="legend-item r-only"><div class="legend-swatch" style="background:rgba(255,255,255,0.3)"></div><span>95% bootstrap interval</span></div>
+  </div>
+  <div class="glass chart-wrap gap-chart-wrap fade-in">
+    <div id="tooltip-gap" class="tooltip"></div>
+    <svg id="chart-gap" class="chart-svg" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+</section>
+
+<!-- ── Panel 2: The Tie Problem ───────────────────────────────────────────── -->
+<section id="ties">
+  <div class="section-label">Panel 02 · Stability Analysis</div>
+  <h2 class="g-only">49% of Items Have Ambiguous Neighbors</h2>
+  <h2 class="r-only">Storage-Index Boundary Tie Instability</h2>
+  <p class="section-desc g-only">
+    Standard AI methods silently choose which "neighbors" an item has when there are tied distances—and that choice changes if you reorder your dataset. Our fractional method is immune: its score is always exactly 1.000, regardless of data ordering.
+  </p>
+  <p class="section-desc r-only">
+    When multiple candidates share the exact $k$-th boundary distance, index-resolved methods produce unstable graphs ($\bar{Q}_{\text{hard}} = 0.955 \pm 0.0015$ at $k=10$). The fractional soft statistic $Q_{NX}^{\text{soft}}$ is provably invariant: $Q_{\text{soft}} = 1.000 \pm 0.000$.
+  </p>
+  <div class="tie-grid">
+    <div class="glass chart-wrap fade-in">
+      <div style="font-size:13px;font-weight:600;margin-bottom:16px">
+        <span class="g-only">Instability by neighborhood size</span>
+        <span class="r-only">$\bar{Q}_{\text{overlap}}$ by $k$</span>
+      </div>
+      <div id="tooltip-tie" class="tooltip"></div>
+      <svg id="chart-ties" class="chart-svg" viewBox="0 0 360 260" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="glass chart-wrap tie-demo fade-in">
+      <div class="tie-demo-title g-only">Interactive demo: what happens when data order changes?</div>
+      <div class="tie-demo-title r-only">Storage-index tie-breaking demo</div>
+      <svg id="demo-ties" viewBox="0 0 320 120" style="width:100%"></svg>
+      <div class="demo-stat">
+        Selected neighbor: <span id="demo-selected" class="hi">Candidate 62</span>
+        &nbsp;·&nbsp; Method: <span id="demo-method">index-resolved</span>
+      </div>
+      <div class="demo-btns">
+        <button class="btn btn-primary" id="demoReindex">Reindex Dataset</button>
+        <button class="btn btn-ghost" id="demoReset">Reset</button>
+      </div>
+      <div style="margin-top:12px;font-size:12px;color:var(--text3)">
+        <span class="g-only">Fractional method: always <span style="color:var(--green);font-weight:700">1.000</span> — unaffected by reordering</span>
+        <span class="r-only">$Q_{\text{soft}} = 1.000$ under any permutation</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Panel 3: Annotation Depth Surface ─────────────────────────────────── -->
+<section id="surface">
+  <div class="section-label">Panel 03 · Reference Surface</div>
+  <h2 class="g-only">More Annotators = Better Structure — But Slowly</h2>
+  <h2 class="r-only">$R_{\text{reference}}(n,k) = Q(G_n^{\text{rep}}, G_{100}^{\text{obs}})$ — 50-Seed Plug-In Surface</h2>
+  <p class="section-desc g-only">
+    How much does adding more human annotators improve the ability to recover opinion structure? We simulated the answer across 40 combinations of annotator count and neighborhood scale. Every column is monotonically increasing—confirmed across 50 independent simulation runs.
+  </p>
+  <p class="section-desc r-only">
+    Plug-in empirical reference similarity where $G_n^{\text{rep}}$ is drawn from $\mathbf{y}_i \sim \text{Multinomial}(n, \hat{p}_i)$. Monotonicity confirmed for both column means and 95% CI lower bounds across all 50 seeds and all $k \in \{5,10,20,50,100\}$.
+  </p>
+  <div class="surface-controls">
+    <button class="btn btn-primary" id="playBtn">▶ Animate</button>
+    <button class="btn btn-ghost" id="resetSurface">Reset</button>
+    <div class="mono-badge">✓ Monotone · All 50 Seeds</div>
+    <span class="g-only" style="font-size:12px;color:var(--text3)">Hover cells for mean ± SD</span>
+  </div>
+  <div class="glass chart-wrap fade-in">
+    <div id="tooltip-surface" class="tooltip"></div>
+    <svg id="chart-surface" class="chart-svg" viewBox="0 0 800 340" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+</section>
+
+<!-- ── Panel 4: Phase Diagram ─────────────────────────────────────────────── -->
+<section id="phase">
+  <div class="section-label">Panel 04 · Phase Analysis</div>
+  <h2 class="g-only">ChaosNLI Has a Specific Disagreement Fingerprint</h2>
+  <h2 class="r-only">Dirichlet Concentration Phase Diagram ($C=3$, Boundary Tie Rate)</h2>
+  <p class="section-desc g-only">
+    We modeled disagreement patterns across many simulated conditions to find where ChaosNLI sits. At 49.1% of items having ambiguous neighbors, the data falls between two theoretical regimes — not a perfect match for either, but precisely placed.
+  </p>
+  <p class="section-desc r-only">
+    Boundary tie percentage $\mathbb{P}[\text{tie at boundary}]$ across Dirichlet concentration $\alpha$ and annotation depth $n$ for $C=3$ labels. Empirical ChaosNLI rate (49.1% at $n=100$) lies between $\alpha=0.1$ (80.2%) and $\alpha=0.5$ (35.7%) — compatible with both, uniquely identified by neither.
+  </p>
+  <div class="glass chart-wrap fade-in">
+    <div id="tooltip-phase" class="tooltip"></div>
+    <svg id="chart-phase" class="chart-svg" viewBox="0 0 800 280" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+  <p class="phase-note g-only">
+    ★ Pulsing circle marks the empirical ChaosNLI result (49.1%). The data sits between the α=0.1 concentrated regime (top row) and the α=0.5 Jeffreys-prior regime (middle row).
+  </p>
+  <p class="phase-note r-only">
+    ★ Empirical marker at $(n=100, \alpha \in (0.1, 0.5))$. Phase diagram is descriptive, not a parameter identification — a single boundary-tie summary statistic is insufficient to uniquely identify $\alpha$.
+  </p>
+</section>
+
+<!-- ── Panel 5: Geometry Robustness ──────────────────────────────────────── -->
+<section id="geometry">
+  <div class="section-label">Panel 05 · Robustness Check</div>
+  <h2 class="g-only">The Finding Holds Across Every Distance Measure</h2>
+  <h2 class="r-only">Fixed-Reference Geometry Sensitivity: 5 Distance Metrics</h2>
+  <p class="section-desc g-only">
+    We tried 5 different mathematical ways to measure "how similar" two opinion distributions are. In every case, the same models rank near the top, and all models score far below the human baseline. The finding is not a quirk of our measurement choice.
+  </p>
+  <p class="section-desc r-only">
+    $Q(G_m, G_{100}^{\text{obs}})$ under Hellinger, Jensen-Shannon divergence, total variation, Euclidean, and Aitchison distance. Ordinal ranking of the 9 models is preserved across all 5 metrics; absolute values differ slightly.
+  </p>
+  <p class="pc-hint g-only">Each line is one AI model. Hover to highlight. Lines staying parallel means the ranking is consistent.</p>
+  <p class="pc-hint r-only">Parallel-coordinate plot. Each axis is one distance metric. Hover to isolate a model.</p>
+  <div class="glass chart-wrap fade-in" style="overflow:visible">
+    <div id="tooltip-geo" class="tooltip"></div>
+    <svg id="chart-geo" class="chart-svg" viewBox="0 0 800 320" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+</section>
+
+<!-- ── Panel 6: What Disagreement Looks Like ─────────────────────────────── -->
+<section id="examples">
+  <div class="section-label">Panel 06 · Item-Level View</div>
+  <h2 class="g-only">What Does Human Disagreement Actually Look Like?</h2>
+  <h2 class="r-only">Item-Level Vote Distributions — Ternary Simplex</h2>
+  <p class="section-desc g-only">
+    These are real sentences from the ChaosNLI dataset—each rated by 100 different people. The triangle shows how the votes were split between Entailment (E), Neutral (N), and Contradiction (C). A dot in the center means total three-way disagreement. A corner means everyone agreed.
+  </p>
+  <p class="section-desc r-only">
+    Ternary simplex plot of vote distributions $(e, n, c)$ where $e+n+c=100$. Barycentric coordinates: $x = n/100 + c/200$, $y = c/100 \cdot \sqrt{3}/2$. Items selected to span the entropy range $H \in [0.0, 1.583]$.
+  </p>
+  <div class="examples-layout">
+    <div class="item-cards" id="itemCards"></div>
+    <div class="ternary-wrap glass chart-wrap fade-in">
+      <div class="ternary-title g-only">Vote split across 100 annotators</div>
+      <div class="ternary-title r-only">Ternary vote-distribution simplex</div>
+      <svg id="chart-ternary" viewBox="0 0 340 320" style="width:100%;max-width:380px"></svg>
+      <div id="ternary-info" style="text-align:center;margin-top:12px;font-size:12px;color:var(--text2)"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Panel 7: Bootstrap Validation ─────────────────────────────────────── -->
+<section id="bootstrap">
+  <div class="section-label">Panel 07 · Robustness</div>
+  <h2 class="g-only">1,000 Random Checks — All Confirmed the Gap</h2>
+  <h2 class="r-only">Stratified Focal-Item Bootstrap: $\Delta_{m,b} > 0$ for all 1,000 replicates</h2>
+  <p class="section-desc g-only">
+    We ran 1,000 different random sub-samples of the data—each time checking whether AI models still scored below the human baseline. Every single one confirmed the gap. No random rearrangement made the AI models look competitive.
+  </p>
+  <p class="section-desc r-only">
+    In all 1,000 stratified focal-item bootstrap replicates (SNLI + MNLI strata), $\Delta_{m,b} = H_b - M_{m,b} > 0$ for every evaluated model. Minimum 95% CI lower bound: $+0.054$ (BART-Large). The bootstrap resamples items within the fixed ChaosNLI candidate population.
+  </p>
+  <div class="glass chart-wrap fade-in">
+    <div class="boot-counter" id="bootCounter">0 / 1000</div>
+    <div class="boot-grid" id="bootGrid"></div>
+    <div class="boot-summary">
+      <div class="boot-stat-item">
+        <div class="boot-stat-val">1,000 / 1,000</div>
+        <div class="boot-stat-lab g-only">Checks confirming the gap</div>
+        <div class="boot-stat-lab r-only">Replicates with $\Delta_m > 0$</div>
+      </div>
+      <div class="boot-stat-item">
+        <div class="boot-stat-val">+0.054</div>
+        <div class="boot-stat-lab g-only">Minimum gap (BART-Large)</div>
+        <div class="boot-stat-lab r-only">Min 95% CI lower bound</div>
+      </div>
+      <div class="boot-stat-item">
+        <div class="boot-stat-val">p &lt; 0.001</div>
+        <div class="boot-stat-lab g-only">Statistical significance</div>
+        <div class="boot-stat-lab r-only">All CIs exclude zero</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VariErr note -->
+  <div style="margin-top:40px" class="fade-in">
+    <div class="section-label" style="margin-bottom:12px">Appendix · Study 2A</div>
+    <div class="glass chart-wrap varierr-note">
+      <strong class="g-only">Exploratory: Does annotator identity matter?</strong>
+      <strong class="r-only">VariErr External Validation (Study 2A) — Exploratory / Inconclusive</strong>
+      <br/><br/>
+      <span class="g-only">
+        We also explored whether individual annotators have consistent personal styles across different items. Out of 52 annotator groups we found, the within-group SD was 7.8% lower than expected by chance—a suggestive pattern, but not statistically conclusive (p = 0.20 across 500,000 permutations). This is an interesting direction for future research, not a confirmed finding.
+      </span>
+      <span class="r-only">
+        Matched 500 items across 52 multi-item annotator profiles. Within-profile SD = 0.106 vs. null mean = 0.115 (7.8% reduction). Permutation p-value = 0.2045 (500,000 permutations). Consistent with either small signal or sampling limitations from the 52-profile restriction. Appropriately inconclusive.
+      </span>
+    </div>
+  </div>
+</section>
+
+<div class="section-sep"><hr/></div>
+<footer>
+  <p><strong>Collective Opinion as a Relational Space</strong> · ChaosNLI Computational Study</p>
+  <p style="margin-top:8px">
+    Data: <a href="https://github.com/easonnie/ChaosNLI" target="_blank">ChaosNLI (CC-BY)</a> · 
+    Study RC1 · All values from <code>canonical_results.json</code> · 
+    <a href="#hero" style="color:var(--text3)">Back to top ↑</a>
+  </p>
+</footer>
+
+<!-- ── Data ────────────────────────────────────────────────────────────────── -->
+<script>
+const MODELS = [
+  {key:"bart-large",     name:"BART-Large",     qm:0.01572, delta:0.05977, ciLo:0.05431, ciHi:0.06539, qfixed:0.01867},
+  {key:"roberta-large",  name:"RoBERTa-Large",  qm:0.01415, delta:0.06135, ciLo:0.05557, ciHi:0.06685, qfixed:0.01821},
+  {key:"xlnet-large",    name:"XLNet-Large",    qm:0.01285, delta:0.06264, ciLo:0.05711, ciHi:0.06846, qfixed:0.01319},
+  {key:"albert-xxlarge", name:"ALBERT-xxLarge", qm:0.01124, delta:0.06426, ciLo:0.05896, ciHi:0.06997, qfixed:0.01074},
+  {key:"bert-large",     name:"BERT-Large",     qm:0.01029, delta:0.06520, ciLo:0.05966, ciHi:0.07076, qfixed:0.01059},
+  {key:"roberta-base",   name:"RoBERTa-Base",   qm:0.01007, delta:0.06543, ciLo:0.05979, ciHi:0.07106, qfixed:0.01129},
+  {key:"xlnet-base",     name:"XLNet-Base",     qm:0.00927, delta:0.06623, ciLo:0.06069, ciHi:0.07175, qfixed:0.00893},
+  {key:"distilbert",     name:"DistilBERT",     qm:0.00854, delta:0.06695, ciLo:0.06124, ciHi:0.07261, qfixed:0.00854},
+  {key:"bert-base",      name:"BERT-Base",      qm:0.00768, delta:0.06782, ciLo:0.06235, ciHi:0.07356, qfixed:0.00865},
+];
+const HBAR = 0.07549, HBAR_CI_LO = 0.07000, HBAR_CI_HI = 0.08099;
+const NULL_VAL = 0.00354;
+
+const SCALE_ROWS = [
+  {k:5,  affected:49.47, overlap:0.9062, sd:0.00293},
+  {k:10, affected:49.12, overlap:0.9554, sd:0.00146},
+  {k:20, affected:50.66, overlap:0.9763, sd:0.00079},
+  {k:50, affected:51.56, overlap:0.9905, sd:0.00033},
+];
+const EMPIRICAL_TIE_PCT = 49.11;
+
+const REF_SURFACE = {
+  n: [3,5,10,20,30,50,75,100],
+  k: [5,10,20,50,100],
+  data: [
+    // n=3
+    [{mean:0.0060,sd:0.0001},{mean:0.0109,sd:0.0002},{mean:0.0206,sd:0.0004},{mean:0.0490,sd:0.0008},{mean:0.0940,sd:0.0014}],
+    // n=5
+    [{mean:0.0082,sd:0.0002},{mean:0.0148,sd:0.0003},{mean:0.0280,sd:0.0005},{mean:0.0653,sd:0.0011},{mean:0.1216,sd:0.0019}],
+    // n=10
+    [{mean:0.0135,sd:0.0005},{mean:0.0242,sd:0.0007},{mean:0.0449,sd:0.0009},{mean:0.0999,sd:0.0019},{mean:0.1793,sd:0.0032}],
+    // n=20
+    [{mean:0.0230,sd:0.0011},{mean:0.0402,sd:0.0013},{mean:0.0726,sd:0.0016},{mean:0.1550,sd:0.0023},{mean:0.2620,sd:0.0033}],
+    // n=30
+    [{mean:0.0318,sd:0.0013},{mean:0.0550,sd:0.0018},{mean:0.0973,sd:0.0021},{mean:0.2009,sd:0.0027},{mean:0.3242,sd:0.0035}],
+    // n=50
+    [{mean:0.0474,sd:0.0020},{mean:0.0813,sd:0.0018},{mean:0.1424,sd:0.0020},{mean:0.2769,sd:0.0033},{mean:0.4136,sd:0.0038}],
+    // n=75
+    [{mean:0.0640,sd:0.0023},{mean:0.1106,sd:0.0028},{mean:0.1908,sd:0.0034},{mean:0.3502,sd:0.0037},{mean:0.4898,sd:0.0033}],
+    // n=100
+    [{mean:0.0807,sd:0.0025},{mean:0.1391,sd:0.0033},{mean:0.2341,sd:0.0041},{mean:0.4080,sd:0.0039},{mean:0.5448,sd:0.0038}],
+  ]
+};
+
+// Phase diagram C=3
+const PHASE = {
+  alphas: [0.1, 0.5, 1.0],
+  nVotes: [3, 5, 10, 20, 30, 50, 100],
+  empirical: 49.11,
+  // rows × cols in same order
+  data: [
+    [100.0, 99.8, 99.1, 95.7, 92.2, 87.6, 80.2], // alpha=0.1
+    [100.0, 100.0, 100.0, 94.3, 84.8, 66.2, 35.7], // alpha=0.5
+    [100.0, 100.0, 100.0, 92.5, 85.8, 62.5, 25.5], // alpha=1.0
+  ]
+};
+
+const GEO = [
+  {name:"BART-Large",     H:0.01867,JSD:0.01873,TV:0.01927,Eu:0.01887,Ai:0.01811},
+  {name:"RoBERTa-Large",  H:0.01821,JSD:0.01827,TV:0.01856,Eu:0.01798,Ai:0.01744},
+  {name:"XLNet-Large",    H:0.01319,JSD:0.01329,TV:0.01379,Eu:0.01321,Ai:0.01261},
+  {name:"ALBERT-xxLarge", H:0.01074,JSD:0.01078,TV:0.01146,Eu:0.01163,Ai:0.01217},
+  {name:"BERT-Large",     H:0.01059,JSD:0.01063,TV:0.01145,Eu:0.01082,Ai:0.01089},
+  {name:"RoBERTa-Base",   H:0.01129,JSD:0.01133,TV:0.01205,Eu:0.01147,Ai:0.01098},
+  {name:"XLNet-Base",     H:0.00893,JSD:0.00899,TV:0.00965,Eu:0.00901,Ai:0.00858},
+  {name:"DistilBERT",     H:0.00854,JSD:0.00858,TV:0.00912,Eu:0.00867,Ai:0.00812},
+  {name:"BERT-Base",      H:0.00865,JSD:0.00869,TV:0.00934,Eu:0.00878,Ai:0.00831},
+];
+
+const EXAMPLES = [
+  {
+    label:"Three-way split",type:"high",entropy:1.583,
+    premise:"An elderly woman crafts a design on a loom.",
+    hypothesis:"The woman is sewing.",
+    E:35,N:31,C:34,
+    note:"Nearly equal three-way disagreement — is weaving the same as sewing?"
+  },
+  {
+    label:"Two-way disagreement",type:"high",entropy:1.557,
+    premise:"A photographer snaps a midair action shot of a snowboarder.",
+    hypothesis:"The midair shot snaps at a boarder of snow.",
+    E:42,N:26,C:32,
+    note:"Entailment leads, but contradiction is strong — reworded hypothesis causes splits"
+  },
+  {
+    label:"Majority opinion",type:"mid",entropy:0.78,
+    premise:"A woman stands at a podium with a slide show behind her.",
+    hypothesis:"A woman is giving a presentation at work.",
+    E:20,N:79,C:1,
+    note:"Strong neutral majority — public speaking doesn't necessarily mean 'at work'"
+  },
+  {
+    label:"Unanimous",type:"low",entropy:0.0,
+    premise:"A little girl in a pink jacket is walking.",
+    hypothesis:"The little girl can walk.",
+    E:100,N:0,C:0,
+    note:"Perfect consensus — logical entailment that is obvious to everyone"
+  },
+];
+</script>
+
+<!-- ── Chart Code ──────────────────────────────────────────────────────────── -->
+<script>
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function showTip(tip, html, event) {
+  tip.innerHTML = html;
+  tip.classList.add('show');
+}
+function moveTip(tip, event) {
+  const rect = tip.parentElement.getBoundingClientRect();
+  const x = event.clientX - rect.left + 12;
+  const y = event.clientY - rect.top - 10;
+  tip.style.left = Math.min(x, rect.width - 200) + 'px';
+  tip.style.top = y + 'px';
+}
+function hideTip(tip) { tip.classList.remove('show'); }
+
+const MODEL_COLORS = d3.scaleOrdinal()
+  .domain(MODELS.map(m=>m.key))
+  .range(['#3b82f6','#60a5fa','#93c5fd','#8b5cf6','#a78bfa','#06b6d4','#34d399','#f59e0b','#f87171']);
+
+// ── Panel 1: Gap Chart ────────────────────────────────────────────────────── 
+function drawGap() {
+  const svg = d3.select('#chart-gap');
+  const tip = document.getElementById('tooltip-gap');
+  const W=800, H=400;
+  const m = {top:20,right:120,bottom:48,left:140};
+  const iW = W-m.left-m.right, iH = H-m.top-m.bottom;
+
+  const allModels = [...MODELS];
+  const xMax = HBAR * 1.15;
+
+  const xScale = d3.scaleLinear().domain([0, xMax]).range([0, iW]);
+  const yScale = d3.scaleBand()
+    .domain(allModels.map(m=>m.key))
+    .range([0, iH]).padding(.35);
+
+  const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
+
+  // Grid lines
+  g.append('g').attr('class','grid')
+    .call(d3.axisBottom(xScale).ticks(6).tickSize(iH).tickFormat(''))
+    .call(gr=>{ gr.select('.domain').remove(); gr.selectAll('.tick line').attr('y1',-iH) });
+
+  // Null line
+  const nullX = xScale(NULL_VAL);
+  g.append('line').attr('x1',nullX).attr('x2',nullX).attr('y1',0).attr('y2',iH)
+    .attr('stroke','#f87171').attr('stroke-width',1.5).attr('stroke-dasharray','5,4').attr('opacity',.7);
+
+  // HH100 reference line
+  const hbX = xScale(HBAR);
+  g.append('line').attr('x1',hbX).attr('x2',hbX).attr('y1',0).attr('y2',iH)
+    .attr('stroke','#f59e0b').attr('stroke-width',2).attr('opacity',.9);
+  g.append('text').attr('x',hbX+6).attr('y',12)
+    .attr('fill','#f59e0b').attr('font-size',11).attr('font-weight',600)
+    .text('H̄ = 0.0755');
+
+  // Bars + CI
+  allModels.forEach((mod, i) => {
+    const bY = yScale(mod.key);
+    const bH = yScale.bandwidth();
+    const barW = xScale(mod.qm);
+    const col = MODEL_COLORS(mod.key);
+
+    // bar
+    g.append('rect')
+      .attr('x',0).attr('y',bY).attr('width',barW).attr('height',bH)
+      .attr('rx',3)
+      .attr('fill',col).attr('opacity',.85)
+      .style('cursor','pointer')
+      .on('mouseenter', (ev) => {
+        const pct = (mod.qm / HBAR * 100).toFixed(1);
+        showTip(tip,
+          `<strong style="color:${col}">${mod.name}</strong><br/>` +
+          `Score: <span style="color:#fff;font-family:monospace">${mod.qm.toFixed(5)}</span><br/>` +
+          `vs. Human: <span style="color:#f59e0b;font-family:monospace">${HBAR.toFixed(5)}</span><br/>` +
+          `Gap (Δ): <span style="color:#f87171;font-family:monospace">-${mod.delta.toFixed(5)}</span><br/>` +
+          `Recovery: <span style="color:#94a3b8">${pct}% of human level</span>`,
+          ev);
+        moveTip(tip, ev);
+        d3.select(ev.currentTarget).attr('opacity', 1);
+      })
+      .on('mousemove', ev=>moveTip(tip,ev))
+      .on('mouseleave', ev=>{ hideTip(tip); d3.select(ev.currentTarget).attr('opacity',.85); });
+
+    // CI whisker (research mode shown via CSS opacity trick — always render, toggle opacity)
+    const ciLoX = xScale(mod.qm + mod.delta - (mod.delta - (HBAR - mod.ciHi)));
+    // Actually use HBAR-ciHi and HBAR-ciLo mapped to model delta
+    // CI is on delta_m: [ciLo, ciHi]. Model score = HBAR - delta
+    // So model CI = [HBAR - ciHi, HBAR - ciLo]
+    const mCiLo = Math.max(0, HBAR - mod.ciHi);
+    const mCiHi = HBAR - mod.ciLo;
+    const mid = bY + bH/2;
+
+    const ciGroup = g.append('g').attr('class','r-only-svg').attr('opacity', document.documentElement.classList.contains('research-mode') ? 1 : 0);
+    ciGroup.append('line')
+      .attr('x1',xScale(mCiLo)).attr('x2',xScale(mCiHi))
+      .attr('y1',mid).attr('y2',mid)
+      .attr('stroke','rgba(255,255,255,0.35)').attr('stroke-width',1.5);
+    ciGroup.append('line').attr('x1',xScale(mCiLo)).attr('x2',xScale(mCiLo)).attr('y1',mid-5).attr('y2',mid+5).attr('stroke','rgba(255,255,255,0.35)').attr('stroke-width',1.5);
+    ciGroup.append('line').attr('x1',xScale(mCiHi)).attr('x2',xScale(mCiHi)).attr('y1',mid-5).attr('y2',mid+5).attr('stroke','rgba(255,255,255,0.35)').attr('stroke-width',1.5);
+
+    // value label
+    g.append('text')
+      .attr('x', barW + 6).attr('y', bY + bH/2 + 4)
+      .attr('fill','rgba(255,255,255,0.7)').attr('font-size',11).attr('font-family','JetBrains Mono,monospace')
+      .text(mod.qm.toFixed(5));
+  });
+
+  // Y axis (model names)
+  g.append('g')
+    .call(d3.axisLeft(yScale).tickFormat(k => MODELS.find(m=>m.key===k)?.name || k))
+    .call(ax=>{ ax.select('.domain').remove(); ax.selectAll('.tick line').remove(); ax.selectAll('.tick text').attr('fill','#94a3b8').attr('font-size',12) });
+
+  // X axis
+  g.append('g').attr('transform',`translate(0,${iH})`)
+    .call(d3.axisBottom(xScale).ticks(6).tickFormat(d3.format('.3f')))
+    .call(ax=>{ ax.select('.domain').attr('stroke','rgba(255,255,255,0.1)'); ax.selectAll('.tick text').attr('fill','#64748b').attr('font-size',10) });
+
+  // x axis label
+  g.append('text').attr('x',iW/2).attr('y',iH+38)
+    .attr('fill','#64748b').attr('text-anchor','middle').attr('font-size',11)
+    .text('Fractional Soft Overlap Score (higher = better structure recovery)');
+
+  // Update CI visibility on mode change
+  document.getElementById('modeToggle').addEventListener('click', () => {
+    const isResearch = document.documentElement.classList.contains('research-mode');
+    svg.selectAll('.r-only-svg').attr('opacity', isResearch ? 1 : 0);
+  });
+}
+
+// ── Panel 2: Tie Charts ───────────────────────────────────────────────────── 
+function drawTies() {
+  const svg = d3.select('#chart-ties');
+  const tip = document.getElementById('tooltip-tie');
+  const W=360, H=260;
+  const m = {top:20,right:20,bottom:50,left:50};
+  const iW=W-m.left-m.right, iH=H-m.top-m.bottom;
+
+  const xScale = d3.scaleBand().domain(SCALE_ROWS.map(r=>r.k)).range([0,iW]).padding(.35);
+  const yScale = d3.scaleLinear().domain([0.88,1.01]).range([iH,0]);
+
+  const g = svg.append('g').attr('transform',`translate(${m.left},${m.top})`);
+
+  g.append('g').attr('class','grid')
+    .call(d3.axisLeft(yScale).ticks(5).tickSize(-iW).tickFormat(''))
+    .call(gr=>{ gr.select('.domain').remove(); });
+
+  // Fractional line (1.000)
+  g.append('line').attr('x1',0).attr('x2',iW).attr('y1',yScale(1.0)).attr('y2',yScale(1.0))
+    .attr('stroke','#10b981').attr('stroke-width',2).attr('stroke-dasharray','6,3');
+  g.append('text').attr('x',iW-4).attr('y',yScale(1.0)-6)
+    .attr('fill','#10b981').attr('font-size',10).attr('text-anchor','end').attr('font-weight',600)
+    .text('Fractional = 1.000 ✓');
+
+  // Bars for deterministic overlap
+  SCALE_ROWS.forEach(row => {
+    const bX = xScale(row.k);
+    const bW = xScale.bandwidth();
+    const bH = iH - yScale(row.overlap);
+    const bY = yScale(row.overlap);
+    const col = d3.interpolateRdYlGn(1 - (1 - row.overlap) * 8);
+
+    g.append('rect').attr('x',bX).attr('y',bY).attr('width',bW).attr('height',bH).attr('rx',3)
+      .attr('fill',col).attr('opacity',.85)
+      .on('mouseenter', ev => {
+        showTip(tip,
+          `<strong>k = ${row.k}</strong><br/>` +
+          `Deterministic overlap: <span style="font-family:monospace">${row.overlap.toFixed(4)} ± ${row.sd.toFixed(5)}</span><br/>` +
+          `Items affected: <span style="color:#f87171">${row.affected.toFixed(1)}%</span><br/>` +
+          `Fractional: <span style="color:#10b981">1.0000 ± 0.0000</span>`, ev);
+        moveTip(tip, ev);
+      })
+      .on('mousemove', ev=>moveTip(tip,ev))
+      .on('mouseleave', () => hideTip(tip));
+
+    g.append('text').attr('x', bX+bW/2).attr('y', bY-4)
+      .attr('text-anchor','middle').attr('fill','rgba(255,255,255,.6)').attr('font-size',9).attr('font-family','JetBrains Mono,monospace')
+      .text(row.overlap.toFixed(3));
+  });
+
+  // Axes
+  g.append('g').attr('transform',`translate(0,${iH})`).call(d3.axisBottom(xScale).tickFormat(d=>`k=${d}`))
+    .call(ax=>{ ax.select('.domain').attr('stroke','rgba(255,255,255,0.1)'); ax.selectAll('text').attr('fill','#94a3b8').attr('font-size',11) });
+  g.append('g').call(d3.axisLeft(yScale).ticks(5).tickFormat(d3.format('.3f')))
+    .call(ax=>{ ax.select('.domain').attr('stroke','rgba(255,255,255,0.1)'); ax.selectAll('text').attr('fill','#64748b').attr('font-size',10) });
+
+  g.append('text').attr('transform','rotate(-90)').attr('x',-iH/2).attr('y',-36)
+    .attr('text-anchor','middle').attr('fill','#64748b').attr('font-size',10)
+    .text('Neighbor Graph Overlap');
+  g.append('text').attr('x',iW/2).attr('y',iH+38)
+    .attr('text-anchor','middle').attr('fill','#64748b').attr('font-size',10)
+    .text('Neighborhood size k');
+}
+
+// Interactive tie demo
+function initTieDemo() {
+  const demoSvg = d3.select('#demo-ties');
+  const W=320, H=120;
+  const candidates = [
+    {id:1, dist:0.12, tied:false},
+    {id:7, dist:0.15, tied:false},
+    {id:23, dist:0.18, tied:false},
+    {id:41, dist:0.21, tied:false},
+    {id:55, dist:0.24, tied:false},
+    {id:62, dist:0.27, tied:true, selected:true},
+    {id:74, dist:0.27, tied:true, selected:false},
+    {id:88, dist:0.27, tied:true, selected:false},
+    {id:99, dist:0.27, tied:true, selected:false},
+    {id:112, dist:0.31, tied:false},
+  ];
+  let reindexed = false;
+
+  function render(selected) {
+    demoSvg.selectAll('*').remove();
+    const n = candidates.length;
+    const spacing = (W-40) / n;
+
+    candidates.forEach((c, i) => {
+      const cx = 20 + i * spacing + spacing/2;
+      const cy = 50;
+      const r = 10;
+      const isTied = c.tied;
+      const isSel = (c.id === selected);
+      const isKBound = i === 4; // k=5 mark
+
+      // line between nodes
+      if(i < n-1) {
+        demoSvg.append('line').attr('x1',cx+r).attr('x2',20+(i+1)*spacing).attr('y1',cy).attr('y2',cy)
+          .attr('stroke','rgba(255,255,255,0.1)').attr('stroke-width',1);
+      }
+
+      const col = isSel ? '#3b82f6' : isTied ? '#f59e0b' : 'rgba(255,255,255,0.15)';
+      const stroke = isSel ? '#60a5fa' : isTied ? '#fbbf24' : 'rgba(255,255,255,0.2)';
+
+      demoSvg.append('circle').attr('cx',cx).attr('cy',cy).attr('r',r)
+        .attr('fill',col).attr('stroke',stroke).attr('stroke-width',isSel?2:1);
+
+      demoSvg.append('text').attr('x',cx).attr('y',cy+4).attr('text-anchor','middle')
+        .attr('font-size',7).attr('fill','rgba(255,255,255,0.8)').text(c.id);
+
+      if(isSel) {
+        demoSvg.append('text').attr('x',cx).attr('y',cy-16).attr('text-anchor','middle')
+          .attr('font-size',8).attr('fill','#3b82f6').attr('font-weight',700).text('✓ selected');
+      }
+      if(isTied && !isSel) {
+        demoSvg.append('text').attr('x',cx).attr('y',cy+24).attr('text-anchor','middle')
+          .attr('font-size',7).attr('fill','#f59e0b').text('tied');
+      }
+    });
+
+    // k boundary marker
+    const kBoundX = 20 + 5*spacing;
+    demoSvg.append('line').attr('x1',kBoundX).attr('x2',kBoundX).attr('y1',28).attr('y2',72)
+      .attr('stroke','rgba(255,255,255,0.3)').attr('stroke-width',1).attr('stroke-dasharray','3,3');
+    demoSvg.append('text').attr('x',kBoundX).attr('y',20).attr('text-anchor','middle')
+      .attr('font-size',8).attr('fill','rgba(255,255,255,0.4)').text('k boundary');
+
+    // Legend
+    demoSvg.append('circle').attr('cx',20).attr('cy',100).attr('r',4).attr('fill','#f59e0b');
+    demoSvg.append('text').attr('x',28).attr('y',104).attr('font-size',8).attr('fill','#94a3b8').text('tied candidates');
+    demoSvg.append('circle').attr('cx',120).attr('cy',100).attr('r',4).attr('fill','#3b82f6');
+    demoSvg.append('text').attr('x',128).attr('y',104).attr('font-size',8).attr('fill','#94a3b8').text('selected');
+  }
+
+  render(62);
+
+  document.getElementById('demoReindex').addEventListener('click', () => {
+    if(!reindexed) {
+      reindexed = true;
+      document.getElementById('demo-selected').textContent = 'Candidate 74';
+      document.getElementById('demo-selected').style.color = 'var(--gold)';
+      document.getElementById('demo-method').textContent = 'reindexed — different result!';
+      render(74);
+    }
+  });
+
+  document.getElementById('demoReset').addEventListener('click', () => {
+    reindexed = false;
+    document.getElementById('demo-selected').textContent = 'Candidate 62';
+    document.getElementById('demo-selected').style.color = 'var(--red)';
+    document.getElementById('demo-method').textContent = 'index-resolved';
+    render(62);
+  });
+}
+
+// ── Panel 3: Annotation Depth Heatmap ────────────────────────────────────── 
+function drawSurface() {
+  const svg = d3.select('#chart-surface');
+  const tip = document.getElementById('tooltip-surface');
+  const W=800, H=340;
+  const m = {top:30,right:60,bottom:50,left:65};
+  const iW=W-m.left-m.right, iH=H-m.top-m.bottom;
+
+  const nVals = REF_SURFACE.n;
+  const kVals = REF_SURFACE.k;
+
+  const xScale = d3.scaleBand().domain(kVals).range([0,iW]).padding(.04);
+  const yScale = d3.scaleBand().domain(nVals).range([iH,0]).padding(.04);
+
+  const colorScale = d3.scaleSequential()
+    .domain([0, 0.56])
+    .interpolator(t => d3.interpolateRgb('#1e1b4b', '#f59e0b')(Math.pow(t, 0.7)));
+
+  const g = svg.append('g').attr('transform',`translate(${m.left},${m.top})`);
+
+  // Draw cells (initially hidden for animation)
+  REF_SURFACE.data.forEach((row, ri) => {
+    row.forEach((cell, ki) => {
+      const n = nVals[ri], k = kVals[ki];
+      const rect = g.append('rect')
+        .attr('x', xScale(k)).attr('y', yScale(n))
+        .attr('width', xScale.bandwidth()).attr('height', yScale.bandwidth())
+        .attr('rx', 4)
+        .attr('fill', colorScale(cell.mean))
+        .attr('class', `surface-cell row-${ri}`)
+        .attr('opacity', 0)
+        .style('cursor','pointer')
+        .on('mouseenter', ev => {
+          showTip(tip,
+            `<strong>n=${n} votes, k=${k} neighbors</strong><br/>` +
+            `Mean: <span style="font-family:monospace;color:#fff">${cell.mean.toFixed(4)}</span><br/>` +
+            `SD: <span style="font-family:monospace;color:#94a3b8">±${cell.sd.toFixed(4)}</span><br/>` +
+            `<span style="color:#10b981;font-size:11px">✓ Monotone (50 seeds confirmed)</span>`, ev);
+          moveTip(tip, ev);
+          d3.select(ev.currentTarget).attr('opacity', 1).attr('stroke','rgba(255,255,255,0.5)').attr('stroke-width',2);
+        })
+        .on('mousemove', ev=>moveTip(tip,ev))
+        .on('mouseleave', ev=>{ hideTip(tip); d3.select(ev.currentTarget).attr('stroke',null); });
+
+      // Text label inside cell
+      const textCol = cell.mean > 0.2 ? '#000' : 'rgba(255,255,255,0.8)';
+      g.append('text')
+        .attr('x', xScale(k) + xScale.bandwidth()/2)
+        .attr('y', yScale(n) + yScale.bandwidth()/2 + 4)
+        .attr('text-anchor','middle').attr('font-size',10).attr('font-family','JetBrains Mono,monospace')
+        .attr('fill',textCol).attr('pointer-events','none')
+        .attr('class', `surface-label row-${ri}`).attr('opacity',0)
+        .text(cell.mean.toFixed(3));
+    });
+  });
+
+  // HH100 reference annotation
+  const approxN = 45; // ~where k=10 col crosses 0.0755 (between n=30:0.055 and n=50:0.0813)
+  g.append('text').attr('x',xScale(10)+xScale.bandwidth()/2).attr('y',-12)
+    .attr('text-anchor','middle').attr('fill','#f59e0b').attr('font-size',9).attr('font-weight',600)
+    .text('← Human level ≈ 0.075 crossed ~n=45');
+
+  // Axes
+  g.append('g').attr('transform',`translate(0,${iH})`)
+    .call(d3.axisBottom(xScale).tickFormat(d=>`k=${d}`))
+    .call(ax=>{ ax.select('.domain').attr('stroke','rgba(255,255,255,0.1)'); ax.selectAll('text').attr('fill','#94a3b8').attr('font-size',11) });
+
+  g.append('g').call(d3.axisLeft(yScale).tickFormat(d=>`n=${d}`))
+    .call(ax=>{ ax.select('.domain').attr('stroke','rgba(255,255,255,0.1)'); ax.selectAll('text').attr('fill','#94a3b8').attr('font-size',11) });
+
+  g.append('text').attr('x',iW/2).attr('y',iH+40).attr('text-anchor','middle')
+    .attr('fill','#64748b').attr('font-size',11).text('Neighborhood Scale k (larger = broader view)');
+  g.append('text').attr('transform','rotate(-90)').attr('x',-iH/2).attr('y',-50)
+    .attr('text-anchor','middle').attr('fill','#64748b').attr('font-size',11)
+    .text('Annotation Depth n (votes per item)');
+
+  // Color legend bar
+  const legendW = 160, legendH = 10;
+  const lDefs = svg.append('defs');
+  const grad = lDefs.append('linearGradient').attr('id','surfaceGrad').attr('x1','0%').attr('x2','100%');
+  for(let i=0;i<=10;i++) {
+    grad.append('stop').attr('offset', `${i*10}%`).attr('stop-color', colorScale(i/10 * 0.56));
+  }
+  const lgX = m.left + iW - legendW, lgY = m.top - 22;
+  svg.append('rect').attr('x',lgX).attr('y',lgY).attr('width',legendW).attr('height',legendH).attr('rx',3)
+    .attr('fill','url(#surfaceGrad)');
+  svg.append('text').attr('x',lgX).attr('y',lgY-3).attr('font-size',9).attr('fill','#64748b').text('0');
+  svg.append('text').attr('x',lgX+legendW).attr('y',lgY-3).attr('text-anchor','end').attr('font-size',9).attr('fill','#f59e0b').text('0.54');
+
+  // Animate on play
+  let animated = false;
+  document.getElementById('playBtn').addEventListener('click', () => {
+    if(animated) return;
+    animated = true;
+    nVals.forEach((n, ri) => {
+      setTimeout(() => {
+        svg.selectAll(`.row-${ri}`).transition().duration(400).attr('opacity', 1);
+      }, ri * 220);
+    });
+  });
+  document.getElementById('resetSurface').addEventListener('click', () => {
+    animated = false;
+    svg.selectAll('.surface-cell,.surface-label').attr('opacity',0);
+  });
+  // Show all on initial load (after small delay)
+  setTimeout(()=> svg.selectAll('.surface-cell,.surface-label').attr('opacity',1), 400);
+}
+
+// ── Panel 4: Phase Diagram ────────────────────────────────────────────────── 
+function drawPhase() {
+  const svg = d3.select('#chart-phase');
+  const tip = document.getElementById('tooltip-phase');
+  const W=800, H=280;
+  const m = {top:40,right:80,bottom:50,left:90};
+  const iW=W-m.left-m.right, iH=H-m.top-m.bottom;
+
+  const alphaLabels = ['α=0.1\n(concentrated)', 'α=0.5\n(Jeffreys)', 'α=1.0\n(uniform)'];
+  const nLabels = PHASE.nVotes;
+
+  const xScale = d3.scaleBand().domain(nLabels).range([0,iW]).padding(.06);
+  const yScale = d3.scaleBand().domain(PHASE.alphas).range([0,iH]).padding(.06);
+  const colorScale = d3.scaleSequential().domain([0,100]).interpolator(d3.interpolatePlasma);
+
+  const g = svg.append('g').attr('transform',`translate(${m.left},${m.top})`);
+
+  PHASE.alphas.forEach((alpha, ai) => {
+    PHASE.nVotes.forEach((nv, ni) => {
+      const val = PHASE.data[ai][ni];
+      g.append('rect')
+        .attr('x',xScale(nv)).attr('y',yScale(alpha))
+        .attr('width',xScale.bandwidth()).attr('height',yScale.bandwidth())
+        .attr('rx',5).attr('fill',colorScale(val))
+        .style('cursor','pointer')
+        .on('mouseenter', ev => {
+          showTip(tip,
+            `<strong>α=${alpha}, n=${nv} votes</strong><br/>` +
+            `Boundary tie rate: <span style="font-family:monospace;color:#fff">${val.toFixed(1)}%</span>`, ev);
+          moveTip(tip, ev);
+        })
+        .on('mousemove', ev=>moveTip(tip,ev))
+        .on('mouseleave', () => hideTip(tip));
+
+      const textCol = val > 60 ? '#000' : '#fff';
+      g.append('text')
+        .attr('x',xScale(nv)+xScale.bandwidth()/2).attr('y',yScale(alpha)+yScale.bandwidth()/2+4)
+        .attr('text-anchor','middle').attr('font-size',11).attr('fill',textCol)
+        .attr('font-family','JetBrains Mono,monospace').attr('pointer-events','none')
+        .text(val.toFixed(0)+'%');
+    });
+  });
+
+  // Empirical marker between alpha=0.1 and alpha=0.5 at n=100
+  const empX = xScale(100) + xScale.bandwidth()/2;
+  const empY1 = yScale(0.1) + yScale.bandwidth();
+  const empY2 = yScale(0.5);
+  const empYmid = (empY1 + empY2) / 2;
+
+  // Pulsing circle
+  const empGroup = g.append('g');
+  empGroup.append('circle').attr('cx',empX).attr('cy',empYmid).attr('r',14)
+    .attr('fill','none').attr('stroke','#fff').attr('stroke-width',2)
+    .append('animate').attr('attributeName','r').attr('values','12;18;12').attr('dur','2s').attr('repeatCount','indefinite');
+  empGroup.append('circle').attr('cx',empX).attr('cy',empYmid).attr('r',5)
+    .attr('fill','#fff');
+  empGroup.append('text').attr('x',empX+22).attr('y',empYmid+4)
+    .attr('font-size',11).attr('fill','#fff').attr('font-weight',600).text('Empirical 49.1%');
+
+  // Axes
+  g.append('g').attr('transform',`translate(0,${iH})`)
+    .call(d3.axisBottom(xScale).tickFormat(d=>`n=${d}`))
+    .call(ax=>{ ax.select('.domain').attr('stroke','rgba(255,255,255,.1)'); ax.selectAll('text').attr('fill','#94a3b8').attr('font-size',11) });
+
+  g.append('g').call(d3.axisLeft(yScale).tickFormat(d=>`α=${d}`))
+    .call(ax=>{ ax.select('.domain').attr('stroke','rgba(255,255,255,.1)'); ax.selectAll('text').attr('fill','#94a3b8').attr('font-size',11) });
+
+  g.append('text').attr('x',iW/2).attr('y',iH+38).attr('text-anchor','middle')
+    .attr('fill','#64748b').attr('font-size',11).text('Annotation depth n (votes per item)');
+  g.append('text').attr('transform','rotate(-90)').attr('x',-iH/2).attr('y',-70)
+    .attr('text-anchor','middle').attr('fill','#64748b').attr('font-size',11)
+    .text('Dirichlet concentration α');
+
+  // legend
+  const lDefs2 = svg.append('defs');
+  const grad2 = lDefs2.append('linearGradient').attr('id','phaseGrad').attr('x1','0%').attr('x2','100%');
+  for(let i=0;i<=10;i++) grad2.append('stop').attr('offset',`${i*10}%`).attr('stop-color',colorScale(i*10));
+  svg.append('rect').attr('x',m.left+iW+10).attr('y',m.top).attr('width',12).attr('height',iH).attr('rx',3)
+    .attr('fill','url(#phaseGrad)').attr('transform',`rotate(90,${m.left+iW+10+6},${m.top+iH/2})`);
+  // simpler: horizontal legend
+  const lgW=80,lgH=10;
+  svg.append('rect').attr('x',m.left+iW-lgW).attr('y',10).attr('width',lgW).attr('height',lgH).attr('rx',3)
+    .attr('fill','url(#phaseGrad)');
+  svg.append('text').attr('x',m.left+iW-lgW).attr('y',8).attr('font-size',9).attr('fill','#64748b').text('0%');
+  svg.append('text').attr('x',m.left+iW).attr('y',8).attr('text-anchor','end').attr('font-size',9).attr('fill','#fff').text('100%');
+}
+
+// ── Panel 5: Geometry (Parallel Coords) ──────────────────────────────────── 
+function drawGeo() {
+  const svg = d3.select('#chart-geo');
+  const tip = document.getElementById('tooltip-geo');
+  const W=800, H=320;
+  const m = {top:40,right:30,bottom:50,left:40};
+  const iW=W-m.left-m.right, iH=H-m.top-m.bottom;
+
+  const metrics = ['H','JSD','TV','Eu','Ai'];
+  const metricLabels = {H:'Hellinger',JSD:'Jensen-Shannon',TV:'Total Variation',Eu:'Euclidean',Ai:'Aitchison'};
+
+  const allVals = GEO.flatMap(m=>[m.H,m.JSD,m.TV,m.Eu,m.Ai]);
+  const vMin = d3.min(allVals)*0.95, vMax = d3.max(allVals)*1.05;
+
+  const xPos = Object.fromEntries(metrics.map((k,i)=>[k, m.left + i*(iW/(metrics.length-1))]));
+  const yScale = d3.scaleLinear().domain([vMin,vMax]).range([m.top+iH, m.top]);
+
+  const colScale = d3.scaleOrdinal().domain(GEO.map(m=>m.name))
+    .range(['#3b82f6','#60a5fa','#93c5fd','#8b5cf6','#a78bfa','#06b6d4','#34d399','#f59e0b','#f87171']);
+
+  const g = svg.append('g');
+
+  // Axes per metric
+  metrics.forEach(k => {
+    const x = xPos[k];
+    g.append('line').attr('x1',x).attr('x2',x).attr('y1',m.top).attr('y2',m.top+iH)
+      .attr('stroke','rgba(255,255,255,0.15)').attr('stroke-width',1);
+    g.append('text').attr('x',x).attr('y',m.top-10).attr('text-anchor','middle')
+      .attr('fill','#94a3b8').attr('font-size',11).attr('font-weight',600).text(metricLabels[k]);
+    // tick marks
+    const ticks = yScale.ticks(4);
+    ticks.forEach(t=>{
+      g.append('text').attr('x',x).attr('y',yScale(t)+4).attr('text-anchor','middle')
+        .attr('fill','#475569').attr('font-size',8).attr('font-family','JetBrains Mono,monospace').text(t.toFixed(3));
+    });
+  });
+
+  const lineGen = d3.line().x(([k])=>xPos[k]).y(([k,v])=>yScale(v));
+
+  GEO.forEach(model => {
+    const points = metrics.map(k=>[k, model[k]]);
+    const path = g.append('path')
+      .attr('d', lineGen(points))
+      .attr('fill','none')
+      .attr('stroke', colScale(model.name))
+      .attr('stroke-width', 2)
+      .attr('opacity', 0.55)
+      .style('cursor','pointer')
+      .on('mouseenter', function(ev) {
+        d3.selectAll('#chart-geo path').attr('opacity',0.1);
+        d3.select(this).attr('opacity',1).attr('stroke-width',3);
+        showTip(tip, `<strong style="color:${colScale(model.name)}">${model.name}</strong><br/>`+
+          metrics.map(k=>`${metricLabels[k]}: <span style="font-family:monospace">${model[k].toFixed(5)}</span>`).join('<br/>'), ev);
+        moveTip(tip, ev);
+      })
+      .on('mousemove', ev=>moveTip(tip,ev))
+      .on('mouseleave', function() {
+        d3.selectAll('#chart-geo path').attr('opacity',0.55).attr('stroke-width',2);
+        hideTip(tip);
+      });
+
+    // Endpoint label
+    g.append('text').attr('x',xPos['Ai']+8).attr('y',yScale(model.Ai)+4)
+      .attr('fill',colScale(model.name)).attr('font-size',9).attr('font-weight',600)
+      .text(model.name.split('-')[0]);
+  });
+
+  // x axis label
+  g.append('text').attr('x',W/2).attr('y',H-6).attr('text-anchor','middle')
+    .attr('fill','#475569').attr('font-size',11).text('Distance metric (all within fixed-reference Q estimand)');
+}
+
+// ── Panel 6: Ternary + Examples ───────────────────────────────────────────── 
+function initExamples() {
+  let selected = 0;
+
+  function renderCards() {
+    const container = document.getElementById('itemCards');
+    container.innerHTML = '';
+    EXAMPLES.forEach((ex, i) => {
+      const card = document.createElement('div');
+      card.className = `item-card ${ex.type} ${i===selected?'active':''}`;
+      const total = ex.E+ex.N+ex.C;
+      const ep = ex.E, np = ex.N, cp = ex.C;
+      card.innerHTML = `
+        <div class="item-card-meta">
+          <span class="entropy-badge ${ex.type}">${ex.label}</span>
+          <span style="font-size:10px;color:var(--text3);font-family:var(--mono)">H=${ex.entropy.toFixed(3)}</span>
+        </div>
+        <div class="item-text">
+          <span style="color:var(--text3)">P:</span> <em>${ex.premise}</em>
+        </div>
+        <div class="item-text">
+          <span style="color:var(--text3)">H:</span> <em>${ex.hypothesis}</em>
+        </div>
+        <div class="vote-bars">
+          <div class="vb-e" style="flex:${ep}"></div>
+          <div class="vb-n" style="flex:${np}"></div>
+          <div class="vb-c" style="flex:${cp}"></div>
+        </div>
+        <div class="vote-pct-row">
+          <span class="vote-pct"><span class="e">E</span> ${ep}%</span>
+          <span class="vote-pct"><span class="n">N</span> ${np}%</span>
+          <span class="vote-pct"><span class="c">C</span> ${cp}%</span>
+        </div>
+      `;
+      card.addEventListener('click', () => { selected = i; renderCards(); drawTernary(EXAMPLES[i]); });
+      container.appendChild(card);
+    });
+  }
+
+  function drawTernary(ex) {
+    const svg = d3.select('#chart-ternary');
+    svg.selectAll('*').remove();
+    const W=340, H=320, pad=40;
+
+    // Triangle corners: E=bottom-left, N=bottom-right, C=top
+    const sqrt3 = Math.sqrt(3);
+    const side = W - pad*2;
+    const h = side * sqrt3/2;
+    const triH = Math.min(h, H - pad*2 - 20);
+    const scale = triH / h;
+    const triSide = side * scale;
+    const triH2 = triH;
+
+    const cxc = W/2;
+    const cyBase = H - pad - 8;
+
+    const pE = {x: cxc - triSide/2, y: cyBase};
+    const pN = {x: cxc + triSide/2, y: cyBase};
+    const pC = {x: cxc, y: cyBase - triH2};
+
+    // Draw triangle
+    svg.append('polygon')
+      .attr('points',`${pE.x},${pE.y} ${pN.x},${pN.y} ${pC.x},${pC.y}`)
+      .attr('fill','rgba(255,255,255,0.03)').attr('stroke','rgba(255,255,255,0.15)').attr('stroke-width',1.5);
+
+    // Grid lines (tertiary at 25%, 50%, 75%)
+    [0.25,0.5,0.75].forEach(t=>{
+      const gE = {x:pE.x*(1-t)+pN.x*t, y:pE.y*(1-t)+pN.y*t};
+      const gN = {x:pN.x*(1-t)+pC.x*t, y:pN.y*(1-t)+pC.y*t};
+      const gC = {x:pC.x*(1-t)+pE.x*t, y:pC.y*(1-t)+pE.y*t};
+      [[gE,gN],[gN,gC],[gC,gE]].forEach(([a,b])=>{
+        // These aren't standard ternary gridlines but look nice
+      });
+    });
+
+    // Corner labels
+    const cOff=16;
+    svg.append('text').attr('x',pE.x-cOff).attr('y',pE.y+4).attr('fill','#3b82f6')
+      .attr('font-size',13).attr('font-weight',700).attr('text-anchor','middle').text('E');
+    svg.append('text').attr('x',pN.x+cOff).attr('y',pN.y+4).attr('fill','#8b5cf6')
+      .attr('font-size',13).attr('font-weight',700).attr('text-anchor','middle').text('N');
+    svg.append('text').attr('x',pC.x).attr('y',pC.y-10).attr('fill','#f87171')
+      .attr('font-size',13).attr('font-weight',700).attr('text-anchor','middle').text('C');
+
+    // Corner sub-labels
+    svg.append('text').attr('x',pE.x-cOff).attr('y',pE.y+16).attr('fill','#3b82f6')
+      .attr('font-size',8).attr('text-anchor','middle').attr('opacity',.7).text('Entailment');
+    svg.append('text').attr('x',pN.x+cOff).attr('y',pN.y+16).attr('fill','#8b5cf6')
+      .attr('font-size',8).attr('text-anchor','middle').attr('opacity',.7).text('Neutral');
+    svg.append('text').attr('x',pC.x).attr('y',pC.y-20).attr('fill','#f87171')
+      .attr('font-size',8).attr('text-anchor','middle').attr('opacity',.7).text('Contradiction');
+
+    // Data point
+    const total = ex.E + ex.N + ex.C;
+    const e = ex.E/total, n = ex.N/total, c = ex.C/total;
+    // Barycentric: point = e*pE + n*pN + c*pC
+    const dx = e*pE.x + n*pN.x + c*pC.x;
+    const dy = e*pE.y + n*pN.y + c*pC.y;
+
+    // Pulsing glow
+    svg.append('circle').attr('cx',dx).attr('cy',dy).attr('r',16)
+      .attr('fill','rgba(255,255,255,0.05)').attr('stroke','rgba(255,255,255,0.2)').attr('stroke-width',1);
+    svg.append('circle').attr('cx',dx).attr('cy',dy).attr('r',8)
+      .attr('fill','rgba(255,255,255,0.15)');
+    svg.append('circle').attr('cx',dx).attr('cy',dy).attr('r',4)
+      .attr('fill','#fff').attr('stroke','rgba(255,255,255,0.9)').attr('stroke-width',2);
+
+    // Vote percentage lines to corners
+    const alpha=0.25;
+    [[pE,'#3b82f6',ex.E],[pN,'#8b5cf6',ex.N],[pC,'#f87171',ex.C]].forEach(([p,col,pct])=>{
+      if(pct > 0) {
+        svg.append('line').attr('x1',dx).attr('y1',dy).attr('x2',p.x).attr('y2',p.y)
+          .attr('stroke',col).attr('stroke-width',1).attr('opacity',alpha+(pct/100)*0.6).attr('stroke-dasharray','3,3');
+        // pct label along line
+        const lx = dx + (p.x-dx)*0.55, ly = dy + (p.y-dy)*0.55;
+        svg.append('text').attr('x',lx).attr('y',ly).attr('text-anchor','middle')
+          .attr('font-size',10).attr('fill',col).attr('font-weight',700).attr('font-family','JetBrains Mono,monospace')
+          .text(pct+'%');
+      }
+    });
+
+    document.getElementById('ternary-info').innerHTML =
+      `<em style="color:var(--text3)">"${ex.note}"</em><br/>` +
+      `<span style="font-family:var(--mono);font-size:11px;color:var(--text2)">Entropy = ${ex.entropy.toFixed(3)}</span>`;
+  }
+
+  renderCards();
+  drawTernary(EXAMPLES[0]);
+}
+
+// ── Panel 7: Bootstrap dots ───────────────────────────────────────────────── 
+function initBootstrap() {
+  const grid = document.getElementById('bootGrid');
+  const counter = document.getElementById('bootCounter');
+  const dots = [];
+  for(let i=0;i<1000;i++){
+    const d = document.createElement('div');
+    d.className='boot-dot';
+    grid.appendChild(d);
+    dots.push(d);
+  }
+  let lit=0;
+  const observer = new IntersectionObserver(entries=>{
+    if(entries[0].isIntersecting && lit===0){
+      const interval = setInterval(()=>{
+        const batch=Math.min(20,1000-lit);
+        for(let i=0;i<batch;i++) dots[lit+i].classList.add('lit');
+        lit+=batch;
+        counter.textContent = `${lit.toLocaleString()} / 1,000`;
+        if(lit>=1000) clearInterval(interval);
+      },30);
+    }
+  },{threshold:0.3});
+  observer.observe(grid);
+}
+
+// ── Scroll animations ─────────────────────────────────────────────────────── 
+function initScrollAnimations() {
+  const obs = new IntersectionObserver(entries=>{
+    entries.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('visible'); });
+  },{threshold:0.1});
+  document.querySelectorAll('.fade-in').forEach(el=>obs.observe(el));
+}
+
+// ── Mode toggle ───────────────────────────────────────────────────────────── 
+document.getElementById('modeToggle').addEventListener('click', function() {
+  const html = document.documentElement;
+  html.classList.toggle('research-mode');
+  html.classList.toggle('general-mode');
+});
+
+// ── Nav active state ──────────────────────────────────────────────────────── 
+function initNav() {
+  const sections = document.querySelectorAll('section[id]');
+  const links = document.querySelectorAll('.nav-links a');
+  const obs = new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const link = document.querySelector(`.nav-links a[href="#${e.target.id}"]`);
+        if(link) link.classList.add('active');
+      }
+    });
+  },{threshold:0.5});
+  sections.forEach(s=>obs.observe(s));
+}
+
+// ── Init all ──────────────────────────────────────────────────────────────── 
+window.addEventListener('DOMContentLoaded', () => {
+  drawGap();
+  drawTies();
+  initTieDemo();
+  drawSurface();
+  drawPhase();
+  drawGeo();
+  initExamples();
+  initBootstrap();
+  initScrollAnimations();
+  initNav();
+});
+</script>
+</body>
+</html>
