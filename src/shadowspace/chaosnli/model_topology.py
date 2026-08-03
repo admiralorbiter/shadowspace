@@ -39,16 +39,26 @@ def evaluate_model_topology_recovery(
 
     model_evaluations: dict[str, dict[str, Any]] = {}
 
-    # Map item object_ids to model logits indices
-    if Path("data/chaosnli/processed/canonical_items_posterior.parquet").exists():
-        all_canon_df = pl.read_parquet("data/chaosnli/processed/canonical_items_posterior.parquet")
-        obj_id_to_idx = {obj_id: idx for idx, obj_id in enumerate(all_canon_df["object_id"])}
-        df_indices = [obj_id_to_idx.get(obj_id, idx) for idx, obj_id in enumerate(canon_df["object_id"])]
-    else:
-        df_indices = list(range(len(canon_df)))
-
     for model_name, m_data in model_results.items():
         logits_full = m_data["logits"]
+
+        # Map item object_ids to model logits indices
+        if "object_ids" in m_data and len(m_data["object_ids"]) > 0:
+            m_obj_to_idx = {obj_id: idx for idx, obj_id in enumerate(m_data["object_ids"])}
+            df_indices = []
+            for obj_id in canon_df["object_id"]:
+                if obj_id not in m_obj_to_idx:
+                    raise KeyError(f"Item object_id '{obj_id}' not found in model predictions for '{model_name}'.")
+                df_indices.append(m_obj_to_idx[obj_id])
+        elif len(logits_full) == len(canon_df):
+            df_indices = list(range(len(canon_df)))
+        elif Path("data/chaosnli/processed/canonical_items_posterior.parquet").exists():
+            all_canon_df = pl.read_parquet("data/chaosnli/processed/canonical_items_posterior.parquet")
+            obj_id_to_idx = {obj_id: idx for idx, obj_id in enumerate(all_canon_df["object_id"])}
+            df_indices = [obj_id_to_idx[obj_id] for obj_id in canon_df["object_id"]]
+        else:
+            df_indices = list(range(len(canon_df)))
+
         logits = logits_full[df_indices]
         q_model = compute_model_probabilities(logits, temperature=1.0)
 
@@ -123,16 +133,26 @@ def evaluate_hypothesis2_temperature_scaling(
 
     results_by_model: dict[str, list[dict[str, Any]]] = {}
 
-    # Map item object_ids to model logits indices
-    if Path("data/chaosnli/processed/canonical_items_posterior.parquet").exists():
-        all_canon_df = pl.read_parquet("data/chaosnli/processed/canonical_items_posterior.parquet")
-        obj_id_to_idx = {obj_id: idx for idx, obj_id in enumerate(all_canon_df["object_id"])}
-        df_indices = [obj_id_to_idx.get(obj_id, idx) for idx, obj_id in enumerate(canon_df["object_id"])]
-    else:
-        df_indices = list(range(len(canon_df)))
-
     for model_name, m_data in model_results.items():
         logits_full = m_data["logits"]
+
+        # Map item object_ids to model logits indices
+        if "object_ids" in m_data and len(m_data["object_ids"]) > 0:
+            m_obj_to_idx = {obj_id: idx for idx, obj_id in enumerate(m_data["object_ids"])}
+            df_indices = []
+            for obj_id in canon_df["object_id"]:
+                if obj_id not in m_obj_to_idx:
+                    raise KeyError(f"Item object_id '{obj_id}' not found in model predictions for '{model_name}'.")
+                df_indices.append(m_obj_to_idx[obj_id])
+        elif len(logits_full) == len(canon_df):
+            df_indices = list(range(len(canon_df)))
+        elif Path("data/chaosnli/processed/canonical_items_posterior.parquet").exists():
+            all_canon_df = pl.read_parquet("data/chaosnli/processed/canonical_items_posterior.parquet")
+            obj_id_to_idx = {obj_id: idx for idx, obj_id in enumerate(all_canon_df["object_id"])}
+            df_indices = [obj_id_to_idx[obj_id] for obj_id in canon_df["object_id"]]
+        else:
+            df_indices = list(range(len(canon_df)))
+
         logits = logits_full[df_indices]
         temp_curve = []
 

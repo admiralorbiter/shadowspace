@@ -46,13 +46,15 @@ def test_chaosnli_normalize_cli(capsys) -> None:
 
 
 def test_chaosnli_subcommands_stub(capsys) -> None:
-    subcommands = [
-        "audit-joins",
+    implemented = {
         "human-posterior",
         "build-spaces",
         "compute-neighbors",
         "compare-graphs",
         "analyze",
+    }
+    stubs = [
+        "audit-joins",
         "select-cases",
         "render-packets",
         "build-bundle",
@@ -81,17 +83,22 @@ def test_chaosnli_subcommands_stub(capsys) -> None:
         mock_read_parquet.return_value = fake_df
         mock_joint.return_value = fake_df.select(["human_p_entailment", "human_p_neutral"]).to_numpy()
 
-        for sub in subcommands:
+        for sub in implemented:
             ret = main(["chaosnli", sub])
-            assert ret == 0, f"Subcommand {sub} failed"
+            assert ret == 0, f"Implemented subcommand {sub} failed"
+
+        for sub in stubs:
+            ret = main(["chaosnli", sub])
+            assert ret == 2, f"Stub subcommand {sub} should fail closed with code 2"
 
 
 def test_chaosnli_subcommands_with_args(capsys) -> None:
     ret = main(["chaosnli", "predict", "--model", "roberta-large"])
-    assert ret == 0
+    assert ret == 2
     ret = main(["chaosnli", "calibrate", "--model", "roberta-large"])
-    assert ret == 0
+    assert ret == 2
     ret = main(["chaosnli", "import-codings", "dummy.csv"])
-    assert ret == 0
+    assert ret == 2
     ret = main(["chaosnli", "verify-release", "artifacts/releases/v1"])
-    assert ret == 0
+    assert ret == 2
+

@@ -16,7 +16,7 @@ def test_text_embeddings_and_cosine_distance() -> None:
         "hypothesis": ["An animal is outdoors.", "Felines are resting indoors."],
     })
 
-    emb = extract_text_embeddings(df)
+    emb, method_name = extract_text_embeddings(df, method="tfidf-svd")
     assert emb.shape[0] == 2
     assert emb.shape[1] > 0
 

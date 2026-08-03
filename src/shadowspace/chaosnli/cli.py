@@ -162,8 +162,8 @@ def handle_chaosnli_command(parsed_args: argparse.Namespace) -> int:
         return 0
 
     elif cmd == "audit-joins":
-        _emit_status("chaosnli.audit-joins", message="External join audit requested.")
-        return 0
+        _emit_status("chaosnli.audit-joins", status="not_implemented", message="Command not yet implemented.")
+        return 2
 
     elif cmd == "human-posterior":
         from shadowspace.chaosnli.posterior import run_posterior_pipeline
@@ -174,12 +174,12 @@ def handle_chaosnli_command(parsed_args: argparse.Namespace) -> int:
         return 0
 
     elif cmd == "predict":
-        _emit_status("chaosnli.predict", model=parsed_args.model, message="Model prediction requested.")
-        return 0
+        _emit_status("chaosnli.predict", status="not_implemented", model=parsed_args.model, message="Command not yet implemented.")
+        return 2
 
     elif cmd == "calibrate":
-        _emit_status("chaosnli.calibrate", model=parsed_args.model, message="Model calibration requested.")
-        return 0
+        _emit_status("chaosnli.calibrate", status="not_implemented", model=parsed_args.model, message="Command not yet implemented.")
+        return 2
 
     elif cmd == "build-spaces":
         from shadowspace.chaosnli.distances import build_distance_matrix
@@ -285,28 +285,28 @@ def handle_chaosnli_command(parsed_args: argparse.Namespace) -> int:
         return 0
 
     elif cmd == "select-cases":
-        _emit_status("chaosnli.select-cases", message="Case selection requested.")
-        return 0
+        _emit_status("chaosnli.select-cases", status="not_implemented", message="Command not yet implemented.")
+        return 2
 
     elif cmd == "render-packets":
-        _emit_status("chaosnli.render-packets", message="Review packet rendering requested.")
-        return 0
+        _emit_status("chaosnli.render-packets", status="not_implemented", message="Command not yet implemented.")
+        return 2
 
     elif cmd == "import-codings":
-        _emit_status("chaosnli.import-codings", file=parsed_args.coding_file, message="Import codings requested.")
-        return 0
+        _emit_status("chaosnli.import-codings", status="not_implemented", file=parsed_args.coding_file, message="Command not yet implemented.")
+        return 2
 
     elif cmd == "build-bundle":
-        _emit_status("chaosnli.build-bundle", message="Bundle build requested.")
-        return 0
+        _emit_status("chaosnli.build-bundle", status="not_implemented", message="Command not yet implemented.")
+        return 2
 
     elif cmd == "report":
-        _emit_status("chaosnli.report", message="Report generation requested.")
-        return 0
+        _emit_status("chaosnli.report", status="not_implemented", message="Command not yet implemented.")
+        return 2
 
     elif cmd == "verify-release":
-        _emit_status("chaosnli.verify-release", release_dir=parsed_args.release_dir, message="Release verification requested.")
-        return 0
+        _emit_status("chaosnli.verify-release", status="not_implemented", release_dir=parsed_args.release_dir, message="Command not yet implemented.")
+        return 2
 
     print(f"Unknown chaosnli subcommand '{cmd}'", file=sys.stderr)
     return 1

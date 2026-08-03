@@ -1,0 +1,38 @@
+# Experiment E001: Posterior Edge-Support Graph
+id = "E001"
+title = "Posterior edge-support graph construction and model-human relational comparison"
+status = "pilot"
+
+dataset_release = "chaosnli-canonical-2026-08-02"
+partition = "lab_discovery_v1"
+
+unit_of_analysis = "edge"
+question = """
+How does replacing empirical fuzzy neighborhood edges with posterior edge support
+s_ij(k) = P(j in N_i(k) | human votes) alter observed model-human relational alignment
+and model ranking?
+"""
+
+estimands = [
+  "mean_jsd_bits",
+  "posterior_edge_support",
+  "weighted_fuzzy_qnx",
+  "high_support_core_overlap"
+]
+
+metrics = ["hellinger", "jensen_shannon", "total_variation"]
+k = [5, 10, 20, 50]
+seeds = [42, 1001, 1002]
+
+null_model = "stratified_item_identity_permutation"
+required_controls = [
+  "raw_logits",
+  "human_posterior_positive_control",
+  "exact_profile_preserving_permutation"
+]
+
+go_criteria = """
+Directional result consistent across SNLI and MNLI, survives at least
+three neighborhood scales (k) and two probability geometries, and exceeds
+the corresponding stratified-null interval.
+"""

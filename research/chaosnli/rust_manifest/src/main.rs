@@ -13,10 +13,18 @@ use std::time::Instant;
 
 // ─── Data structures ────────────────────────────────────────────────────────
 
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+enum SourceDataset {
+    #[serde(rename = "chaosnli_snli")]
+    ChaosnliSnli,
+    #[serde(rename = "chaosnli_mnli")]
+    ChaosnliMnli,
+}
+
 #[derive(Debug, Deserialize)]
 struct ItemRecord {
     object_id: String,
-    source_dataset: Option<String>,
+    source_dataset: Option<SourceDataset>,
     human_count_entailment: i32,
     human_count_neutral: i32,
     human_count_contradiction: i32,
@@ -24,6 +32,29 @@ struct ItemRecord {
     human_p_neutral: f64,
     human_p_contradiction: f64,
 }
+
+fn partition_item_strata(items: &[ItemRecord]) -> (Vec<usize>, Vec<usize>) {
+    (0..items.len()).partition(|&index| {
+        let item = &items[index];
+        match item.source_dataset {
+            Some(SourceDataset::ChaosnliSnli) => true,
+            Some(SourceDataset::ChaosnliMnli) => false,
+            None => {
+                if item.object_id.starts_with("chaosnli_snli_") {
+                    true
+                } else if item.object_id.starts_with("chaosnli_mnli_") {
+                    false
+                } else {
+                    panic!(
+                        "Unrecognized source dataset and object_id format for item: {:?}",
+                        item
+                    );
+                }
+            }
+        }
+    })
+}
+
 
 #[derive(Serialize)]
 struct ModelPairedResult {
@@ -167,24 +198,47 @@ fn hellinger(p: &[f64], q: &[f64]) -> f64 {
 
 /// Build full NxN Hellinger distance matrix — PARALLEL (top-level only, not inside par_iter)
 fn build_dist_matrix_par(probs: &[[f64; 3]], n: usize) -> Vec<f64> {
-    (0..n)
+    let mut dist = vec![0.0f64; n * n];
+    let rows: Vec<Vec<f64>> = (0..n)
         .into_par_iter()
-        .flat_map(|i| {
+        .map(|i| {
             let mut row = vec![0.0f64; n];
-            for j in 0..n {
-                row[j] = hellinger(&probs[i], &probs[j]);
+            let p_i = &probs[i];
+            for j in (i + 1)..n {
+                let p_j = &probs[j];
+                let d0 = p_i[0].sqrt() - p_j[0].sqrt();
+                let d1 = p_i[1].sqrt() - p_j[1].sqrt();
+                let d2 = p_i[2].sqrt() - p_j[2].sqrt();
+                row[j] = (0.5 * (d0 * d0 + d1 * d1 + d2 * d2)).sqrt();
             }
             row
         })
-        .collect()
+        .collect();
+
+    for i in 0..n {
+        for j in (i + 1)..n {
+            let d = rows[i][j];
+            dist[i * n + j] = d;
+            dist[j * n + i] = d;
+        }
+    }
+    dist
 }
 
 /// Build full NxN Hellinger distance matrix — SEQUENTIAL (safe inside par_iter)
 fn build_dist_matrix_seq(probs: &[[f64; 3]], n: usize) -> Vec<f64> {
     let mut dist = vec![0.0f64; n * n];
     for i in 0..n {
-        for j in 0..n {
-            dist[i * n + j] = hellinger(&probs[i], &probs[j]);
+        let p_i = &probs[i];
+        let i_off = i * n;
+        for j in (i + 1)..n {
+            let p_j = &probs[j];
+            let d0 = p_i[0].sqrt() - p_j[0].sqrt();
+            let d1 = p_i[1].sqrt() - p_j[1].sqrt();
+            let d2 = p_i[2].sqrt() - p_j[2].sqrt();
+            let d = (0.5 * (d0 * d0 + d1 * d1 + d2 * d2)).sqrt();
+            dist[i_off + j] = d;
+            dist[j * n + i] = d;
         }
     }
     dist
@@ -194,55 +248,57 @@ fn build_dist_matrix_seq(probs: &[[f64; 3]], n: usize) -> Vec<f64> {
 fn soft_qnx_per_item_seq(dist_a: &[f64], dist_b: &[f64], n: usize, k: usize) -> Vec<f64> {
     const ATOL: f64 = 1e-7;
     let mut result = vec![0.0f64; n];
+    let mut scratch_a = vec![0.0f64; n - 1];
+    let mut scratch_b = vec![0.0f64; n - 1];
+
     for i in 0..n {
         let row_a = &dist_a[i * n..(i + 1) * n];
         let row_b = &dist_b[i * n..(i + 1) * n];
 
-        let mut sorted_a: Vec<f64> = row_a
-            .iter()
-            .enumerate()
-            .filter(|&(j, _)| j != i)
-            .map(|(_, &d)| d)
-            .collect();
-        sorted_a.sort_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal));
-        let k_dist_a = sorted_a[k - 1];
+        let mut idx = 0;
+        for j in 0..n {
+            if j != i {
+                scratch_a[idx] = row_a[j];
+                scratch_b[idx] = row_b[j];
+                idx += 1;
+            }
+        }
 
-        let mut sorted_b: Vec<f64> = row_b
-            .iter()
-            .enumerate()
-            .filter(|&(j, _)| j != i)
-            .map(|(_, &d)| d)
-            .collect();
-        sorted_b.sort_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal));
-        let k_dist_b = sorted_b[k - 1];
+        scratch_a.select_nth_unstable_by(k - 1, |x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal));
+        let k_dist_a = scratch_a[k - 1];
 
-        // Pre-compute tie fractions for this row
-        let n_closer_a = row_a
-            .iter()
-            .enumerate()
-            .filter(|&(j, &d)| j != i && d < k_dist_a - ATOL)
-            .count();
-        let n_tied_a = row_a
-            .iter()
-            .enumerate()
-            .filter(|&(j, &d)| j != i && (d - k_dist_a).abs() <= ATOL)
-            .count();
+        scratch_b.select_nth_unstable_by(k - 1, |x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal));
+        let k_dist_b = scratch_b[k - 1];
+
+        let mut n_closer_a = 0;
+        let mut n_tied_a = 0;
+        let mut n_closer_b = 0;
+        let mut n_tied_b = 0;
+
+        for j in 0..n {
+            if j != i {
+                let d_a = row_a[j];
+                if d_a < k_dist_a - ATOL {
+                    n_closer_a += 1;
+                } else if (d_a - k_dist_a).abs() <= ATOL {
+                    n_tied_a += 1;
+                }
+
+                let d_b = row_b[j];
+                if d_b < k_dist_b - ATOL {
+                    n_closer_b += 1;
+                } else if (d_b - k_dist_b).abs() <= ATOL {
+                    n_tied_b += 1;
+                }
+            }
+        }
+
         let frac_a = if n_tied_a > 0 {
             (k as f64 - n_closer_a as f64) / n_tied_a as f64
         } else {
             0.0
         };
 
-        let n_closer_b = row_b
-            .iter()
-            .enumerate()
-            .filter(|&(j, &d)| j != i && d < k_dist_b - ATOL)
-            .count();
-        let n_tied_b = row_b
-            .iter()
-            .enumerate()
-            .filter(|&(j, &d)| j != i && (d - k_dist_b).abs() <= ATOL)
-            .count();
         let frac_b = if n_tied_b > 0 {
             (k as f64 - n_closer_b as f64) / n_tied_b as f64
         } else {
@@ -251,26 +307,25 @@ fn soft_qnx_per_item_seq(dist_a: &[f64], dist_b: &[f64], n: usize, k: usize) -> 
 
         let mut sum_min = 0.0f64;
         for j in 0..n {
-            if j == i {
-                continue;
+            if j != i {
+                let d_a = row_a[j];
+                let d_b = row_b[j];
+                let w_a = if d_a < k_dist_a - ATOL {
+                    1.0
+                } else if (d_a - k_dist_a).abs() <= ATOL {
+                    frac_a
+                } else {
+                    0.0
+                };
+                let w_b = if d_b < k_dist_b - ATOL {
+                    1.0
+                } else if (d_b - k_dist_b).abs() <= ATOL {
+                    frac_b
+                } else {
+                    0.0
+                };
+                sum_min += w_a.min(w_b);
             }
-            let d_a = row_a[j];
-            let d_b = row_b[j];
-            let w_a = if d_a < k_dist_a - ATOL {
-                1.0
-            } else if (d_a - k_dist_a).abs() <= ATOL {
-                frac_a
-            } else {
-                0.0
-            };
-            let w_b = if d_b < k_dist_b - ATOL {
-                1.0
-            } else if (d_b - k_dist_b).abs() <= ATOL {
-                frac_b
-            } else {
-                0.0
-            };
-            sum_min += w_a.min(w_b);
         }
         result[i] = sum_min / k as f64;
     }
@@ -280,119 +335,41 @@ fn soft_qnx_per_item_seq(dist_a: &[f64], dist_b: &[f64], n: usize, k: usize) -> 
 /// Compute per-item soft Q_NX overlap — PARALLEL version (top-level only)
 #[allow(dead_code)]
 fn soft_qnx_per_item(dist_a: &[f64], dist_b: &[f64], n: usize, k: usize) -> Vec<f64> {
-    const ATOL: f64 = 1e-7;
-    (0..n)
-        .into_par_iter()
-        .map(|i| {
-            // ── Weights for A[i] ──────────────────────────────────────────
-            let row_a = &dist_a[i * n..(i + 1) * n];
-            let mut sorted_a: Vec<f64> = row_a
-                .iter()
-                .enumerate()
-                .filter(|&(j, _)| j != i)
-                .map(|(_, &d)| d)
-                .collect();
-            sorted_a.sort_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal));
-            let k_dist_a = sorted_a[k - 1];
-
-            // ── Weights for B[i] ──────────────────────────────────────────
-            let row_b = &dist_b[i * n..(i + 1) * n];
-            let mut sorted_b: Vec<f64> = row_b
-                .iter()
-                .enumerate()
-                .filter(|&(j, _)| j != i)
-                .map(|(_, &d)| d)
-                .collect();
-            sorted_b.sort_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal));
-            let k_dist_b = sorted_b[k - 1];
-
-            // ── Compute min(w_a[i][j], w_b[i][j]) for each j ──────────────
-            let mut sum_min = 0.0f64;
-            for j in 0..n {
-                if j == i {
-                    continue;
-                }
-                let d_a = dist_a[i * n + j];
-                let d_b = dist_b[i * n + j];
-
-                let w_a = if d_a < k_dist_a - ATOL {
-                    1.0
-                } else if (d_a - k_dist_a).abs() <= ATOL {
-                    // Compute n_closer_a and n_tied_a
-                    let n_closer_a = row_a
-                        .iter()
-                        .enumerate()
-                        .filter(|&(jj, &d)| jj != i && d < k_dist_a - ATOL)
-                        .count();
-                    let n_tied_a = row_a
-                        .iter()
-                        .enumerate()
-                        .filter(|&(jj, &d)| jj != i && (d - k_dist_a).abs() <= ATOL)
-                        .count();
-                    let r_a = k as f64 - n_closer_a as f64;
-                    if n_tied_a > 0 {
-                        r_a / n_tied_a as f64
-                    } else {
-                        0.0
-                    }
-                } else {
-                    0.0
-                };
-
-                let w_b = if d_b < k_dist_b - ATOL {
-                    1.0
-                } else if (d_b - k_dist_b).abs() <= ATOL {
-                    let n_closer_b = row_b
-                        .iter()
-                        .enumerate()
-                        .filter(|&(jj, &d)| jj != i && d < k_dist_b - ATOL)
-                        .count();
-                    let n_tied_b = row_b
-                        .iter()
-                        .enumerate()
-                        .filter(|&(jj, &d)| jj != i && (d - k_dist_b).abs() <= ATOL)
-                        .count();
-                    let r_b = k as f64 - n_closer_b as f64;
-                    if n_tied_b > 0 {
-                        r_b / n_tied_b as f64
-                    } else {
-                        0.0
-                    }
-                } else {
-                    0.0
-                };
-
-                sum_min += w_a.min(w_b);
-            }
-            sum_min / k as f64
-        })
-        .collect()
+    soft_qnx_per_item_seq(dist_a, dist_b, n, k)
 }
 
 /// Fast variant with pre-computed A weights — SEQUENTIAL (safe inside par_iter)
 fn soft_qnx_with_wa_seq(weights_a: &[f64], dist_b: &[f64], n: usize, k: usize) -> Vec<f64> {
     const ATOL: f64 = 1e-7;
     let mut result = vec![0.0f64; n];
+    let mut scratch_b = vec![0.0f64; n - 1];
+
     for i in 0..n {
         let row_b = &dist_b[i * n..(i + 1) * n];
-        let mut sorted_b: Vec<f64> = row_b
-            .iter()
-            .enumerate()
-            .filter(|&(j, _)| j != i)
-            .map(|(_, &d)| d)
-            .collect();
-        sorted_b.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-        let k_dist_b = sorted_b[k - 1];
-        let n_closer_b = row_b
-            .iter()
-            .enumerate()
-            .filter(|&(j, &d)| j != i && d < k_dist_b - ATOL)
-            .count();
-        let n_tied_b = row_b
-            .iter()
-            .enumerate()
-            .filter(|&(j, &d)| j != i && (d - k_dist_b).abs() <= ATOL)
-            .count();
+        let mut idx = 0;
+        for j in 0..n {
+            if j != i {
+                scratch_b[idx] = row_b[j];
+                idx += 1;
+            }
+        }
+
+        scratch_b.select_nth_unstable_by(k - 1, |a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        let k_dist_b = scratch_b[k - 1];
+
+        let mut n_closer_b = 0;
+        let mut n_tied_b = 0;
+        for j in 0..n {
+            if j != i {
+                let d = row_b[j];
+                if d < k_dist_b - ATOL {
+                    n_closer_b += 1;
+                } else if (d - k_dist_b).abs() <= ATOL {
+                    n_tied_b += 1;
+                }
+            }
+        }
+
         let frac_b = if n_tied_b > 0 {
             (k as f64 - n_closer_b as f64) / n_tied_b as f64
         } else {
@@ -400,11 +377,12 @@ fn soft_qnx_with_wa_seq(weights_a: &[f64], dist_b: &[f64], n: usize, k: usize) -
         };
 
         let mut sum_min = 0.0f64;
+        let i_off = i * n;
         for j in 0..n {
             if j == i {
                 continue;
             }
-            let w_a = weights_a[i * n + j];
+            let w_a = weights_a[i_off + j];
             let d_b = row_b[j];
             let w_b = if d_b < k_dist_b - ATOL {
                 1.0
@@ -675,13 +653,7 @@ fn main() {
         .collect();
 
     // Preserve dataset strata without relying on input row order.
-    let (snli_indices, mnli_indices): (Vec<usize>, Vec<usize>) = (0..n).partition(|&index| {
-        let item = &items[index];
-        item.source_dataset
-            .as_deref()
-            .map(|source| source.contains("snli"))
-            .unwrap_or_else(|| !item.object_id.contains("mnli"))
-    });
+    let (snli_indices, mnli_indices) = partition_item_strata(&items);
 
     // ── Load model probabilities ────────────────────────────────────────────
     let mfile = File::open(&paths.models).unwrap_or_else(|error| {
@@ -1085,4 +1057,23 @@ mod tests {
 
         assert_eq!(error, "missing path after --items");
     }
+
+    #[test]
+    fn test_source_dataset_deserialization_and_partitioning() {
+        let json_data = r#"[
+            {"object_id": "chaosnli_snli_10", "source_dataset": "chaosnli_snli", "human_count_entailment": 50, "human_count_neutral": 30, "human_count_contradiction": 20, "human_p_entailment": 0.5, "human_p_neutral": 0.3, "human_p_contradiction": 0.2},
+            {"object_id": "chaosnli_mnli_20", "source_dataset": "chaosnli_mnli", "human_count_entailment": 10, "human_count_neutral": 40, "human_count_contradiction": 50, "human_p_entailment": 0.1, "human_p_neutral": 0.4, "human_p_contradiction": 0.5},
+            {"object_id": "chaosnli_snli_30", "source_dataset": null, "human_count_entailment": 10, "human_count_neutral": 40, "human_count_contradiction": 50, "human_p_entailment": 0.1, "human_p_neutral": 0.4, "human_p_contradiction": 0.5}
+        ]"#;
+
+        let items: Vec<ItemRecord> = serde_json::from_str(json_data).unwrap();
+        assert_eq!(items[0].source_dataset, Some(SourceDataset::ChaosnliSnli));
+        assert_eq!(items[1].source_dataset, Some(SourceDataset::ChaosnliMnli));
+        assert_eq!(items[2].source_dataset, None);
+
+        let (snli, mnli) = partition_item_strata(&items);
+        assert_eq!(snli, vec![0, 2]);
+        assert_eq!(mnli, vec![1]);
+    }
+
 }
