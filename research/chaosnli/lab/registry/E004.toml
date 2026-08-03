@@ -1,11 +1,11 @@
 # Experiment E004: Relational Alignment of Generative LLM Judgment Distributions
 id = "E004"
 title = "Relational Alignment of Generative LLM Judgment Distributions"
-status = "stage1a_preflight"
-analysis_status = "pending_preflight"
-methodological_audit = "pending_preflight"
-manuscript_status = "drafting"
-submission_status = "pre_submission"
+status = "stage1a_requires_rerun"
+analysis_status = "invalidated_by_prompt_mapping_bug"
+methodological_audit = "failed_requires_patch"
+manuscript_status = "not_started"
+submission_status = "not_applicable"
 
 dataset_release = "chaosnli-canonical-2026-08-02"
 partition = "5fold_stratified_crossfit"
@@ -34,6 +34,9 @@ practical_margins = { nll = 0.02, jsd = 0.01, normalized_recovery_r = 0.05, gap_
 model_digest = "f4031aab637d1ffae40e28e08d6d678ad94dbe15951d2ea1ebc441c9df48ed92"
 model_sha256 = "2274d7d84a797265a6f2ea309bc0c50ebdc2a7a40b991ee7e28b12f628042fa9"
 
+# Stage 1A Preflight Rerun Required
+preflight_status = "prompt_mapping_patched_rerunning"
+
 estimands = [
   "pointwise_nll",
   "pointwise_jsd",
@@ -56,5 +59,6 @@ required_safeguards = [
   "recompute_null_at_every_level",
   "training_only_human_support_target",
   "held_out_focal_row_scoring",
-  "literal_30strata_item_level_paired_bootstrap"
+  "literal_30strata_item_level_paired_bootstrap",
+  "manifest_object_id_strict_alignment_assertion"
 ]

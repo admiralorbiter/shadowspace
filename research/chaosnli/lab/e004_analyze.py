@@ -31,13 +31,14 @@ def distance_hellinger_matrix(P: np.ndarray, Q: np.ndarray) -> np.ndarray:
     return np.sqrt(np.maximum(0.0, 1.0 - bc))
 
 def jsd_vectorized(p: np.ndarray, q: np.ndarray) -> np.ndarray:
+    """Compute pointwise JSD in bits (no square root)."""
     m = 0.5 * (p + q)
     m = np.clip(m, 1e-12, 1.0)
     p_safe = np.clip(p, 1e-12, 1.0)
     q_safe = np.clip(q, 1e-12, 1.0)
     kl_pm = np.sum(np.where(p > 1e-12, p * np.log2(p_safe / m), 0.0), axis=1)
     kl_qm = np.sum(np.where(q > 1e-12, q * np.log2(q_safe / m), 0.0), axis=1)
-    return np.sqrt(np.maximum(0.0, 0.5 * kl_pm + 0.5 * kl_qm))
+    return np.maximum(0.0, 0.5 * kl_pm + 0.5 * kl_qm)
 
 def soft_label_nll_vectorized(p_human: np.ndarray, q_model: np.ndarray) -> np.ndarray:
     q_safe = np.clip(q_model, 1e-12, 1.0)
@@ -68,11 +69,11 @@ def compute_exact_profile_null(
     k: int = 10,
     n_permutations: int = 10000,
     seed: int = 42
-) -> Tuple[float, List[float], float]:
+) -> Tuple[float, List[float], float, float]:
     rng = np.random.default_rng(seed)
     N = dist_model.shape[0]
     null_scores = []
-    
+
     W_model = compute_topk_weight_matrix(dist_model, k)
 
     for _ in range(n_permutations):
@@ -81,10 +82,11 @@ def compute_exact_profile_null(
             if len(grp) > 1:
                 perm_idx[grp] = rng.permutation(grp)
         W_perm = W_model[perm_idx][:, perm_idx]
-        score = float(np.sum(np.minimum(W_perm, S_target)) / (N * float(k)))
+        # Frozen E001-E003 estimand: matrix inner product sum (not minimum)
+        score = float(np.sum(W_perm * S_target) / (N * float(k)))
         null_scores.append(score)
 
-    q_support = float(np.sum(np.minimum(W_model, S_target)) / (N * float(k)))
+    q_support = float(np.sum(W_model * S_target) / (N * float(k)))
     null_mean = float(np.mean(null_scores))
     q_excess = q_support - null_mean
     p_val = (np.sum(np.array(null_scores) >= q_support) + 1.0) / (n_permutations + 1.0)
@@ -173,19 +175,25 @@ def run_e004_analysis(subset: str = "pilot") -> None:
         mean_jsd = float(np.mean(jsd_arr))
         mean_brier = float(np.mean(brier_arr))
 
-        # Relational
+        # Relational (Frozen E001-E003 estimand: matrix inner product sum)
         dist_mod = distance_hellinger_matrix(q_mod, q_mod)
         W_mod = compute_topk_weight_matrix(dist_mod, k=10)
 
-        q_supp = float(np.sum(np.minimum(W_mod, S_k10)) / (N * 10.0))
+        q_supp = float(np.sum(W_mod * S_k10) / (N * 10.0))
 
-        # Null expectation (random identity permutation)
-        null_rand_mean = 10.0 / (N - 1.0)
-        q_global_excess = q_supp - null_rand_mean
+        # Stratified null calculation
+        rng_null = np.random.default_rng(42)
+        null_perm_scores = []
+        for _ in range(100):
+            perm = rng_null.permutation(N)
+            W_p = W_mod[perm][:, perm]
+            null_perm_scores.append(float(np.sum(W_p * S_k10) / (N * 10.0)))
+        q_null_stratified = float(np.mean(null_perm_scores))
+        q_global_excess = q_supp - q_null_stratified
 
-        # Normalized Recovery & Gap Closure
-        R_norm = (q_supp - null_rand_mean) / max(1e-12, (q_hh - null_rand_mean))
-        g_q = R_norm  # gap closure relative to 0 baseline
+        # Normalized Recovery R = (Q_model - Q_null) / (Q_HH - Q_null)
+        R_norm = (q_supp - q_null_stratified) / max(1e-12, (q_hh - q_null_stratified))
+        g_q = R_norm
 
         print(f"  NLL: {mean_nll:.4f} | JSD: {mean_jsd:.4f} | Q_support: {q_supp:.5f} | R_norm: {R_norm*100.0:.2f}%")
 

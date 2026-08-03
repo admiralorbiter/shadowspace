@@ -115,14 +115,20 @@ def process_single_lpe_task(task_args: Tuple) -> Optional[dict]:
 
     sym_e, sym_n, sym_c = symbols[perm[0]], symbols[perm[1]], symbols[perm[2]]
 
+    # Fix: symbol_1, symbol_2, symbol_3 must match the permuted symbols sym_e, sym_n, sym_c
     prompt = PROMPT_TEMPLATE.format(
         premise=premise,
         hypothesis=hypothesis,
-        symbol_1=symbols[0],
-        symbol_2=symbols[1],
-        symbol_3=symbols[2],
+        symbol_1=sym_e,
+        symbol_2=sym_n,
+        symbol_3=sym_c,
     )
 
+    # Automated prompt-consistency verification
+    assert f"{sym_e} = Entailment" in prompt, f"Prompt mapping error for Entailment: {sym_e}"
+    assert f"{sym_n} = Neutral" in prompt, f"Prompt mapping error for Neutral: {sym_n}"
+    assert f"{sym_c} = Contradiction" in prompt, f"Prompt mapping error for Contradiction: {sym_c}"
+    
     req_id = make_request_id(model_tag, object_id, "v1", perm_idx, "lpe", 1.0, 42, 0, symbol_set_name)
     if req_id in existing_ids:
         return None
@@ -193,10 +199,97 @@ def run_lpe(manifest_path: Path, output_path: Path, max_workers: int = 4, model_
                         rate = completed / max(0.1, elapsed)
                         print(f"  Completed {completed}/{total_tasks} LPE requests ({rate:.2f} req/sec | Elapsed: {elapsed:.1f}s)", flush=True)
 
+def process_single_mce_task(task_args: Tuple) -> Optional[dict]:
+    model_tag, item, perm_idx, perm, rep, temperature, symbols, symbol_set_name, existing_ids = task_args
+    object_id = item["object_id"]
+    premise = item["premise"]
+    hypothesis = item["hypothesis"]
+
+    sym_e, sym_n, sym_c = symbols[perm[0]], symbols[perm[1]], symbols[perm[2]]
+
+    prompt = PROMPT_TEMPLATE.format(
+        premise=premise,
+        hypothesis=hypothesis,
+        symbol_1=sym_e,
+        symbol_2=sym_n,
+        symbol_3=sym_c,
+    )
+
+    seed = 1000 + perm_idx * 100 + rep
+    req_id = make_request_id(model_tag, object_id, "v1", perm_idx, f"mce_t{temperature:.1f}", temperature, seed, rep, symbol_set_name)
+    if req_id in existing_ids:
+        return None
+
+    payload = {
+        "model": model_tag,
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": 1,
+        "temperature": temperature,
+        "top_p": 1.0,
+        "seed": seed,
+        "logprobs": False,
+    }
+
+    try:
+        resp_json = send_chat_completion(payload)
+        return {
+            "request_id": req_id,
+            "object_id": object_id,
+            "permutation_index": perm_idx,
+            "symbol_mapping": {"entailment": sym_e, "neutral": sym_n, "contradiction": sym_c},
+            "mode": "mce",
+            "temperature": temperature,
+            "seed": seed,
+            "replicate": rep,
+            "response": resp_json,
+            "timestamp_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        }
+    except Exception as e:
+        print(f"  Error on item {object_id} perm {perm_idx} rep {rep}: {e}", flush=True)
+        return None
+
+def run_mce(manifest_path: Path, output_path: Path, max_workers: int = 4, replicates_per_perm: int = 5, temperature: float = 1.0, model_tag: str = "gemma3:12b", symbol_set_name: str = "ABC") -> None:
+    existing_ids = get_existing_request_ids(output_path)
+    symbols = LABEL_SETS[symbol_set_name]
+
+    items = []
+    with open(manifest_path, "r", encoding="utf-8") as f:
+        for line in f:
+            items.append(json.loads(line))
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    task_list = []
+    for item in items:
+        for perm_idx, perm in enumerate(S3_PERMUTATIONS):
+            for rep in range(replicates_per_perm):
+                task_list.append((model_tag, item, perm_idx, perm, rep, temperature, symbols, symbol_set_name, existing_ids))
+
+    total_tasks = len(task_list)
+    print(f"Starting Multi-Worker MCE run (workers={max_workers}, T={temperature}) over {len(items)} items x 6 perms x {replicates_per_perm} reps ({total_tasks} tasks)...", flush=True)
+    print(f"  Existing completed requests: {len(existing_ids)}", flush=True)
+
+    completed = 0
+    t0 = time.time()
+
+    with open(output_path, "a", encoding="utf-8") as out_f:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_task = {executor.submit(process_single_mce_task, task): task for task in task_list}
+            for future in concurrent.futures.as_completed(future_to_task):
+                res = future.result()
+                if res is not None:
+                    out_f.write(json.dumps(res) + "\n")
+                    out_f.flush()
+                    completed += 1
+                    if completed % 50 == 0 or completed == total_tasks:
+                        elapsed = time.time() - t0
+                        rate = completed / max(0.1, elapsed)
+                        print(f"  Completed {completed}/{total_tasks} MCE requests ({rate:.2f} req/sec | Elapsed: {elapsed:.1f}s)", flush=True)
+
 def main():
     parser = argparse.ArgumentParser(description="E004 Optimized Multi-Worker Ollama Runner")
-    parser.add_argument("--mode", choices=["preflight", "lpe", "mce"], required=True)
-    parser.add_argument("--subset", choices=["preflight", "pilot"], default="preflight")
+    parser.add_argument("--mode", choices=["preflight", "lpe", "mce", "mce_convergence", "mce_temp"], required=True)
+    parser.add_argument("--subset", choices=["preflight", "pilot", "convergence", "temp_sensitivity"], default="preflight")
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--model", default="gemma3:12b")
     parser.add_argument("--symbol-set", choices=["ABC", "123", "XYZ"], default="ABC")
@@ -205,9 +298,14 @@ def main():
     prewarm_model(args.model)
 
     if args.mode in ["preflight", "lpe"]:
-        manifest = MANIFEST_DIR / f"{args.subset}_60.jsonl" if args.subset == "preflight" else MANIFEST_DIR / f"{args.subset}_600.jsonl"
+        manifest = MANIFEST_DIR / f"{args.subset}_60.jsonl" if args.subset in ["preflight", "convergence"] else MANIFEST_DIR / f"{args.subset}_600.jsonl"
         out_lpe = RAW_RESPONSES_DIR / f"{args.subset}_lpe_responses.jsonl"
         run_lpe(manifest, out_lpe, max_workers=args.workers, model_tag=args.model, symbol_set_name=args.symbol_set)
+
+    elif args.mode == "mce":
+        manifest = MANIFEST_DIR / f"{args.subset}_60.jsonl" if args.subset == "preflight" else MANIFEST_DIR / f"{args.subset}_600.jsonl"
+        out_mce = RAW_RESPONSES_DIR / f"{args.subset}_mce_responses.jsonl"
+        run_mce(manifest, out_mce, max_workers=args.workers, replicates_per_perm=5, temperature=1.0, model_tag=args.model, symbol_set_name=args.symbol_set)
 
 if __name__ == "__main__":
     main()

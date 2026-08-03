@@ -55,13 +55,20 @@ def extract_candidate_logprobs_from_response(resp: dict, sym_map: dict) -> Tuple
     all_found = (len(logprobs_found) == 3)
     return logprobs_found, all_found
 
-def process_lpe_responses(input_path: Path, output_prefix: str) -> None:
-    if not input_path.exists():
-        raise FileNotFoundError(f"Missing LPE response file: {input_path}")
+def process_lpe_responses(input_path: Path, manifest_path: Path, output_prefix: str) -> None:
+    if not input_path.exists() or not manifest_path.exists():
+        raise FileNotFoundError(f"Missing input files: {input_path} or {manifest_path}")
 
-    # Group responses by object_id and permutation_index
+    # Load frozen manifest order
+    manifest_items = []
+    with open(manifest_path, "r", encoding="utf-8") as f:
+        for line in f:
+            manifest_items.append(json.loads(line))
+
+    manifest_obj_ids = [it["object_id"] for it in manifest_items]
+    manifest_sha256 = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+
     items_raw: Dict[str, Dict[int, Tuple[dict, dict]]] = {}
-
     total_records = 0
     with open(input_path, "r", encoding="utf-8") as f:
         for line in f:
@@ -78,20 +85,18 @@ def process_lpe_responses(input_path: Path, output_prefix: str) -> None:
     print(f"Loaded {total_records} raw LPE responses across {len(items_raw)} items.")
 
     NORM_PROBS_DIR.mkdir(parents=True, exist_ok=True)
-
-    sorted_obj_ids = sorted(items_raw.keys())
-    N = len(sorted_obj_ids)
+    N = len(manifest_obj_ids)
 
     q_lpe = np.zeros((N, 3), dtype=np.float64)
-    s_order = np.zeros(N, dtype=np.float64)
+    s_mapping = np.zeros(N, dtype=np.float64)
     mean_logits = np.zeros((N, 3), dtype=np.float64)
     probs_per_perm = np.zeros((N, 6, 3), dtype=np.float64)
 
     failed_items = []
     missing_tokens_count = 0
 
-    for i, obj_id in enumerate(sorted_obj_ids):
-        perm_map = items_raw[obj_id]
+    for i, obj_id in enumerate(manifest_obj_ids):
+        perm_map = items_raw.get(obj_id, {})
         if len(perm_map) < 6:
             failed_items.append(obj_id)
             print(f"  Warning: Item {obj_id} has only {len(perm_map)}/6 permutations logged.")
@@ -119,7 +124,6 @@ def process_lpe_responses(input_path: Path, output_prefix: str) -> None:
 
             item_logits[perm_idx] = [log_e, log_n, log_c]
 
-            # Softmax over candidate symbols for this permutation
             max_lp = max(log_e, log_n, log_c)
             exp_e = np.exp(log_e - max_lp)
             exp_n = np.exp(log_n - max_lp)
@@ -132,7 +136,6 @@ def process_lpe_responses(input_path: Path, output_prefix: str) -> None:
             failed_items.append(obj_id)
             continue
 
-        # 6-permutation average
         mean_lps = np.mean(item_logits, axis=0)
         mean_logits[i] = mean_lps
 
@@ -140,35 +143,40 @@ def process_lpe_responses(input_path: Path, output_prefix: str) -> None:
         q_lpe[i] = mean_p
         probs_per_perm[i] = item_probs
 
-        # Order sensitivity: average JSD between per-permutation prob and mean prob
         jsd_sum = sum(jsd_single(item_probs[k], mean_p) for k in range(6))
-        s_order[i] = jsd_sum / 6.0
+        s_mapping[i] = jsd_sum / 6.0
 
     print("=========================================================================")
     print(f"   LPE EXTRACTION SUMMARY ({output_prefix})")
     print("=========================================================================")
-    print(f"  Processed Items:               {N}")
+    print(f"  Manifest Item Alignment:       STRICT MATCH ({N} items)")
     print(f"  Extraction Success Rate:       {(N - len(failed_items)) / max(1, N) * 100.0:.2f}%")
     print(f"  Missing Token Events:          {missing_tokens_count}")
-    print(f"  Mean Label Order Sensitivity:  {np.mean(s_order):.6f} bits")
+    print(f"  Mean Label Mapping Sensitivity: {np.mean(s_mapping):.6f} bits")
     print("=========================================================================")
 
-    # Persist arrays
     np.save(NORM_PROBS_DIR / f"{output_prefix}_lpe_probs.npy", q_lpe)
     np.save(NORM_PROBS_DIR / f"{output_prefix}_lpe_mean_logits.npy", mean_logits)
-    np.save(NORM_PROBS_DIR / f"{output_prefix}_lpe_order_sensitivity.npy", s_order)
+    np.save(NORM_PROBS_DIR / f"{output_prefix}_lpe_order_sensitivity.npy", s_mapping)
     np.save(NORM_PROBS_DIR / f"{output_prefix}_lpe_probs_per_perm.npy", probs_per_perm)
-    
+
+    meta_info = {
+        "object_ids": manifest_obj_ids,
+        "object_ids_sha256": hashlib.sha256(json.dumps(manifest_obj_ids).encode("utf-8")).hexdigest(),
+        "manifest_sha256": manifest_sha256,
+        "object_count": N
+    }
     with open(NORM_PROBS_DIR / f"{output_prefix}_object_ids.json", "w", encoding="utf-8") as f:
-        json.dump(sorted_obj_ids, f, indent=2)
+        json.dump(meta_info, f, indent=2)
 
 def main():
     parser = argparse.ArgumentParser(description="E004 LPE Extraction")
     parser.add_argument("--subset", choices=["preflight", "pilot"], default="preflight")
     args = parser.parse_args()
 
+    manifest = Path("research/chaosnli/artifacts/E004/manifests") / f"{args.subset}_60.jsonl" if args.subset == "preflight" else Path("research/chaosnli/artifacts/E004/manifests") / f"{args.subset}_600.jsonl"
     input_file = RAW_RESPONSES_DIR / f"{args.subset}_lpe_responses.jsonl"
-    process_lpe_responses(input_file, args.subset)
+    process_lpe_responses(input_file, manifest, args.subset)
 
 if __name__ == "__main__":
     main()

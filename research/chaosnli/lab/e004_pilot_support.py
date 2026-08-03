@@ -98,12 +98,12 @@ def build_pilot_support_matrices(subset: str = "pilot") -> None:
     print("  Computing S_hellinger_k050_pilot...")
     S_k50 = compute_posterior_support_matrix(draws, k=50)
 
-    # Split-half human-human reference Q_HH on pilot
+    # Split-half human-human reference Q_HH on pilot (using matrix product)
     draws_a = draws[:, :250, :]
     draws_b = draws[:, 250:, :]
     S_a = compute_posterior_support_matrix(draws_a, k=10)
     S_b = compute_posterior_support_matrix(draws_b, k=10)
-    q_hh = float(np.sum(np.minimum(S_a, S_b)) / (N * 10.0))
+    q_hh = float(np.sum(S_a * S_b) / (N * 10.0))
     print(f"  Pilot Human-Human Relational Reference Q_HH (k=10) = {q_hh:.5f}")
 
     PILOT_SUPPORT_DIR.mkdir(parents=True, exist_ok=True)
