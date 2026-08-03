@@ -374,7 +374,7 @@ footer a:hover{text-decoration:underline}
   <div class="nav-brand">
     <span class="dot"></span>
     <span class="g-only">ChaosNLI Research</span>
-    <span class="r-only">$Q_{NX}^{\text{soft}}$ — ChaosNLI Study</span>
+    <span class="r-only">Q<sub>NX</sub><sup>soft</sup> — ChaosNLI Study</span>
   </div>
   <div class="nav-links">
     <a href="#gap">The Gap</a>
@@ -407,26 +407,26 @@ footer a:hover{text-decoration:underline}
     <h1 class="g-only">When AI Tries to Read<br/>Human Disagreement</h1>
     <h1 class="r-only">Collective Opinion as<br/>a Relational Space</h1>
     <p class="hero-sub g-only">
-      When 100 people label the same sentence, their disagreements aren't random—they have structure. This is what happens when we ask AI models to reproduce that structure.
+      Language is full of ambiguity. When 100 people read the same sentence pair and vote on how they relate, their disagreements tell a story — one that's surprisingly consistent across different groups of readers. The patterns aren't random noise; they reflect structure in the language itself. This visualization explores what happens when we ask AI models to capture that same structure.
     </p>
     <p class="hero-sub r-only">
-      Tie-aware neighborhood analysis of human and model NLI distributions using fractional soft-overlap $Q_{NX}^{\text{soft}}(k)$ under a fully paired posterior-predictive estimand.
+      Tie-aware neighborhood analysis of human and model NLI distributions using fractional soft-overlap Q<sub>NX</sub><sup>soft</sup>(k) under a fully paired posterior-predictive estimand across 500 simulated cohort pairs.
     </p>
     <div class="stat-grid">
       <div class="stat-card">
         <div class="stat-val gold" id="heroHbar">0.0755</div>
         <div class="stat-label g-only">Human Coherence Score</div>
-        <div class="stat-label r-only">$\bar{H}$ (HH100)</div>
+        <div class="stat-label r-only">H̄ (HH100 focal-bootstrap mean)</div>
       </div>
       <div class="stat-card">
         <div class="stat-val blue">~0.012</div>
         <div class="stat-label g-only">Best AI Model Score</div>
-        <div class="stat-label r-only">Max $\hat{M}_m$ (BART-L)</div>
+        <div class="stat-label r-only">Max M̂<sub>m</sub> (BART-Large)</div>
       </div>
       <div class="stat-card">
         <div class="stat-val violet">49.1%</div>
         <div class="stat-label g-only">Items With Ambiguous Neighbors</div>
-        <div class="stat-label r-only">Boundary-Tie Affected at k=10</div>
+        <div class="stat-label r-only">Boundary-tie affected at k=10</div>
       </div>
     </div>
     <div class="scroll-hint">
@@ -440,17 +440,19 @@ footer a:hover{text-decoration:underline}
 <section id="gap">
   <div class="section-label">Panel 01 · Model Recovery</div>
   <h2 class="g-only">AI Models Score 4–10× Lower Than Humans</h2>
-  <h2 class="r-only">Focal-Bootstrap Paired Estimand: $\hat{M}_m$ vs. $\bar{H}$</h2>
+  <h2 class="r-only">Focal-Bootstrap Paired Estimand: M̂<sub>m</sub> vs. H̄</h2>
   <p class="section-desc g-only">
-    We asked 9 state-of-the-art AI models to reproduce the structure of human disagreements on 3,113 NLI items. Every model scored far below the human replicate baseline—and the gap held across all 1,000 random checks we ran.
+    This task is called Natural Language Inference (NLI). Given a premise — say, <em style="color:var(--text);font-style:italic">"A woman is running"</em> — and a hypothesis — <em style="color:var(--text);font-style:italic">"Someone is exercising"</em> — annotators vote on whether the hypothesis is entailed, neutral, or contradicted.
+    <br/><br/>
+    For ambiguous sentences, votes split in consistent ways: two independent groups of 100 annotators tend to disagree in similar patterns. Our score measures that consistency. Human groups score around 0.075. We tested 9 AI models. The best scored 0.016 — less than a quarter of human level, and the gap held without exception across 1,000 different random checks.
   </p>
   <p class="section-desc r-only">
-    Under the fully paired estimand $\hat{M}_m = \frac{1}{1000}\sum_b M_{m,b}$, where both human and model scores are evaluated against identical posterior-predictive cohorts $(G_{H1}^{(s)}, G_{H2}^{(s)})$. Bootstrap intervals shown at 95%.
+    Fully paired estimand: M̂<sub>m</sub> = (1/1000)·Σ<sub>b</sub> M<sub>m,b</sub>, where both H<sub>b</sub> and M<sub>m,b</sub> are evaluated against identical posterior-predictive cohorts (G<sub>H1</sub><sup>(s)</sup>, G<sub>H2</sub><sup>(s)</sup>). Point estimates are focal-bootstrap means; 95% bootstrap intervals shown for Δ<sub>m</sub>.
   </p>
   <div class="legend-row">
-    <div class="legend-item"><div class="legend-swatch" style="background:var(--gold)"></div><span class="g-only">Human reference (H̄ = 0.0755)</span><span class="r-only">$\bar{H}$ = 0.07549</span></div>
-    <div class="legend-item"><div class="legend-swatch" style="background:var(--red);opacity:.7" ></div><span class="g-only">Random chance floor</span><span class="r-only">Empirical null (0.00354)</span></div>
-    <div class="legend-item r-only"><div class="legend-swatch" style="background:rgba(255,255,255,0.3)"></div><span>95% bootstrap interval</span></div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--gold)"></div><span class="g-only">Human reference (H̄ = 0.0755)</span><span class="r-only">H̄ = 0.07549 (HH100 bootstrap mean)</span></div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--red);opacity:.7"></div><span class="g-only">Random chance floor (score = 0.004)</span><span class="r-only">Empirical stratified null (0.00354)</span></div>
+    <div class="legend-item r-only"><div class="legend-swatch" style="background:rgba(255,255,255,0.3)"></div><span>95% bootstrap interval on Δ<sub>m</sub></span></div>
   </div>
   <div class="glass chart-wrap gap-chart-wrap fade-in">
     <div id="tooltip-gap" class="tooltip"></div>
@@ -464,23 +466,25 @@ footer a:hover{text-decoration:underline}
   <h2 class="g-only">49% of Items Have Ambiguous Neighbors</h2>
   <h2 class="r-only">Storage-Index Boundary Tie Instability</h2>
   <p class="section-desc g-only">
-    Standard AI methods silently choose which "neighbors" an item has when there are tied distances—and that choice changes if you reorder your dataset. Our fractional method is immune: its score is always exactly 1.000, regardless of data ordering.
+    To measure how similar two groups' opinions are, we find the "nearest neighbors" of each item — the other sentence pairs that are most similar in how people disagreed about them. Think of it as asking: which sentences in the dataset are closest relatives of this one, based on how voters reacted?
+    <br/><br/>
+    The problem: when multiple items are exactly the same distance away, you have a tie. Standard tools silently pick whichever tied item appears first in the data file. Reorder the file, and a different item wins — your analysis changes without warning. We found that <strong style="color:var(--red)">49% of items</strong> in this dataset hit this issue. Our fix assigns each tied item an equal fractional share of credit, making the score always identical regardless of how the data is ordered.
   </p>
   <p class="section-desc r-only">
-    When multiple candidates share the exact $k$-th boundary distance, index-resolved methods produce unstable graphs ($\bar{Q}_{\text{hard}} = 0.955 \pm 0.0015$ at $k=10$). The fractional soft statistic $Q_{NX}^{\text{soft}}$ is provably invariant: $Q_{\text{soft}} = 1.000 \pm 0.000$.
+    When multiple candidates share the exact k-th boundary distance, index-resolved methods select by storage order, producing unstable neighborhood graphs. Q̄<sub>hard</sub> = 0.955 ± 0.0015 at k=10 under random row permutation. The fractional soft statistic Q<sub>NX</sub><sup>soft</sup> is provably invariant to any permutation: Q<sub>soft</sub> = 1.000 ± 0.000.
   </p>
   <div class="tie-grid">
     <div class="glass chart-wrap fade-in">
       <div style="font-size:13px;font-weight:600;margin-bottom:16px">
-        <span class="g-only">Instability by neighborhood size</span>
-        <span class="r-only">$\bar{Q}_{\text{overlap}}$ by $k$</span>
+        <span class="g-only">Overlap stability at different neighborhood sizes</span>
+        <span class="r-only">Q̄<sub>overlap</sub> by k (index-resolved vs. fractional)</span>
       </div>
       <div id="tooltip-tie" class="tooltip"></div>
       <svg id="chart-ties" class="chart-svg" viewBox="0 0 360 260" preserveAspectRatio="xMidYMid meet"></svg>
     </div>
     <div class="glass chart-wrap tie-demo fade-in">
-      <div class="tie-demo-title g-only">Interactive demo: what happens when data order changes?</div>
-      <div class="tie-demo-title r-only">Storage-index tie-breaking demo</div>
+      <div class="tie-demo-title g-only">Try it: click "Reindex" to see how data order changes the result</div>
+      <div class="tie-demo-title r-only">Storage-index tie-breaking demo (k=5, 7 tied candidates)</div>
       <svg id="demo-ties" viewBox="0 0 320 120" style="width:100%"></svg>
       <div class="demo-stat">
         Selected neighbor: <span id="demo-selected" class="hi">Candidate 62</span>
@@ -491,8 +495,8 @@ footer a:hover{text-decoration:underline}
         <button class="btn btn-ghost" id="demoReset">Reset</button>
       </div>
       <div style="margin-top:12px;font-size:12px;color:var(--text3)">
-        <span class="g-only">Fractional method: always <span style="color:var(--green);font-weight:700">1.000</span> — unaffected by reordering</span>
-        <span class="r-only">$Q_{\text{soft}} = 1.000$ under any permutation</span>
+        <span class="g-only">Fractional method: always <span style="color:var(--green);font-weight:700">1.000</span> — completely unaffected by row order</span>
+        <span class="r-only">Q<sub>soft</sub> = 1.000 under any permutation of the data</span>
       </div>
     </div>
   </div>
@@ -502,12 +506,14 @@ footer a:hover{text-decoration:underline}
 <section id="surface">
   <div class="section-label">Panel 03 · Reference Surface</div>
   <h2 class="g-only">More Annotators = Better Structure — But Slowly</h2>
-  <h2 class="r-only">$R_{\text{reference}}(n,k) = Q(G_n^{\text{rep}}, G_{100}^{\text{obs}})$ — 50-Seed Plug-In Surface</h2>
+  <h2 class="r-only">R<sub>ref</sub>(n,k) = Q(G<sub>n</sub><sup>rep</sup>, G<sub>100</sub><sup>obs</sup>) — 50-Seed Plug-In Surface</h2>
   <p class="section-desc g-only">
-    How much does adding more human annotators improve the ability to recover opinion structure? We simulated the answer across 40 combinations of annotator count and neighborhood scale. Every column is monotonically increasing—confirmed across 50 independent simulation runs.
+    Here's a practical question: how many annotators do you actually need? With just 3 votes per item, you get a rough sketch of opinion structure. With 100 votes, a much richer picture — but even then, how close are you to the real thing?
+    <br/><br/>
+    We simulated this at 8 different annotator counts (3 to 100) and 5 different neighborhood scales (how broadly you define "similar"). Each cell in the grid shows how similar a simulated partial sample is to the full 100-annotator ground truth. Brighter yellow = more similar. Darker purple = less similar. Every column strictly increases as you add more annotators — a result confirmed across <strong style="color:var(--green)">50 independent simulation runs</strong>.
   </p>
   <p class="section-desc r-only">
-    Plug-in empirical reference similarity where $G_n^{\text{rep}}$ is drawn from $\mathbf{y}_i \sim \text{Multinomial}(n, \hat{p}_i)$. Monotonicity confirmed for both column means and 95% CI lower bounds across all 50 seeds and all $k \in \{5,10,20,50,100\}$.
+    Plug-in empirical reference similarity using G<sub>n</sub><sup>rep</sup> drawn from y<sub>i</sub> ~ Multinomial(n, p̂<sub>i</sub>) with observed label proportions p̂<sub>i</sub> (not Dirichlet posterior draws). Strict monotonicity confirmed for column means and 95% CI lower bounds across all 50 seeds and all k ∈ {5, 10, 20, 50, 100}.
   </p>
   <div class="surface-controls">
     <button class="btn btn-primary" id="playBtn">▶ Animate</button>
@@ -525,22 +531,24 @@ footer a:hover{text-decoration:underline}
 <section id="phase">
   <div class="section-label">Panel 04 · Phase Analysis</div>
   <h2 class="g-only">ChaosNLI Has a Specific Disagreement Fingerprint</h2>
-  <h2 class="r-only">Dirichlet Concentration Phase Diagram ($C=3$, Boundary Tie Rate)</h2>
+  <h2 class="r-only">Dirichlet Concentration Phase Diagram (C=3, Boundary Tie Rate)</h2>
   <p class="section-desc g-only">
-    We modeled disagreement patterns across many simulated conditions to find where ChaosNLI sits. At 49.1% of items having ambiguous neighbors, the data falls between two theoretical regimes — not a perfect match for either, but precisely placed.
+    Where does ChaosNLI's disagreement pattern sit in the broader space of possible datasets? To answer this, we used a mathematical model called a Dirichlet distribution — essentially a "disagreement engine" that can simulate everything from near-perfect consensus (everyone votes the same) to pure random noise (every label equally likely).
+    <br/><br/>
+    The concentration parameter α controls how much opinions cluster. Low α (top rows) = very concentrated opinions, high tie rates. High α (bottom rows) = spread-out opinions, fewer ties. Each cell shows the tie rate at a given annotation depth. The real ChaosNLI data (49.1% boundary ties at n=100 votes) lands between two regimes — precisely located, but consistent with a range of underlying processes.
   </p>
   <p class="section-desc r-only">
-    Boundary tie percentage $\mathbb{P}[\text{tie at boundary}]$ across Dirichlet concentration $\alpha$ and annotation depth $n$ for $C=3$ labels. Empirical ChaosNLI rate (49.1% at $n=100$) lies between $\alpha=0.1$ (80.2%) and $\alpha=0.5$ (35.7%) — compatible with both, uniquely identified by neither.
+    P[tie at boundary] across Dirichlet concentration α and annotation depth n for C=3 labels, estimated via Monte Carlo simulation. Empirical ChaosNLI rate (49.1% at n=100) lies between α=0.1 (80.2%) and α=0.5 (35.7%) — compatible with both, uniquely identified by neither. The diagram is descriptive, not a parameter identification.
   </p>
   <div class="glass chart-wrap fade-in">
     <div id="tooltip-phase" class="tooltip"></div>
     <svg id="chart-phase" class="chart-svg" viewBox="0 0 800 280" preserveAspectRatio="xMidYMid meet"></svg>
   </div>
   <p class="phase-note g-only">
-    ★ Pulsing circle marks the empirical ChaosNLI result (49.1%). The data sits between the α=0.1 concentrated regime (top row) and the α=0.5 Jeffreys-prior regime (middle row).
+    ★ The pulsing circle marks where the real ChaosNLI dataset lands (49.1% ties). It falls between the highly concentrated α=0.1 row (80% ties) and the moderate α=0.5 row (36% ties). This tells us the data has structured disagreement — not random noise, not pure consensus.
   </p>
   <p class="phase-note r-only">
-    ★ Empirical marker at $(n=100, \alpha \in (0.1, 0.5))$. Phase diagram is descriptive, not a parameter identification — a single boundary-tie summary statistic is insufficient to uniquely identify $\alpha$.
+    ★ Empirical marker at (n=100, α ∈ (0.1, 0.5)). Boundary-tie rate alone is insufficient to uniquely identify α — the diagram places the data within a regime, not at a point estimate.
   </p>
 </section>
 
@@ -550,13 +558,17 @@ footer a:hover{text-decoration:underline}
   <h2 class="g-only">The Finding Holds Across Every Distance Measure</h2>
   <h2 class="r-only">Fixed-Reference Geometry Sensitivity: 5 Distance Metrics</h2>
   <p class="section-desc g-only">
-    We tried 5 different mathematical ways to measure "how similar" two opinion distributions are. In every case, the same models rank near the top, and all models score far below the human baseline. The finding is not a quirk of our measurement choice.
+    A fair skeptic might ask: did we pick a measurement method that happens to make AI models look bad? We tested 5 completely different mathematical definitions of "similarity" between opinion distributions, ranging from classical statistics to information theory to methods designed specifically for percentage-based data:
+    <br/><br/>
+    <strong>Hellinger</strong> (main measure) · <strong>Jensen-Shannon</strong> (information theory) · <strong>Total Variation</strong> (maximum label difference) · <strong>Euclidean</strong> (straight-line distance) · <strong>Aitchison</strong> (compositional data geometry)
+    <br/><br/>
+    Each model's scores across these 5 methods is shown as a line. If the lines stay roughly parallel, it means the ranking is stable regardless of measurement choice — and they do.
   </p>
   <p class="section-desc r-only">
-    $Q(G_m, G_{100}^{\text{obs}})$ under Hellinger, Jensen-Shannon divergence, total variation, Euclidean, and Aitchison distance. Ordinal ranking of the 9 models is preserved across all 5 metrics; absolute values differ slightly.
+    Fixed-reference Q(G<sub>m</sub>, G<sub>100</sub><sup>obs</sup>) under Hellinger, Jensen-Shannon divergence, total variation distance, Euclidean norm, and Aitchison distance. Ordinal ranking of all 9 models is preserved across all 5 metrics; absolute values differ by ~5–15%. This is the fixed-reference estimand, not the paired bootstrap estimand used in Panel 01.
   </p>
-  <p class="pc-hint g-only">Each line is one AI model. Hover to highlight. Lines staying parallel means the ranking is consistent.</p>
-  <p class="pc-hint r-only">Parallel-coordinate plot. Each axis is one distance metric. Hover to isolate a model.</p>
+  <p class="pc-hint g-only">Each colored line = one AI model. Hover to highlight. Parallel lines = ranking doesn't change with measurement method.</p>
+  <p class="pc-hint r-only">Parallel-coordinate plot. Each vertical axis = one distance metric. Hover to isolate a model. Note: these are fixed-reference scores, not paired scores from Table 2.</p>
   <div class="glass chart-wrap fade-in" style="overflow:visible">
     <div id="tooltip-geo" class="tooltip"></div>
     <svg id="chart-geo" class="chart-svg" viewBox="0 0 800 320" preserveAspectRatio="xMidYMid meet"></svg>
@@ -569,10 +581,12 @@ footer a:hover{text-decoration:underline}
   <h2 class="g-only">What Does Human Disagreement Actually Look Like?</h2>
   <h2 class="r-only">Item-Level Vote Distributions — Ternary Simplex</h2>
   <p class="section-desc g-only">
-    These are real sentences from the ChaosNLI dataset—each rated by 100 different people. The triangle shows how the votes were split between Entailment (E), Neutral (N), and Contradiction (C). A dot in the center means total three-way disagreement. A corner means everyone agreed.
+    All the statistics above describe patterns in 3,113 sentence pairs. But what do those patterns actually feel like at the item level? Below are four real examples from the dataset — each rated by 100 people.
+    <br/><br/>
+    The triangle on the right (called a <em style="color:var(--text)">ternary plot</em>) shows how votes split across three labels: Entailment (E), Neutral (N), and Contradiction (C). A dot near a corner means near-consensus. A dot in the center means genuine three-way disagreement. <strong>Click any card</strong> to update the triangle. Notice how the ambiguous examples have a specific character — it's not random noise, but a real conceptual question that different people genuinely answer differently.
   </p>
   <p class="section-desc r-only">
-    Ternary simplex plot of vote distributions $(e, n, c)$ where $e+n+c=100$. Barycentric coordinates: $x = n/100 + c/200$, $y = c/100 \cdot \sqrt{3}/2$. Items selected to span the entropy range $H \in [0.0, 1.583]$.
+    Ternary simplex plot of empirical vote distributions (e, n, c) where e+n+c=100, converted to barycentric coordinates. Items span the entropy range H ∈ [0.0, 1.583] (max possible for 3 labels ≈ 1.585). Click a card to update the diagram.
   </p>
   <div class="examples-layout">
     <div class="item-cards" id="itemCards"></div>
@@ -589,12 +603,14 @@ footer a:hover{text-decoration:underline}
 <section id="bootstrap">
   <div class="section-label">Panel 07 · Robustness</div>
   <h2 class="g-only">1,000 Random Checks — All Confirmed the Gap</h2>
-  <h2 class="r-only">Stratified Focal-Item Bootstrap: $\Delta_{m,b} > 0$ for all 1,000 replicates</h2>
+  <h2 class="r-only">Stratified Focal-Item Bootstrap: Δ<sub>m,b</sub> &gt; 0 for all 1,000 replicates</h2>
   <p class="section-desc g-only">
-    We ran 1,000 different random sub-samples of the data—each time checking whether AI models still scored below the human baseline. Every single one confirmed the gap. No random rearrangement made the AI models look competitive.
+    A natural concern in any analysis: what if the result depends on which specific items happened to be in the dataset? Maybe with a slightly different sample of sentences, the AI models would score higher.
+    <br/><br/>
+    We addressed this with <em style="color:var(--text)">bootstrapping</em>: we drew 1,000 different random sub-samples of the 3,113 items and re-ran the comparison from scratch each time. Every dot below represents one check. Every dot is green. The smallest gap across all 1,000 checks was still +0.054 — about 15× larger than our measurement precision. The finding is not sensitive to which sentences you look at.
   </p>
   <p class="section-desc r-only">
-    In all 1,000 stratified focal-item bootstrap replicates (SNLI + MNLI strata), $\Delta_{m,b} = H_b - M_{m,b} > 0$ for every evaluated model. Minimum 95% CI lower bound: $+0.054$ (BART-Large). The bootstrap resamples items within the fixed ChaosNLI candidate population.
+    Stratified focal-item bootstrap across SNLI and MNLI sub-corpora (proportional strata). For all 1,000 replicates b, Δ<sub>m,b</sub> = H<sub>b</sub> − M<sub>m,b</sub> &gt; 0 for every evaluated model. Minimum 95% CI lower bound across all models: +0.054 (BART-Large, [0.054, 0.065]). Bootstrap resamples items within the fixed ChaosNLI candidate population — it does not re-draw candidates or re-build the neighbor graph.
   </p>
   <div class="glass chart-wrap fade-in">
     <div class="boot-counter" id="bootCounter">0 / 1000</div>
@@ -603,33 +619,35 @@ footer a:hover{text-decoration:underline}
       <div class="boot-stat-item">
         <div class="boot-stat-val">1,000 / 1,000</div>
         <div class="boot-stat-lab g-only">Checks confirming the gap</div>
-        <div class="boot-stat-lab r-only">Replicates with $\Delta_m > 0$</div>
+        <div class="boot-stat-lab r-only">Replicates with Δ<sub>m</sub> &gt; 0</div>
       </div>
       <div class="boot-stat-item">
         <div class="boot-stat-val">+0.054</div>
-        <div class="boot-stat-lab g-only">Minimum gap (BART-Large)</div>
+        <div class="boot-stat-lab g-only">Smallest gap observed (BART-Large)</div>
         <div class="boot-stat-lab r-only">Min 95% CI lower bound</div>
       </div>
       <div class="boot-stat-item">
         <div class="boot-stat-val">p &lt; 0.001</div>
-        <div class="boot-stat-lab g-only">Statistical significance</div>
-        <div class="boot-stat-lab r-only">All CIs exclude zero</div>
+        <div class="boot-stat-lab g-only">Statistical confidence</div>
+        <div class="boot-stat-lab r-only">All bootstrap CIs exclude zero</div>
       </div>
     </div>
   </div>
 
   <!-- VariErr note -->
   <div style="margin-top:40px" class="fade-in">
-    <div class="section-label" style="margin-bottom:12px">Appendix · Study 2A</div>
+    <div class="section-label" style="margin-bottom:12px">Appendix · Exploratory Finding</div>
     <div class="glass chart-wrap varierr-note">
-      <strong class="g-only">Exploratory: Does annotator identity matter?</strong>
+      <strong class="g-only">Bonus question: do individual annotators have a personal style?</strong>
       <strong class="r-only">VariErr External Validation (Study 2A) — Exploratory / Inconclusive</strong>
       <br/><br/>
       <span class="g-only">
-        We also explored whether individual annotators have consistent personal styles across different items. Out of 52 annotator groups we found, the within-group SD was 7.8% lower than expected by chance—a suggestive pattern, but not statistically conclusive (p = 0.20 across 500,000 permutations). This is an interesting direction for future research, not a confirmed finding.
+        We also explored whether specific annotators have consistent personal tendencies — for example, does Annotator #47 tend to pick "neutral" more often than average, and does that pattern persist across completely different sentence pairs?
+        <br/><br/>
+        We found 52 annotator groups that appeared in multiple items and compared how consistent they were internally versus what chance would predict (using 500,000 random permutations). The within-group variation was 7.8% lower than chance — a suggestive pattern, but not statistically significant (p = 0.20). This is an honest preliminary result: interesting enough to investigate further, not strong enough to claim as a confirmed finding.
       </span>
       <span class="r-only">
-        Matched 500 items across 52 multi-item annotator profiles. Within-profile SD = 0.106 vs. null mean = 0.115 (7.8% reduction). Permutation p-value = 0.2045 (500,000 permutations). Consistent with either small signal or sampling limitations from the 52-profile restriction. Appropriately inconclusive.
+        Matched 500 items across 52 multi-item annotator profiles from the VariErr external dataset. Within-profile SD = 0.106 vs. permutation null mean = 0.115 (7.8% reduction, 25% below overall SD). Permutation p-value = 0.2045 across 500,000 permutations. Inconclusive: consistent with either a small signal or sampling limitations of the 52-profile restriction.
       </span>
     </div>
   </div>
@@ -1124,19 +1142,23 @@ function drawSurface() {
   svg.append('text').attr('x',lgX+legendW).attr('y',lgY-3).attr('text-anchor','end').attr('font-size',9).attr('fill','#f59e0b').text('0.54');
 
   // Animate on play
-  let animated = false;
+  let isAnimating = false;
   document.getElementById('playBtn').addEventListener('click', () => {
-    if(animated) return;
-    animated = true;
+    if (isAnimating) return;
+    isAnimating = true;
+    svg.selectAll('.surface-cell,.surface-label').interrupt().attr('opacity', 0);
     nVals.forEach((n, ri) => {
       setTimeout(() => {
         svg.selectAll(`.row-${ri}`).transition().duration(400).attr('opacity', 1);
-      }, ri * 220);
+        if (ri === nVals.length - 1) {
+          setTimeout(() => { isAnimating = false; }, 400);
+        }
+      }, ri * 200);
     });
   });
   document.getElementById('resetSurface').addEventListener('click', () => {
-    animated = false;
-    svg.selectAll('.surface-cell,.surface-label').attr('opacity',0);
+    isAnimating = false;
+    svg.selectAll('.surface-cell,.surface-label').interrupt().attr('opacity', 0);
   });
   // Show all on initial load (after small delay)
   setTimeout(()=> svg.selectAll('.surface-cell,.surface-label').attr('opacity',1), 400);
