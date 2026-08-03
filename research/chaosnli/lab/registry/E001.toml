@@ -1,38 +1,91 @@
 # Experiment E001: Posterior Edge-Support Graph
 id = "E001"
 title = "Posterior edge-support graph construction and model-human relational comparison"
-status = "pilot"
+status = "pilot_partial"
 
 dataset_release = "chaosnli-canonical-2026-08-02"
 partition = "lab_discovery_v1"
 
 unit_of_analysis = "edge"
 question = """
-How does replacing empirical fuzzy neighborhood edges with posterior edge support
-s_ij(k) = P(j in N_i(k) | human votes) alter observed model-human relational alignment
-and model ranking?
+How does replacing empirical fuzzy neighborhood edges with latent posterior edge support
+s_ij(k) = E[W_ij(k) | human vote counts] (averaged over Dirichlet latent posterior draws)
+alter observed model-human relational alignment and model ranking?
 """
 
 estimands = [
   "mean_jsd_bits",
-  "posterior_edge_support",
+  "latent_posterior_edge_support",
   "weighted_fuzzy_qnx",
-  "high_support_core_overlap"
+  "high_support_core_overlap",
+  "cross_fitted_human_reference_q_hh",
+  "null_adjusted_excess_q",
+  "human_normalized_relational_recovery"
 ]
 
 metrics = ["hellinger", "jensen_shannon", "total_variation"]
 k = [5, 10, 20, 50]
 seeds = [42, 1001, 1002]
+n_posterior_draws = 500
+n_posterior_draws_per_half = 250  # for cross-fitted Q_HH
 
 null_model = "stratified_item_identity_permutation"
+n_null_permutations = 10000  # Required for defensible p-values (add-one p_min = 0.0001)
+
 required_controls = [
-  "raw_logits",
-  "human_posterior_positive_control",
-  "exact_profile_preserving_permutation"
+  "cross_fitted_human_support_q_hh",
+  "exact_profile_preserving_permutation",
+  "snli_mnli_separate_reporting",
+  "latent_posterior_draws_not_predictive"
+]
+
+# Pilot partial: what has been computed
+completed = [
+  "latent_posterior_edge_support_product_weight",
+  "core_densities_tau50_tau80_tau95",
+  "100_permutation_stratified_null_mean_only"
+]
+
+# What remains before status = "pilot"
+pending = [
+  "10000_permutation_null_with_exceedance_counts_and_intervals",
+  "add_one_permutation_p_values",
+  "cross_fitted_human_q_hh_reference",
+  "human_normalized_relational_recovery_r_m",
+  "snli_mnli_stratified_reporting",
+  "persist_support_matrices_f32",
+  "persist_core_edge_tables_parquet",
+  "sha256_run_manifest",
+  "q_fuzzy_min_sensitivity",
+  "posterior_predictive_100vote_sensitivity"
 ]
 
 go_criteria = """
 Directional result consistent across SNLI and MNLI, survives at least
-three neighborhood scales (k) and two probability geometries, and exceeds
-the corresponding stratified-null interval.
+three neighborhood scales (k) and two probability geometries, exceeds
+the corresponding stratified-null interval (add-one p < 0.01 with 10,000 perms),
+and human-normalized recovery R_m is reported relative to Q_HH not relative to 1.0.
+"""
+
+language_corrections = """
+CORRECTIONS REQUIRED before citing as established findings:
+
+1. Significance: Do NOT claim p < 0.001. With 10,000 perms, add-one p_min = 0.0001.
+   Current 100-perm design supports only: Q_model > Q_null_mean.
+
+2. Ranking: Do NOT claim invariant ordering. Report Kendall W and mean tau, and use
+   tiered groupings for top models where differences < item-bootstrap interval.
+   Likely tiers:
+     Tier 1: ALBERT-xxLarge, RoBERTa-Large, BART-Large
+     Tier 2: XLNet-Large
+     Tier 3: RoBERTa-Base, XLNet-Base, BERT-Large
+     Tier 4: BERT-Base
+     Tier 5: DistilBERT
+
+3. Human gap: Do NOT interpret delta_edge = 1 - Q_model as a performance gap.
+   mean_human_edge_support = 1.0 is a normalization identity (each row has weight k,
+   average S also has total row weight k). Replace with Q_HH cross-fitted reference.
+
+4. Terminology: These are LATENT POSTERIOR draws (theta ~ Dirichlet(x+alpha)), not
+   posterior-predictive draws (x_new ~ Multinomial(100, theta)).
 """

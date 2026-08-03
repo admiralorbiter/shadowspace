@@ -1,0 +1,151 @@
+# Experiment E002: Temperature Calibration vs. Posterior-Supported Topology
+id = "E002"
+title = "Scalar Temperature Scaling: Pointwise Calibration versus Posterior-Supported Topology"
+status = "pilot"
+
+dataset_release = "chaosnli-canonical-2026-08-02"
+e001_artifact_id = "PENDING_LOCKED_E001_RUN_HASH"
+partition_manifest = "research/chaosnli/lab/manifests/partitions.lock.parquet"
+
+unit_of_analysis = "focal_item"
+selection_design = "five_fold_crossfit"
+
+question = """
+Does ordinary scalar temperature calibration improve posterior-supported relational alignment,
+or can relational alignment improve only when temperature is explicitly selected for topology?
+And are any apparent gains caused by collapse toward the uniform distribution?
+
+Three distinct conditions must be separated:
+  1. Raw model (T=1)
+  2. Standard temperature calibration: T* chosen to minimize held-out soft-label NLL
+  3. Topology-tuned temperature: T* chosen to maximize held-out posterior edge-support Q
+"""
+
+stratification = [
+  "source_dataset",
+  "human_majority_label",
+  "human_entropy_quintile"
+]
+
+# Log-spaced 21-point grid (coarser at extremes, finer near T=1)
+temperatures = [
+  0.10, 0.125, 0.16, 0.20, 0.25,
+  0.32, 0.40, 0.50, 0.63, 0.80,
+  1.00,
+  1.25, 1.60, 2.00, 2.50,
+  3.20, 4.00, 5.00, 6.30, 8.00, 10.00
+]
+
+temperature_selectors = [
+  "raw_t1",                # T=1 (uncalibrated)
+  "soft_label_nll",        # T* = argmin_T sum_i sum_c p_ic^H log q_ic(T)
+  "mean_jsd",              # T* = argmin_T mean_i JSD(p_i^H, q_i(T))
+  "posterior_support_q"    # T* = argmax_T Q_support(q(T), S) — topology oracle
+]
+
+primary_metric = "hellinger"
+sensitivity_metrics = ["jensen_shannon", "total_variation"]
+
+primary_k = 10
+sensitivity_k = [5, 20, 50]
+
+target_graphs = [
+  "latent_posterior_edge_support",      # theta ~ Dirichlet(x + alpha)
+  "posterior_predictive_100vote_support"  # x_new ~ Multinomial(100, theta)
+]
+
+core_targets = [
+  "tau50_k20",
+  "tau50_k50",
+  "tau80_k50"
+]
+
+primary_estimands = [
+  "heldout_delta_q_support_vs_t1",
+  "heldout_excess_q_support_over_null",
+  "human_normalized_relational_recovery",
+  "heldout_delta_soft_label_nll",
+  "heldout_delta_mean_jsd"
+]
+
+core_estimands = [
+  "model_mass_on_core",       # sum W_ij * 1[(i,j) in C_tau] / (N*k)
+  "core_edge_recall",         # sum W_ij * 1[(i,j) in C_tau] / |C_tau|
+  "support_weighted_core_recall"  # weighted by S_ij within C_tau
+]
+
+degeneracy_diagnostics = [
+  "mean_model_entropy",
+  "median_pairwise_distance",
+  "pairwise_distance_sd",
+  "distance_ratio_vs_t1",
+  "boundary_near_tie_rate",
+  "graph_turnover_vs_t1",
+  "micro_jitter_graph_stability"  # add N(0, 1e-6) noise, check graph change
+]
+
+null_models = [
+  "stratified_item_identity_permutation",
+  "exact_profile_preserving_permutation",
+  "uniform_distribution_limit"
+]
+
+n_null_permutations = 10000
+n_item_bootstrap = 2000
+random_seed = 20260802
+
+required_comparisons = [
+  "t1_vs_t_nll",
+  "t1_vs_t_jsd",
+  "t1_vs_t_topology",
+  "t_nll_vs_t_topology"
+]
+
+inference_design = """
+Five-fold cross-fitting stratified by source_dataset x human_majority_label x human_entropy_quintile.
+T* is selected on four folds and evaluated on the fifth.
+Only out-of-fold estimates are reported.
+
+For topology temperature (T_Q*): also run max-statistic permutation null to control
+for optimization over temperature grid:
+  For each null permutation, run complete temperature sweep and retain max(delta_Q_null(T)).
+  Compare observed max(delta_Q_obs(T)) to this null max distribution.
+  Report: p = (1 + #{max_T delta_Q_null >= max_T delta_Q_obs}) / (B+1)
+"""
+
+improvement_criterion = """
+A temperature T improves over T=1 ONLY IF:
+  Q(T) - Q_null(T) > Q(1) - Q_null(1)
+
+Raw Q increasing without null-adjusted excess does NOT count as improvement.
+Document any case where raw Q rises but null-adjusted Q does not.
+"""
+
+go_criteria = """
+Promote only if the out-of-fold null-adjusted topology improvement is positive,
+has a paired 95% interval excluding zero for the cross-model primary estimand,
+has the same direction in SNLI and MNLI, survives Hellinger and Jensen-Shannon,
+and does not coincide with pairwise-distance collapse or micro-jitter instability.
+"""
+
+# Scientific interpretation of possible outcomes
+outcomes = """
+Outcome A: T_NLL improves JSD but not topology
+  => Pointwise distributional calibration and relational alignment are distinct objectives.
+  => Most scientifically interesting outcome.
+
+Outcome B: T_NLL improves both
+  => Logit overconfidence genuinely contributes to topology failure.
+  => Quantify: how much of Q_HH gap is repaired?
+
+Outcome C: Only T_Q* improves topology
+  => Relational recovery is partially repairable but ordinary calibration does not target it.
+  => Motivates topology-aware training.
+
+Outcome D: High T increases raw Q, but not null-adjusted Q
+  => Entropy-inflation failure mode. Report as degeneracy, not improvement.
+
+Outcome E: No temperature materially improves topology
+  => Strong negative result: mismatch is not caused by softmax sharpness.
+  => Motivates Program B: representation changes, manifold-preserving soft-label supervision.
+"""
