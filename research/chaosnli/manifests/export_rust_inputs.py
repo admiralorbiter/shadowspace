@@ -28,16 +28,22 @@ def export_rust_inputs() -> None:
     # Load model predictions
     models = load_model_predictions()
     model_probs = {}
+    model_logits = {}
     for m_key, m_data in models.items():
         probs = compute_model_probabilities(m_data["logits"], temperature=1.0).tolist()
         model_probs[m_key] = probs
+        model_logits[m_key] = m_data["logits"].tolist()
 
     model_probs_path = Path("research/chaosnli/rust_manifest/model_probs.json")
     model_probs_path.parent.mkdir(parents=True, exist_ok=True)
     with open(model_probs_path, "w", encoding="utf-8") as f:
         json.dump(model_probs, f, indent=2)
 
-    print(f"Exported {len(model_probs)} model probabilities to {model_probs_path}")
+    model_logits_path = Path("research/chaosnli/rust_manifest/model_logits.json")
+    with open(model_logits_path, "w", encoding="utf-8") as f:
+        json.dump(model_logits, f, indent=2)
+
+    print(f"Exported {len(model_probs)} model probabilities and logits to {model_probs_path} and {model_logits_path}")
 
 
 if __name__ == "__main__":
