@@ -12,6 +12,11 @@ Does temperature scaling improve marginal probability alignment (NLL/JSD)
 without proportionately recovering relational human belief-space topology (Q_support)?
 """
 
+# Frozen E001 Artifact Binding
+e001_artifact_id = "E001-hellinger-k010-expected-fuzzy-support-v1"
+e001_matrix_sha256 = "94e483e714d92f039f817389d948cbf41b7970077b56f852491832605dccc96f"
+e001_object_ids_sha256 = "121c49cbd40b171d100ba88c1a23d809818c28bad9249bea99a52ec8f5af19d6"
+
 estimands = [
   "pointwise_nll",
   "pointwise_jsd",
@@ -20,7 +25,9 @@ estimands = [
   "core_mass_tau50",
   "core_recall_tau50",
   "gap_closure_D",
-  "gap_closure_Q"
+  "gap_closure_Q",
+  "q_global_excess",
+  "q_profile_excess"
 ]
 
 temperature_conditions = [
@@ -42,8 +49,11 @@ temperature_grid = [
   3.20, 4.00, 5.00, 6.30, 8.00, 10.00
 ]
 
+pointwise_human_baseline = "crossfit_human_jsd_nll"
+
 required_safeguards = [
   "recompute_null_at_every_temperature",
+  "recompute_subgraph_topology_in_training_folds",
   "monitor_entropy_and_top_class_prob",
   "monitor_distance_variance_and_near_ties",
   "cross_fitted_out_of_fold_evaluations"
