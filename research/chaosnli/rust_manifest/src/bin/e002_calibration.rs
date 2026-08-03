@@ -208,7 +208,7 @@ fn partition_exact_profiles(items: &[ItemRecord]) -> Vec<Vec<usize>> {
     map.into_values().collect()
 }
 
-fn build_stratified_5folds_empirical(items: &[ItemRecord], seed: u64) -> Vec<Vec<usize>> {
+fn build_stratified_30groups_empirical(items: &[ItemRecord]) -> Vec<Vec<usize>> {
     let n = items.len();
     let mut entropies = Vec::with_capacity(n);
 
@@ -263,10 +263,15 @@ fn build_stratified_5folds_empirical(items: &[ItemRecord], seed: u64) -> Vec<Vec
         strata_map.entry((is_snli, maj, eq)).or_default().push(idx);
     }
 
+    strata_map.into_values().collect()
+}
+
+fn build_stratified_5folds_empirical(items: &[ItemRecord], seed: u64) -> Vec<Vec<usize>> {
+    let groups = build_stratified_30groups_empirical(items);
     let mut folds = vec![Vec::new(); 5];
     let mut rng = ChaCha8Rng::seed_from_u64(seed);
 
-    for mut group in strata_map.into_values() {
+    for mut group in groups {
         group.shuffle(&mut rng);
         for (i, idx) in group.into_iter().enumerate() {
             folds[i % 5].push(idx);
@@ -619,6 +624,8 @@ fn main() {
     model_names.sort();
 
     let folds = build_stratified_5folds_empirical(&items, 20260803);
+    let strata_30groups = build_stratified_30groups_empirical(&items);
+
     let temp_grid = vec![
         0.10, 0.125, 0.16, 0.20, 0.25, 0.32, 0.40, 0.50, 0.63, 0.80, 1.00,
         1.25, 1.60, 2.00, 2.50, 3.20, 4.00, 5.00, 6.30, 8.00, 10.00,
@@ -790,7 +797,6 @@ fn main() {
             let mut c_tau50_k50 = 0usize;
 
             let mut item_support_observed = vec![0.0f64; n];
-            let mut item_support_null = vec![0.0f64; n];
 
             let mut w_m10_folds = Vec::with_capacity(5);
             let mut sparse_w10_folds = Vec::with_capacity(5);
@@ -848,9 +854,7 @@ fn main() {
 
             // 10,000 Stratified Permutations using COMMON random permutation seeds across folds
             let n_null = 10_000;
-            let mut null_item_accum = vec![0.0f64; n];
-
-            let null_scores: Vec<f64> = (0..n_null)
+            let (item_null_scores, null_scores): (Vec<Vec<f64>>, Vec<f64>) = (0..n_null)
                 .into_par_iter()
                 .map(|b_idx| {
                     let mut null_rng = ChaCha8Rng::seed_from_u64(2026_08_03 + b_idx as u64);
@@ -867,28 +871,35 @@ fn main() {
                         perm[*orig_idx] = shuf_idx;
                     }
 
+                    let mut per_item_null = vec![0.0f64; n];
                     let mut sum_null_f = 0.0f64;
                     for fold_idx in 0..5 {
                         let test_indices = &folds[fold_idx];
                         let sparse_w10 = &sparse_w10_folds[fold_idx];
                         for &i_test in test_indices {
                             let i_perm = perm[i_test];
+                            let mut local_n = 0.0f64;
                             for &(j, w) in &sparse_w10[i_test] {
                                 let j_perm = perm[j];
-                                sum_null_f += w * s_ij_k10[i_perm * n + j_perm];
+                                local_n += w * s_ij_k10[i_perm * n + j_perm];
                             }
+                            per_item_null[i_test] = local_n / 10.0;
+                            sum_null_f += local_n;
                         }
                     }
-                    sum_null_f / (n * 10) as f64
+                    (per_item_null, sum_null_f / (n * 10) as f64)
                 })
-                .collect();
+                .unzip();
 
             let q_null_oof = null_scores.iter().sum::<f64>() / n_null as f64;
             let q_global_excess_oof = q_support_oof - q_null_oof;
 
-            // Item local null estimation
-            for i in 0..n {
-                item_support_null[i] = q_null_oof;
+            // Compute exact per-item expected null support averaged over all 10,000 permutations
+            let mut item_support_null = vec![0.0f64; n];
+            for b_idx in 0..n_null {
+                for i in 0..n {
+                    item_support_null[i] += item_null_scores[b_idx][i] / n_null as f64;
+                }
             }
 
             // 1,000 Exact-Profile Permutations per final condition (with Monte Carlo p-value)
@@ -1003,7 +1014,7 @@ fn main() {
             0.0
         };
 
-        // 4. Exact Stratified Focal-Item Paired Bootstrap (1,000 iterations over topology & NLL)
+        // 4. Exact Stratified Focal-Item Paired Bootstrap (1,000 iterations over literal 30 strata)
         let n_boot = 1000;
         let mut boot_delta_nll = Vec::with_capacity(n_boot);
         let mut boot_delta_jsd = Vec::with_capacity(n_boot);
@@ -1016,10 +1027,9 @@ fn main() {
         for boot_idx in 0..n_boot {
             let mut boot_rng = ChaCha8Rng::seed_from_u64(7070_0000 + boot_idx as u64);
             let mut sampled_indices = Vec::with_capacity(n);
-            for fold_idx in 0..5 {
-                let fold_indices = &folds[fold_idx];
-                for _ in 0..fold_indices.len() {
-                    let pick = fold_indices[boot_rng.gen_range(0..fold_indices.len())];
+            for group in &strata_30groups {
+                for _ in 0..group.len() {
+                    let pick = group[boot_rng.gen_range(0..group.len())];
                     sampled_indices.push(pick);
                 }
             }

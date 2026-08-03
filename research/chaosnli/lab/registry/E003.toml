@@ -1,0 +1,54 @@
+# Experiment E003: Relational Repair Capacity of Flexible Post-Hoc Calibration & Ensembling
+id = "E003"
+title = "Relational Repair Capacity of Increasingly Flexible Post-Hoc Transformations & Ensembling"
+status = "in_development"
+
+dataset_release = "chaosnli-canonical-2026-08-02"
+partition = "5fold_stratified_crossfit"
+
+unit_of_analysis = "item_and_edge"
+question = """
+How much of the human belief-space relational topology gap (G_Q) can be recovered
+through increasingly flexible post-hoc calibration and ensembling techniques
+before representational fine-tuning becomes strictly necessary?
+"""
+
+# Bound Provenance Bindings
+e001_artifact_id = "E001-hellinger-k010-expected-fuzzy-support-v1"
+e001_matrix_sha256 = "94e483e714d92f039f817389d948cbf41b7970077b56f852491832605dccc96f"
+e001_matrix_k50_sha256 = "2da027e261d9a74a67f262aa601544c98ebf2b2879d15cda97b116ce447b1f3d"
+e001_object_ids_sha256 = "121c49cbd40b171d100ba88c1a23d809818c28bad9249bea99a52ec8f5af19d6"
+model_probs_sha256 = "218cd1246cb3bf796726cd729605c8e303449379b70fc9afb6aea5357844893b"
+
+ladder_levels = [
+  "level1_scalar_temperature",
+  "level2_vector_scaling",
+  "level3_matrix_scaling_bias",
+  "level4_dirichlet_calibration",
+  "level5_convex_nll_ensemble",
+  "level6_topology_optimized_ensemble"
+]
+
+estimands = [
+  "pointwise_nll",
+  "pointwise_jsd",
+  "posterior_edge_support",
+  "core_mass_tau50",
+  "core_recall_tau50",
+  "gap_closure_nll",
+  "gap_closure_q",
+  "q_global_excess",
+  "q_profile_excess",
+  "graph_turnover_min"
+]
+
+cross_validation = "5fold_stratified_by_dataset_label_entropy"
+pointwise_human_baseline = "empirical_soft_label_entropy_floor_0.65062"
+
+required_safeguards = [
+  "recompute_null_at_every_level",
+  "fit_parameters_strictly_on_training_folds",
+  "coherent_full_dataset_graphs_per_fold",
+  "held_out_focal_row_scoring",
+  "literal_30strata_item_level_paired_bootstrap"
+]

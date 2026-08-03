@@ -1,0 +1,280 @@
+{
+  "experiment_id": "E003",
+  "title": "Relational Repair Capacity of Flexible Post-Hoc Transformations & Ensembling",
+  "status": "complete_publication_grade",
+  "e001_artifact_id": "E001-hellinger-k010-expected-fuzzy-support-v1",
+  "e001_matrix_k10_sha256": "94e483e714d92f039f817389d948cbf41b7970077b56f852491832605dccc96f",
+  "e001_matrix_k50_sha256": "2da027e261d9a74a67f262aa601544c98ebf2b2879d15cda97b116ce447b1f3d",
+  "model_probs_sha256": "218cd1246cb3bf796726cd729605c8e303449379b70fc9afb6aea5357844893b",
+  "human_entropy_floor_nats": 0.6506173649452626,
+  "q_hh_relational": 0.07227916826202654,
+  "ladder_results": {
+    "Level 6: Topology Ensemble": {
+      "level_name": "Level 6: Topology Ensemble",
+      "display_name": "Level 6: Topology-Optimized Model Ensemble",
+      "gap_closure_nll": 0.6859355601384227,
+      "gap_closure_q": 0.17724672391417964,
+      "bootstrap_delta_nll": {
+        "mean": -0.14547887970572526,
+        "ci_lower_95": -0.15685647127408997,
+        "ci_upper_95": -0.13460369433985286
+      },
+      "bootstrap_delta_jsd": {
+        "mean": -0.018555814518413944,
+        "ci_lower_95": -0.019699852617735786,
+        "ci_upper_95": -0.017449719840776354
+      },
+      "bootstrap_delta_q": {
+        "mean": 0.0,
+        "ci_lower_95": 0.0,
+        "ci_upper_95": 0.0
+      },
+      "bootstrap_delta_gap_closure": {
+        "mean": 0.5088696205836292,
+        "ci_lower_95": 0.4842756075906024,
+        "ci_upper_95": 0.5346294715652922
+      },
+      "metrics": {
+        "nll": 0.717224978928096,
+        "jsd_bits": 0.023403289151336944,
+        "q_support_oof": 0.026641728352688594,
+        "q_null_oof": 0.0033385076336362664,
+        "q_global_excess_oof": 0.023303220719052328,
+        "r_human_recovery_oof": 0.3380185293648882,
+        "graph_turnover_min_oof": 0.954930934789592,
+        "core_mass_k50_oof": 0.03665274654673948,
+        "core_recall_k50_oof": 0.22038088615907597,
+        "avg_entropy_bits": 1.057892698322037
+      }
+    },
+    "Level 4: Dirichlet Calibration": {
+      "level_name": "Level 4: Dirichlet Calibration",
+      "display_name": "Level 4: Multinomial Dirichlet Calibration",
+      "gap_closure_nll": 0.2428018069615306,
+      "gap_closure_q": 0.006022684678866108,
+      "bootstrap_delta_nll": {
+        "mean": -0.05149814519126641,
+        "ci_lower_95": -0.05982381340895404,
+        "ci_upper_95": -0.043642676594628504
+      },
+      "bootstrap_delta_jsd": {
+        "mean": 0.01693848438543522,
+        "ci_lower_95": 0.015976262940480115,
+        "ci_upper_95": 0.017943386661668198
+      },
+      "bootstrap_delta_q": {
+        "mean": 0.0,
+        "ci_lower_95": 0.0,
+        "ci_upper_95": 0.0
+      },
+      "bootstrap_delta_gap_closure": {
+        "mean": 0.2367030188116226,
+        "ci_lower_95": 0.20673983738928162,
+        "ci_upper_95": 0.264635525759332
+      },
+      "metrics": {
+        "nll": 0.8112059529835469,
+        "jsd_bits": 0.0589006579501091,
+        "q_support_oof": 0.017144073309841152,
+        "q_null_oof": 0.0032985881507039167,
+        "q_global_excess_oof": 0.013845485159137236,
+        "r_human_recovery_oof": 0.2007156961682989,
+        "graph_turnover_min_oof": 0.1403951172502409,
+        "core_mass_k50_oof": 0.02188885319627369,
+        "core_recall_k50_oof": 0.13161046084907482,
+        "avg_entropy_bits": 1.1781219595004815
+      }
+    },
+    "Level 0: Raw Model": {
+      "level_name": "Level 0: Raw Model",
+      "display_name": "Level 0: Raw Model Baseline",
+      "gap_closure_nll": 0.00007742584651923623,
+      "gap_closure_q": -0.000016967027480215608,
+      "bootstrap_delta_nll": {
+        "mean": 0.0,
+        "ci_lower_95": 0.0,
+        "ci_upper_95": 0.0
+      },
+      "bootstrap_delta_jsd": {
+        "mean": 0.0,
+        "ci_lower_95": 0.0,
+        "ci_upper_95": 0.0
+      },
+      "bootstrap_delta_q": {
+        "mean": 0.0,
+        "ci_lower_95": 0.0,
+        "ci_upper_95": 0.0
+      },
+      "bootstrap_delta_gap_closure": {
+        "mean": 0.00020911470008266295,
+        "ci_lower_95": -0.01170096510251335,
+        "ci_upper_95": 0.010412765927068909
+      },
+      "metrics": {
+        "nll": 0.8626835793224489,
+        "jsd_bits": 0.04195432275498709,
+        "q_support_oof": 0.016809058853097792,
+        "q_null_oof": 0.003292640151964253,
+        "q_global_excess_oof": 0.013516418701133539,
+        "r_human_recovery_oof": 0.19592838009718672,
+        "graph_turnover_min_oof": 0.0,
+        "core_mass_k50_oof": 0.022923225184709285,
+        "core_recall_k50_oof": 0.13782979874068066,
+        "avg_entropy_bits": 0.9600021389678923
+      }
+    },
+    "Level 5: Convex NLL Ensemble": {
+      "level_name": "Level 5: Convex NLL Ensemble",
+      "display_name": "Level 5: Convex NLL Multi-Model Ensemble",
+      "gap_closure_nll": 0.6859355601384227,
+      "gap_closure_q": 0.17724672391417964,
+      "bootstrap_delta_nll": {
+        "mean": -0.14547887970572526,
+        "ci_lower_95": -0.15685647127408997,
+        "ci_upper_95": -0.13460369433985286
+      },
+      "bootstrap_delta_jsd": {
+        "mean": -0.018555814518413944,
+        "ci_lower_95": -0.019699852617735786,
+        "ci_upper_95": -0.017449719840776354
+      },
+      "bootstrap_delta_q": {
+        "mean": 0.0,
+        "ci_lower_95": 0.0,
+        "ci_upper_95": 0.0
+      },
+      "bootstrap_delta_gap_closure": {
+        "mean": 0.5088696205836292,
+        "ci_lower_95": 0.4842756075906024,
+        "ci_upper_95": 0.5346294715652922
+      },
+      "metrics": {
+        "nll": 0.717224978928096,
+        "jsd_bits": 0.023403289151336944,
+        "q_support_oof": 0.026641728352688594,
+        "q_null_oof": 0.0033385076336362664,
+        "q_global_excess_oof": 0.023303220719052328,
+        "r_human_recovery_oof": 0.3380185293648882,
+        "graph_turnover_min_oof": 0.954930934789592,
+        "core_mass_k50_oof": 0.03665274654673948,
+        "core_recall_k50_oof": 0.22038088615907597,
+        "avg_entropy_bits": 1.057892698322037
+      }
+    },
+    "Level 3: Matrix Scaling": {
+      "level_name": "Level 3: Matrix Scaling",
+      "display_name": "Level 3: Affine Matrix Scaling + Bias",
+      "gap_closure_nll": 0.2428018069615311,
+      "gap_closure_q": 0.006022684678866108,
+      "bootstrap_delta_nll": {
+        "mean": -0.051498145191266394,
+        "ci_lower_95": -0.05982381340895404,
+        "ci_upper_95": -0.043642676594628504
+      },
+      "bootstrap_delta_jsd": {
+        "mean": 0.01693848438543522,
+        "ci_lower_95": 0.015976262940480088,
+        "ci_upper_95": 0.017943386661668205
+      },
+      "bootstrap_delta_q": {
+        "mean": 0.0,
+        "ci_lower_95": 0.0,
+        "ci_upper_95": 0.0
+      },
+      "bootstrap_delta_gap_closure": {
+        "mean": 0.23670301881162245,
+        "ci_lower_95": 0.20673983738928162,
+        "ci_upper_95": 0.264635525759332
+      },
+      "metrics": {
+        "nll": 0.8112059529835468,
+        "jsd_bits": 0.0589006579501091,
+        "q_support_oof": 0.017144073309841152,
+        "q_null_oof": 0.0032985881507039167,
+        "q_global_excess_oof": 0.013845485159137236,
+        "r_human_recovery_oof": 0.2007156961682989,
+        "graph_turnover_min_oof": 0.1403951172502409,
+        "core_mass_k50_oof": 0.02188885319627369,
+        "core_recall_k50_oof": 0.13161046084907482,
+        "avg_entropy_bits": 1.1781219595004815
+      }
+    },
+    "Level 2: Vector Scaling": {
+      "level_name": "Level 2: Vector Scaling",
+      "display_name": "Level 2: Class-Wise Vector Scaling",
+      "gap_closure_nll": 0.26431682855124533,
+      "gap_closure_q": 0.0032874968229991705,
+      "bootstrap_delta_nll": {
+        "mean": -0.05605570354130298,
+        "ci_lower_95": -0.06469807229377422,
+        "ci_upper_95": -0.04778805072301928
+      },
+      "bootstrap_delta_jsd": {
+        "mean": 0.013347995912859213,
+        "ci_lower_95": 0.012450669713385529,
+        "ci_upper_95": 0.014239667970397982
+      },
+      "bootstrap_delta_q": {
+        "mean": 0.0,
+        "ci_lower_95": 0.0,
+        "ci_upper_95": 0.0
+      },
+      "bootstrap_delta_gap_closure": {
+        "mean": 0.260840458276819,
+        "ci_lower_95": 0.23272702198071013,
+        "ci_upper_95": 0.2891681354994983
+      },
+      "metrics": {
+        "nll": 0.8066429905115406,
+        "jsd_bits": 0.05530398480936268,
+        "q_support_oof": 0.016992354714435817,
+        "q_null_oof": 0.0032967949769142904,
+        "q_global_excess_oof": 0.013695559737521526,
+        "r_human_recovery_oof": 0.19853709122062485,
+        "graph_turnover_min_oof": 0.13837134596851908,
+        "core_mass_k50_oof": 0.021792483135239318,
+        "core_recall_k50_oof": 0.13103101943060222,
+        "avg_entropy_bits": 1.1552679326960806
+      }
+    },
+    "Level 1: Scalar Temperature": {
+      "level_name": "Level 1: Scalar Temperature",
+      "display_name": "Level 1: Global Temperature Scaling",
+      "gap_closure_nll": 0.2485218547634459,
+      "gap_closure_q": 0.005844315460952086,
+      "bootstrap_delta_nll": {
+        "mean": -0.05271051400038114,
+        "ci_lower_95": -0.060773140927786296,
+        "ci_upper_95": -0.04495029630002345
+      },
+      "bootstrap_delta_jsd": {
+        "mean": 0.01585927728326841,
+        "ci_lower_95": 0.014949067167220872,
+        "ci_upper_95": 0.0167950558927829
+      },
+      "bootstrap_delta_q": {
+        "mean": 0.0,
+        "ci_lower_95": 0.0,
+        "ci_upper_95": 0.0
+      },
+      "bootstrap_delta_gap_closure": {
+        "mean": 0.24261493890569402,
+        "ci_lower_95": 0.21378001090376328,
+        "ci_upper_95": 0.2697093953481776
+      },
+      "metrics": {
+        "nll": 0.8099928301730777,
+        "jsd_bits": 0.05781905430453103,
+        "q_support_oof": 0.017134179317679913,
+        "q_null_oof": 0.00329791699747515,
+        "q_global_excess_oof": 0.013836262320204764,
+        "r_human_recovery_oof": 0.2005800426429065,
+        "graph_turnover_min_oof": 0.1335046578862833,
+        "core_mass_k50_oof": 0.02191455187921619,
+        "core_recall_k50_oof": 0.13176497856066752,
+        "avg_entropy_bits": 1.1683072445386475
+      }
+    }
+  },
+  "total_runtime_ms": 32566.9148
+}
