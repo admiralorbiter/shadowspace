@@ -1,0 +1,4320 @@
+{
+  "experiment_id": "E002",
+  "title": "Model Logit Temperature Calibration against Posterior Edge-Support Topology",
+  "dataset_release": "chaosnli-canonical-2026-08-02",
+  "n_items": 3113,
+  "n_posterior_draws": 500,
+  "temperatures": [
+    0.1,
+    0.2,
+    0.5,
+    0.8,
+    1.0,
+    1.2,
+    1.5,
+    2.0,
+    3.0,
+    5.0
+  ],
+  "metrics": [
+    {
+      "metric": "hellinger",
+      "scales": [
+        {
+          "k": 5,
+          "models": {
+            "distilbert": {
+              "display_name": "distilbert",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.004071313845165493,
+              "base_q_edge_support_t1": 0.00402467073562485,
+              "relative_gain_pct": 1.1589298256817855,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.003322273799820771,
+                  "delta_edge": 0.9966777262001792
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.0037076446830398378,
+                  "delta_edge": 0.9962923553169601
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.0039556055252168805,
+                  "delta_edge": 0.9960443944747831
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.004059877931256071,
+                  "delta_edge": 0.9959401220687439
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.00402467073562485,
+                  "delta_edge": 0.9959753292643752
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.004063861227112164,
+                  "delta_edge": 0.9959361387728878
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.004037134596851963,
+                  "delta_edge": 0.995962865403148
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.004005782203662116,
+                  "delta_edge": 0.9959942177963379
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.004039190491487368,
+                  "delta_edge": 0.9959608095085126
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.004071313845165493,
+                  "delta_edge": 0.9959286861548345
+                }
+              ]
+            },
+            "roberta-base": {
+              "display_name": "roberta-base",
+              "optimal_temp": 0.5,
+              "optimal_q_edge_support": 0.004850048185030553,
+              "base_q_edge_support_t1": 0.004691680051397413,
+              "relative_gain_pct": 3.3755100922956203,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.003776420176101869,
+                  "delta_edge": 0.9962235798238981
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.004438277555821496,
+                  "delta_edge": 0.9955617224441785
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.004850048185030553,
+                  "delta_edge": 0.9951499518149695
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.0047042724060392446,
+                  "delta_edge": 0.9952957275939608
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.004691680051397413,
+                  "delta_edge": 0.9953083199486026
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.0046688082235785905,
+                  "delta_edge": 0.9953311917764214
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.004696048827497647,
+                  "delta_edge": 0.9953039511725024
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.004745518792161948,
+                  "delta_edge": 0.9952544812078381
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.004802826855123719,
+                  "delta_edge": 0.9951971731448763
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.004760167041439172,
+                  "delta_edge": 0.9952398329585608
+                }
+              ]
+            },
+            "bart-large": {
+              "display_name": "bart-large",
+              "optimal_temp": 1.2,
+              "optimal_q_edge_support": 0.005399614519755874,
+              "base_q_edge_support_t1": 0.005374301317057524,
+              "relative_gain_pct": 0.4710045307286452,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.003952064257796054,
+                  "delta_edge": 0.996047935742204
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.004687138248451056,
+                  "delta_edge": 0.995312861751549
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.005331641503372984,
+                  "delta_edge": 0.994668358496627
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.0053408930292322705,
+                  "delta_edge": 0.9946591069707678
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.005374301317057524,
+                  "delta_edge": 0.9946256986829425
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.005399614519755874,
+                  "delta_edge": 0.9946003854802441
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.005264567940893047,
+                  "delta_edge": 0.994735432059107
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.0052966270478638135,
+                  "delta_edge": 0.9947033729521362
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.005323610664953443,
+                  "delta_edge": 0.9946763893350465
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.005345711532283998,
+                  "delta_edge": 0.994654288467716
+                }
+              ]
+            },
+            "roberta-large": {
+              "display_name": "roberta-large",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.005408673305493121,
+              "base_q_edge_support_t1": 0.005245358175393561,
+              "relative_gain_pct": 3.113517221105815,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.004009555446365464,
+                  "delta_edge": 0.9959904445536345
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.004803682552839642,
+                  "delta_edge": 0.9951963174471603
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.005260434736053158,
+                  "delta_edge": 0.9947395652639468
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.005331320269836222,
+                  "delta_edge": 0.9946686797301638
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.005245358175393561,
+                  "delta_edge": 0.9947546418246065
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.005170960488275034,
+                  "delta_edge": 0.994829039511725
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.005232894314166453,
+                  "delta_edge": 0.9947671056858336
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.005324124638612317,
+                  "delta_edge": 0.9946758753613877
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.005391326694506943,
+                  "delta_edge": 0.9946086733054931
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.005408673305493121,
+                  "delta_edge": 0.9945913266945069
+                }
+              ]
+            },
+            "bert-base": {
+              "display_name": "bert-base",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.00446617410857698,
+              "base_q_edge_support_t1": 0.0043343398650819605,
+              "relative_gain_pct": 3.041622198505799,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.0034748415009115373,
+                  "delta_edge": 0.9965251584990885
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.004073923247843319,
+                  "delta_edge": 0.9959260767521567
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.004172181175714789,
+                  "delta_edge": 0.9958278188242852
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.004315965306778071,
+                  "delta_edge": 0.995684034693222
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.0043343398650819605,
+                  "delta_edge": 0.9956656601349181
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.004326373273369788,
+                  "delta_edge": 0.9956736267266302
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.0043880501124317845,
+                  "delta_edge": 0.9956119498875682
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.004415290716350831,
+                  "delta_edge": 0.9955847092836492
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.0044255701895278285,
+                  "delta_edge": 0.9955744298104722
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.00446617410857698,
+                  "delta_edge": 0.995533825891423
+                }
+              ]
+            },
+            "albert-xxlarge": {
+              "display_name": "albert-xxlarge",
+              "optimal_temp": 2.0,
+              "optimal_q_edge_support": 0.005416832637327368,
+              "base_q_edge_support_t1": 0.00534192097654998,
+              "relative_gain_pct": 1.4023356224518497,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.0038597396762644737,
+                  "delta_edge": 0.9961402603237355
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.004783031512448246,
+                  "delta_edge": 0.9952169684875517
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.005242595566977226,
+                  "delta_edge": 0.9947574044330227
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.005331769996787688,
+                  "delta_edge": 0.9946682300032124
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.00534192097654998,
+                  "delta_edge": 0.99465807902345
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.005358496627047889,
+                  "delta_edge": 0.9946415033729521
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.005355734018631571,
+                  "delta_edge": 0.9946442659813685
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.005416832637327368,
+                  "delta_edge": 0.9945831673626726
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.005412592354641856,
+                  "delta_edge": 0.9945874076453581
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.00540642467073565,
+                  "delta_edge": 0.9945935753292644
+                }
+              ]
+            },
+            "xlnet-base": {
+              "display_name": "xlnet-base",
+              "optimal_temp": 3.0,
+              "optimal_q_edge_support": 0.004817860584645073,
+              "base_q_edge_support_t1": 0.004720526823000355,
+              "relative_gain_pct": 2.0619258251106065,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.003746386669836451,
+                  "delta_edge": 0.9962536133301636
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.004377303602064184,
+                  "delta_edge": 0.9956226963979358
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.004681336331513047,
+                  "delta_edge": 0.995318663668487
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.004712367491166111,
+                  "delta_edge": 0.9952876325088339
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.004720526823000355,
+                  "delta_edge": 0.9952794731769996
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.0046447799550273445,
+                  "delta_edge": 0.9953552200449727
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.004706199807259917,
+                  "delta_edge": 0.99529380019274
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.004738965628011607,
+                  "delta_edge": 0.9952610343719884
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.004817860584645073,
+                  "delta_edge": 0.9951821394153549
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.0048028268551237084,
+                  "delta_edge": 0.9951971731448763
+                }
+              ]
+            },
+            "bert-large": {
+              "display_name": "bert-large",
+              "optimal_temp": 1.5,
+              "optimal_q_edge_support": 0.004701060070671423,
+              "base_q_edge_support_t1": 0.004634371988435633,
+              "relative_gain_pct": 1.4389885490892789,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.003697606035370461,
+                  "delta_edge": 0.9963023939646295
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.004192736067763939,
+                  "delta_edge": 0.9958072639322361
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.004386957918406731,
+                  "delta_edge": 0.9956130420815933
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.004597751365242568,
+                  "delta_edge": 0.9954022486347575
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.004634371988435633,
+                  "delta_edge": 0.9953656280115644
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.004658143270157447,
+                  "delta_edge": 0.9953418567298425
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.004701060070671423,
+                  "delta_edge": 0.9952989399293286
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.004699903629939005,
+                  "delta_edge": 0.995300096370061
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.004693221972373953,
+                  "delta_edge": 0.995306778027626
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.004630517185994255,
+                  "delta_edge": 0.9953694828140057
+                }
+              ]
+            },
+            "xlnet-large": {
+              "display_name": "xlnet-large",
+              "optimal_temp": 1.2,
+              "optimal_q_edge_support": 0.005293286219081311,
+              "base_q_edge_support_t1": 0.0052131705750080755,
+              "relative_gain_pct": 1.5367930690261586,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.003866885091984793,
+                  "delta_edge": 0.9961331149080153
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.004553292386316691,
+                  "delta_edge": 0.9954467076136833
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.005029339329692731,
+                  "delta_edge": 0.9949706606703073
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.005183938323160984,
+                  "delta_edge": 0.994816061676839
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.0052131705750080755,
+                  "delta_edge": 0.994786829424992
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.005293286219081311,
+                  "delta_edge": 0.9947067137809187
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.005276068101509838,
+                  "delta_edge": 0.9947239318984902
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.005196273690973378,
+                  "delta_edge": 0.9948037263090266
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.005209123032444619,
+                  "delta_edge": 0.9947908769675554
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.005283392226148441,
+                  "delta_edge": 0.9947166077738515
+                }
+              ]
+            }
+          }
+        },
+        {
+          "k": 10,
+          "models": {
+            "roberta-large": {
+              "display_name": "roberta-large",
+              "optimal_temp": 2.0,
+              "optimal_q_edge_support": 0.010812367491166302,
+              "base_q_edge_support_t1": 0.010629135881786241,
+              "relative_gain_pct": 1.7238617646618013,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.008122649137840367,
+                  "delta_edge": 0.9918773508621597
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.009525385647785241,
+                  "delta_edge": 0.9904746143522147
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.010435110825570353,
+                  "delta_edge": 0.9895648891744296
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.010648891744298254,
+                  "delta_edge": 0.9893511082557017
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.010629135881786241,
+                  "delta_edge": 0.9893708641182137
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.010721040796659372,
+                  "delta_edge": 0.9892789592033406
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.010714680372631112,
+                  "delta_edge": 0.9892853196273689
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.010812367491166302,
+                  "delta_edge": 0.9891876325088337
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.010781079344683793,
+                  "delta_edge": 0.9892189206553162
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.01079906842274353,
+                  "delta_edge": 0.9892009315772565
+                }
+              ]
+            },
+            "distilbert": {
+              "display_name": "distilbert",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.008060938001927637,
+              "base_q_edge_support_t1": 0.007914198522325933,
+              "relative_gain_pct": 1.8541293750435,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.00652644936143101,
+                  "delta_edge": 0.993473550638569
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.007273244959884201,
+                  "delta_edge": 0.9927267550401158
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.0077707677481531345,
+                  "delta_edge": 0.9922292322518469
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.007964632187600603,
+                  "delta_edge": 0.9920353678123994
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.007914198522325933,
+                  "delta_edge": 0.9920858014776741
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.007888371345968736,
+                  "delta_edge": 0.9921116286540312
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.007952875040154414,
+                  "delta_edge": 0.9920471249598456
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.0079120783809832,
+                  "delta_edge": 0.9920879216190168
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.008001509797623105,
+                  "delta_edge": 0.9919984902023768
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.008060938001927637,
+                  "delta_edge": 0.9919390619980724
+                }
+              ]
+            },
+            "bart-large": {
+              "display_name": "bart-large",
+              "optimal_temp": 1.0,
+              "optimal_q_edge_support": 0.010523578541599875,
+              "base_q_edge_support_t1": 0.010523578541599875,
+              "relative_gain_pct": 0.0,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.007982023115975227,
+                  "delta_edge": 0.9920179768840248
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.009119178955390902,
+                  "delta_edge": 0.9908808210446091
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.010241953099903748,
+                  "delta_edge": 0.9897580469000963
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.01048413106328312,
+                  "delta_edge": 0.9895158689367168
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.010523578541599875,
+                  "delta_edge": 0.9894764214584001
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.010429971088981822,
+                  "delta_edge": 0.9895700289110182
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.010430677802762722,
+                  "delta_edge": 0.9895693221972373
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.010437006103437311,
+                  "delta_edge": 0.9895629938965627
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.010507548988114485,
+                  "delta_edge": 0.9894924510118855
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.010510440089945524,
+                  "delta_edge": 0.9894895599100545
+                }
+              ]
+            },
+            "bert-large": {
+              "display_name": "bert-large",
+              "optimal_temp": 2.0,
+              "optimal_q_edge_support": 0.009216736267266466,
+              "base_q_edge_support_t1": 0.00914661098618711,
+              "relative_gain_pct": 0.7666804807294822,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.007346464191504027,
+                  "delta_edge": 0.992653535808496
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.008197899441497953,
+                  "delta_edge": 0.991802100558502
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.00899209765499538,
+                  "delta_edge": 0.9910079023450046
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.00910915515579842,
+                  "delta_edge": 0.9908908448442015
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.00914661098618711,
+                  "delta_edge": 0.9908533890138129
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.009152361066495494,
+                  "delta_edge": 0.9908476389335045
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.009158592997109062,
+                  "delta_edge": 0.9908414070028909
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.009216736267266466,
+                  "delta_edge": 0.9907832637327335
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.00917619659492467,
+                  "delta_edge": 0.9908238034050754
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.009185287504015571,
+                  "delta_edge": 0.9908147124959844
+                }
+              ]
+            },
+            "albert-xxlarge": {
+              "display_name": "albert-xxlarge",
+              "optimal_temp": 2.0,
+              "optimal_q_edge_support": 0.010985223257308165,
+              "base_q_edge_support_t1": 0.010825056215868996,
+              "relative_gain_pct": 1.479595470408478,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.007723313718795866,
+                  "delta_edge": 0.9922766862812041
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.0094935451821359,
+                  "delta_edge": 0.9905064548178641
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.01026755541278522,
+                  "delta_edge": 0.9897324445872148
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.010653485383874138,
+                  "delta_edge": 0.9893465146161259
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.010825056215868996,
+                  "delta_edge": 0.989174943784131
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.010857051076132426,
+                  "delta_edge": 0.9891429489238676
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.010858946353999442,
+                  "delta_edge": 0.9891410536460006
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.010985223257308165,
+                  "delta_edge": 0.9890147767426918
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.010919081272084892,
+                  "delta_edge": 0.9890809187279151
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.010935367812399678,
+                  "delta_edge": 0.9890646321876003
+                }
+              ]
+            },
+            "xlnet-base": {
+              "display_name": "xlnet-base",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.00935788628332816,
+              "base_q_edge_support_t1": 0.009340539672341977,
+              "relative_gain_pct": 0.18571315571355893,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.007405967349110464,
+                  "delta_edge": 0.9925940326508895
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.008377145724104317,
+                  "delta_edge": 0.9916228542758957
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.008967073562480103,
+                  "delta_edge": 0.99103292643752
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.009197205268230181,
+                  "delta_edge": 0.9908027947317698
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.009340539672341977,
+                  "delta_edge": 0.9906594603276581
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.009330549309348077,
+                  "delta_edge": 0.9906694506906519
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.009237841310633014,
+                  "delta_edge": 0.990762158689367
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.009230517185994406,
+                  "delta_edge": 0.9907694828140056
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.00930815933183442,
+                  "delta_edge": 0.9906918406681656
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.00935788628332816,
+                  "delta_edge": 0.9906421137166719
+                }
+              ]
+            },
+            "bert-base": {
+              "display_name": "bert-base",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.008865852875040344,
+              "base_q_edge_support_t1": 0.00875136524253152,
+              "relative_gain_pct": 1.308225966303136,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.006885416236142981,
+                  "delta_edge": 0.993114583763857
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.008071944858399476,
+                  "delta_edge": 0.9919280551416005
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.008586893671699559,
+                  "delta_edge": 0.9914131063283005
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.008760134918085652,
+                  "delta_edge": 0.9912398650819143
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.00875136524253152,
+                  "delta_edge": 0.9912486347574685
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.00874394474783186,
+                  "delta_edge": 0.9912560552521681
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.00875939608095105,
+                  "delta_edge": 0.991240603919049
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.008781786058464698,
+                  "delta_edge": 0.9912182139415353
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.008771281721811958,
+                  "delta_edge": 0.991228718278188
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.008865852875040344,
+                  "delta_edge": 0.9911341471249596
+                }
+              ]
+            },
+            "xlnet-large": {
+              "display_name": "xlnet-large",
+              "optimal_temp": 2.0,
+              "optimal_q_edge_support": 0.010411757147446304,
+              "base_q_edge_support_t1": 0.010277385159010716,
+              "relative_gain_pct": 1.3074530764060852,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.007823692255217727,
+                  "delta_edge": 0.9921763077447823
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.008894692957139107,
+                  "delta_edge": 0.9911053070428609
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.009926919370382405,
+                  "delta_edge": 0.9900730806296176
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.010266623835528548,
+                  "delta_edge": 0.9897333761644714
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.010277385159010716,
+                  "delta_edge": 0.9897226148409893
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.010339800835207313,
+                  "delta_edge": 0.9896601991647926
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.01035261805332488,
+                  "delta_edge": 0.9896473819466751
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.010411757147446304,
+                  "delta_edge": 0.9895882428525536
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.010348152907163611,
+                  "delta_edge": 0.9896518470928364
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.0103712174751045,
+                  "delta_edge": 0.9896287825248955
+                }
+              ]
+            },
+            "roberta-base": {
+              "display_name": "roberta-base",
+              "optimal_temp": 1.2,
+              "optimal_q_edge_support": 0.009583424349502247,
+              "base_q_edge_support_t1": 0.009572855766142164,
+              "relative_gain_pct": 0.11040157313831862,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.007427932659125818,
+                  "delta_edge": 0.9925720673408742
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.008521406186111392,
+                  "delta_edge": 0.9914785938138886
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.009369836170896402,
+                  "delta_edge": 0.9906301638291036
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.009435239318985067,
+                  "delta_edge": 0.990564760681015
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.009572855766142164,
+                  "delta_edge": 0.9904271442338578
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.009583424349502247,
+                  "delta_edge": 0.9904165756504978
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.009539961451975745,
+                  "delta_edge": 0.9904600385480242
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.009577834885962248,
+                  "delta_edge": 0.9904221651140378
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.009455958882107457,
+                  "delta_edge": 0.9905440411178925
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.009476132348217323,
+                  "delta_edge": 0.9905238676517827
+                }
+              ]
+            }
+          }
+        },
+        {
+          "k": 20,
+          "models": {
+            "bert-base": {
+              "display_name": "bert-base",
+              "optimal_temp": 2.0,
+              "optimal_q_edge_support": 0.01754522968197727,
+              "base_q_edge_support_t1": 0.017400530035334236,
+              "relative_gain_pct": 0.8315818331349638,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.013888616036120948,
+                  "delta_edge": 0.9861113839638791
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.01583321495475894,
+                  "delta_edge": 0.984166785045241
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.016938499839381806,
+                  "delta_edge": 0.9830615001606182
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.017213459685189718,
+                  "delta_edge": 0.9827865403148103
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.017400530035334236,
+                  "delta_edge": 0.9825994699646657
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.017456585287502543,
+                  "delta_edge": 0.9825434147124975
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.01749428204304378,
+                  "delta_edge": 0.9825057179569562
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.01754522968197727,
+                  "delta_edge": 0.9824547703180228
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.017533986508189974,
+                  "delta_edge": 0.9824660134918101
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.017530019274010728,
+                  "delta_edge": 0.9824699807259892
+                }
+              ]
+            },
+            "bart-large": {
+              "display_name": "bart-large",
+              "optimal_temp": 2.0,
+              "optimal_q_edge_support": 0.020650192740120036,
+              "base_q_edge_support_t1": 0.020525778991324656,
+              "relative_gain_pct": 0.6061341148024851,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.015921413018072362,
+                  "delta_edge": 0.9840785869819276
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.017982058870367915,
+                  "delta_edge": 0.982017941129632
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.019757741728234447,
+                  "delta_edge": 0.9802422582717656
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.020452457436554262,
+                  "delta_edge": 0.9795475425634458
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.020525778991324656,
+                  "delta_edge": 0.9794742210086753
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.020549598458077013,
+                  "delta_edge": 0.979450401541923
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.020567683906197776,
+                  "delta_edge": 0.9794323160938022
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.020650192740120036,
+                  "delta_edge": 0.97934980725988
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.020593671699323392,
+                  "delta_edge": 0.9794063283006766
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.020612512046255648,
+                  "delta_edge": 0.9793874879537443
+                }
+              ]
+            },
+            "bert-large": {
+              "display_name": "bert-large",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.018261194988755045,
+              "base_q_edge_support_t1": 0.01790016061676659,
+              "relative_gain_pct": 2.016933700864575,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.014655199017930805,
+                  "delta_edge": 0.9853448009820692
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.016348797574030485,
+                  "delta_edge": 0.9836512024259695
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.017264214584000938,
+                  "delta_edge": 0.982735785415999
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.01787791519434452,
+                  "delta_edge": 0.9821220848056554
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.01790016061676659,
+                  "delta_edge": 0.9820998393832334
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.018009733376162726,
+                  "delta_edge": 0.9819902666238373
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.018122389977511873,
+                  "delta_edge": 0.9818776100224881
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.018202377128170376,
+                  "delta_edge": 0.9817976228718296
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.018230982974620762,
+                  "delta_edge": 0.9817690170253792
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.018261194988755045,
+                  "delta_edge": 0.981738805011245
+                }
+              ]
+            },
+            "roberta-base": {
+              "display_name": "roberta-base",
+              "optimal_temp": 1.0,
+              "optimal_q_edge_support": 0.01894344683584774,
+              "base_q_edge_support_t1": 0.01894344683584774,
+              "relative_gain_pct": 0.0,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.01452884671617359,
+                  "delta_edge": 0.9854711532838264
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.016518648519045394,
+                  "delta_edge": 0.9834813514809546
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.018396482492770497,
+                  "delta_edge": 0.9816035175072295
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.01875952457436365,
+                  "delta_edge": 0.9812404754256363
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.01894344683584774,
+                  "delta_edge": 0.9810565531641523
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.0189098779312541,
+                  "delta_edge": 0.9810901220687459
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.01891162865402955,
+                  "delta_edge": 0.9810883713459705
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.01884225827176168,
+                  "delta_edge": 0.9811577417282383
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.01880639254738002,
+                  "delta_edge": 0.98119360745262
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.018806906521038804,
+                  "delta_edge": 0.9811930934789612
+                }
+              ]
+            },
+            "roberta-large": {
+              "display_name": "roberta-large",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.021571554770315547,
+              "base_q_edge_support_t1": 0.02120062640539437,
+              "relative_gain_pct": 1.7496104022039445,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.01607522241742075,
+                  "delta_edge": 0.9839247775825792
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.018401667264467514,
+                  "delta_edge": 0.9815983327355324
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.020195888210727042,
+                  "delta_edge": 0.979804111789273
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.021012640539670068,
+                  "delta_edge": 0.9789873594603299
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.02120062640539437,
+                  "delta_edge": 0.9787993735946057
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.02122850947638697,
+                  "delta_edge": 0.978771490523613
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.021249791198198715,
+                  "delta_edge": 0.9787502088018013
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.02130327658207279,
+                  "delta_edge": 0.9786967234179272
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.02156442338579907,
+                  "delta_edge": 0.9784355766142009
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.021571554770315547,
+                  "delta_edge": 0.9784284452296844
+                }
+              ]
+            },
+            "xlnet-large": {
+              "display_name": "xlnet-large",
+              "optimal_temp": 2.0,
+              "optimal_q_edge_support": 0.02059665917121544,
+              "base_q_edge_support_t1": 0.02013035656922376,
+              "relative_gain_pct": 2.316415014250597,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.015784611454171323,
+                  "delta_edge": 0.9842153885458287
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.017844518964605934,
+                  "delta_edge": 0.9821554810353941
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.01933514294892191,
+                  "delta_edge": 0.9806648570510781
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.019972855766139934,
+                  "delta_edge": 0.9800271442338601
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.02013035656922376,
+                  "delta_edge": 0.9798696434307762
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.020317876646319864,
+                  "delta_edge": 0.9796821233536801
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.02044307741728037,
+                  "delta_edge": 0.9795569225827196
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.02059665917121544,
+                  "delta_edge": 0.9794033408287846
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.02057778670092957,
+                  "delta_edge": 0.9794222132990704
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.020562030195950473,
+                  "delta_edge": 0.9794379698040495
+                }
+              ]
+            },
+            "distilbert": {
+              "display_name": "distilbert",
+              "optimal_temp": 0.8,
+              "optimal_q_edge_support": 0.015577979441052426,
+              "base_q_edge_support_t1": 0.015553372952134993,
+              "relative_gain_pct": 0.15820676963870278,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.01299366646402329,
+                  "delta_edge": 0.9870063335359767
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.014498481269436767,
+                  "delta_edge": 0.9855015187305632
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.015417426919369138,
+                  "delta_edge": 0.9845825730806309
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.015577979441052426,
+                  "delta_edge": 0.9844220205589476
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.015553372952134993,
+                  "delta_edge": 0.984446627047865
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.015488596209443034,
+                  "delta_edge": 0.984511403790557
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.01537311275297014,
+                  "delta_edge": 0.9846268872470298
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.01539017025377323,
+                  "delta_edge": 0.9846098297462268
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.015423112752970172,
+                  "delta_edge": 0.9845768872470299
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.015340106007065885,
+                  "delta_edge": 0.9846598939929341
+                }
+              ]
+            },
+            "albert-xxlarge": {
+              "display_name": "albert-xxlarge",
+              "optimal_temp": 3.0,
+              "optimal_q_edge_support": 0.02139500481850075,
+              "base_q_edge_support_t1": 0.021186990041757992,
+              "relative_gain_pct": 0.9818042880691149,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.015445071925821254,
+                  "delta_edge": 0.9845549280741788
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.018808609877984966,
+                  "delta_edge": 0.9811913901220151
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.02056174108576704,
+                  "delta_edge": 0.979438258914233
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.02109958239639984,
+                  "delta_edge": 0.9789004176036001
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.021186990041757992,
+                  "delta_edge": 0.978813009958242
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.021252232573078268,
+                  "delta_edge": 0.9787477674269217
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.0212507870221628,
+                  "delta_edge": 0.9787492129778372
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.021326533890135776,
+                  "delta_edge": 0.9786734661098643
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.02139500481850075,
+                  "delta_edge": 0.9786049951814992
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.02137425313202466,
+                  "delta_edge": 0.9786257468679753
+                }
+              ]
+            },
+            "xlnet-base": {
+              "display_name": "xlnet-base",
+              "optimal_temp": 3.0,
+              "optimal_q_edge_support": 0.018230292322516814,
+              "base_q_edge_support_t1": 0.017935367812397955,
+              "relative_gain_pct": 1.6443739164077253,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.014637091328919584,
+                  "delta_edge": 0.9853629086710805
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.016317382589244818,
+                  "delta_edge": 0.9836826174107551
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.017442868615481902,
+                  "delta_edge": 0.9825571313845181
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.017780372630901056,
+                  "delta_edge": 0.982219627369099
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.017935367812397955,
+                  "delta_edge": 0.9820646321876021
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.018048715065851192,
+                  "delta_edge": 0.9819512849341488
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.01810016061676672,
+                  "delta_edge": 0.9818998393832333
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.018159958239638552,
+                  "delta_edge": 0.9818400417603614
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.018230292322516814,
+                  "delta_edge": 0.9817697076774832
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.01818997751365075,
+                  "delta_edge": 0.9818100224863493
+                }
+              ]
+            }
+          }
+        },
+        {
+          "k": 50,
+          "models": {
+            "roberta-base": {
+              "display_name": "roberta-base",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.04532427240604712,
+              "base_q_edge_support_t1": 0.04468497911982844,
+              "relative_gain_pct": 1.4306670805514616,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.03647944343030157,
+                  "delta_edge": 0.9635205565696985
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.040639719781091696,
+                  "delta_edge": 0.9593602802189083
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.04295316415034477,
+                  "delta_edge": 0.9570468358496552
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.04420076453582574,
+                  "delta_edge": 0.9557992354641742
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.04468497911982844,
+                  "delta_edge": 0.9553150208801715
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.04493671056859144,
+                  "delta_edge": 0.9550632894314086
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.04507619017026178,
+                  "delta_edge": 0.9549238098297382
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.04525203340829582,
+                  "delta_edge": 0.9547479665917041
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.04529789270800674,
+                  "delta_edge": 0.9547021072919932
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.04532427240604712,
+                  "delta_edge": 0.9546757275939529
+                }
+              ]
+            },
+            "roberta-large": {
+              "display_name": "roberta-large",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.051194731770006385,
+              "base_q_edge_support_t1": 0.05003874718921608,
+              "relative_gain_pct": 2.3101789027992115,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.039560146649764996,
+                  "delta_edge": 0.960439853350235
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.0448373171183751,
+                  "delta_edge": 0.9551626828816249
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.047549412142636714,
+                  "delta_edge": 0.9524505878573633
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.04936870542885604,
+                  "delta_edge": 0.9506312945711439
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.05003874718921608,
+                  "delta_edge": 0.9499612528107839
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.050321105043376016,
+                  "delta_edge": 0.9496788949566239
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.05063958239641158,
+                  "delta_edge": 0.9493604176035885
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.050807105685843054,
+                  "delta_edge": 0.949192894314157
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.051144137487963384,
+                  "delta_edge": 0.9488558625120366
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.051194731770006385,
+                  "delta_edge": 0.9488052682299937
+                }
+              ]
+            },
+            "xlnet-large": {
+              "display_name": "xlnet-large",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.04956417603598783,
+              "base_q_edge_support_t1": 0.048316909733385975,
+              "relative_gain_pct": 2.5814281366178147,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.03882326699087783,
+                  "delta_edge": 0.9611767330091222
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.04349804875106187,
+                  "delta_edge": 0.9565019512489381
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.04581777063926371,
+                  "delta_edge": 0.9541822293607363
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.04766785737231923,
+                  "delta_edge": 0.9523321426276807
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.048316909733385975,
+                  "delta_edge": 0.951683090266614
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.04858406681658542,
+                  "delta_edge": 0.9514159331834146
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.04889214262770008,
+                  "delta_edge": 0.9511078573723
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.049160167041448835,
+                  "delta_edge": 0.9508398329585511
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.049352817218127294,
+                  "delta_edge": 0.9506471827818727
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.04956417603598783,
+                  "delta_edge": 0.9504358239640122
+                }
+              ]
+            },
+            "bert-base": {
+              "display_name": "bert-base",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.04218442017347325,
+              "base_q_edge_support_t1": 0.0415528557661489,
+              "relative_gain_pct": 1.5199061428621565,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.034697325001707864,
+                  "delta_edge": 0.9653026749982921
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.03856397205592285,
+                  "delta_edge": 0.9614360279440771
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.0403873433986573,
+                  "delta_edge": 0.9596126566013427
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.04119509155156468,
+                  "delta_edge": 0.9588049084484354
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.0415528557661489,
+                  "delta_edge": 0.9584471442338511
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.04182161901703235,
+                  "delta_edge": 0.9581783809829676
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.042030472213306254,
+                  "delta_edge": 0.9579695277866938
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.04211350465789347,
+                  "delta_edge": 0.9578864953421066
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.04212712495985302,
+                  "delta_edge": 0.957872875040147
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.04218442017347325,
+                  "delta_edge": 0.9578155798265268
+                }
+              ]
+            },
+            "albert-xxlarge": {
+              "display_name": "albert-xxlarge",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.04988100867331507,
+              "base_q_edge_support_t1": 0.0493840603919147,
+              "relative_gain_pct": 1.006292875588916,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.038218378520806305,
+                  "delta_edge": 0.9617816214791937
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.04568286769454832,
+                  "delta_edge": 0.9543171323054517
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.04804021843881471,
+                  "delta_edge": 0.9519597815611853
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.049121792483145,
+                  "delta_edge": 0.950878207516855
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.0493840603919147,
+                  "delta_edge": 0.9506159396080853
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.04955858657244811,
+                  "delta_edge": 0.9504414134275518
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.049864818503061764,
+                  "delta_edge": 0.9501351814969382
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.049710157404442956,
+                  "delta_edge": 0.950289842595557
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.04982264696435279,
+                  "delta_edge": 0.9501773530356472
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.04988100867331507,
+                  "delta_edge": 0.950118991326685
+                }
+              ]
+            },
+            "distilbert": {
+              "display_name": "distilbert",
+              "optimal_temp": 1.5,
+              "optimal_q_edge_support": 0.03708697719242299,
+              "base_q_edge_support_t1": 0.036840334082882176,
+              "relative_gain_pct": 0.6694920545126495,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.03188067135594479,
+                  "delta_edge": 0.9681193286440553
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.0346868089713615,
+                  "delta_edge": 0.9653131910286386
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.035948185030520954,
+                  "delta_edge": 0.964051814969479
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.03665060070671765,
+                  "delta_edge": 0.9633493992932823
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.036840334082882176,
+                  "delta_edge": 0.9631596659171178
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.03700702858978875,
+                  "delta_edge": 0.9629929714102112
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.03708697719242299,
+                  "delta_edge": 0.9629130228075771
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.03703498875683029,
+                  "delta_edge": 0.9629650112431697
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.036916614198526355,
+                  "delta_edge": 0.9630833858014737
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.03684384195310389,
+                  "delta_edge": 0.9631561580468961
+                }
+              ]
+            },
+            "bert-large": {
+              "display_name": "bert-large",
+              "optimal_temp": 3.0,
+              "optimal_q_edge_support": 0.04416226148410648,
+              "base_q_edge_support_t1": 0.043442589142313956,
+              "relative_gain_pct": 1.6566055476917858,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.035765989534172656,
+                  "delta_edge": 0.9642340104658274
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.03944829621506569,
+                  "delta_edge": 0.9605517037849343
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.04152293607453293,
+                  "delta_edge": 0.958477063925467
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.042940417603605105,
+                  "delta_edge": 0.9570595823963949
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.043442589142313956,
+                  "delta_edge": 0.9565574108576861
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.043794050754906486,
+                  "delta_edge": 0.9562059492450935
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.043967208480573075,
+                  "delta_edge": 0.9560327915194269
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.0440842274333518,
+                  "delta_edge": 0.9559157725666482
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.04416226148410648,
+                  "delta_edge": 0.9558377385158935
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.04404550594282793,
+                  "delta_edge": 0.955954494057172
+                }
+              ]
+            },
+            "bart-large": {
+              "display_name": "bart-large",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.049800796659180115,
+              "base_q_edge_support_t1": 0.048736562801165145,
+              "relative_gain_pct": 2.1836457001631775,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.03893042666874409,
+                  "delta_edge": 0.9610695733312559
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.043454691058671606,
+                  "delta_edge": 0.9565453089413284
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.04663815611950763,
+                  "delta_edge": 0.9533618438804924
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.04839105043367386,
+                  "delta_edge": 0.9516089495663261
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.048736562801165145,
+                  "delta_edge": 0.9512634371988349
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.04895007388372231,
+                  "delta_edge": 0.9510499261162777
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.04914068101510702,
+                  "delta_edge": 0.950859318984893
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.049528763250892456,
+                  "delta_edge": 0.9504712367491075
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.04959426919371268,
+                  "delta_edge": 0.9504057308062873
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.049800796659180115,
+                  "delta_edge": 0.9501992033408199
+                }
+              ]
+            },
+            "xlnet-base": {
+              "display_name": "xlnet-base",
+              "optimal_temp": 3.0,
+              "optimal_q_edge_support": 0.04350386122711946,
+              "base_q_edge_support_t1": 0.04292948281401283,
+              "relative_gain_pct": 1.3379579148322442,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.03589870884272846,
+                  "delta_edge": 0.9641012911572715
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.039343719389984565,
+                  "delta_edge": 0.9606562806100154
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.04177632508834575,
+                  "delta_edge": 0.9582236749116543
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.042807645358182364,
+                  "delta_edge": 0.9571923546418176
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.04292948281401283,
+                  "delta_edge": 0.9570705171859871
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.04308997751365946,
+                  "delta_edge": 0.9569100224863405
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.04320753613878004,
+                  "delta_edge": 0.95679246386122
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.04336881464825642,
+                  "delta_edge": 0.9566311853517436
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.04350386122711946,
+                  "delta_edge": 0.9564961387728805
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.043380668165763685,
+                  "delta_edge": 0.9566193318342363
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "metric": "jensen_shannon",
+      "scales": [
+        {
+          "k": 5,
+          "models": {
+            "roberta-large": {
+              "display_name": "roberta-large",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.0054097654995181816,
+              "base_q_edge_support_t1": 0.005251076132348267,
+              "relative_gain_pct": 3.022035163275168,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.003910316320260422,
+                  "delta_edge": 0.9960896836797396
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.0046533347056378176,
+                  "delta_edge": 0.9953466652943622
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.005241867437627198,
+                  "delta_edge": 0.9947581325623728
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.005332219723739211,
+                  "delta_edge": 0.9946677802762608
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.005251076132348267,
+                  "delta_edge": 0.9947489238676517
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.005176485705107672,
+                  "delta_edge": 0.9948235142948924
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.005232380340507606,
+                  "delta_edge": 0.9947676196594923
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.005321811757147493,
+                  "delta_edge": 0.9946781882428525
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.005391969161580507,
+                  "delta_edge": 0.9946080308384195
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.0054097654995181816,
+                  "delta_edge": 0.9945902345004818
+                }
+              ]
+            },
+            "bert-large": {
+              "display_name": "bert-large",
+              "optimal_temp": 1.5,
+              "optimal_q_edge_support": 0.00469849020237717,
+              "base_q_edge_support_t1": 0.004634436235142989,
+              "relative_gain_pct": 1.3821307271089258,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.003573641813690564,
+                  "delta_edge": 0.9964263581863094
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.004107007848125734,
+                  "delta_edge": 0.9958929921518742
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.004365820751686526,
+                  "delta_edge": 0.9956341792483134
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.004591647928043726,
+                  "delta_edge": 0.9954083520719563
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.004634436235142989,
+                  "delta_edge": 0.995365563764857
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.004663668486990082,
+                  "delta_edge": 0.9953363315130099
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.00469849020237717,
+                  "delta_edge": 0.9953015097976228
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.004697783488596248,
+                  "delta_edge": 0.9953022165114037
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.004691615804690047,
+                  "delta_edge": 0.99530838419531
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.004628011564407361,
+                  "delta_edge": 0.9953719884355926
+                }
+              ]
+            },
+            "albert-xxlarge": {
+              "display_name": "albert-xxlarge",
+              "optimal_temp": 2.0,
+              "optimal_q_edge_support": 0.00541824606488921,
+              "base_q_edge_support_t1": 0.005347831673626756,
+              "relative_gain_pct": 1.316690493638913,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.0037326756365510055,
+                  "delta_edge": 0.996267324363449
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.004558150375869391,
+                  "delta_edge": 0.9954418496241306
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.005255573401863192,
+                  "delta_edge": 0.9947444265981368
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.005338708641182169,
+                  "delta_edge": 0.9946612913588179
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.005347831673626756,
+                  "delta_edge": 0.9946521683263733
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.005356697719241919,
+                  "delta_edge": 0.994643302280758
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.005359074847414101,
+                  "delta_edge": 0.994640925152586
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.00541824606488921,
+                  "delta_edge": 0.9945817539351108
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.005413877288788985,
+                  "delta_edge": 0.994586122711211
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.005406553164150367,
+                  "delta_edge": 0.9945934468358496
+                }
+              ]
+            },
+            "xlnet-large": {
+              "display_name": "xlnet-large",
+              "optimal_temp": 1.2,
+              "optimal_q_edge_support": 0.005295984580790269,
+              "base_q_edge_support_t1": 0.005229810472213338,
+              "relative_gain_pct": 1.2653251762854982,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.003761645145088477,
+                  "delta_edge": 0.9962383548549115
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.004453262329722155,
+                  "delta_edge": 0.9955467376702778
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.005030966912945753,
+                  "delta_edge": 0.9949690330870542
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.0051987150658529165,
+                  "delta_edge": 0.9948012849341471
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.005229810472213338,
+                  "delta_edge": 0.9947701895277866
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.005295984580790269,
+                  "delta_edge": 0.9947040154192097
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.005278637969804084,
+                  "delta_edge": 0.9947213620301959
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.0051998715065853275,
+                  "delta_edge": 0.9948001284934147
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.005210921940250593,
+                  "delta_edge": 0.9947890780597494
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.00528531962736913,
+                  "delta_edge": 0.9947146803726309
+                }
+              ]
+            },
+            "distilbert": {
+              "display_name": "distilbert",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.004069771924188942,
+              "base_q_edge_support_t1": 0.0040259556697719735,
+              "relative_gain_pct": 1.0883441848591058,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.003180431059663394,
+                  "delta_edge": 0.9968195689403366
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.003661667042145091,
+                  "delta_edge": 0.9963383329578549
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.003962351429489287,
+                  "delta_edge": 0.9960376485705107
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.004051268872470333,
+                  "delta_edge": 0.9959487311275297
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.0040259556697719735,
+                  "delta_edge": 0.9959740443302281
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.004060777385159064,
+                  "delta_edge": 0.9959392226148409
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.004033793768069436,
+                  "delta_edge": 0.9959662062319306
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.00402569868294255,
+                  "delta_edge": 0.9959743013170574
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.004036106649534265,
+                  "delta_edge": 0.9959638933504658
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.004069771924188942,
+                  "delta_edge": 0.9959302280758111
+                }
+              ]
+            },
+            "bert-base": {
+              "display_name": "bert-base",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.004466816575650544,
+              "base_q_edge_support_t1": 0.004331834243495066,
+              "relative_gain_pct": 3.116054875787905,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.0033497382116122135,
+                  "delta_edge": 0.9966502617883878
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.003986204505658429,
+                  "delta_edge": 0.9960137954943415
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.004159845807902388,
+                  "delta_edge": 0.9958401541920976
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.004307163507870266,
+                  "delta_edge": 0.9956928364921297
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.004331834243495066,
+                  "delta_edge": 0.995668165756505
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.004325538066174158,
+                  "delta_edge": 0.9956744619338258
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.004388242852553856,
+                  "delta_edge": 0.9956117571474461
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.004414969482814053,
+                  "delta_edge": 0.9955850305171859
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.004426919370382314,
+                  "delta_edge": 0.9955730806296177
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.004466816575650544,
+                  "delta_edge": 0.9955331834243495
+                }
+              ]
+            },
+            "xlnet-base": {
+              "display_name": "xlnet-base",
+              "optimal_temp": 3.0,
+              "optimal_q_edge_support": 0.004817539351108288,
+              "base_q_edge_support_t1": 0.0047142948923868,
+              "relative_gain_pct": 2.190029709177078,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.0036015334633373807,
+                  "delta_edge": 0.9963984665366626
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.004252085004299696,
+                  "delta_edge": 0.9957479149957003
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.00470472213299072,
+                  "delta_edge": 0.9952952778670093
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.004703629938965663,
+                  "delta_edge": 0.9952963700610343
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.0047142948923868,
+                  "delta_edge": 0.9952857051076132
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.004616511403790596,
+                  "delta_edge": 0.9953834885962094
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.0047032444587215266,
+                  "delta_edge": 0.9952967555412785
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.0047380019274012595,
+                  "delta_edge": 0.9952619980725987
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.004817539351108288,
+                  "delta_edge": 0.9951824606488917
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.0048037905557340495,
+                  "delta_edge": 0.9951962094442659
+                }
+              ]
+            },
+            "roberta-base": {
+              "display_name": "roberta-base",
+              "optimal_temp": 0.5,
+              "optimal_q_edge_support": 0.004839832958560909,
+              "base_q_edge_support_t1": 0.00469476389335051,
+              "relative_gain_pct": 3.090018337575388,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.003654988821506876,
+                  "delta_edge": 0.9963450111784932
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.004314734296108031,
+                  "delta_edge": 0.9956852657038919
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.004839832958560909,
+                  "delta_edge": 0.9951601670414391
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.004706392547381998,
+                  "delta_edge": 0.995293607452618
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.00469476389335051,
+                  "delta_edge": 0.9953052361066494
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.0046738837134597325,
+                  "delta_edge": 0.9953261162865402
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.004702409251525916,
+                  "delta_edge": 0.9952975907484741
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.004749309347895965,
+                  "delta_edge": 0.995250690652104
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.0048063604240283124,
+                  "delta_edge": 0.9951936395759717
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.0047628011564407775,
+                  "delta_edge": 0.9952371988435592
+                }
+              ]
+            },
+            "bart-large": {
+              "display_name": "bart-large",
+              "optimal_temp": 1.2,
+              "optimal_q_edge_support": 0.005398136845486679,
+              "base_q_edge_support_t1": 0.005368711853517525,
+              "relative_gain_pct": 0.5480829065146335,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.003830973188879746,
+                  "delta_edge": 0.9961690268111203
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.004622349291656836,
+                  "delta_edge": 0.9953776507083432
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.005352071956312266,
+                  "delta_edge": 0.9946479280436877
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.005341985223257319,
+                  "delta_edge": 0.9946580147767426
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.005368711853517525,
+                  "delta_edge": 0.9946312881464825
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.005398136845486679,
+                  "delta_edge": 0.9946018631545133
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.00526296177320914,
+                  "delta_edge": 0.9947370382267908
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.005294699646643127,
+                  "delta_edge": 0.9947053003533569
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.0053234821715387294,
+                  "delta_edge": 0.9946765178284612
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.005345454545454571,
+                  "delta_edge": 0.9946545454545455
+                }
+              ]
+            }
+          }
+        },
+        {
+          "k": 10,
+          "models": {
+            "bert-base": {
+              "display_name": "bert-base",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.008869193703822874,
+              "base_q_edge_support_t1": 0.00875637648570531,
+              "relative_gain_pct": 1.2884007249087137,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.006680292312241691,
+                  "delta_edge": 0.9933197076877583
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.007886303719477789,
+                  "delta_edge": 0.9921136962805223
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.008541310632830302,
+                  "delta_edge": 0.9914586893671697
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.008755862512046481,
+                  "delta_edge": 0.9912441374879535
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.00875637648570531,
+                  "delta_edge": 0.9912436235142947
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.008745711532284164,
+                  "delta_edge": 0.9912542884677158
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.008763507870221855,
+                  "delta_edge": 0.9912364921297782
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.008785865724381824,
+                  "delta_edge": 0.9912141342756182
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.008775778991326894,
+                  "delta_edge": 0.9912242210086731
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.008869193703822874,
+                  "delta_edge": 0.9911308062961771
+                }
+              ]
+            },
+            "bert-large": {
+              "display_name": "bert-large",
+              "optimal_temp": 2.0,
+              "optimal_q_edge_support": 0.009215740443302438,
+              "base_q_edge_support_t1": 0.009150337295213777,
+              "relative_gain_pct": 0.7147621555204481,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.007089777437705359,
+                  "delta_edge": 0.9929102225622947
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.008066183378517614,
+                  "delta_edge": 0.9919338166214824
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.008984837777064148,
+                  "delta_edge": 0.9910151622229358
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.009125987793125755,
+                  "delta_edge": 0.9908740122068742
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.009150337295213777,
+                  "delta_edge": 0.9908496627047862
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.0091611628654033,
+                  "delta_edge": 0.9908388371345968
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.009159556697719406,
+                  "delta_edge": 0.9908404433022806
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.009215740443302438,
+                  "delta_edge": 0.9907842595566976
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.009176292964985703,
+                  "delta_edge": 0.9908237070350143
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.009187407645358326,
+                  "delta_edge": 0.9908125923546417
+                }
+              ]
+            },
+            "xlnet-large": {
+              "display_name": "xlnet-large",
+              "optimal_temp": 2.0,
+              "optimal_q_edge_support": 0.010411371667202175,
+              "base_q_edge_support_t1": 0.010258400256986957,
+              "relative_gain_pct": 1.4911819229419272,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.007587411371265819,
+                  "delta_edge": 0.9924125886287342
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.008695474467785898,
+                  "delta_edge": 0.9913045255322142
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.009878284612913752,
+                  "delta_edge": 0.9901217153870863
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.01025184709283663,
+                  "delta_edge": 0.9897481529071633
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.010258400256986957,
+                  "delta_edge": 0.989741599743013
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.010347831673626856,
+                  "delta_edge": 0.9896521683263731
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.01035946032765833,
+                  "delta_edge": 0.9896405396723417
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.010411371667202175,
+                  "delta_edge": 0.9895886283327978
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.010348442017346731,
+                  "delta_edge": 0.9896515579826533
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.010368486990041871,
+                  "delta_edge": 0.9896315130099581
+                }
+              ]
+            },
+            "xlnet-base": {
+              "display_name": "xlnet-base",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.00935801477674288,
+              "base_q_edge_support_t1": 0.009323996145197756,
+              "relative_gain_pct": 0.3648503390109694,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.00714035980500094,
+                  "delta_edge": 0.9928596401949991
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.008215968924097825,
+                  "delta_edge": 0.9917840310759022
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.008952312881465021,
+                  "delta_edge": 0.991047687118535
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.009204304529393068,
+                  "delta_edge": 0.990795695470607
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.009323996145197756,
+                  "delta_edge": 0.9906760038548023
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.009341824606489125,
+                  "delta_edge": 0.9906581753935109
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.009243077417282563,
+                  "delta_edge": 0.9907569225827174
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.009226566013492005,
+                  "delta_edge": 0.990773433986508
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.00930722775457777,
+                  "delta_edge": 0.9906927722454222
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.00935801477674288,
+                  "delta_edge": 0.9906419852232571
+                }
+              ]
+            },
+            "roberta-base": {
+              "display_name": "roberta-base",
+              "optimal_temp": 1.2,
+              "optimal_q_edge_support": 0.009589270799871649,
+              "base_q_edge_support_t1": 0.009570992611628823,
+              "relative_gain_pct": 0.19097484435018536,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.007237899376253392,
+                  "delta_edge": 0.9927621006237466
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.008259355722088755,
+                  "delta_edge": 0.9917406442779112
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.009341150016061821,
+                  "delta_edge": 0.9906588499839382
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.009446193382589292,
+                  "delta_edge": 0.9905538066174107
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.009570992611628823,
+                  "delta_edge": 0.9904290073883711
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.009589270799871649,
+                  "delta_edge": 0.9904107292001284
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.009540282685512503,
+                  "delta_edge": 0.9904597173144875
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.009577738515901194,
+                  "delta_edge": 0.9904222614840988
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.00945923546418261,
+                  "delta_edge": 0.9905407645358174
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.009478027626084318,
+                  "delta_edge": 0.9905219723739157
+                }
+              ]
+            },
+            "distilbert": {
+              "display_name": "distilbert",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.008064375200771199,
+              "base_q_edge_support_t1": 0.007932540957276153,
+              "relative_gain_pct": 1.6619421721878493,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.006298468851203257,
+                  "delta_edge": 0.9937015311487968
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.007216051926938107,
+                  "delta_edge": 0.9927839480730619
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.007774365563765085,
+                  "delta_edge": 0.9922256344362349
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.00795778991326717,
+                  "delta_edge": 0.9920422100867329
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.007932540957276153,
+                  "delta_edge": 0.9920674590427239
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.007885833601028175,
+                  "delta_edge": 0.9921141663989719
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.007953035656922812,
+                  "delta_edge": 0.9920469643430772
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.007912303244458952,
+                  "delta_edge": 0.9920876967555411
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.008004690009637242,
+                  "delta_edge": 0.9919953099903628
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.008064375200771199,
+                  "delta_edge": 0.9919356247992288
+                }
+              ]
+            },
+            "albert-xxlarge": {
+              "display_name": "albert-xxlarge",
+              "optimal_temp": 2.0,
+              "optimal_q_edge_support": 0.010994763893350572,
+              "base_q_edge_support_t1": 0.010823899775136606,
+              "relative_gain_pct": 1.5785818583285034,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.007445128062235179,
+                  "delta_edge": 0.9925548719377648
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.009045389969442123,
+                  "delta_edge": 0.9909546100305578
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.01021448763250897,
+                  "delta_edge": 0.989785512367491
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.01063466109861878,
+                  "delta_edge": 0.9893653389013812
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.010823899775136606,
+                  "delta_edge": 0.9891761002248634
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.010847124959845899,
+                  "delta_edge": 0.9891528750401541
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.010858143270157501,
+                  "delta_edge": 0.9891418567298425
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.010994763893350572,
+                  "delta_edge": 0.9890052361066495
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.010922454224221095,
+                  "delta_edge": 0.9890775457757789
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.010939704465146223,
+                  "delta_edge": 0.9890602955348538
+                }
+              ]
+            },
+            "roberta-large": {
+              "display_name": "roberta-large",
+              "optimal_temp": 2.0,
+              "optimal_q_edge_support": 0.010811468037263324,
+              "base_q_edge_support_t1": 0.010625152585930166,
+              "relative_gain_pct": 1.753532006494446,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.00789576561304253,
+                  "delta_edge": 0.9921042343869575
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.00919275901889359,
+                  "delta_edge": 0.9908072409811064
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.01043070992611645,
+                  "delta_edge": 0.9895692900738835
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.010679890780597653,
+                  "delta_edge": 0.9893201092194024
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.010625152585930166,
+                  "delta_edge": 0.9893748474140698
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.010718599421779846,
+                  "delta_edge": 0.9892814005782201
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.010720044972695372,
+                  "delta_edge": 0.9892799550273046
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.010811468037263324,
+                  "delta_edge": 0.9891885319627367
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.010781207838098517,
+                  "delta_edge": 0.9892187921619015
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.01079990362993918,
+                  "delta_edge": 0.9892000963700608
+                }
+              ]
+            },
+            "bart-large": {
+              "display_name": "bart-large",
+              "optimal_temp": 1.0,
+              "optimal_q_edge_support": 0.010511275297141166,
+              "base_q_edge_support_t1": 0.010511275297141166,
+              "relative_gain_pct": 0.0,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.007765360061135953,
+                  "delta_edge": 0.9922346399388641
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.00904010783185364,
+                  "delta_edge": 0.9909598921681464
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.010241535496305944,
+                  "delta_edge": 0.9897584645036941
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.010468037263090387,
+                  "delta_edge": 0.9895319627369096
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.010511275297141166,
+                  "delta_edge": 0.9894887247028589
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.010432637327337119,
+                  "delta_edge": 0.9895673626726629
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.010422036620623331,
+                  "delta_edge": 0.9895779633793766
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.010427947317700099,
+                  "delta_edge": 0.9895720526822999
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.010501413427561982,
+                  "delta_edge": 0.989498586572438
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.010510793446836003,
+                  "delta_edge": 0.989489206553164
+                }
+              ]
+            }
+          }
+        },
+        {
+          "k": 20,
+          "models": {
+            "distilbert": {
+              "display_name": "distilbert",
+              "optimal_temp": 0.8,
+              "optimal_q_edge_support": 0.015595358175392286,
+              "base_q_edge_support_t1": 0.015553276582073956,
+              "relative_gain_pct": 0.2705641675968847,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.012530729318755457,
+                  "delta_edge": 0.9874692706812446
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.01435802813769588,
+                  "delta_edge": 0.9856419718623041
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.015394908448440825,
+                  "delta_edge": 0.9846050915515592
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.015595358175392286,
+                  "delta_edge": 0.9844046418246077
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.015553276582073956,
+                  "delta_edge": 0.984446723417926
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.015477690330869306,
+                  "delta_edge": 0.9845223096691307
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.015368695791839426,
+                  "delta_edge": 0.9846313042081606
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.015391583681335091,
+                  "delta_edge": 0.9846084163186649
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.0154230806296165,
+                  "delta_edge": 0.9845769193703835
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.015341374879536185,
+                  "delta_edge": 0.9846586251204639
+                }
+              ]
+            },
+            "xlnet-base": {
+              "display_name": "xlnet-base",
+              "optimal_temp": 3.0,
+              "optimal_q_edge_support": 0.01823366527465304,
+              "base_q_edge_support_t1": 0.017930966912944102,
+              "relative_gain_pct": 1.688131840176584,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.01411382596322075,
+                  "delta_edge": 0.9858861740367793
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.015962923242790916,
+                  "delta_edge": 0.9840370767572091
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.01742364278830557,
+                  "delta_edge": 0.9825763572116945
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.0178240764535802,
+                  "delta_edge": 0.9821759235464198
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.017930966912944102,
+                  "delta_edge": 0.9820690330870558
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.018057918406680026,
+                  "delta_edge": 0.98194208159332
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.018094635399934122,
+                  "delta_edge": 0.9819053646000658
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.01816450369418405,
+                  "delta_edge": 0.9818354963058159
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.01823366527465304,
+                  "delta_edge": 0.9817663347253469
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.01819675554127686,
+                  "delta_edge": 0.9818032444587231
+                }
+              ]
+            },
+            "albert-xxlarge": {
+              "display_name": "albert-xxlarge",
+              "optimal_temp": 3.0,
+              "optimal_q_edge_support": 0.021395422422098534,
+              "base_q_edge_support_t1": 0.021167394796014365,
+              "relative_gain_pct": 1.077258813763444,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.014888745284661166,
+                  "delta_edge": 0.9851112547153388
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.018172719560198284,
+                  "delta_edge": 0.9818272804398017
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.020490362993894305,
+                  "delta_edge": 0.9795096370061057
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.021050562158687038,
+                  "delta_edge": 0.9789494378413129
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.021167394796014365,
+                  "delta_edge": 0.9788326052039856
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.021256296177318546,
+                  "delta_edge": 0.9787437038226815
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.021270655316412687,
+                  "delta_edge": 0.9787293446835873
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.02131374879537186,
+                  "delta_edge": 0.9786862512046282
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.021395422422098534,
+                  "delta_edge": 0.9786045775779014
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.021376501766782074,
+                  "delta_edge": 0.9786234982332179
+                }
+              ]
+            },
+            "roberta-large": {
+              "display_name": "roberta-large",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.02157430131705505,
+              "base_q_edge_support_t1": 0.02118673305492857,
+              "relative_gain_pct": 1.829296952586656,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.015565333194741677,
+                  "delta_edge": 0.9844346668052584
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.017785930758298683,
+                  "delta_edge": 0.9822140692417013
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.02008732733697191,
+                  "delta_edge": 0.9799126726630281
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.020981368454864417,
+                  "delta_edge": 0.9790186315451356
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.02118673305492857,
+                  "delta_edge": 0.9788132669450714
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.021234002569865955,
+                  "delta_edge": 0.978765997430134
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.02126305814326781,
+                  "delta_edge": 0.9787369418567322
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.021309139094119075,
+                  "delta_edge": 0.978690860905881
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.021569306135558148,
+                  "delta_edge": 0.9784306938644418
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.02157430131705505,
+                  "delta_edge": 0.9784256986829449
+                }
+              ]
+            },
+            "roberta-base": {
+              "display_name": "roberta-base",
+              "optimal_temp": 1.0,
+              "optimal_q_edge_support": 0.01892987471891876,
+              "base_q_edge_support_t1": 0.01892987471891876,
+              "relative_gain_pct": 0.0,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.014191540435718015,
+                  "delta_edge": 0.985808459564282
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.016175968887959958,
+                  "delta_edge": 0.9838240311120401
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.018288307099259448,
+                  "delta_edge": 0.9817116929007406
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.018773466109860002,
+                  "delta_edge": 0.98122653389014
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.01892987471891876,
+                  "delta_edge": 0.9810701252810813
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.01890085126887059,
+                  "delta_edge": 0.9810991487311294
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.01891763572116739,
+                  "delta_edge": 0.9810823642788327
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.018842852553804745,
+                  "delta_edge": 0.9811571474461953
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.0188088017989059,
+                  "delta_edge": 0.9811911982010941
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.01880795053003336,
+                  "delta_edge": 0.9811920494699666
+                }
+              ]
+            },
+            "bert-base": {
+              "display_name": "bert-base",
+              "optimal_temp": 2.0,
+              "optimal_q_edge_support": 0.017553132026982145,
+              "base_q_edge_support_t1": 0.017399919691614384,
+              "relative_gain_pct": 0.8805347270746278,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.013427813541010409,
+                  "delta_edge": 0.9865721864589896
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.015475608552678759,
+                  "delta_edge": 0.9845243914473213
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.01689257950529895,
+                  "delta_edge": 0.983107420494701
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.017268342434948847,
+                  "delta_edge": 0.9827316575650511
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.017399919691614384,
+                  "delta_edge": 0.9826000803083856
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.017466736267264867,
+                  "delta_edge": 0.9825332637327351
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.017502650176676977,
+                  "delta_edge": 0.982497349823323
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.017553132026982145,
+                  "delta_edge": 0.9824468679730178
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.017540154192096244,
+                  "delta_edge": 0.9824598458079038
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.017534821715385698,
+                  "delta_edge": 0.9824651782846143
+                }
+              ]
+            },
+            "bart-large": {
+              "display_name": "bart-large",
+              "optimal_temp": 2.0,
+              "optimal_q_edge_support": 0.02065766141985019,
+              "base_q_edge_support_t1": 0.02052309669129251,
+              "relative_gain_pct": 0.6556745825534821,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.01547846949085573,
+                  "delta_edge": 0.9845215305091443
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.017638698419952113,
+                  "delta_edge": 0.9823613015800479
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.01970526823000123,
+                  "delta_edge": 0.9802947317699988
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.020497783488594077,
+                  "delta_edge": 0.9795022165114059
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.02052309669129251,
+                  "delta_edge": 0.9794769033087075
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.020580758111144782,
+                  "delta_edge": 0.9794192418888552
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.020571394153547588,
+                  "delta_edge": 0.9794286058464524
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.02065766141985019,
+                  "delta_edge": 0.9793423385801499
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.02059924510118651,
+                  "delta_edge": 0.9794007548988135
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.020617491166075697,
+                  "delta_edge": 0.9793825088339243
+                }
+              ]
+            },
+            "bert-large": {
+              "display_name": "bert-large",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.018262785094762146,
+              "base_q_edge_support_t1": 0.01790489881143412,
+              "relative_gain_pct": 1.9988176816697714,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.014134766114909431,
+                  "delta_edge": 0.9858652338850906
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.01615664444510027,
+                  "delta_edge": 0.9838433555548998
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.01714259556697565,
+                  "delta_edge": 0.9828574044330244
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.017853774494055445,
+                  "delta_edge": 0.9821462255059445
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.01790489881143412,
+                  "delta_edge": 0.9820951011885659
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.017990796659169465,
+                  "delta_edge": 0.9820092033408305
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.018149983938321398,
+                  "delta_edge": 0.9818500160616787
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.018204047542561674,
+                  "delta_edge": 0.9817959524574383
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.018242772245420685,
+                  "delta_edge": 0.9817572277545793
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.018262785094762146,
+                  "delta_edge": 0.9817372149052379
+                }
+              ]
+            },
+            "xlnet-large": {
+              "display_name": "xlnet-large",
+              "optimal_temp": 2.0,
+              "optimal_q_edge_support": 0.02060441696112871,
+              "base_q_edge_support_t1": 0.020120462576290948,
+              "relative_gain_pct": 2.4052845852959206,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.015293811554496028,
+                  "delta_edge": 0.984706188445504
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.01739404552003616,
+                  "delta_edge": 0.9826059544799638
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.01923217153870668,
+                  "delta_edge": 0.9807678284612933
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.01997166720205388,
+                  "delta_edge": 0.9800283327979461
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.020120462576290948,
+                  "delta_edge": 0.979879537423709
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.02031151622229162,
+                  "delta_edge": 0.9796884837777083
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.020448072598777314,
+                  "delta_edge": 0.9795519274012227
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.02060441696112871,
+                  "delta_edge": 0.9793955830388713
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.02057650176678243,
+                  "delta_edge": 0.9794234982332176
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.020564712495982556,
+                  "delta_edge": 0.9794352875040174
+                }
+              ]
+            }
+          }
+        },
+        {
+          "k": 50,
+          "models": {
+            "xlnet-base": {
+              "display_name": "xlnet-base",
+              "optimal_temp": 3.0,
+              "optimal_q_edge_support": 0.04353862512046964,
+              "base_q_edge_support_t1": 0.042962222936081366,
+              "relative_gain_pct": 1.3416488835920706,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.03458330141591853,
+                  "delta_edge": 0.9654166985840815
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.03861313115239586,
+                  "delta_edge": 0.9613868688476042
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.04157789913267594,
+                  "delta_edge": 0.958422100867324
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.042819139094128364,
+                  "delta_edge": 0.9571808609058716
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.042962222936081366,
+                  "delta_edge": 0.9570377770639187
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.04310668165757187,
+                  "delta_edge": 0.9568933183424281
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.04323405075490559,
+                  "delta_edge": 0.9567659492450944
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.04339796337938366,
+                  "delta_edge": 0.9566020366206164
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.04353862512046964,
+                  "delta_edge": 0.9564613748795303
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.043413356890466416,
+                  "delta_edge": 0.9565866431095336
+                }
+              ]
+            },
+            "bart-large": {
+              "display_name": "bart-large",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.0498188628332886,
+              "base_q_edge_support_t1": 0.04871794410537319,
+              "relative_gain_pct": 2.25978076072794,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.03782519213935719,
+                  "delta_edge": 0.9621748078606428
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.04286462494351648,
+                  "delta_edge": 0.9571353750564835
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.046272939286870096,
+                  "delta_edge": 0.9537270607131298
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.048270260199173146,
+                  "delta_edge": 0.9517297398008269
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.04871794410537319,
+                  "delta_edge": 0.9512820558946268
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.04897786700932452,
+                  "delta_edge": 0.9510221329906755
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.04913050433666149,
+                  "delta_edge": 0.9508694956633386
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.049540424028277276,
+                  "delta_edge": 0.9504595759717227
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.04961067780277142,
+                  "delta_edge": 0.9503893221972286
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.0498188628332886,
+                  "delta_edge": 0.9501811371667114
+                }
+              ]
+            },
+            "albert-xxlarge": {
+              "display_name": "albert-xxlarge",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.04991312560232239,
+              "base_q_edge_support_t1": 0.04937675554128811,
+              "relative_gain_pct": 1.0862804879631498,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.036739145005559276,
+                  "delta_edge": 0.9632608549944407
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.0444695605221634,
+                  "delta_edge": 0.9555304394778366
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.04780785523076225,
+                  "delta_edge": 0.9521921447692377
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.049050440089954975,
+                  "delta_edge": 0.950949559910045
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.04937675554128811,
+                  "delta_edge": 0.9506232444587119
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.049595348538397116,
+                  "delta_edge": 0.9504046514616029
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.04987699325410566,
+                  "delta_edge": 0.9501230067458943
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.04973624799230018,
+                  "delta_edge": 0.9502637520076999
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.04984136845487633,
+                  "delta_edge": 0.9501586315451237
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.04991312560232239,
+                  "delta_edge": 0.9500868743976776
+                }
+              ]
+            },
+            "roberta-large": {
+              "display_name": "roberta-large",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.051208384195319555,
+              "base_q_edge_support_t1": 0.04998492129779259,
+              "relative_gain_pct": 2.447663946969131,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.03845520474287859,
+                  "delta_edge": 0.9615447952571214
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.043633996694242255,
+                  "delta_edge": 0.9563660033057577
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.047212084805662566,
+                  "delta_edge": 0.9527879151943375
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.04924271121105961,
+                  "delta_edge": 0.9507572887889404
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.04998492129779259,
+                  "delta_edge": 0.9500150787022074
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.05030246707357168,
+                  "delta_edge": 0.9496975329264283
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.05063644073242159,
+                  "delta_edge": 0.9493635592675784
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.050804355926768026,
+                  "delta_edge": 0.949195644073232
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.05115680693865406,
+                  "delta_edge": 0.9488431930613459
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.051208384195319555,
+                  "delta_edge": 0.9487916158046804
+                }
+              ]
+            },
+            "xlnet-large": {
+              "display_name": "xlnet-large",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.049582441374889125,
+              "base_q_edge_support_t1": 0.04831588178606815,
+              "relative_gain_pct": 2.6214146197910915,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.037598069219323994,
+                  "delta_edge": 0.962401930780676
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.042337419387644654,
+                  "delta_edge": 0.9576625806123553
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.0454989335046667,
+                  "delta_edge": 0.9545010664953333
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.04757050433666228,
+                  "delta_edge": 0.9524294956633377
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.04831588178606815,
+                  "delta_edge": 0.9516841182139318
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.04855530356570181,
+                  "delta_edge": 0.9514446964342982
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.048915650497921646,
+                  "delta_edge": 0.9510843495020783
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.049184253132036476,
+                  "delta_edge": 0.9508157468679636
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.04937047221330859,
+                  "delta_edge": 0.9506295277866914
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.049582441374889125,
+                  "delta_edge": 0.9504175586251109
+                }
+              ]
+            },
+            "roberta-base": {
+              "display_name": "roberta-base",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.04534437520077877,
+              "base_q_edge_support_t1": 0.04467999357533757,
+              "relative_gain_pct": 1.486977889378933,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.03552349826537448,
+                  "delta_edge": 0.9644765017346255
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.04000987286444656,
+                  "delta_edge": 0.9599901271355534
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.0426508191455261,
+                  "delta_edge": 0.9573491808544738
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.04422785737231791,
+                  "delta_edge": 0.9557721426276821
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.04467999357533757,
+                  "delta_edge": 0.9553200064246624
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.044974436235151065,
+                  "delta_edge": 0.9550255637648489
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.04509298425956474,
+                  "delta_edge": 0.9549070157404352
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.04527214262769819,
+                  "delta_edge": 0.9547278573723018
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.04530679730164619,
+                  "delta_edge": 0.9546932026983538
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.04534437520077877,
+                  "delta_edge": 0.9546556247992213
+                }
+              ]
+            },
+            "distilbert": {
+              "display_name": "distilbert",
+              "optimal_temp": 1.5,
+              "optimal_q_edge_support": 0.03710558946354419,
+              "base_q_edge_support_t1": 0.036807857372313575,
+              "relative_gain_pct": 0.8088818868727896,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.030780802464283927,
+                  "delta_edge": 0.9692191975357161
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.03451310932140299,
+                  "delta_edge": 0.965486890678597
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.035961953099907254,
+                  "delta_edge": 0.9640380469000928
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.036601040796662904,
+                  "delta_edge": 0.9633989592033371
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.036807857372313575,
+                  "delta_edge": 0.9631921426276864
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.03701906842274731,
+                  "delta_edge": 0.9629809315772527
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.03710558946354419,
+                  "delta_edge": 0.9628944105364559
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.0370563186636727,
+                  "delta_edge": 0.9629436813363274
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.03694521040797065,
+                  "delta_edge": 0.9630547895920294
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.03685891423064972,
+                  "delta_edge": 0.9631410857693503
+                }
+              ]
+            },
+            "bert-large": {
+              "display_name": "bert-large",
+              "optimal_temp": 3.0,
+              "optimal_q_edge_support": 0.0441600449727027,
+              "base_q_edge_support_t1": 0.04339571474462683,
+              "relative_gain_pct": 1.7613034664223597,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.034631212320001534,
+                  "delta_edge": 0.9653687876799985
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.038967314875928215,
+                  "delta_edge": 0.9610326851240718
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.04132166613128401,
+                  "delta_edge": 0.958678333868716
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.04284282685513098,
+                  "delta_edge": 0.957157173144869
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.04339571474462683,
+                  "delta_edge": 0.9566042852553732
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.04376238355285043,
+                  "delta_edge": 0.9562376164471496
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.043967902345012314,
+                  "delta_edge": 0.9560320976549876
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.044075766141992934,
+                  "delta_edge": 0.9559242338580071
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.0441600449727027,
+                  "delta_edge": 0.9558399550272973
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.044065505942827786,
+                  "delta_edge": 0.9559344940571722
+                }
+              ]
+            },
+            "bert-base": {
+              "display_name": "bert-base",
+              "optimal_temp": 5.0,
+              "optimal_q_edge_support": 0.04220558946354711,
+              "base_q_edge_support_t1": 0.04157194346290428,
+              "relative_gain_pct": 1.5242154873232072,
+              "curve": [
+                {
+                  "temperature": 0.1,
+                  "q_edge_support": 0.03380975238638707,
+                  "delta_edge": 0.9661902476136129
+                },
+                {
+                  "temperature": 0.2,
+                  "q_edge_support": 0.037909660712200845,
+                  "delta_edge": 0.9620903392877992
+                },
+                {
+                  "temperature": 0.5,
+                  "q_edge_support": 0.040257603597821746,
+                  "delta_edge": 0.9597423964021783
+                },
+                {
+                  "temperature": 0.8,
+                  "q_edge_support": 0.04122844201735313,
+                  "delta_edge": 0.9587715579826469
+                },
+                {
+                  "temperature": 1.0,
+                  "q_edge_support": 0.04157194346290428,
+                  "delta_edge": 0.9584280565370957
+                },
+                {
+                  "temperature": 1.2,
+                  "q_edge_support": 0.04185187921619703,
+                  "delta_edge": 0.958148120783803
+                },
+                {
+                  "temperature": 1.5,
+                  "q_edge_support": 0.04204393832316796,
+                  "delta_edge": 0.957956061676832
+                },
+                {
+                  "temperature": 2.0,
+                  "q_edge_support": 0.04214645036942565,
+                  "delta_edge": 0.9578535496305743
+                },
+                {
+                  "temperature": 3.0,
+                  "q_edge_support": 0.04214880179891499,
+                  "delta_edge": 0.957851198201085
+                },
+                {
+                  "temperature": 5.0,
+                  "q_edge_support": 0.04220558946354711,
+                  "delta_edge": 0.9577944105364529
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "total_runtime_ms": 593409.2180999999
+}
