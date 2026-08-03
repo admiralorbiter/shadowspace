@@ -330,7 +330,73 @@ fn build_stratified_5folds_empirical(items: &[ItemRecord], seed: u64) -> Vec<Vec
     folds
 }
 
+// ─── Training-Only Human Posterior Support Target Generator ─────────────────
+
+fn compute_training_support_matrix(
+    items: &[ItemRecord],
+    train_indices: &[usize],
+    n_draws: usize,
+    k: usize,
+    seed_offset: u64,
+) -> Vec<f64> {
+    let n_tr = train_indices.len();
+    let sum_w = (0..n_draws)
+        .into_par_iter()
+        .fold(
+            || vec![0.0f64; n_tr * n_tr],
+            |mut acc, b| {
+                let seed = seed_offset + b as u64;
+                let mut rng = ChaCha8Rng::seed_from_u64(seed);
+                let probs: Vec<[f64; 3]> = train_indices
+                    .iter()
+                    .map(|&idx| {
+                        let item = &items[idx];
+                        let a = [
+                            item.human_count_entailment as f64 + 0.5,
+                            item.human_count_neutral as f64 + 0.5,
+                            item.human_count_contradiction as f64 + 0.5,
+                        ];
+                        let dir = Dirichlet::new(&a).unwrap();
+                        let sample = dir.sample(&mut rng);
+                        let s: f64 = sample.iter().sum();
+                        [sample[0] / s, sample[1] / s, sample[2] / s]
+                    })
+                    .collect();
+                let dist = build_dist_matrix_seq(&probs, n_tr);
+                let w = compute_topk_weight_matrix(&dist, n_tr, k);
+                for i in 0..(n_tr * n_tr) {
+                    acc[i] += w[i];
+                }
+                acc
+            },
+        )
+        .reduce(
+            || vec![0.0f64; n_tr * n_tr],
+            |mut a, b| {
+                for i in 0..(n_tr * n_tr) {
+                    a[i] += b[i];
+                }
+                a
+            },
+        );
+
+    let mut s_train = vec![0.0f64; n_tr * n_tr];
+    for i in 0..(n_tr * n_tr) {
+        s_train[i] = sum_w[i] / n_draws as f64;
+    }
+    s_train
+}
+
 // ─── Optimizers for Vector, Full Affine Matrix, Dirichlet, & Ensembles ────────
+
+#[derive(Debug, Clone, Serialize)]
+struct EnsembleOptimizerResult {
+    best_alpha: Vec<f64>,
+    best_objective: f64,
+    second_best_alpha: Vec<f64>,
+    second_best_objective: f64,
+    objective_margin: f64,
+}
 
 fn optimize_temperature_nll(
     human_probs: &[[f64; 3]],
@@ -497,12 +563,12 @@ fn optimize_convex_ensemble_nll(
     human_probs: &[[f64; 3]],
     model_probs_pool: &[Vec<[f64; 3]>],
     indices: &[usize],
-) -> Vec<f64> {
+) -> EnsembleOptimizerResult {
     let m = model_probs_pool.len();
-    let mut best_alpha = vec![1.0 / m as f64; m];
-    let mut min_loss = 1e9f64;
-
     let grid = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0];
+
+    let mut candidates: Vec<(Vec<f64>, f64)> = Vec::new();
+
     for &a0 in &grid {
         for &a1 in &grid {
             for &a2 in &grid {
@@ -521,30 +587,52 @@ fn optimize_convex_ensemble_nll(
                     }
                     sum_loss += soft_label_nll_single(&human_probs[idx], &q);
                 }
-                if sum_loss < min_loss {
-                    min_loss = sum_loss;
-                    best_alpha = alpha;
-                }
+                let nll = sum_loss / indices.len() as f64;
+                candidates.push((alpha, nll));
             }
         }
     }
-    best_alpha
+
+    candidates.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
+
+    let best_alpha = candidates[0].0.clone();
+    let best_objective = candidates[0].1;
+
+    let second_best = candidates
+        .iter()
+        .skip(1)
+        .find(|(alpha, _)| {
+            (alpha[0] - best_alpha[0]).abs() > 1e-4
+                || (alpha[1] - best_alpha[1]).abs() > 1e-4
+                || (alpha[2] - best_alpha[2]).abs() > 1e-4
+        })
+        .cloned()
+        .unwrap_or_else(|| candidates[0].clone());
+
+    let second_best_alpha = second_best.0;
+    let second_best_objective = second_best.1;
+    let objective_margin = second_best_objective - best_objective;
+
+    EnsembleOptimizerResult {
+        best_alpha,
+        best_objective,
+        second_best_alpha,
+        second_best_objective,
+        objective_margin,
+    }
 }
 
 /// Training-only topology simplex optimizer.
-/// Builds N_tr × N_tr Hellinger graph and support target strictly within each
-/// training fold. Permutation nulls are stratified within the training subset.
+/// Evaluates candidate weights against a training-only human posterior support target S_train.
 fn optimize_ensemble_topology_training_only(
     items: &[ItemRecord],
-    s_ij_k10: &[f64],
+    s_train: &[f64],
     model_probs_pool: &[Vec<[f64; 3]>],
     train_indices: &[usize],
-    n_full: usize,
-) -> Vec<f64> {
+) -> EnsembleOptimizerResult {
     let m = model_probs_pool.len();
     let n_tr = train_indices.len();
 
-    // Partition training indices by dataset for stratified permutations
     let mut snli_train_pos = Vec::new();
     let mut mnli_train_pos = Vec::new();
     for (pos, &idx) in train_indices.iter().enumerate() {
@@ -554,18 +642,9 @@ fn optimize_ensemble_topology_training_only(
         }
     }
 
-    // Extract training-only S_ij submatrix (N_tr × N_tr)
-    let mut s_train = vec![0.0f64; n_tr * n_tr];
-    for (ti, &i) in train_indices.iter().enumerate() {
-        for (tj, &j) in train_indices.iter().enumerate() {
-            s_train[ti * n_tr + tj] = s_ij_k10[i * n_full + j];
-        }
-    }
-
-    let mut best_alpha = vec![1.0 / m as f64; m];
-    let mut max_excess = -1e9f64;
-
     let grid = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0];
+    let mut candidates: Vec<(Vec<f64>, f64)> = Vec::new();
+
     for &a0 in &grid {
         for &a1 in &grid {
             for &a2 in &grid {
@@ -575,7 +654,6 @@ fn optimize_ensemble_topology_training_only(
                 }
                 let alpha = vec![a0 / sum_a, a1 / sum_a, a2 / sum_a];
 
-                // Build training-only blended probabilities (N_tr items)
                 let mut q_train = vec![[0.0f64; 3]; n_tr];
                 for (ti, &idx) in train_indices.iter().enumerate() {
                     for k in 0..m {
@@ -585,11 +663,9 @@ fn optimize_ensemble_topology_training_only(
                     }
                 }
 
-                // Build training-only N_tr × N_tr distance and weight matrices
                 let dist_train = build_dist_matrix_seq(&q_train, n_tr);
                 let w_train = compute_topk_weight_matrix(&dist_train, n_tr, 10);
 
-                // Compute training-only Q_support
                 let mut sum_q = 0.0f64;
                 for ti in 0..n_tr {
                     let ti_off = ti * n_tr;
@@ -601,7 +677,6 @@ fn optimize_ensemble_topology_training_only(
                 }
                 let q_sup_cand = sum_q / (n_tr * 10) as f64;
 
-                // Training-only null with stratified permutations within training subset
                 let sparse_w_train = extract_nonzero_weights(&w_train, n_tr);
                 let sum_null: f64 = (0..50)
                     .into_par_iter()
@@ -609,7 +684,6 @@ fn optimize_ensemble_topology_training_only(
                         let mut null_rng = ChaCha8Rng::seed_from_u64(6060_0000 + b_idx as u64);
                         let mut perm = (0..n_tr).collect::<Vec<_>>();
 
-                        // Stratified shuffle within training positions
                         let mut snli_shuffled = snli_train_pos.clone();
                         let mut mnli_shuffled = mnli_train_pos.clone();
                         snli_shuffled.shuffle(&mut null_rng);
@@ -624,10 +698,8 @@ fn optimize_ensemble_topology_training_only(
 
                         let mut s_null = 0.0f64;
                         for ti in 0..n_tr {
-                            let ti_perm = perm[ti];
                             for &(tj, w_val) in &sparse_w_train[ti] {
-                                let tj_perm = perm[tj];
-                                s_null += w_val * s_train[ti_perm * n_tr + tj_perm];
+                                s_null += w_val * s_train[perm[ti] * n_tr + perm[tj]];
                             }
                         }
                         s_null / (n_tr * 10) as f64
@@ -636,18 +708,41 @@ fn optimize_ensemble_topology_training_only(
 
                 let q_null_cand = sum_null / 50.0;
                 let q_excess_cand = q_sup_cand - q_null_cand;
-
-                if q_excess_cand > max_excess {
-                    max_excess = q_excess_cand;
-                    best_alpha = alpha;
-                }
+                candidates.push((alpha, q_excess_cand));
             }
         }
     }
-    best_alpha
+
+    candidates.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+    let best_alpha = candidates[0].0.clone();
+    let best_objective = candidates[0].1;
+
+    let second_best = candidates
+        .iter()
+        .skip(1)
+        .find(|(alpha, _)| {
+            (alpha[0] - best_alpha[0]).abs() > 1e-4
+                || (alpha[1] - best_alpha[1]).abs() > 1e-4
+                || (alpha[2] - best_alpha[2]).abs() > 1e-4
+        })
+        .cloned()
+        .unwrap_or_else(|| candidates[0].clone());
+
+    let second_best_alpha = second_best.0;
+    let second_best_objective = second_best.1;
+    let objective_margin = best_objective - second_best_objective;
+
+    EnsembleOptimizerResult {
+        best_alpha,
+        best_objective,
+        second_best_alpha,
+        second_best_objective,
+        objective_margin,
+    }
 }
 
-/// Blend probabilities for a given simplex alpha, with a debug assertion
+/// Blend probabilities for a given simplex alpha, with an explicit assertion
 /// that the output sums to 1.
 fn blend_ensemble_probs(
     ensemble_pool: &[Vec<[f64; 3]>],
@@ -663,22 +758,32 @@ fn blend_ensemble_probs(
                 q[1] += alpha[k] * ensemble_pool[k][i][1];
                 q[2] += alpha[k] * ensemble_pool[k][i][2];
             }
-            debug_assert!(
-                (q[0] + q[1] + q[2] - 1.0).abs() < 1e-9,
+            let sum_q = q[0] + q[1] + q[2];
+            assert!(
+                (sum_q - 1.0).abs() < 1e-6,
                 "Ensemble blend does not sum to 1.0: sum = {}",
-                q[0] + q[1] + q[2]
+                sum_q
             );
-            debug_assert!(
+            assert!(
                 q.iter().all(|&x| x.is_finite() && x >= 0.0),
                 "Ensemble blend has invalid values: {:?}",
                 q
             );
-            q
+            [q[0] / sum_q, q[1] / sum_q, q[2] / sum_q]
         })
         .collect()
 }
 
 // ─── Output Structs for E003 Summary ────────────────────────────────────────
+
+#[derive(Serialize)]
+struct OptimizationInfo {
+    fold_weights: Vec<Vec<f64>>,
+    fold_training_objectives: Vec<f64>,
+    fold_second_best_weights: Vec<Vec<f64>>,
+    fold_objective_margins: Vec<f64>,
+    candidate_grid_spec: String,
+}
 
 #[derive(Serialize)]
 struct ConditionMetrics {
@@ -687,6 +792,14 @@ struct ConditionMetrics {
     q_support_oof: f64,
     q_null_oof: f64,
     q_global_excess_oof: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    q_profile_null_oof: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    q_profile_excess_oof: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    q_profile_null_95ci: Option<[f64; 2]>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    q_profile_pvalue_monte_carlo: Option<f64>,
     r_human_recovery_oof: f64,
     graph_turnover_min_oof: f64,
     core_mass_k50_oof: f64,
@@ -711,7 +824,21 @@ struct LadderLevelResult {
     bootstrap_delta_jsd: BootstrapCI,
     bootstrap_delta_q: BootstrapCI,
     bootstrap_delta_gap_closure: BootstrapCI,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    optimization_info: Option<OptimizationInfo>,
     metrics: ConditionMetrics,
+}
+
+#[derive(Serialize)]
+struct PairwiseContrast {
+    contrast_name: String,
+    delta_g_q: BootstrapCI,
+    delta_q_support: BootstrapCI,
+    delta_r_recovery: BootstrapCI,
+    delta_nll: BootstrapCI,
+    delta_jsd: BootstrapCI,
+    delta_core_recall_k50: BootstrapCI,
+    prob_gt_zero: f64,
 }
 
 #[derive(Serialize)]
@@ -726,21 +853,36 @@ struct E003Summary {
     human_entropy_floor_nats: f64,
     q_hh_relational: f64,
     ladder_results: HashMap<String, LadderLevelResult>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ensemble_pairwise_contrasts: Option<HashMap<String, PairwiseContrast>>,
     total_runtime_ms: f64,
 }
 
 // ─── Helper utilities ────────────────────────────────────────────────────────
 
 fn get_workspace_dir() -> PathBuf {
-    let manifest_dir = PathBuf::from(
-        env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| "research/chaosnli/rust_manifest".into()),
-    );
-    let candidate = manifest_dir.join("../..");
-    if candidate.join("data").exists() {
-        candidate.canonicalize().unwrap_or(candidate)
-    } else {
-        PathBuf::from(".")
+    if let Ok(cwd) = env::current_dir() {
+        if cwd.join("data").exists() {
+            return cwd;
+        }
+        let mut cur = cwd;
+        while let Some(parent) = cur.parent().map(|p| p.to_path_buf()) {
+            if parent.join("data").exists() {
+                return parent;
+            }
+            cur = parent;
+        }
     }
+    if let Ok(manifest_env) = env::var("CARGO_MANIFEST_DIR") {
+        let mut cur = PathBuf::from(manifest_env);
+        while let Some(parent) = cur.parent().map(|p| p.to_path_buf()) {
+            if parent.join("data").exists() {
+                return parent;
+            }
+            cur = parent;
+        }
+    }
+    PathBuf::from(".")
 }
 
 fn load_items(path: &Path) -> Vec<ItemRecord> {
@@ -769,7 +911,7 @@ fn compute_bytes_sha256(data: &[u8]) -> String {
 
 fn compute_file_sha256(path: &Path) -> String {
     let mut hasher = Sha256::new();
-    let mut file = File::open(path).unwrap();
+    let mut file = File::open(path).unwrap_or_else(|e| panic!("Failed to open sha256 file {}: {e}", path.display()));
     let mut buffer = [0u8; 65536];
     while let Ok(n) = file.read(&mut buffer) {
         if n == 0 {
@@ -901,6 +1043,22 @@ fn main() {
         raw_models["xlnet-large"].clone(),
     ];
 
+    println!("\nPre-computing training-only human posterior support matrices per fold...");
+    let t_supp = Instant::now();
+    let mut fold_s_train = Vec::with_capacity(5);
+    for fold_idx in 0..5 {
+        let test_indices = &folds[fold_idx];
+        let mut train_indices = Vec::with_capacity(n - test_indices.len());
+        for i in 0..n {
+            if !test_indices.contains(&i) {
+                train_indices.push(i);
+            }
+        }
+        let s_tr = compute_training_support_matrix(&items, &train_indices, 200, 10, 2026_0803_0000 + fold_idx as u64);
+        fold_s_train.push(s_tr);
+    }
+    println!("Training-only support matrices for 5 folds generated in {:.2?}", t_supp.elapsed());
+
     let ladder_names = vec![
         ("Level 0: Raw Model Baseline", "Level 0: Raw Model Baseline"),
         ("Level 1: Scalar Temperature", "Level 1: Global Isotropic Scalar Temperature"),
@@ -913,6 +1071,7 @@ fn main() {
     ];
 
     let mut ladder_results = HashMap::new();
+    let mut boot_reps_by_level: HashMap<String, (Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>)> = HashMap::new();
 
     // Baseline O_i_raw and O_i_null_raw pre-computation using actual 10,000 stratified perms
     let dist_raw_ref = build_dist_matrix_seq(&raw_probs_all, n);
@@ -981,6 +1140,10 @@ fn main() {
         println!("\n--- Evaluating Repair Ladder Step: {display_name} ---");
 
         let mut f_probs_all = vec![vec![[0.0f64; 3]; n]; 5];
+        let mut fold_weights = Vec::with_capacity(5);
+        let mut fold_training_objectives = Vec::with_capacity(5);
+        let mut fold_second_best_weights = Vec::with_capacity(5);
+        let mut fold_objective_margins = Vec::with_capacity(5);
 
         for fold_idx in 0..5 {
             let test_indices = &folds[fold_idx];
@@ -1011,23 +1174,56 @@ fn main() {
                 }
                 "Level 5a: Equal Weight Ensemble" => {
                     let alpha_eq = vec![1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0];
+                    fold_weights.push(alpha_eq.clone());
+                    fold_training_objectives.push(0.0);
+                    fold_second_best_weights.push(alpha_eq.clone());
+                    fold_objective_margins.push(0.0);
                     blend_ensemble_probs(&ensemble_pool, &alpha_eq, n)
                 }
                 "Level 5b: Convex NLL Ensemble" => {
-                    let alpha_opt = optimize_convex_ensemble_nll(&human_probs, &ensemble_pool, &train_indices);
-                    println!("    Fold {fold_idx} NLL weights: [{:.3}, {:.3}, {:.3}]", alpha_opt[0], alpha_opt[1], alpha_opt[2]);
-                    blend_ensemble_probs(&ensemble_pool, &alpha_opt, n)
+                    let opt_res = optimize_convex_ensemble_nll(&human_probs, &ensemble_pool, &train_indices);
+                    println!(
+                        "    Fold {fold_idx} NLL weights: [{:.3}, {:.3}, {:.3}] | obj = {:.5} | margin = {:.5}",
+                        opt_res.best_alpha[0], opt_res.best_alpha[1], opt_res.best_alpha[2],
+                        opt_res.best_objective, opt_res.objective_margin
+                    );
+                    fold_weights.push(opt_res.best_alpha.clone());
+                    fold_training_objectives.push(opt_res.best_objective);
+                    fold_second_best_weights.push(opt_res.second_best_alpha);
+                    fold_objective_margins.push(opt_res.objective_margin);
+                    blend_ensemble_probs(&ensemble_pool, &opt_res.best_alpha, n)
                 }
                 "Level 6a: Topology Ensemble" => {
-                    let alpha_topo = optimize_ensemble_topology_training_only(&items, &s_ij_k10, &ensemble_pool, &train_indices, n);
-                    println!("    Fold {fold_idx} Topo weights: [{:.3}, {:.3}, {:.3}]", alpha_topo[0], alpha_topo[1], alpha_topo[2]);
-                    blend_ensemble_probs(&ensemble_pool, &alpha_topo, n)
+                    let s_train = &fold_s_train[fold_idx];
+                    let opt_res = optimize_ensemble_topology_training_only(&items, s_train, &ensemble_pool, &train_indices);
+                    println!(
+                        "    Fold {fold_idx} Topo weights: [{:.3}, {:.3}, {:.3}] | obj = {:.5} | margin = {:.5}",
+                        opt_res.best_alpha[0], opt_res.best_alpha[1], opt_res.best_alpha[2],
+                        opt_res.best_objective, opt_res.objective_margin
+                    );
+                    fold_weights.push(opt_res.best_alpha.clone());
+                    fold_training_objectives.push(opt_res.best_objective);
+                    fold_second_best_weights.push(opt_res.second_best_alpha);
+                    fold_objective_margins.push(opt_res.objective_margin);
+                    blend_ensemble_probs(&ensemble_pool, &opt_res.best_alpha, n)
                 }
                 _ => raw_probs_all.clone(),
             };
 
             f_probs_all[fold_idx] = probs_f;
         }
+
+        let opt_info = if level_key.starts_with("Level 5") || level_key.starts_with("Level 6") {
+            Some(OptimizationInfo {
+                fold_weights,
+                fold_training_objectives,
+                fold_second_best_weights,
+                fold_objective_margins,
+                candidate_grid_spec: "simplex_grid_step_0.1_m3".to_string(),
+            })
+        } else {
+            None
+        };
 
         // Out-of-Fold Evaluation
         let mut sum_oof_nll = 0.0f64;
@@ -1147,6 +1343,63 @@ fn main() {
             }
         }
 
+        // Exact-Profile Permutation Null for Ensemble Levels (5a, 5b, 6a)
+        let is_ensemble_level = level_key.starts_with("Level 5") || level_key.starts_with("Level 6");
+        let (q_profile_null_oof, q_profile_excess_oof, q_profile_null_95ci, q_profile_pvalue_monte_carlo) = if is_ensemble_level {
+            let exact_groups = partition_exact_profiles(&items);
+            let n_null_prof = 10_000;
+            
+            let (_, null_prof_scores): (Vec<Vec<f64>>, Vec<f64>) = (0..n_null_prof)
+                .into_par_iter()
+                .map(|b_idx| {
+                    let mut null_rng = ChaCha8Rng::seed_from_u64(3030_0000 + b_idx as u64);
+                    let mut perm = (0..n).collect::<Vec<_>>();
+                    for group in &exact_groups {
+                        let mut grp_shuffled = group.clone();
+                        grp_shuffled.shuffle(&mut null_rng);
+                        for (orig_idx, &shuf_idx) in group.iter().zip(grp_shuffled.iter()) {
+                            perm[*orig_idx] = shuf_idx;
+                        }
+                    }
+
+                    let mut per_item_null = vec![0.0f64; n];
+                    let mut sum_null_f = 0.0f64;
+                    for fold_idx in 0..5 {
+                        let test_indices = &folds[fold_idx];
+                        let sparse_w10 = &sparse_w10_folds[fold_idx];
+                        for &i_test in test_indices {
+                            let i_perm = perm[i_test];
+                            let mut local_n = 0.0f64;
+                            for &(j, w) in &sparse_w10[i_test] {
+                                let j_perm = perm[j];
+                                local_n += w * s_ij_k10[i_perm * n + j_perm];
+                            }
+                            per_item_null[i_test] = local_n / 10.0;
+                            sum_null_f += local_n;
+                        }
+                    }
+                    (per_item_null, sum_null_f / (n * 10) as f64)
+                })
+                .unzip();
+
+            let prof_null_mean = null_prof_scores.iter().sum::<f64>() / n_null_prof as f64;
+            let prof_excess = q_support_oof - prof_null_mean;
+            
+            let mut sorted_prof_scores = null_prof_scores.clone();
+            sorted_prof_scores.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+            let ci_lo = sorted_prof_scores[(0.025 * n_null_prof as f64) as usize];
+            let ci_hi = sorted_prof_scores[(0.975 * n_null_prof as f64) as usize];
+            
+            let ge_count = null_prof_scores.iter().filter(|&&s| s >= q_support_oof).count();
+            let pval = (ge_count + 1) as f64 / (n_null_prof + 1) as f64;
+
+            println!("    Exact-Profile Null: mean = {:.5}, excess = {:.5}, p = {:.5}", prof_null_mean, prof_excess, pval);
+
+            (Some(prof_null_mean), Some(prof_excess), Some([ci_lo, ci_hi]), Some(pval))
+        } else {
+            (None, None, None, None)
+        };
+
         let r_human_recovery_oof = if (q_hh_relational - q_null_oof).abs() > 1e-12 {
             (q_support_oof - q_null_oof) / (q_hh_relational - q_null_oof)
         } else {
@@ -1172,6 +1425,13 @@ fn main() {
         let mut boot_delta_jsd = Vec::with_capacity(n_boot);
         let mut boot_delta_q = Vec::with_capacity(n_boot);
         let mut boot_delta_gc = Vec::with_capacity(n_boot);
+
+        let mut boot_g_q_vec = Vec::with_capacity(n_boot);
+        let mut boot_q_sup_vec = Vec::with_capacity(n_boot);
+        let mut boot_r_rec_vec = Vec::with_capacity(n_boot);
+        let mut boot_nll_vec = Vec::with_capacity(n_boot);
+        let mut boot_jsd_vec = Vec::with_capacity(n_boot);
+        let mut boot_recall_vec = Vec::with_capacity(n_boot);
 
         for boot_idx in 0..n_boot {
             let mut boot_rng = ChaCha8Rng::seed_from_u64(7070_0000 + boot_idx as u64);
@@ -1256,10 +1516,24 @@ fn main() {
             boot_delta_jsd.push(d_jsd);
             boot_delta_q.push(d_q);
             boot_delta_gc.push(g_nll_b - g_q_b);
+
+            boot_g_q_vec.push(g_q_b);
+            boot_q_sup_vec.push(b_obs_cal);
+            boot_r_rec_vec.push(r_cal_b);
+            boot_nll_vec.push(b_nll_cal);
+            boot_jsd_vec.push(b_jsd_cal);
+            boot_recall_vec.push(core_recall_k50_oof); // constant across bootstrap for fold predictions
+        }
+
+        if is_ensemble_level {
+            boot_reps_by_level.insert(
+                level_key.to_string(),
+                (boot_g_q_vec, boot_q_sup_vec, boot_r_rec_vec, boot_nll_vec, boot_jsd_vec, boot_recall_vec),
+            );
         }
 
         let calc_ci = |arr: &mut Vec<f64>| -> BootstrapCI {
-            arr.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            arr.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
             let mean = arr.iter().sum::<f64>() / arr.len() as f64;
             let ci_lower_95 = arr[(0.025 * arr.len() as f64) as usize];
             let ci_upper_95 = arr[(0.975 * arr.len() as f64) as usize];
@@ -1290,12 +1564,17 @@ fn main() {
             bootstrap_delta_jsd,
             bootstrap_delta_q,
             bootstrap_delta_gap_closure,
+            optimization_info: opt_info,
             metrics: ConditionMetrics {
                 nll: nll_val,
                 jsd_bits: jsd_val,
                 q_support_oof,
                 q_null_oof,
                 q_global_excess_oof,
+                q_profile_null_oof,
+                q_profile_excess_oof,
+                q_profile_null_95ci,
+                q_profile_pvalue_monte_carlo,
                 r_human_recovery_oof,
                 graph_turnover_min_oof,
                 core_mass_k50_oof,
@@ -1307,6 +1586,71 @@ fn main() {
         println!("  NLL = {:.4}, G_NLL = {:.2}%, Q_support = {:.5}, G_Q = {:.2}%", nll_val, gap_closure_nll * 100.0, q_support_oof, gap_closure_q * 100.0);
 
         ladder_results.insert(level_key.to_string(), level_res);
+    }
+
+    // Direct Paired Bootstrap Contrasts Between Ensemble Conditions
+    let mut ensemble_pairwise_contrasts = HashMap::new();
+
+    let contrast_pairs = vec![
+        ("topo_vs_nll", "Level 6a: Topology Ensemble", "Level 5b: Convex NLL Ensemble", "Level 6a Topology vs Level 5b NLL"),
+        ("topo_vs_equal", "Level 6a: Topology Ensemble", "Level 5a: Equal Weight Ensemble", "Level 6a Topology vs Level 5a Equal"),
+        ("nll_vs_equal", "Level 5b: Convex NLL Ensemble", "Level 5a: Equal Weight Ensemble", "Level 5b NLL vs Level 5a Equal"),
+    ];
+
+    for (key, l1, l2, display_name) in contrast_pairs {
+        if let (Some(r1), Some(r2)) = (boot_reps_by_level.get(l1), boot_reps_by_level.get(l2)) {
+            let n_b = r1.0.len();
+            let mut d_g_q = vec![0.0f64; n_b];
+            let mut d_q_sup = vec![0.0f64; n_b];
+            let mut d_r_rec = vec![0.0f64; n_b];
+            let mut d_nll = vec![0.0f64; n_b];
+            let mut d_jsd = vec![0.0f64; n_b];
+            let mut d_recall = vec![0.0f64; n_b];
+
+            let mut gt_zero_count = 0usize;
+
+            for i in 0..n_b {
+                d_g_q[i] = r1.0[i] - r2.0[i];
+                d_q_sup[i] = r1.1[i] - r2.1[i];
+                d_r_rec[i] = r1.2[i] - r2.2[i];
+                d_nll[i] = r1.3[i] - r2.3[i];
+                d_jsd[i] = r1.4[i] - r2.4[i];
+                d_recall[i] = r1.5[i] - r2.5[i];
+
+                if d_g_q[i] > 0.0 {
+                    gt_zero_count += 1;
+                }
+            }
+
+            let calc_ci = |arr: &mut Vec<f64>| -> BootstrapCI {
+                arr.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+                let mean = arr.iter().sum::<f64>() / arr.len() as f64;
+                let ci_lower_95 = arr[(0.025 * arr.len() as f64) as usize];
+                let ci_upper_95 = arr[(0.975 * arr.len() as f64) as usize];
+                BootstrapCI { mean, ci_lower_95, ci_upper_95 }
+            };
+
+            let contrast = PairwiseContrast {
+                contrast_name: display_name.to_string(),
+                delta_g_q: calc_ci(&mut d_g_q),
+                delta_q_support: calc_ci(&mut d_q_sup),
+                delta_r_recovery: calc_ci(&mut d_r_rec),
+                delta_nll: calc_ci(&mut d_nll),
+                delta_jsd: calc_ci(&mut d_jsd),
+                delta_core_recall_k50: calc_ci(&mut d_recall),
+                prob_gt_zero: gt_zero_count as f64 / n_b as f64,
+            };
+
+            println!(
+                "  Ensemble Contrast {display_name}: ΔG_Q = {:.2}% [{:.2}%, {:.2}%], P(>0) = {:.3}",
+                contrast.delta_g_q.mean * 100.0,
+                contrast.delta_g_q.ci_lower_95 * 100.0,
+                contrast.delta_g_q.ci_upper_95 * 100.0,
+                contrast.prob_gt_zero
+            );
+
+            ensemble_pairwise_contrasts.insert(key.to_string(), contrast);
+        }
     }
 
     let total_runtime_ms = t_start.elapsed().as_secs_f64() * 1000.0;
@@ -1322,6 +1666,7 @@ fn main() {
         human_entropy_floor_nats,
         q_hh_relational,
         ladder_results,
+        ensemble_pairwise_contrasts: Some(ensemble_pairwise_contrasts),
         total_runtime_ms,
     };
 

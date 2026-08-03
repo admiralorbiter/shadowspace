@@ -490,15 +490,28 @@ struct SourceArtifacts {
 // ─── Helper utilities ────────────────────────────────────────────────────────
 
 fn get_workspace_dir() -> PathBuf {
-    let manifest_dir = PathBuf::from(
-        env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| "research/chaosnli/rust_manifest".into()),
-    );
-    let candidate = manifest_dir.join("../..");
-    if candidate.join("data").exists() {
-        candidate.canonicalize().unwrap_or(candidate)
-    } else {
-        PathBuf::from(".")
+    if let Ok(cwd) = env::current_dir() {
+        if cwd.join("data").exists() {
+            return cwd;
+        }
+        let mut cur = cwd;
+        while let Some(parent) = cur.parent().map(|p| p.to_path_buf()) {
+            if parent.join("data").exists() {
+                return parent;
+            }
+            cur = parent;
+        }
     }
+    if let Ok(manifest_env) = env::var("CARGO_MANIFEST_DIR") {
+        let mut cur = PathBuf::from(manifest_env);
+        while let Some(parent) = cur.parent().map(|p| p.to_path_buf()) {
+            if parent.join("data").exists() {
+                return parent;
+            }
+            cur = parent;
+        }
+    }
+    PathBuf::from(".")
 }
 
 fn load_items(path: &Path) -> Vec<ItemRecord> {

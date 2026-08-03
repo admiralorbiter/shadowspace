@@ -38,8 +38,10 @@ def generate_e003_markdown() -> None:
     lines.append("1. **BART-Large Post-Hoc Calibration Produces Little Relational Repair ($G_Q \\le 0.83\\%$)**:")
     lines.append("   - For the BART-Large anchor, moving from scalar temperature scaling ($G_Q = 0.59\\%$) to class-wise vector scaling + bias, coarse-grid identifiable 8-parameter affine matrix scaling, and coarse-grid identifiable 8-parameter Dirichlet calibration closes at most approximately 0.83% of BART's remaining relational gap.")
     lines.append("2. **Diverse-Model Probability Ensembling Substantially Improves Relational Alignment**:")
-    lines.append("   - Combining BART-Large, RoBERTa-Large, and XLNet-Large output distributions materially improves both pointwise and relational alignment relative to BART-Large alone. Equal-weight ensembling provides most of the gain.")
-    lines.append("3. **Post-Hoc Ceiling Provides Strong Motivation for Fine-Tuning**: The tested global post-hoc methods leave most of BART's remaining relational gap unclosed. This provides strong motivation for topology-aware fine-tuning (E004), but does not establish it as uniquely necessary.\n")
+    lines.append("   - Combining BART-Large, RoBERTa-Large, and XLNet-Large output distributions materially improves both pointwise and relational alignment relative to BART-Large alone ($G_Q \\approx 17.18\\% - 17.71\\%$). Equal-weight ensembling provides most of the gain.")
+    lines.append("3. **Level 6a Topology Weighting Gain is Incremental**:")
+    lines.append("   - Level 6a produced the highest relational-recovery point estimate, but its advantage over equal and NLL-optimized weighting is small and evaluated directly via paired bootstrap contrasts.")
+    lines.append("4. **Post-Hoc Ceiling Provides Strong Motivation for Fine-Tuning**: Global post-hoc recalibration leaves most of BART's relational gap unclosed. This motivates topology-aware fine-tuning (E004), but does not establish it as uniquely necessary.\n")
     lines.append("---\n")
     lines.append("## 6-Level Relational Repair Ladder Summary Results\n")
     lines.append("| Ladder Level | NLL (nats) | JSD (bits) | $Q_{\\text{support, OOF}}$ | $Q_{\\text{null, OOF}}$ | $Q_{\\text{global-excess}}$ | $G_{\\text{NLL}}$ | Relational Gap Closure $G_Q$ | $\\Delta G = G_{\\text{NLL}} - G_Q$ (95% CI) | Min Turnover | Core Mass ($k=50$) | Core Recall ($k=50$) |")
@@ -58,11 +60,72 @@ def generate_e003_markdown() -> None:
             f"{m['graph_turnover_min_oof']*100.0:.2f}% | {m['core_mass_k50_oof']:.6f} | {m['core_recall_k50_oof']*100.0:.2f}% |"
         )
 
+    # Exact-Profile Null Section
+    lines.append("\n---\n")
+    lines.append("## Exact-Profile Null & Excess Analysis (Ensemble Conditions)\n")
+    lines.append("| Ensemble Condition | $Q_{\\text{support}}$ | $Q_{\\text{exact-profile null}}$ (95% CI) | $Q_{\\text{profile-excess}}$ | $p_{\\text{Monte Carlo}}$ |")
+    lines.append("|---|---|---|---|---|")
+
+    for l_res in sorted_ladder:
+        m = l_res["metrics"]
+        if m.get("q_profile_null_oof") is not None:
+            pn_mean = m["q_profile_null_oof"]
+            pn_ci = m.get("q_profile_null_95ci", [0.0, 0.0])
+            pe = m.get("q_profile_excess_oof", 0.0)
+            pval = m.get("q_profile_pvalue_monte_carlo", 1.0)
+            lines.append(
+                f"| **{l_res['display_name']}** | {m['q_support_oof']:.5f} | "
+                f"{pn_mean:.5f} [{pn_ci[0]:.5f}, {pn_ci[1]:.5f}] | **{pe:.5f}** | {pval:.4f} |"
+            )
+
+    # Direct Paired Ensemble Contrasts Section
+    if "ensemble_pairwise_contrasts" in data and data["ensemble_pairwise_contrasts"]:
+        lines.append("\n---\n")
+        lines.append("## Direct Paired Bootstrap Contrasts Between Ensemble Conditions\n")
+        lines.append("| Contrast | $\\Delta G_Q$ (95% CI) | $\\Delta Q_{\\text{support}}$ (95% CI) | $\\Delta R$ (95% CI) | $\\Delta \\text{NLL}$ (95% CI) | $P(\\Delta G_Q > 0)$ |")
+        lines.append("|---|---|---|---|---|---|")
+        
+        contrasts = data["ensemble_pairwise_contrasts"]
+        for c_key, c in contrasts.items():
+            gq_c = c["delta_g_q"]
+            qs_c = c["delta_q_support"]
+            r_c = c["delta_r_recovery"]
+            nll_c = c["delta_nll"]
+            lines.append(
+                f"| **{c['contrast_name']}** | "
+                f"**{gq_c['mean']*100.0:+.2f}%** [{gq_c['ci_lower_95']*100.0:+.2f}%, {gq_c['ci_upper_95']*100.0:+.2f}%] | "
+                f"{qs_c['mean']:+.5f} [{qs_c['ci_lower_95']:+.5f}, {qs_c['ci_upper_95']:+.5f}] | "
+                f"{r_c['mean']*100.0:+.2f}% [{r_c['ci_lower_95']*100.0:+.2f}%, {r_c['ci_upper_95']*100.0:+.2f}%] | "
+                f"{nll_c['mean']:+.5f} [{nll_c['ci_lower_95']:+.5f}, {nll_c['ci_upper_95']:+.5f}] | "
+                f"{c['prob_gt_zero']*100.0:.1f}% |"
+            )
+
+    # Fold Weights Section
+    lines.append("\n---\n")
+    lines.append("## Fold-Specific Optimization Weights & Margins\n")
+    for l_res in sorted_ladder:
+        opt = l_res.get("optimization_info")
+        if opt:
+            lines.append(f"### {l_res['display_name']}\n")
+            lines.append("| Fold | Best Weights (BART, RoBERTa, XLNet) | Best Objective | Second-Best Weights | Objective Margin |")
+            lines.append("|---|---|---|---|---|")
+            for f_idx in range(len(opt["fold_weights"])):
+                bw = opt["fold_weights"][f_idx]
+                bo = opt["fold_training_objectives"][f_idx]
+                sbw = opt["fold_second_best_weights"][f_idx]
+                margin = opt["fold_objective_margins"][f_idx]
+                lines.append(
+                    f"| Fold {f_idx} | [{bw[0]:.3f}, {bw[1]:.3f}, {bw[2]:.3f}] | {bo:.5f} | "
+                    f"[{sbw[0]:.3f}, {sbw[1]:.3f}, {sbw[2]:.3f}] | {margin:.5f} |"
+                )
+            lines.append("\n")
+
     lines.append("\n---\n")
     lines.append("## Scientific Conclusions for Experiment E003\n")
-    lines.append("- **Levels 1 to 4 (BART-Large Post-Hoc Calibration)**: The tested scalar, vector, coarse-grid affine, and coarse-grid Dirichlet transformations closed at most approximately $0.83\\%$ of BART's remaining relational gap.")
+    lines.append("- **Levels 1 to 4 (BART-Large Post-Hoc Calibration)**: Scalar, vector, coarse-grid affine, and coarse-grid Dirichlet transformations closed at most approximately $0.83\\%$ of BART's remaining relational gap.")
     lines.append("- **Levels 5a/5b/6a (Multi-Model Ensembling)**: Combining BART-Large, RoBERTa-Large, and XLNet-Large output distributions materially improves both pointwise and relational alignment relative to BART-Large alone.")
-    lines.append("- **Core Takeaway**: Diverse-model probability ensembling produces a large and reliable improvement in both pointwise and relational alignment, whereas increasingly flexible BART-Large recalibration produces little relational improvement. This provides strong motivation for topology-aware fine-tuning (E004).\n")
+    lines.append("- **Ensemble Contrast & Ranking**: Level 6a produced the highest relational-recovery point estimate, but its advantage over equal and NLL-optimized weighting was small.")
+    lines.append("- **Core Takeaway**: Diverse-model probability ensembling produces a large and reliable improvement in both pointwise and relational alignment, whereas single-model BART recalibration produces little relational improvement. This motivates topology-aware fine-tuning (E004).\n")
 
     with open(md_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")

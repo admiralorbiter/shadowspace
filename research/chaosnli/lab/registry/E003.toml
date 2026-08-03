@@ -50,6 +50,7 @@ pointwise_human_baseline = "empirical_soft_label_entropy_floor_0.65062"
 required_safeguards = [
   "recompute_null_at_every_level",
   "fit_parameters_strictly_on_training_folds",
+  "training_only_human_support_target",
   "coherent_full_dataset_graphs_per_fold",
   "held_out_focal_row_scoring",
   "literal_30strata_item_level_paired_bootstrap"
