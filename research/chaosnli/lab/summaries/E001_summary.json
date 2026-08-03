@@ -1,0 +1,795 @@
+{
+  "experiment_id": "E001",
+  "title": "Posterior Edge-Support Graph Construction & Model Comparison",
+  "dataset_release": "chaosnli-canonical-2026-08-02",
+  "n_items": 3113,
+  "snli_count": 1514,
+  "mnli_count": 1599,
+  "n_posterior_draws": 500,
+  "metrics": [
+    {
+      "metric": "hellinger",
+      "scales": [
+        {
+          "k": 5,
+          "mean_human_edge_support": 1.0000000000069638,
+          "density_tau_50": 4.64508648944595e-6,
+          "density_tau_80": 0.0,
+          "density_tau_95": 0.0,
+          "mean_degree_tau_50": 0.014455509155155798,
+          "models": {
+            "roberta-large": {
+              "display_name": "roberta-large",
+              "q_edge_support_mean": 0.005245358175393561,
+              "delta_edge_mean": 0.9947546418315703,
+              "q_null_mean": 0.0016260404754256269
+            },
+            "bert-base": {
+              "display_name": "bert-base",
+              "q_edge_support_mean": 0.0043343398650819605,
+              "delta_edge_mean": 0.9956656601418818,
+              "q_null_mean": 0.001671008673305485
+            },
+            "xlnet-large": {
+              "display_name": "xlnet-large",
+              "q_edge_support_mean": 0.0052131705750080755,
+              "delta_edge_mean": 0.9947868294319557,
+              "q_null_mean": 0.001629951172502401
+            },
+            "bert-large": {
+              "display_name": "bert-large",
+              "q_edge_support_mean": 0.004634371988435633,
+              "delta_edge_mean": 0.9953656280185281,
+              "q_null_mean": 0.001645672341792475
+            },
+            "bart-large": {
+              "display_name": "bart-large",
+              "q_edge_support_mean": 0.005374301317057524,
+              "delta_edge_mean": 0.9946256986899062,
+              "q_null_mean": 0.001629746225505934
+            },
+            "xlnet-base": {
+              "display_name": "xlnet-base",
+              "q_edge_support_mean": 0.004720526823000355,
+              "delta_edge_mean": 0.9952794731839634,
+              "q_null_mean": 0.0016523951172502326
+            },
+            "roberta-base": {
+              "display_name": "roberta-base",
+              "q_edge_support_mean": 0.004691680051397413,
+              "delta_edge_mean": 0.9953083199555663,
+              "q_null_mean": 0.0016382608416318591
+            },
+            "distilbert": {
+              "display_name": "distilbert",
+              "q_edge_support_mean": 0.00402467073562485,
+              "delta_edge_mean": 0.9959753292713389,
+              "q_null_mean": 0.0016633080629617652
+            },
+            "albert-xxlarge": {
+              "display_name": "albert-xxlarge",
+              "q_edge_support_mean": 0.00534192097654998,
+              "delta_edge_mean": 0.9946580790304138,
+              "q_null_mean": 0.0016415740443302199
+            }
+          }
+        },
+        {
+          "k": 10,
+          "mean_human_edge_support": 1.0000000000066993,
+          "density_tau_50": 0.000031793036416652285,
+          "density_tau_80": 1.6515863073585602e-6,
+          "density_tau_95": 0.0,
+          "mean_degree_tau_50": 0.0989399293286219,
+          "models": {
+            "bert-base": {
+              "display_name": "bert-base",
+              "q_edge_support_mean": 0.00875136524253152,
+              "delta_edge_mean": 0.9912486347641678,
+              "q_null_mean": 0.003312670093157733
+            },
+            "roberta-base": {
+              "display_name": "roberta-base",
+              "q_edge_support_mean": 0.009572855766142164,
+              "delta_edge_mean": 0.9904271442405571,
+              "q_null_mean": 0.003253798907805981
+            },
+            "distilbert": {
+              "display_name": "distilbert",
+              "q_edge_support_mean": 0.007914198522325933,
+              "delta_edge_mean": 0.9920858014843734,
+              "q_null_mean": 0.003314621265660141
+            },
+            "xlnet-base": {
+              "display_name": "xlnet-base",
+              "q_edge_support_mean": 0.009340539672341977,
+              "delta_edge_mean": 0.9906594603343574,
+              "q_null_mean": 0.0032688586572438227
+            },
+            "xlnet-large": {
+              "display_name": "xlnet-large",
+              "q_edge_support_mean": 0.010277385159010716,
+              "delta_edge_mean": 0.9897226148476886,
+              "q_null_mean": 0.0032476778027626164
+            },
+            "bart-large": {
+              "display_name": "bart-large",
+              "q_edge_support_mean": 0.010523578541599875,
+              "delta_edge_mean": 0.9894764214650994,
+              "q_null_mean": 0.0032506816575650576
+            },
+            "roberta-large": {
+              "display_name": "roberta-large",
+              "q_edge_support_mean": 0.010629135881786241,
+              "delta_edge_mean": 0.989370864124913,
+              "q_null_mean": 0.0032543099903630003
+            },
+            "bert-large": {
+              "display_name": "bert-large",
+              "q_edge_support_mean": 0.00914661098618711,
+              "delta_edge_mean": 0.9908533890205122,
+              "q_null_mean": 0.0032514895599100617
+            },
+            "albert-xxlarge": {
+              "display_name": "albert-xxlarge",
+              "q_edge_support_mean": 0.010825056215868996,
+              "delta_edge_mean": 0.9891749437908303,
+              "q_null_mean": 0.0032707028589784863
+            }
+          }
+        },
+        {
+          "k": 20,
+          "mean_human_edge_support": 1.0000000000054883,
+          "density_tau_50": 0.00020882244373664796,
+          "density_tau_80": 0.000018683570101993714,
+          "density_tau_95": 1.0322414420991001e-6,
+          "mean_degree_tau_50": 0.6498554449084485,
+          "models": {
+            "bert-base": {
+              "display_name": "bert-base",
+              "q_edge_support_mean": 0.017400530035334236,
+              "delta_edge_mean": 0.982599469970154,
+              "q_null_mean": 0.006576532283970478
+            },
+            "albert-xxlarge": {
+              "display_name": "albert-xxlarge",
+              "q_edge_support_mean": 0.021186990041757992,
+              "delta_edge_mean": 0.9788130099637303,
+              "q_null_mean": 0.006551393832316126
+            },
+            "xlnet-large": {
+              "display_name": "xlnet-large",
+              "q_edge_support_mean": 0.02013034050754692,
+              "delta_edge_mean": 0.9798696594979414,
+              "q_null_mean": 0.006485851911339582
+            },
+            "bert-large": {
+              "display_name": "bert-large",
+              "q_edge_support_mean": 0.01790016061676659,
+              "delta_edge_mean": 0.9820998393887217,
+              "q_null_mean": 0.0065813072598779635
+            },
+            "roberta-base": {
+              "display_name": "roberta-base",
+              "q_edge_support_mean": 0.01894344683584774,
+              "delta_edge_mean": 0.9810565531696406,
+              "q_null_mean": 0.0065729611307420825
+            },
+            "bart-large": {
+              "display_name": "bart-large",
+              "q_edge_support_mean": 0.020525778991324656,
+              "delta_edge_mean": 0.9794742210141636,
+              "q_null_mean": 0.006503240764535852
+            },
+            "distilbert": {
+              "display_name": "distilbert",
+              "q_edge_support_mean": 0.015553372952134993,
+              "delta_edge_mean": 0.9844466270533533,
+              "q_null_mean": 0.006600486026341183
+            },
+            "roberta-large": {
+              "display_name": "roberta-large",
+              "q_edge_support_mean": 0.02120062640539437,
+              "delta_edge_mean": 0.978799373600094,
+              "q_null_mean": 0.0065042730485062985
+            },
+            "xlnet-base": {
+              "display_name": "xlnet-base",
+              "q_edge_support_mean": 0.017935367812397955,
+              "delta_edge_mean": 0.9820646321930904,
+              "q_null_mean": 0.006558392868615514
+            }
+          }
+        },
+        {
+          "k": 50,
+          "mean_human_edge_support": 0.999999999994318,
+          "density_tau_50": 0.0026631829206156784,
+          "density_tau_80": 0.0002879953623456489,
+          "density_tau_95": 0.000048515347778657705,
+          "mean_degree_tau_50": 8.287825248955992,
+          "models": {
+            "bart-large": {
+              "display_name": "bart-large",
+              "q_edge_support_mean": 0.048736562801165145,
+              "delta_edge_mean": 0.9512634371931529,
+              "q_null_mean": 0.016230179955025594
+            },
+            "roberta-base": {
+              "display_name": "roberta-base",
+              "q_edge_support_mean": 0.04468497911982844,
+              "delta_edge_mean": 0.9553150208744896,
+              "q_null_mean": 0.016324430131704034
+            },
+            "albert-xxlarge": {
+              "display_name": "albert-xxlarge",
+              "q_edge_support_mean": 0.0493840603919147,
+              "delta_edge_mean": 0.9506159396024033,
+              "q_null_mean": 0.01635085460969953
+            },
+            "roberta-large": {
+              "display_name": "roberta-large",
+              "q_edge_support_mean": 0.05003874718921608,
+              "delta_edge_mean": 0.9499612528051019,
+              "q_null_mean": 0.0162227791840651
+            },
+            "bert-large": {
+              "display_name": "bert-large",
+              "q_edge_support_mean": 0.043442589142313956,
+              "delta_edge_mean": 0.9565574108520041,
+              "q_null_mean": 0.016303257629294785
+            },
+            "xlnet-base": {
+              "display_name": "xlnet-base",
+              "q_edge_support_mean": 0.04292948281401283,
+              "delta_edge_mean": 0.9570705171803051,
+              "q_null_mean": 0.016306582717634004
+            },
+            "bert-base": {
+              "display_name": "bert-base",
+              "q_edge_support_mean": 0.0415528557661489,
+              "delta_edge_mean": 0.9584471442281691,
+              "q_null_mean": 0.016442092194023313
+            },
+            "distilbert": {
+              "display_name": "distilbert",
+              "q_edge_support_mean": 0.036840334082882176,
+              "delta_edge_mean": 0.9631596659114359,
+              "q_null_mean": 0.016497908641180406
+            },
+            "xlnet-large": {
+              "display_name": "xlnet-large",
+              "q_edge_support_mean": 0.048316909733385975,
+              "delta_edge_mean": 0.951683090260932,
+              "q_null_mean": 0.016259825441694395
+            }
+          }
+        }
+      ]
+    },
+    {
+      "metric": "jensen_shannon",
+      "scales": [
+        {
+          "k": 5,
+          "mean_human_edge_support": 1.0000000000069735,
+          "density_tau_50": 4.541862345236041e-6,
+          "density_tau_80": 0.0,
+          "density_tau_95": 0.0,
+          "mean_degree_tau_50": 0.014134275618374558,
+          "models": {
+            "bart-large": {
+              "display_name": "bart-large",
+              "q_edge_support_mean": 0.005368711853517525,
+              "delta_edge_mean": 0.994631288153456,
+              "q_null_mean": 0.0016294044330227998
+            },
+            "albert-xxlarge": {
+              "display_name": "albert-xxlarge",
+              "q_edge_support_mean": 0.005347831673626756,
+              "delta_edge_mean": 0.9946521683333468,
+              "q_null_mean": 0.0016420012849341396
+            },
+            "bert-large": {
+              "display_name": "bert-large",
+              "q_edge_support_mean": 0.0046339222614841385,
+              "delta_edge_mean": 0.9953660777454894,
+              "q_null_mean": 0.0016454031480886524
+            },
+            "roberta-base": {
+              "display_name": "roberta-base",
+              "q_edge_support_mean": 0.00469476389335051,
+              "delta_edge_mean": 0.995305236113623,
+              "q_null_mean": 0.0016383051718599343
+            },
+            "distilbert": {
+              "display_name": "distilbert",
+              "q_edge_support_mean": 0.0040259556697719735,
+              "delta_edge_mean": 0.9959740443372016,
+              "q_null_mean": 0.0016635965306777945
+            },
+            "bert-base": {
+              "display_name": "bert-base",
+              "q_edge_support_mean": 0.004331834243495066,
+              "delta_edge_mean": 0.9956681657634785,
+              "q_null_mean": 0.0016719537423706952
+            },
+            "xlnet-base": {
+              "display_name": "xlnet-base",
+              "q_edge_support_mean": 0.0047142948923868,
+              "delta_edge_mean": 0.9952857051145867,
+              "q_null_mean": 0.00165236749116607
+            },
+            "xlnet-large": {
+              "display_name": "xlnet-large",
+              "q_edge_support_mean": 0.005229810472213338,
+              "delta_edge_mean": 0.9947701895347602,
+              "q_null_mean": 0.0016296575650497837
+            },
+            "roberta-large": {
+              "display_name": "roberta-large",
+              "q_edge_support_mean": 0.005251076132348267,
+              "delta_edge_mean": 0.9947489238746252,
+              "q_null_mean": 0.0016261863154513254
+            }
+          }
+        },
+        {
+          "k": 10,
+          "mean_human_edge_support": 1.0000000000066998,
+          "density_tau_50": 0.000032515605426121653,
+          "density_tau_80": 1.6515863073585602e-6,
+          "density_tau_95": 0.0,
+          "mean_degree_tau_50": 0.10118856408609059,
+          "models": {
+            "roberta-base": {
+              "display_name": "roberta-base",
+              "q_edge_support_mean": 0.009570992611628823,
+              "delta_edge_mean": 0.9904290073950709,
+              "q_null_mean": 0.003254266945069072
+            },
+            "xlnet-base": {
+              "display_name": "xlnet-base",
+              "q_edge_support_mean": 0.009323996145197756,
+              "delta_edge_mean": 0.990676003861502,
+              "q_null_mean": 0.0032703209123032513
+            },
+            "bert-large": {
+              "display_name": "bert-large",
+              "q_edge_support_mean": 0.009150337295213777,
+              "delta_edge_mean": 0.990849662711486,
+              "q_null_mean": 0.0032502560231288235
+            },
+            "xlnet-large": {
+              "display_name": "xlnet-large",
+              "q_edge_support_mean": 0.010258400256986957,
+              "delta_edge_mean": 0.9897415997497128,
+              "q_null_mean": 0.0032475069065210486
+            },
+            "bert-base": {
+              "display_name": "bert-base",
+              "q_edge_support_mean": 0.00875637648570531,
+              "delta_edge_mean": 0.9912436235209945,
+              "q_null_mean": 0.0033125467394796077
+            },
+            "albert-xxlarge": {
+              "display_name": "albert-xxlarge",
+              "q_edge_support_mean": 0.010823899775136606,
+              "delta_edge_mean": 0.9891761002315631,
+              "q_null_mean": 0.0032701471249598512
+            },
+            "bart-large": {
+              "display_name": "bart-large",
+              "q_edge_support_mean": 0.010511275297141166,
+              "delta_edge_mean": 0.9894887247095586,
+              "q_null_mean": 0.0032497038226790955
+            },
+            "distilbert": {
+              "display_name": "distilbert",
+              "q_edge_support_mean": 0.007932540957276153,
+              "delta_edge_mean": 0.9920674590494236,
+              "q_null_mean": 0.003314830067459047
+            },
+            "roberta-large": {
+              "display_name": "roberta-large",
+              "q_edge_support_mean": 0.010625152585930166,
+              "delta_edge_mean": 0.9893748474207695,
+              "q_null_mean": 0.003253585929971097
+            }
+          }
+        },
+        {
+          "k": 20,
+          "mean_human_edge_support": 1.0000000000054814,
+          "density_tau_50": 0.00020954501274611734,
+          "density_tau_80": 0.000019096466678833352,
+          "density_tau_95": 1.1354655863090102e-6,
+          "mean_degree_tau_50": 0.6521040796659171,
+          "models": {
+            "xlnet-base": {
+              "display_name": "xlnet-base",
+              "q_edge_support_mean": 0.01793204304529232,
+              "delta_edge_mean": 0.9820679569601891,
+              "q_null_mean": 0.006556028107934502
+            },
+            "albert-xxlarge": {
+              "display_name": "albert-xxlarge",
+              "q_edge_support_mean": 0.021167394796014365,
+              "delta_edge_mean": 0.978832605209467,
+              "q_null_mean": 0.006550742531320302
+            },
+            "bart-large": {
+              "display_name": "bart-large",
+              "q_edge_support_mean": 0.02052309669129251,
+              "delta_edge_mean": 0.9794769033141889,
+              "q_null_mean": 0.006501869418567332
+            },
+            "bert-large": {
+              "display_name": "bert-large",
+              "q_edge_support_mean": 0.017905332476708776,
+              "delta_edge_mean": 0.9820946675287726,
+              "q_null_mean": 0.006577311917764249
+            },
+            "xlnet-large": {
+              "display_name": "xlnet-large",
+              "q_edge_support_mean": 0.020120462576290948,
+              "delta_edge_mean": 0.9798795374291904,
+              "q_null_mean": 0.006485989399293323
+            },
+            "roberta-large": {
+              "display_name": "roberta-large",
+              "q_edge_support_mean": 0.02118673305492857,
+              "delta_edge_mean": 0.9788132669505528,
+              "q_null_mean": 0.006505727754577609
+            },
+            "distilbert": {
+              "display_name": "distilbert",
+              "q_edge_support_mean": 0.015553276582073956,
+              "delta_edge_mean": 0.9844467234234074,
+              "q_null_mean": 0.0066000656922583015
+            },
+            "roberta-base": {
+              "display_name": "roberta-base",
+              "q_edge_support_mean": 0.01892987471891876,
+              "delta_edge_mean": 0.9810701252865627,
+              "q_null_mean": 0.006573229039511758
+            },
+            "bert-base": {
+              "display_name": "bert-base",
+              "q_edge_support_mean": 0.017399068422741915,
+              "delta_edge_mean": 0.9826009315827395,
+              "q_null_mean": 0.006575188403469354
+            }
+          }
+        },
+        {
+          "k": 50,
+          "mean_human_edge_support": 0.9999999999943107,
+          "density_tau_50": 0.0026699957141335324,
+          "density_tau_80": 0.00029346624198877416,
+          "density_tau_95": 0.00004872179606707753,
+          "mean_degree_tau_50": 8.309026662383554,
+          "models": {
+            "bert-large": {
+              "display_name": "bert-large",
+              "q_edge_support_mean": 0.04339571474462683,
+              "delta_edge_mean": 0.9566042852496839,
+              "q_null_mean": 0.01630019492450839
+            },
+            "roberta-base": {
+              "display_name": "roberta-base",
+              "q_edge_support_mean": 0.04467999357533757,
+              "delta_edge_mean": 0.9553200064189731,
+              "q_null_mean": 0.01632128409893821
+            },
+            "bert-base": {
+              "display_name": "bert-base",
+              "q_edge_support_mean": 0.04157194346290428,
+              "delta_edge_mean": 0.9584280565314064,
+              "q_null_mean": 0.016444096241565873
+            },
+            "distilbert": {
+              "display_name": "distilbert",
+              "q_edge_support_mean": 0.036807857372313575,
+              "delta_edge_mean": 0.963192142621997,
+              "q_null_mean": 0.016496900803082106
+            },
+            "roberta-large": {
+              "display_name": "roberta-large",
+              "q_edge_support_mean": 0.04998492129779259,
+              "delta_edge_mean": 0.950015078696518,
+              "q_null_mean": 0.01622156993253923
+            },
+            "xlnet-base": {
+              "display_name": "xlnet-base",
+              "q_edge_support_mean": 0.042962222936081366,
+              "delta_edge_mean": 0.9570377770582293,
+              "q_null_mean": 0.0163050613556038
+            },
+            "bart-large": {
+              "display_name": "bart-large",
+              "q_edge_support_mean": 0.04871794410537319,
+              "delta_edge_mean": 0.9512820558889374,
+              "q_null_mean": 0.016227881272083088
+            },
+            "xlnet-large": {
+              "display_name": "xlnet-large",
+              "q_edge_support_mean": 0.04831588178606815,
+              "delta_edge_mean": 0.9516841182082425,
+              "q_null_mean": 0.016260176871183633
+            },
+            "albert-xxlarge": {
+              "display_name": "albert-xxlarge",
+              "q_edge_support_mean": 0.04937675554128811,
+              "delta_edge_mean": 0.9506232444530226,
+              "q_null_mean": 0.016346686411819668
+            }
+          }
+        }
+      ]
+    },
+    {
+      "metric": "total_variation",
+      "scales": [
+        {
+          "k": 5,
+          "mean_human_edge_support": 1.0000000000068927,
+          "density_tau_50": 2.4773794610378405e-6,
+          "density_tau_80": 0.0,
+          "density_tau_95": 0.0,
+          "mean_degree_tau_50": 0.007709604882749759,
+          "models": {
+            "bart-large": {
+              "display_name": "bart-large",
+              "q_edge_support_mean": 0.005327465467394844,
+              "delta_edge_mean": 0.9946725345394979,
+              "q_null_mean": 0.001633868294249911
+            },
+            "xlnet-base": {
+              "display_name": "xlnet-base",
+              "q_edge_support_mean": 0.004681272084805691,
+              "delta_edge_mean": 0.995318727922087,
+              "q_null_mean": 0.001653218438805003
+            },
+            "bert-base": {
+              "display_name": "bert-base",
+              "q_edge_support_mean": 0.004294763893350513,
+              "delta_edge_mean": 0.9957052361135422,
+              "q_null_mean": 0.0016640848056537019
+            },
+            "distilbert": {
+              "display_name": "distilbert",
+              "q_edge_support_mean": 0.0039402505621587425,
+              "delta_edge_mean": 0.996059749444734,
+              "q_null_mean": 0.0016602158689367095
+            },
+            "roberta-base": {
+              "display_name": "roberta-base",
+              "q_edge_support_mean": 0.004735689045936438,
+              "delta_edge_mean": 0.9952643109609562,
+              "q_null_mean": 0.001636471570831986
+            },
+            "roberta-large": {
+              "display_name": "roberta-large",
+              "q_edge_support_mean": 0.005273755220045027,
+              "delta_edge_mean": 0.9947262447868477,
+              "q_null_mean": 0.001629199486026333
+            },
+            "xlnet-large": {
+              "display_name": "xlnet-large",
+              "q_edge_support_mean": 0.0051161580469001435,
+              "delta_edge_mean": 0.9948838419599926,
+              "q_null_mean": 0.001624499839383224
+            },
+            "bert-large": {
+              "display_name": "bert-large",
+              "q_edge_support_mean": 0.004403212335367864,
+              "delta_edge_mean": 0.9955967876715248,
+              "q_null_mean": 0.001646187600385472
+            },
+            "albert-xxlarge": {
+              "display_name": "albert-xxlarge",
+              "q_edge_support_mean": 0.005277224542242257,
+              "delta_edge_mean": 0.9947227754646505,
+              "q_null_mean": 0.0016383964021843796
+            }
+          }
+        },
+        {
+          "k": 10,
+          "mean_human_edge_support": 1.0000000000066989,
+          "density_tau_50": 0.000027457622359836062,
+          "density_tau_80": 3.0967243262973006e-7,
+          "density_tau_95": 0.0,
+          "mean_degree_tau_50": 0.08544812078380983,
+          "models": {
+            "bert-base": {
+              "display_name": "bert-base",
+              "q_edge_support_mean": 0.008700256986829651,
+              "delta_edge_mean": 0.9912997430198692,
+              "q_null_mean": 0.0033054760681015148
+            },
+            "roberta-base": {
+              "display_name": "roberta-base",
+              "q_edge_support_mean": 0.009406199807260063,
+              "delta_edge_mean": 0.9905938001994388,
+              "q_null_mean": 0.0032522987471892127
+            },
+            "bart-large": {
+              "display_name": "bart-large",
+              "q_edge_support_mean": 0.010267651782846257,
+              "delta_edge_mean": 0.9897323482238526,
+              "q_null_mean": 0.0032377857372309724
+            },
+            "xlnet-base": {
+              "display_name": "xlnet-base",
+              "q_edge_support_mean": 0.008896241567619886,
+              "delta_edge_mean": 0.9911037584390789,
+              "q_null_mean": 0.0032668162544169676
+            },
+            "xlnet-large": {
+              "display_name": "xlnet-large",
+              "q_edge_support_mean": 0.010109508512688888,
+              "delta_edge_mean": 0.98989049149401,
+              "q_null_mean": 0.003244108576935438
+            },
+            "albert-xxlarge": {
+              "display_name": "albert-xxlarge",
+              "q_edge_support_mean": 0.010345775778991451,
+              "delta_edge_mean": 0.9896542242277074,
+              "q_null_mean": 0.0032670780597494446
+            },
+            "distilbert": {
+              "display_name": "distilbert",
+              "q_edge_support_mean": 0.007817346610986398,
+              "delta_edge_mean": 0.9921826533957124,
+              "q_null_mean": 0.003315690009637012
+            },
+            "bert-large": {
+              "display_name": "bert-large",
+              "q_edge_support_mean": 0.009029296498554676,
+              "delta_edge_mean": 0.9909707035081442,
+              "q_null_mean": 0.0032351034371988514
+            },
+            "roberta-large": {
+              "display_name": "roberta-large",
+              "q_edge_support_mean": 0.010382878252489756,
+              "delta_edge_mean": 0.9896171217542091,
+              "q_null_mean": 0.0032553167362672753
+            }
+          }
+        },
+        {
+          "k": 20,
+          "mean_human_edge_support": 1.0000000000054732,
+          "density_tau_50": 0.00018920985633676506,
+          "density_tau_80": 0.000013419138747288301,
+          "density_tau_95": 3.0967243262973006e-7,
+          "mean_degree_tau_50": 0.5888210729200128,
+          "models": {
+            "roberta-base": {
+              "display_name": "roberta-base",
+              "q_edge_support_mean": 0.01820573401862977,
+              "delta_edge_mean": 0.9817942659868434,
+              "q_null_mean": 0.006522104079665946
+            },
+            "albert-xxlarge": {
+              "display_name": "albert-xxlarge",
+              "q_edge_support_mean": 0.020473080629615746,
+              "delta_edge_mean": 0.9795269193758575,
+              "q_null_mean": 0.006498954706071344
+            },
+            "bert-base": {
+              "display_name": "bert-base",
+              "q_edge_support_mean": 0.017056456794087845,
+              "delta_edge_mean": 0.9829435432113853,
+              "q_null_mean": 0.006574625120462606
+            },
+            "xlnet-base": {
+              "display_name": "xlnet-base",
+              "q_edge_support_mean": 0.017587375522002752,
+              "delta_edge_mean": 0.9824126244834704,
+              "q_null_mean": 0.006524147446193416
+            },
+            "roberta-large": {
+              "display_name": "roberta-large",
+              "q_edge_support_mean": 0.020104764964126682,
+              "delta_edge_mean": 0.9798952350413465,
+              "q_null_mean": 0.006495738944212468
+            },
+            "bert-large": {
+              "display_name": "bert-large",
+              "q_edge_support_mean": 0.017313684548665248,
+              "delta_edge_mean": 0.982686315456808,
+              "q_null_mean": 0.006543665917121771
+            },
+            "distilbert": {
+              "display_name": "distilbert",
+              "q_edge_support_mean": 0.015265097976227625,
+              "delta_edge_mean": 0.9847349020292455,
+              "q_null_mean": 0.006581918406681686
+            },
+            "xlnet-large": {
+              "display_name": "xlnet-large",
+              "q_edge_support_mean": 0.019290298747187386,
+              "delta_edge_mean": 0.9807097012582858,
+              "q_null_mean": 0.006472589142306485
+            },
+            "bart-large": {
+              "display_name": "bart-large",
+              "q_edge_support_mean": 0.019834227433342073,
+              "delta_edge_mean": 0.9801657725721311,
+              "q_null_mean": 0.006465679087696786
+            }
+          }
+        },
+        {
+          "k": 50,
+          "mean_human_edge_support": 0.9999999999944978,
+          "density_tau_50": 0.002095966248182223,
+          "density_tau_80": 0.0002732343097236318,
+          "density_tau_95": 0.00003437364002190003,
+          "mean_degree_tau_50": 6.522646964343077,
+          "models": {
+            "roberta-base": {
+              "display_name": "roberta-base",
+              "q_edge_support_mean": 0.04291591390941933,
+              "delta_edge_mean": 0.9570840860850786,
+              "q_null_mean": 0.016288096305812662
+            },
+            "xlnet-base": {
+              "display_name": "xlnet-base",
+              "q_edge_support_mean": 0.04194017346611624,
+              "delta_edge_mean": 0.9580598265283816,
+              "q_null_mean": 0.01626867118535009
+            },
+            "xlnet-large": {
+              "display_name": "xlnet-large",
+              "q_edge_support_mean": 0.04589025163294525,
+              "delta_edge_mean": 0.9541097483615526,
+              "q_null_mean": 0.0162230480993666
+            },
+            "distilbert": {
+              "display_name": "distilbert",
+              "q_edge_support_mean": 0.035689174429813536,
+              "delta_edge_mean": 0.9643108255646843,
+              "q_null_mean": 0.016406472341790806
+            },
+            "albert-xxlarge": {
+              "display_name": "albert-xxlarge",
+              "q_edge_support_mean": 0.04833022807581983,
+              "delta_edge_mean": 0.951669771918678,
+              "q_null_mean": 0.016312708962413994
+            },
+            "roberta-large": {
+              "display_name": "roberta-large",
+              "q_edge_support_mean": 0.047046141985231445,
+              "delta_edge_mean": 0.9529538580092664,
+              "q_null_mean": 0.016191934468356855
+            },
+            "bart-large": {
+              "display_name": "bart-large",
+              "q_edge_support_mean": 0.046139832958568994,
+              "delta_edge_mean": 0.9538601670359288,
+              "q_null_mean": 0.016164847349821675
+            },
+            "bert-base": {
+              "display_name": "bert-base",
+              "q_edge_support_mean": 0.040481111468043104,
+              "delta_edge_mean": 0.9595188885264547,
+              "q_null_mean": 0.016377392932860523
+            },
+            "bert-large": {
+              "display_name": "bert-large",
+              "q_edge_support_mean": 0.041523327979447015,
+              "delta_edge_mean": 0.9584766720150508,
+              "q_null_mean": 0.0162493471249582
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "total_runtime_ms": 1024895.1127
+}
