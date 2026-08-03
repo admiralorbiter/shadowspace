@@ -122,10 +122,11 @@ def generate_e003_markdown() -> None:
 
     lines.append("\n---\n")
     lines.append("## Scientific Conclusions for Experiment E003\n")
-    lines.append("- **Levels 1 to 4 (BART-Large Post-Hoc Calibration)**: Scalar, vector, coarse-grid affine, and coarse-grid Dirichlet transformations closed at most approximately $0.83\\%$ of BART's remaining relational gap.")
-    lines.append("- **Levels 5a/5b/6a (Multi-Model Ensembling)**: Combining BART-Large, RoBERTa-Large, and XLNet-Large output distributions materially improves both pointwise and relational alignment relative to BART-Large alone.")
-    lines.append("- **Ensemble Contrast & Ranking**: Level 6a produced the highest relational-recovery point estimate, but its advantage over equal and NLL-optimized weighting was small.")
-    lines.append("- **Core Takeaway**: Diverse-model probability ensembling produces a large and reliable improvement in both pointwise and relational alignment, whereas single-model BART recalibration produces little relational improvement. This motivates topology-aware fine-tuning (E004).\n")
+    lines.append("- **BART-Large Post-Hoc Calibration**: Conventional temperature scaling substantially improved soft-label negative log-likelihood while closing less than 1% of BART's remaining relational gap, despite replacing considerable neighborhood mass. More flexible class-wise, affine, and Dirichlet recalibration produced similarly limited relational improvement ($G_Q \\le 0.83\\%$).")
+    lines.append("- **Multi-Model Ensembling**: Combining BART-Large, RoBERTa-Large, and XLNet-Large probabilities closed approximately 17% of BART-Large's remaining relational gap (increasing human-normalized recovery $R$ from 19.6% to ~33-34%).")
+    lines.append("- **Weighting Strategy Equivalence**: Equal, NLL-selected, and topology-selected weighting produced statistically indistinguishable relational results (all direct $\\Delta G_Q$ contrasts $< 1.0\\%$ and 95% CIs spanned zero), indicating that model combination—not the particular global weighting objective—accounted for the gain.")
+    lines.append("- **Exact-Profile Boundary**: Exact-vote-profile controls yielded negligible excess support ($Q_{\\text{profile-excess}} \\approx 0.00000$, $p \\ge 0.73$) for every ensemble, showing that the observed improvement concerns the organization of aggregate human judgment distributions rather than detectable item-specific alignment beyond those distributions.")
+    lines.append("- **Core Takeaway**: The experiment establishes that calibration improves marginal fit while ensembling improves vote-distribution geometry, but global post-hoc weight optimization adds essentially no gain beyond simple averaging.\n")
 
     with open(md_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")

@@ -1,16 +1,20 @@
 # Experiment E003: Relational Repair Capacity of Flexible Post-Hoc Calibration & Ensembling
 id = "E003"
 title = "Relational Repair Capacity of Increasingly Flexible Post-Hoc Transformations & Ensembling"
-status = "complete_publication_grade"
+status = "complete"
+analysis_status = "complete"
+methodological_audit = "passed_with_interpretation_notes"
+manuscript_status = "requires_results_sync"
+submission_status = "pre_submission"
 
 dataset_release = "chaosnli-canonical-2026-08-02"
 partition = "5fold_stratified_crossfit"
 
 unit_of_analysis = "item_and_edge"
 question = """
-How much of the human belief-space relational topology gap (G_Q) can be recovered
-through increasingly flexible post-hoc calibration and ensembling techniques
-before representational fine-tuning becomes strictly necessary?
+How much relational recovery is obtainable from increasingly flexible global post-hoc
+transformations and probability ensembling, and what residual gap motivates
+representation-level intervention?
 """
 
 # Bound Provenance Bindings
@@ -24,8 +28,8 @@ ladder_levels = [
   "level0_raw_model",
   "level1_scalar_temperature",
   "level2_vector_scaling_bias",
-  "level3_full_affine_matrix",
-  "level4_full_dirichlet_calibration",
+  "level3_coarse_grid_identifiable_affine",
+  "level4_coarse_grid_identifiable_dirichlet",
   "level5a_equal_weight_ensemble",
   "level5b_convex_nll_ensemble",
   "level6a_topology_optimized_ensemble"
