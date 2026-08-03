@@ -203,7 +203,8 @@ Votes:      (33 E, 67 N, 0 C)  -->  d_H = 0.02284
 
 We need **10 neighbors total**. Since 9 items are strictly closer, we only have **1 remaining slot** ($r_i = 10 - 9 = 1$). But we have **7 tied candidates** ($|B_i| = 7$).
 
-- **The index-resolved NumPy implementation tested here** (`np.argsort` without explicit `kind`): In this run, the implementation selected **Candidate 62**. Because NumPy's default sort is not guaranteed to preserve the original row order among tied values, reordering the rows of the dataset can cause another equally valid tied candidate (Candidate 74, 194, etc.) to be selected instead.
+- **The index-resolved implementation tested here** (stable storage index as deterministic secondary ordering after distance): In this run, the implementation selected **Candidate 62** — the tied candidate with the lowest storage-row index. Reordering the rows of the dataset changes which tied candidate has the lowest row index, so a different but equally valid tied candidate (Candidate 74, 194, etc.) is selected instead. This is the canonical experiment described in the paper and stored as `tie_policy: "stable_storage_index_with_explicit_self_exclusion"` in the canonical manifest.
+
 - **Our Tie-Aware Solution**: Assigns each of the 7 tied candidates an exact, reproducible fractional weight:
 
 $$w_{ij} = \frac{r_i}{|B_i|} = \frac{1}{7} \approx 0.14286$$

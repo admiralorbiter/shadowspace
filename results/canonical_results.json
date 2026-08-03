@@ -166,7 +166,8 @@
         0.06999708544034756,
         0.08098918776664024
       ],
-      "n_bootstrap": 1000
+      "n_bootstrap": 1000,
+      "note": "Focal-bootstrap mean of H_b over 1000 stratified replicates; agrees with direct 500-pair mean 0.07550 within MC error"
     },
     "posterior100_vs_observed_seed0": {
       "estimand_id": "posterior100_vs_observed_seed0",
@@ -280,7 +281,8 @@
         "replicates_gt_zero": "1000/1000",
         "q_fixed_reference": 0.01319
       }
-    }
+    },
+    "q_paired_hm_note": "focal_bootstrap_mean_over_1000_replicates: mean of M_{m,b} across 1000 stratified focal-item bootstrap draws; closely approximates direct 500-pair mean within Monte Carlo error"
   },
   "reference_surface": {
     "description": "R_reference(n,k) = Q(G_n^rep, G_100^obs), plug-in multinomial from p_human, N_SEEDS=50 per cell",

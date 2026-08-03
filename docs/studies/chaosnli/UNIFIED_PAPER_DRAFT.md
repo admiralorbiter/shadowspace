@@ -1,7 +1,7 @@
 # Collective Opinion as a Relational Space: Tie-Aware Neighborhood Analysis of Human and Model NLI Distributions
 
 - **Document type:** paper draft
-- **Status:** external peer-review draft; Round 12 methodological revision
+- **Status:** release candidate RC1; ready for external circulation pending four final label fixes (now resolved)
 - **Scope:** ChaosNLI computational audit, reference-graph similarity, and formal tie mathematics
 
 ---
@@ -108,11 +108,11 @@ Conventional index-resolved fixed-$k$ neighborhoods rely on array storage row or
 
 ### 4.1 Nine-Model Hellinger Benchmark ($k=10$)
 
-We evaluate nine benchmark NLI models against 500 posterior-predictive simulation pairs on $N=3,113$ ChaosNLI items under Hellinger distance at $k=10$. We use a **fully paired estimand** where both human reliability $H_b$ and model performance $M_{m,b}$ are evaluated symmetrically against identical simulated posterior cohorts ($G_{H1}^{(s)}, G_{H2}^{(s)}$). Direct 500-pair means serve as point estimates; bootstrap is used only for confidence intervals and $\Delta_m$ distributions. Fixed full-data reference scores $Q(G_m, G_{100}^{\text{obs}})$ are reported separately as a descriptive baseline:
+We evaluate nine benchmark NLI models against 500 posterior-predictive simulation pairs on $N=3,113$ ChaosNLI items under Hellinger distance at $k=10$. We use a **fully paired estimand** where both human reliability $H_b$ and model performance $M_{m,b}$ are evaluated symmetrically against identical simulated posterior cohorts ($G_{H1}^{(s)}, G_{H2}^{(s)}$). Focal-bootstrap means across 1,000 stratified replicates serve as point estimates; bootstrap is used for confidence intervals and $\Delta_m$ distributions. Fixed full-data reference scores $Q(G_m, G_{100}^{\text{obs}})$ are reported separately as a descriptive baseline:
 
 **Table 2: Benchmark NLI Model Overlap Scores Under Fully Paired Estimand ($k=10$)**
 
-| Model | Direct Paired Score $\bar{M}_m$ | Mean $\Delta_m$ (vs. HH100) | 95% Joint Bootstrap CI | Replicates $\Delta_m > 0$ | Fixed-ref. $Q(G_m, G_{100}^{\text{obs}})$ |
+| Model | Focal-Bootstrap Mean $\hat{M}_m$ | Mean $\Delta_m$ (vs. HH100) | 95% Bootstrap Interval | Replicates $\Delta_m > 0$ | Fixed-ref. $Q(G_m, G_{100}^{\text{obs}})$ |
 |---|---|---|---|---|---|
 | BART-Large | **0.01572** | **0.05977** | [0.05431, 0.06539] | 1,000 / 1,000 | 0.01867 |
 | RoBERTa-Large | **0.01415** | **0.06135** | [0.05557, 0.06685] | 1,000 / 1,000 | 0.01821 |
@@ -123,13 +123,13 @@ We evaluate nine benchmark NLI models against 500 posterior-predictive simulatio
 | XLNet-Base | **0.00927** | **0.06623** | [0.06069, 0.07175] | 1,000 / 1,000 | 0.00893 |
 | DistilBERT | **0.00854** | **0.06695** | [0.06124, 0.07261] | 1,000 / 1,000 | 0.00854 |
 | BERT-Base | **0.00768** | **0.06782** | [0.06235, 0.07356] | 1,000 / 1,000 | 0.00865 |
-| **HH100 Bootstrap Mean** ($\bar{H}$) | **0.07549** | — | [0.07000, 0.08099] | — | — |
+| **HH100 Focal-Bootstrap Mean** ($\bar{H}$) | **0.07549** | — | [0.07000, 0.08099] | — | — |
 
-*Methods and Inference Note*: Point estimates $\bar{M}_m$ and $\bar{H}$ are direct means over the 500 pre-computed posterior pairs ($\bar{H} = \frac{1}{500}\sum_s H_s = 0.07550$; $\bar{M}_m = \frac{1}{500}\sum_s M_{m,s}$). The canonical bootstrap mean of $H_b$ over 1,000 replicates is $0.07549$, consistent with the direct 500-pair simulation mean $0.07550$ (the $0.00001$ difference is within Monte Carlo error). Bootstrap is used exclusively for confidence intervals and $\Delta_m$ distributions. In 1,000 of 1,000 stratified joint bootstrap replicates, every model difference interval $\Delta_m$ comfortably excludes zero (minimum lower bound $0.05431$). Formally, for bootstrap replicate $b \in \{1,...,1000\}$, a stratified focal-item resample $\mathbf{b} \subset \{1..N\}$ is drawn. Let $s = b \bmod 500$ index one of 500 pre-computed posterior human pairs. We define:
+*Methods and Inference Note*: All paired point estimates ($\hat{M}_m$ for models, $\bar{H}$ for the human reference) are **focal-bootstrap means** across 1,000 stratified replicates — the mean of $M_{m,b}$ and $H_b$ respectively over 1,000 bootstrap draws. These closely approximate the corresponding direct 500-pair means within Monte Carlo error: the direct human mean $\bar{H}_{\text{direct}} = \frac{1}{500}\sum_s H_s = 0.07550$ vs. focal-bootstrap mean $\bar{H} = 0.07549$ ($\Delta < 0.00001$). Direct 500-pair means for individual models are not separately stored in the canonical release; focal-bootstrap means serve as the primary point estimates throughout. Bootstrap is used exclusively for confidence intervals and $\Delta_m$ distributions. In 1,000 of 1,000 stratified joint bootstrap replicates, every model difference interval $\Delta_m$ comfortably excludes zero (minimum lower bound $0.05431$). Formally, for bootstrap replicate $b \in \{1,...,1000\}$, a stratified focal-item resample $\mathbf{b} \subset \{1..N\}$ is drawn. Let $s = b \bmod 500$ index one of 500 pre-computed posterior human pairs. We define:
 $$H_b = \frac{1}{|\mathbf{b}|}\sum_{i \in \mathbf{b}} Q_{\text{fuzzy, item}}\!\left(G_{H1}^{(s)}, G_{H2}^{(s)}\right)$$
 $$M_{m,b} = \frac{1}{|\mathbf{b}|}\sum_{i \in \mathbf{b}} \frac{1}{2}\left[Q_{\text{fuzzy, item}}\!\left(G_m, G_{H1}^{(s)}\right) + Q_{\text{fuzzy, item}}\!\left(G_m, G_{H2}^{(s)}\right)\right]$$
 $$\Delta_{m,b} = H_b - M_{m,b}$$
-Both human reliability $H_b$ and model score $M_{m,b}$ evaluate against the exact same two simulated posterior cohorts. Given the same simulated human cohorts, models resemble those cohorts substantially less than the cohorts resemble one another.
+$\hat{M}_m = \frac{1}{1000}\sum_b M_{m,b}$; $\bar{H} = \frac{1}{1000}\sum_b H_b$. Both human reliability $H_b$ and model score $M_{m,b}$ evaluate against the exact same two simulated posterior cohorts. Given the same simulated human cohorts, models resemble those cohorts substantially less than the cohorts resemble one another.
 
 *Bootstrap Scope Statement*: The bootstrap estimates sampling variation across focal items within the fixed ChaosNLI candidate population. It does not reconstruct the neighbor graph from resampled rows or estimate uncertainty over an unselected NLI population. Edge contributions are non-independent through shared candidate nodes; this limitation is unlikely to alter the qualitative finding given the size of the observed gap.
 
@@ -153,7 +153,7 @@ To provide an interpretable anchor for model evaluation, we present a **Referenc
 
 *Panel B: Tie-Interpretation Sensitivity Across 500 HH100 Reference Pairs ($k=10$)*
 
-| Overlap Formulation | Direct Mean | 95% Simulation Interval | Scientific Attitude |
+| Overlap Formulation | Simulation Mean | 95% Simulation Interval | Scientific Attitude |
 |---|---|---|---|
 | $Q_{\text{strict}}$ (Core Bound) | 0.00020 | [0.00018, 0.00023] | Guaranteed common neighbors only |
 | $Q_{\text{expected}}$ (Random Resolution) | 0.07450 | [0.07011, 0.07907] | Collision probability under random tie choices |
@@ -161,7 +161,7 @@ To provide an interpretable anchor for model evaluation, we present a **Referenc
 
 *Note*: $\bar{H} = 0.07549$ is the bootstrap mean of $H_b$ over 1,000 replicates, consistent with the direct 500-pair simulation mean ($0.07550$, stored as $0.0755$ in canonical results). The Panel B 95% interval $[0.07111, 0.08007]$ is from the 500-pair simulation distribution. An earlier analysis version reported $0.07522$ for this cell; that value was from a different analysis path and is superseded by the canonical computation. The Panel A $0.13850$ value is computed from posterior-predictive 100-vote replicates (Dirichlet sampling) evaluated against $G_{100}^{\text{obs}}$. This differs from the plug-in surface value $0.1391 \pm 0.0033$ (Table 4, $n=100, k=10$), which uses observed proportions $\hat{p}_i$ directly without Dirichlet sampling.
 
-*Takeaway*: BART-Large ($0.01867$ fixed reference) achieves a raw ratio of **13.5%** ($0.01867 / 0.13850$) and a chance-adjusted ratio of **11.2%** ($(0.01867 - 0.00354) / (0.13850 - 0.00354)$, using the empirical stratified null $0.00354$) of human-level replicate overlap under the fixed-reference comparison, placing the evaluated models substantially closer to the empirical stratified null than to human collective opinion alignment.
+*Takeaway*: The fixed-reference comparison shows that all evaluated models lie substantially closer to the empirical stratified null ($0.00354$) than to the posterior-predictive human reference ($0.13850$). Note that $0.13850$ is a single-draw estimate (posterior-predictive 100-vote cohort, seed 0 vs. observed graph) and should be treated as **illustrative** rather than a stable reference denominator; it is documented in the canonical results under `posterior100_vs_observed_seed0`. The primary benchmark result is the fully paired comparison in Table 2, where all 1,000 bootstrap replicates place $\Delta_m > 0$ for every evaluated model.
 
 **Table 4: Reference Graph Similarity Surface $R_{\text{reference}}(n, k) = Q(G_n^{\text{rep}}, G_{100}^{\text{obs}})$ (50-Seed Simulation, Mean $\pm$ SD)**
 
@@ -241,7 +241,7 @@ ChaosNLI contains 3,113 items ($1,514$ SNLI, $1,599$ MNLI) with 100 human votes 
 
 ### 6.1 Distance Metrics and Floating-Point Tie Detection
 
-Distance matrices use double-precision float64 arithmetic. Hellinger distance between $p, q$ is $d_H(p, q) = \frac{1}{\sqrt{2}} \sqrt{\sum_{c=1}^C (\sqrt{p_c} - \sqrt{q_c})^2}$. Ties use exact float comparison for count vectors and $|d_{ij} - d_{ik}| < 10^{-12}$ for smoothed distributions.
+Distance matrices use double-precision float64 arithmetic. Hellinger distance between $p, q$ is $d_H(p, q) = \frac{1}{\sqrt{2}} \sqrt{\sum_{c=1}^C (\sqrt{p_c} - \sqrt{q_c})^2}$. Tie detection uses absolute tolerance $|d_{ij} - d_{ik}| < 10^{-7}$ throughout (both for human count-vector distances and for model softmax-probability distances), matching the canonical manifest `conventions.tie_tolerance`.
 
 ### 6.2 Dirichlet Posterior Prior and Sampling Procedure
 
@@ -249,7 +249,7 @@ Posterior distributions use a symmetric Dirichlet prior $\boldsymbol{\alpha} = (
 
 ### 6.3 Model Predictions and Logit Conversion
 
-Model predictions use pre-computed logits from 9 benchmark NLI models: BART-Large, RoBERTa-Large, XLNet-Large, ALBERT-xxLarge, BERT-Large, RoBERTa-Base, XLNet-Base, DistilBERT, BERT-Base. Softmax converts logits to 3-class probability distributions $q_m = \text{softmax}(z_m)$ with label order [entailment, neutral, contradiction]. The generated probability artifact is intentionally excluded from version control. A locked provenance manifest containing source artifact filenames, SHA-256 checksums, and exact checkpoint identifiers is still required before archival release.
+Model predictions use pre-computed logits from 9 benchmark NLI models: BART-Large, RoBERTa-Large, XLNet-Large, ALBERT-xxLarge, BERT-Large, RoBERTa-Base, XLNet-Base, DistilBERT, BERT-Base. Softmax converts logits to 3-class probability distributions $q_m = \text{softmax}(z_m)$ with label order [entailment, neutral, contradiction]. The generated probability artifact is intentionally excluded from version control. The supplied model-prediction artifact is hash-locked and source-attributed in the canonical release manifest (SHA-256 and source URL recorded). Exact checkpoint revisions were not included with the supplied artifact and remain unavailable.
 
 ### 6.4 Storage-Order Row Permutation Experiment
 
