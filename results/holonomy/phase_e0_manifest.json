@@ -1,7 +1,7 @@
 {
-  "timestamp_utc": "2026-08-04T23:49:13.914595+00:00",
-  "phase": "E2-A1",
-  "git_commit_sha": "c99e1acf9b11f2b090cef05e49c444ad13d7c51f",
+  "timestamp_utc": "2026-08-04T23:57:26.651462+00:00",
+  "phase": "E2-A1.1",
+  "git_commit_sha": "894fc25bfc60080e0fdb3d645b71c2f346b0bade",
   "environment": {
     "python_version": "3.12.0",
     "numpy_version": "2.2.6",
@@ -15,7 +15,9 @@
     "theorem1_prop1b_invariance": true,
     "sheaf_cohomology_h0": true,
     "glue_ood_solver": true,
-    "natural_language_orbit_smoke_test": true
+    "natural_language_orbit_smoke_test": true,
+    "natural_language_transport_identifiability": "NOT_ESTIMABLE",
+    "natural_language_model_audit": "NOT_RUN"
   },
   "cohomology": {
     "dim_H0": 6,
@@ -30,6 +32,7 @@
     "adapter_mode": "deterministic_sha256_mock",
     "is_live_model": false,
     "model_name": "roberta-large-mnli",
+    "audit_status": "not_estimable",
     "num_active_orbits": 15,
     "text_path_closure_rate": 1.0,
     "train_orbit_count": 9,
@@ -37,15 +40,47 @@
     "estimator_identifiable": false,
     "min_edge_design_rank": 1,
     "max_edge_condition_number": null,
+    "max_transport_norm": null,
     "mean_held_out_return_residual": null,
     "artificial_curvature_detected": false,
+    "edge_diagnostics": {
+      "rename_a": {
+        "generator_name": "rename_a",
+        "reason": "rank_deficient",
+        "design_rank": 1,
+        "required_rank": 2,
+        "condition_number": null,
+        "condition_threshold": 1000000.0,
+        "v22_condition_number": null,
+        "matrix_norm": null,
+        "bias_norm": null,
+        "singular_values": [
+          0.01411337928727101,
+          2.6981765490634904e-16
+        ]
+      }
+    },
     "provenance": {
       "model_requested": "roberta-large-mnli",
       "model_resolved": null,
       "adapter_mode": "deterministic_sha256_mock",
       "is_loaded": false,
       "use_mock_fallback": true,
-      "identifiability_error": "Edge 'rename_a' design matrix is ill-conditioned (cond=5.23e+13 > 1.00e+06)."
+      "identifiability_error": {
+        "generator_name": "rename_a",
+        "reason": "rank_deficient",
+        "design_rank": 1,
+        "required_rank": 2,
+        "condition_number": null,
+        "condition_threshold": 1000000.0,
+        "v22_condition_number": null,
+        "matrix_norm": null,
+        "bias_norm": null,
+        "singular_values": [
+          0.01411337928727101,
+          2.6981765490634904e-16
+        ]
+      }
     }
   },
   "monte_carlo_sweeps": [
