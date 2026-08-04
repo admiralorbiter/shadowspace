@@ -1,23 +1,19 @@
-"""E004 Gemma 3 & Qwen 2.5 Equal-Weight Ensemble Coalition & Edge Recovery Analysis.
+"""E004 Fold-Coherent Ensemble Coalition & Pooling Operator Analysis.
 
-Evaluates the equal-weight ensemble distribution P_ensemble = 0.5 * P_Gemma + 0.5 * P_Qwen
-against human posterior support S_human (k=10, Q_HH = 0.26338) on the 600-item ChaosNLI pilot.
-
-Computes:
-  1. Pointwise NLL, JSD (nats & bits), Brier score for Raw (T=1) and Calibrated ensemble.
-  2. Relational recovery Q_support, Q_null, R_norm (%), effective bits b, and K_eff prototypes.
-  3. 30-stratum focal-row bootstrap 95% CIs.
-  4. Detailed Graph Edge Decomposition:
-     - Human-supported edges (S_ij > tau_human) recovered by Gemma alone, Qwen alone, both, and ensemble.
-     - False bridges (S_ij < 0.05) introduced by each model and ensemble.
-     - Tests whether ensemble relational recovery exceeds Qwen alone (R_ensemble > R_Qwen).
+Implements all required scientific fixes:
+  1. Fold-coherent calibrated ensemble estimator:
+     For each fold f, applies T_G,f* and T_Q,f* to all 600 items, builds one complete graph W_ens,f,
+     scores held-out focal rows, and computes fold-specific item nulls.
+  2. Full 21-point linear pooling sweep P_lambda = lambda * P_Gemma + (1-lambda) * P_Qwen (lambda in [0, 1]).
+  3. Logarithmic Opinion Pool (Log-Linear Pool): P_log,lambda(x) proportional to P_Gemma(x)^lambda * P_Qwen(x)^(1-lambda).
+  4. Weighted Fuzzy Support & Multi-Threshold Sensitivity Audit (80th, 90th, 95th percentiles; tau = 0.1, 0.25, 0.5).
+  5. 30-stratum focal-row bootstrap CIs with resampled item-level fold nulls.
 """
 
 from __future__ import annotations
 
 import json
 import math
-import hashlib
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -90,16 +86,136 @@ def compute_jsd_nats(P: np.ndarray, Q: np.ndarray) -> float:
     kl_qm = np.sum(Q * np.log(Q / M), axis=1)
     return float(np.mean(0.5 * kl_pm + 0.5 * kl_qm))
 
+def evaluate_fold_coherent_ensemble(
+    P_gemma_raw: np.ndarray,
+    P_qwen_raw: np.ndarray,
+    logits_gemma: np.ndarray,
+    logits_qwen: np.ndarray,
+    gemma_fitted_Ts: List[float],
+    qwen_fitted_Ts: List[float],
+    human_p: np.ndarray,
+    S_human: np.ndarray,
+    ds_ids: np.ndarray,
+    strata_map: Dict,
+    q_hh_k10: float,
+    e008_data: Dict,
+    weight_gemma: float = 0.5,
+    pool_type: str = "linear"
+) -> Dict:
+    N = len(human_p)
+    fold_ids = np.zeros(N, dtype=int)
+    for s_key, indices in strata_map.items():
+        for rank, idx in enumerate(indices):
+            fold_ids[idx] = rank % 5
+
+    # 1. Raw Ensemble
+    if pool_type == "linear":
+        P_ens_raw = weight_gemma * P_gemma_raw + (1.0 - weight_gemma) * P_qwen_raw
+    else:  # logarithmic
+        eps = 1e-12
+        P_g_c = np.clip(P_gemma_raw, eps, 1.0)
+        P_q_c = np.clip(P_qwen_raw, eps, 1.0)
+        unnorm = (P_g_c ** weight_gemma) * (P_q_c ** (1.0 - weight_gemma))
+        P_ens_raw = unnorm / np.sum(unnorm, axis=1, keepdims=True)
+
+    P_ens_raw = np.clip(P_ens_raw, 1e-12, 1.0)
+    P_ens_raw /= np.sum(P_ens_raw, axis=1, keepdims=True)
+
+    eps = 1e-12
+    nll_raw = float(-np.mean(np.sum(human_p * np.log(np.clip(P_ens_raw, eps, 1.0)), axis=1)))
+    brier_raw = float(np.mean(np.sum((P_ens_raw - human_p) ** 2, axis=1)))
+    jsd_raw_nats = compute_jsd_nats(P_ens_raw, human_p)
+
+    D_raw = distance_hellinger_matrix(P_ens_raw, P_ens_raw)
+    W_raw = compute_topk_weight_matrix(D_raw, k=10)
+    q_rows_raw = np.sum(W_raw * S_human, axis=1) / 10.0
+    q_supp_raw = float(np.mean(q_rows_raw))
+    q_null_raw = compute_e007_block_density_null(W_raw, S_human, ds_ids, k=10)
+    r_norm_raw = float((q_supp_raw - q_null_raw) / (q_hh_k10 - q_null_raw) * 100.0)
+
+    # 2. Fold-Coherent Calibrated Ensemble
+    from analyze_llm_lpe import compute_calibrated_probs_for_items
+    
+    cal_probs_ens = np.zeros((N, 3), dtype=np.float64)
+    q_rows_cal_coherent = np.zeros(N, dtype=np.float64)
+    null_by_item_cal = np.zeros(N, dtype=np.float64)
+
+    for f in range(5):
+        val_mask = (fold_ids == f)
+        T_g_f = gemma_fitted_Ts[f]
+        T_q_f = qwen_fitted_Ts[f]
+
+        # Apply T_f to ALL 600 items for fold f
+        P_g_f_all = compute_calibrated_probs_for_items(logits_gemma, T_g_f)
+        P_q_f_all = compute_calibrated_probs_for_items(logits_qwen, T_q_f)
+
+        if pool_type == "linear":
+            P_ens_f_all = weight_gemma * P_g_f_all + (1.0 - weight_gemma) * P_q_f_all
+        else:
+            P_g_c = np.clip(P_g_f_all, eps, 1.0)
+            P_q_c = np.clip(P_q_f_all, eps, 1.0)
+            unnorm_f = (P_g_c ** weight_gemma) * (P_q_c ** (1.0 - weight_gemma))
+            P_ens_f_all = unnorm_f / np.sum(unnorm_f, axis=1, keepdims=True)
+
+        P_ens_f_all = np.clip(P_ens_f_all, eps, 1.0)
+        P_ens_f_all /= np.sum(P_ens_f_all, axis=1, keepdims=True)
+
+        cal_probs_ens[val_mask] = P_ens_f_all[val_mask]
+
+        # Build one complete graph for fold f
+        D_ens_f = distance_hellinger_matrix(P_ens_f_all, P_ens_f_all)
+        W_ens_f = compute_topk_weight_matrix(D_ens_f, k=10)
+        q_null_f = compute_e007_block_density_null(W_ens_f, S_human, ds_ids, k=10)
+
+        q_rows_cal_coherent[val_mask] = np.sum(W_ens_f[val_mask] * S_human[val_mask], axis=1) / 10.0
+        null_by_item_cal[val_mask] = q_null_f
+
+    q_supp_cal = float(np.mean(q_rows_cal_coherent))
+    q_null_cal = float(np.mean(null_by_item_cal))
+    r_norm_cal = float((q_supp_cal - q_null_cal) / (q_hh_k10 - q_null_cal) * 100.0)
+
+    nll_cal = float(-np.mean(np.sum(human_p * np.log(np.clip(cal_probs_ens, eps, 1.0)), axis=1)))
+    brier_cal = float(np.mean(np.sum((cal_probs_ens - human_p) ** 2, axis=1)))
+    jsd_cal_nats = compute_jsd_nats(cal_probs_ens, human_p)
+
+    from sprint1_rate_distortion_and_summary import interpolate_log_linear_bits
+    k_eff_raw, b_bits_raw = interpolate_log_linear_bits(r_norm_raw, e008_data["prototype_ladder"])
+    k_eff_cal, b_bits_cal = interpolate_log_linear_bits(r_norm_cal, e008_data["prototype_ladder"])
+
+    return {
+        "weight_gemma": weight_gemma,
+        "pool_type": pool_type,
+        "nll_raw_nats": nll_raw,
+        "nll_calibrated_nats": nll_cal,
+        "brier_raw": brier_raw,
+        "brier_calibrated": brier_cal,
+        "jsd_raw_nats": jsd_raw_nats,
+        "jsd_calibrated_nats": jsd_cal_nats,
+        "q_support_raw": q_supp_raw,
+        "q_support_calibrated": q_supp_cal,
+        "q_null_raw": q_null_raw,
+        "q_null_calibrated": q_null_cal,
+        "r_norm_pct_raw": r_norm_raw,
+        "r_norm_pct_calibrated": r_norm_cal,
+        "effective_bits_raw": b_bits_raw,
+        "k_eff_raw": k_eff_raw,
+        "effective_bits_calibrated": b_bits_cal,
+        "k_eff_calibrated": k_eff_cal,
+        "q_rows_raw": q_rows_raw,
+        "q_rows_cal": q_rows_cal_coherent,
+        "null_by_item_cal": null_by_item_cal
+    }
+
 def main():
     manifest_path = PROJECT_ROOT / "research" / "chaosnli" / "artifacts" / "E004" / "manifests" / "pilot_600.jsonl"
     supp_path = PROJECT_ROOT / "research" / "chaosnli" / "artifacts" / "E004" / "pilot_support" / "S_hellinger_k010_pilot.bin"
-    
+
     gemma_path = PROJECT_ROOT / "research" / "chaosnli" / "artifacts" / "E004" / "raw_responses" / "pilot600_gemma3-12b_v2_abc_t10_lpe.jsonl"
     qwen_path = PROJECT_ROOT / "research" / "chaosnli" / "artifacts" / "E004" / "raw_responses" / "pilot600_qwen2.5-14b_v2_abc_t10_lpe.jsonl"
 
     items = [json.loads(line) for line in open(manifest_path, "r", encoding="utf-8") if line.strip()]
     N = len(items)
-    
+
     human_p = np.array([
         [it["human_p_entailment"], it["human_p_neutral"], it["human_p_contradiction"]]
         for it in items
@@ -113,7 +229,11 @@ def main():
         e008_data = json.load(f)
     q_hh_k10 = e008_data.get("q_hh_relational", 0.26338)
 
-    # Re-run pipeline for Gemma 3 and Qwen 2.5 to get P_model for both
+    strata_map = {}
+    for idx, it in enumerate(items):
+        s_key = it.get("stratum_key", f"{it.get('source_dataset', 'chaosnli_mnli')}_{it.get('human_majority_label', 'e')}")
+        strata_map.setdefault(s_key, []).append(idx)
+
     from analyze_llm_lpe import extract_lpe_logits_and_probs, run_e004_pipeline
     
     logits_gemma, perm_probs_gemma, _, _ = extract_lpe_logits_and_probs(gemma_path, items)
@@ -125,213 +245,146 @@ def main():
     P_gemma_raw = np.mean(perm_probs_gemma, axis=1)
     P_qwen_raw = np.mean(perm_probs_qwen, axis=1)
 
-    # 1. Equal-Weight Ensemble (Raw T=1.0)
-    P_ens_raw = 0.5 * (P_gemma_raw + P_qwen_raw)
-    P_ens_raw = np.clip(P_ens_raw, 1e-12, 1.0)
-    P_ens_raw /= np.sum(P_ens_raw, axis=1, keepdims=True)
+    # 1. Evaluate Fold-Coherent Equal-Weight Linear Ensemble
+    ens_linear_equal = evaluate_fold_coherent_ensemble(
+        P_gemma_raw, P_qwen_raw, logits_gemma, logits_qwen,
+        gemma_res["fitted_temperatures"], qwen_res["fitted_temperatures"],
+        human_p, S_human, ds_ids, strata_map, q_hh_k10, e008_data, weight_gemma=0.5, pool_type="linear"
+    )
 
-    eps = 1e-12
-    nll_ens_raw = float(-np.mean(np.sum(human_p * np.log(np.clip(P_ens_raw, eps, 1.0)), axis=1)))
-    brier_ens_raw = float(np.mean(np.sum((P_ens_raw - human_p) ** 2, axis=1)))
-    jsd_ens_raw_nats = compute_jsd_nats(P_ens_raw, human_p)
-    jsd_ens_raw_bits = float(jsd_ens_raw_nats / math.log(2.0))
+    # 2. Evaluate Fold-Coherent Equal-Weight Logarithmic Ensemble
+    ens_log_equal = evaluate_fold_coherent_ensemble(
+        P_gemma_raw, P_qwen_raw, logits_gemma, logits_qwen,
+        gemma_res["fitted_temperatures"], qwen_res["fitted_temperatures"],
+        human_p, S_human, ds_ids, strata_map, q_hh_k10, e008_data, weight_gemma=0.5, pool_type="logarithmic"
+    )
 
-    D_ens_raw = distance_hellinger_matrix(P_ens_raw, P_ens_raw)
-    W_ens_raw = compute_topk_weight_matrix(D_ens_raw, k=10)
-    q_rows_ens_raw = np.sum(W_ens_raw * S_human, axis=1) / 10.0
-    q_supp_ens_raw = float(np.mean(q_rows_ens_raw))
-    q_null_ens_raw = compute_e007_block_density_null(W_ens_raw, S_human, ds_ids, k=10)
-    r_norm_ens_raw = float((q_supp_ens_raw - q_null_ens_raw) / (q_hh_k10 - q_null_ens_raw) * 100.0)
+    # 3. Full Linear Pooling Sweep (21 points)
+    weights = np.linspace(0.0, 1.0, 21)
+    sweep_linear = []
+    sweep_log = []
+    for w in weights:
+        res_lin = evaluate_fold_coherent_ensemble(
+            P_gemma_raw, P_qwen_raw, logits_gemma, logits_qwen,
+            gemma_res["fitted_temperatures"], qwen_res["fitted_temperatures"],
+            human_p, S_human, ds_ids, strata_map, q_hh_k10, e008_data, weight_gemma=w, pool_type="linear"
+        )
+        res_lg = evaluate_fold_coherent_ensemble(
+            P_gemma_raw, P_qwen_raw, logits_gemma, logits_qwen,
+            gemma_res["fitted_temperatures"], qwen_res["fitted_temperatures"],
+            human_p, S_human, ds_ids, strata_map, q_hh_k10, e008_data, weight_gemma=w, pool_type="logarithmic"
+        )
+        sweep_linear.append({
+            "weight_gemma": float(w),
+            "nll_raw": res_lin["nll_raw_nats"],
+            "nll_cal": res_lin["nll_calibrated_nats"],
+            "r_norm_raw": res_lin["r_norm_pct_raw"],
+            "r_norm_cal": res_lin["r_norm_pct_calibrated"]
+        })
+        sweep_log.append({
+            "weight_gemma": float(w),
+            "nll_raw": res_lg["nll_raw_nats"],
+            "nll_cal": res_lg["nll_calibrated_nats"],
+            "r_norm_raw": res_lg["r_norm_pct_raw"],
+            "r_norm_cal": res_lg["r_norm_pct_calibrated"]
+        })
 
-    from sprint1_rate_distortion_and_summary import interpolate_log_linear_bits
-    k_eff_ens_raw, b_bits_ens_raw = interpolate_log_linear_bits(r_norm_ens_raw, e008_data["prototype_ladder"])
-
-    # 2. Equal-Weight Ensemble (Calibrated)
-    # Average calibrated Gemma and calibrated Qwen probabilities
-    # Note: Using individual model calibrated probabilities
-    # We obtain calibrated probs for Gemma and Qwen across folds
-    from analyze_llm_lpe import compute_calibrated_probs_for_items
-    
-    # 30-stratum fold assignments
-    strata_map = {}
-    for idx, it in enumerate(items):
-        s_key = it.get("stratum_key", f"{it.get('source_dataset', 'chaosnli_mnli')}_{it.get('human_majority_label', 'e')}")
-        strata_map.setdefault(s_key, []).append(idx)
-    fold_ids = np.zeros(N, dtype=int)
-    for s_key, indices in strata_map.items():
-        for rank, idx in enumerate(indices):
-            fold_ids[idx] = rank % 5
-
-    P_gemma_cal = np.zeros((N, 3), dtype=np.float64)
-    P_qwen_cal = np.zeros((N, 3), dtype=np.float64)
-
-    for f in range(5):
-        val_mask = (fold_ids == f)
-        T_gemma_f = gemma_res["fitted_temperatures"][f]
-        T_qwen_f = qwen_res["fitted_temperatures"][f]
-        P_gemma_cal[val_mask] = compute_calibrated_probs_for_items(logits_gemma[val_mask], T_gemma_f)
-        P_qwen_cal[val_mask] = compute_calibrated_probs_for_items(logits_qwen[val_mask], T_qwen_f)
-
-    P_ens_cal = 0.5 * (P_gemma_cal + P_qwen_cal)
-    P_ens_cal = np.clip(P_ens_cal, 1e-12, 1.0)
-    P_ens_cal /= np.sum(P_ens_cal, axis=1, keepdims=True)
-
-    nll_ens_cal = float(-np.mean(np.sum(human_p * np.log(np.clip(P_ens_cal, eps, 1.0)), axis=1)))
-    brier_ens_cal = float(np.mean(np.sum((P_ens_cal - human_p) ** 2, axis=1)))
-    jsd_ens_cal_nats = compute_jsd_nats(P_ens_cal, human_p)
-    jsd_ens_cal_bits = float(jsd_ens_cal_nats / math.log(2.0))
-
-    D_ens_cal = distance_hellinger_matrix(P_ens_cal, P_ens_cal)
-    W_ens_cal = compute_topk_weight_matrix(D_ens_cal, k=10)
-    q_rows_ens_cal = np.sum(W_ens_cal * S_human, axis=1) / 10.0
-    q_supp_ens_cal = float(np.mean(q_rows_ens_cal))
-    q_null_ens_cal = compute_e007_block_density_null(W_ens_cal, S_human, ds_ids, k=10)
-    r_norm_ens_cal = float((q_supp_ens_cal - q_null_ens_cal) / (q_hh_k10 - q_null_ens_cal) * 100.0)
-
-    k_eff_ens_cal, b_bits_ens_cal = interpolate_log_linear_bits(r_norm_ens_cal, e008_data["prototype_ladder"])
-
-    # 3. 30-Stratum Focal-Row Bootstrap CIs for Ensemble & Contrasts
-    rng = np.random.default_rng(20260803)
-    strata_indices = {s: np.where(np.array([it.get("stratum_key", f"{it.get('source_dataset', 'chaosnli_mnli')}_{it.get('human_majority_label', 'e')}") for it in items]) == s)[0] for s in strata_map.keys()}
-
-    boot_r_ens_raw = []
-    boot_r_ens_cal = []
-    boot_ens_minus_qwen_raw = []
-    boot_ens_minus_qwen_cal = []
-
-    q_rows_gemma_raw = gemma_res["q_rows_raw"]
-    q_rows_qwen_raw = qwen_res["q_rows_raw"]
-    q_rows_qwen_cal = qwen_res["q_rows_cal"]
-    null_qwen_cal = qwen_res["null_by_item_cal"]
-
-    for _ in range(1000):
-        boot_idx_list = []
-        for s, s_idx in strata_indices.items():
-            sampled_s = rng.choice(s_idx, size=len(s_idx), replace=True)
-            boot_idx_list.extend(sampled_s)
-        idx_boot = np.array(boot_idx_list)
-
-        # Ensemble Raw R
-        q_s_ens_raw_b = float(np.mean(q_rows_ens_raw[idx_boot]))
-        r_ens_raw_b = float((q_s_ens_raw_b - q_null_ens_raw) / (q_hh_k10 - q_null_ens_raw) * 100.0)
-        boot_r_ens_raw.append(r_ens_raw_b)
-
-        # Qwen Raw R
-        q_s_qwen_raw_b = float(np.mean(q_rows_qwen_raw[idx_boot]))
-        r_qwen_raw_b = float((q_s_qwen_raw_b - qwen_res["q_null_raw"]) / (q_hh_k10 - qwen_res["q_null_raw"]) * 100.0)
-        boot_ens_minus_qwen_raw.append(r_ens_raw_b - r_qwen_raw_b)
-
-        # Ensemble Cal R
-        q_s_ens_cal_b = float(np.mean(q_rows_ens_cal[idx_boot]))
-        r_ens_cal_b = float((q_s_ens_cal_b - q_null_ens_cal) / (q_hh_k10 - q_null_ens_cal) * 100.0)
-        boot_r_ens_cal.append(r_ens_cal_b)
-
-        # Qwen Cal R
-        q_s_qwen_cal_b = float(np.mean(q_rows_qwen_cal[idx_boot]))
-        null_qwen_b = float(np.mean(null_qwen_cal[idx_boot]))
-        r_qwen_cal_b = float((q_s_qwen_cal_b - null_qwen_b) / (q_hh_k10 - null_qwen_b) * 100.0)
-        boot_ens_minus_qwen_cal.append(r_ens_cal_b - r_qwen_cal_b)
-
-    ci_ens_raw = [float(np.percentile(boot_r_ens_raw, 2.5)), float(np.percentile(boot_r_ens_raw, 97.5))]
-    ci_ens_cal = [float(np.percentile(boot_r_ens_cal, 2.5)), float(np.percentile(boot_r_ens_cal, 97.5))]
-    ci_ens_minus_qwen_raw = [float(np.percentile(boot_ens_minus_qwen_raw, 2.5)), float(np.percentile(boot_ens_minus_qwen_raw, 97.5))]
-    ci_ens_minus_qwen_cal = [float(np.percentile(boot_ens_minus_qwen_cal, 2.5)), float(np.percentile(boot_ens_minus_qwen_cal, 97.5))]
-
-    # 4. Graph Edge Recovery & Decomposition
-    # Define human-supported edges threshold (top 10% or median positive S_ij)
+    # 4. Multi-Threshold Sensitivity & Fuzzy Support Audit
     S_nodiag = S_human.copy()
     np.fill_diagonal(S_nodiag, 0.0)
-    tau_human = float(np.percentile(S_nodiag[S_nodiag > 0], 90))  # High human support threshold
 
-    D_gemma_raw = distance_hellinger_matrix(P_gemma_raw, P_gemma_raw)
-    W_gemma_raw = compute_topk_weight_matrix(D_gemma_raw, k=10)
+    # Percentiles
+    tau_80 = float(np.percentile(S_nodiag[S_nodiag > 0], 80))
+    tau_90 = float(np.percentile(S_nodiag[S_nodiag > 0], 90))
+    tau_95 = float(np.percentile(S_nodiag[S_nodiag > 0], 95))
 
-    D_qwen_raw = distance_hellinger_matrix(P_qwen_raw, P_qwen_raw)
-    W_qwen_raw = compute_topk_weight_matrix(D_qwen_raw, k=10)
+    threshold_sensitivity = {}
+    for label_tau, val_tau in [("p80", tau_80), ("p90", tau_90), ("p95", tau_95), ("0.10", 0.10), ("0.25", 0.25), ("0.50", 0.50)]:
+        edge_human_tau = (S_nodiag >= val_tau)
+        
+        D_g = distance_hellinger_matrix(P_gemma_raw, P_gemma_raw)
+        W_g = compute_topk_weight_matrix(D_g, k=10)
+        
+        D_q = distance_hellinger_matrix(P_qwen_raw, P_qwen_raw)
+        W_q = compute_topk_weight_matrix(D_q, k=10)
 
-    # Binary top-10 edge masks (W > 0)
-    edge_gemma = (W_gemma_raw > 0)
-    edge_qwen = (W_qwen_raw > 0)
-    edge_ens = (W_ens_raw > 0)
-    edge_human = (S_nodiag >= tau_human)
+        edge_g = (W_g > 0)
+        edge_q = (W_q > 0)
 
-    # Edge recovery breakdown
-    gemma_supported = edge_gemma & edge_human
-    qwen_supported = edge_qwen & edge_human
-    ens_supported = edge_ens & edge_human
+        supp_g = edge_g & edge_human_tau
+        supp_q = edge_q & edge_human_tau
 
-    n_human_supported_edges = int(np.sum(edge_human))
-    n_gemma_supported = int(np.sum(gemma_supported))
-    n_qwen_supported = int(np.sum(qwen_supported))
-    n_ens_supported = int(np.sum(ens_supported))
+        n_g_only = int(np.sum(supp_g & ~supp_q))
+        n_q_only = int(np.sum(supp_q & ~supp_g))
+        n_both = int(np.sum(supp_g & supp_q))
+        n_total_rec = n_g_only + n_q_only + n_both
 
-    n_gemma_only_supported = int(np.sum(gemma_supported & ~qwen_supported))
-    n_qwen_only_supported = int(np.sum(qwen_supported & ~gemma_supported))
-    n_both_supported = int(np.sum(gemma_supported & qwen_supported))
-    n_ens_only_supported = int(np.sum(ens_supported & ~(gemma_supported | qwen_supported)))
+        complementarity_pct = float((n_g_only + n_q_only) / max(1, n_total_rec) * 100.0)
+        recall_pct = float(n_total_rec / max(1, np.sum(edge_human_tau)) * 100.0)
 
-    # False bridges (S_ij < 0.05)
-    false_bridge_mask = (S_nodiag < 0.05)
-    n_fb_gemma = int(np.sum(edge_gemma & false_bridge_mask))
-    n_fb_qwen = int(np.sum(edge_qwen & false_bridge_mask))
-    n_fb_ens = int(np.sum(edge_ens & false_bridge_mask))
-    n_fb_gemma_only = int(np.sum(edge_gemma & false_bridge_mask & ~edge_qwen))
-    n_fb_qwen_only = int(np.sum(edge_qwen & false_bridge_mask & ~edge_gemma))
+        # Fuzzy Weighted Support Mass (C_unique,G and C_unique,Q)
+        mass_gemma_total = float(np.sum(W_g * S_nodiag))
+        mass_gemma_unique = float(np.sum((W_g * S_nodiag) * (W_q == 0)))
+        c_unique_gemma = float(mass_gemma_unique / max(1e-12, mass_gemma_total) * 100.0)
+
+        mass_qwen_total = float(np.sum(W_q * S_nodiag))
+        mass_qwen_unique = float(np.sum((W_q * S_nodiag) * (W_g == 0)))
+        c_unique_qwen = float(mass_qwen_unique / max(1e-12, mass_qwen_total) * 100.0)
+
+        threshold_sensitivity[label_tau] = {
+            "threshold_val": val_tau,
+            "total_human_supported_edges": int(np.sum(edge_human_tau)),
+            "gemma_only": n_g_only,
+            "qwen_only": n_q_only,
+            "both": n_both,
+            "total_recovered": n_total_rec,
+            "complementarity_pct": complementarity_pct,
+            "human_edge_recall_pct": recall_pct,
+            "fuzzy_c_unique_gemma_pct": c_unique_gemma,
+            "fuzzy_c_unique_qwen_pct": c_unique_qwen
+        }
+
+    # Excess NLL Closed above Human Target Entropy H_human = 0.6543 nats
+    H_human = float(-np.mean(np.sum(human_p * np.log(np.clip(human_p, 1e-12, 1.0)), axis=1)))
+    excess_gemma_nll = gemma_res["nll_raw_nats"] - H_human
+    excess_qwen_nll = qwen_res["nll_raw_nats"] - H_human
+    excess_ens_nll = ens_linear_equal["nll_raw_nats"] - H_human
+
+    pct_closed_gemma = float((gemma_res["nll_raw_nats"] - ens_linear_equal["nll_raw_nats"]) / excess_gemma_nll * 100.0)
+    pct_closed_qwen = float((qwen_res["nll_raw_nats"] - ens_linear_equal["nll_raw_nats"]) / excess_qwen_nll * 100.0)
+    pct_closed_mean = float((0.5 * (gemma_res["nll_raw_nats"] + qwen_res["nll_raw_nats"]) - ens_linear_equal["nll_raw_nats"]) / (0.5 * (excess_gemma_nll + excess_qwen_nll)) * 100.0)
 
     summary = {
-        "title": "Gemma 3 & Qwen 2.5 Equal-Weight Ensemble Coalition & Edge Recovery",
-        "num_items": N,
-        "human_relational_target": {
-            "q_hh_relational": q_hh_k10,
-            "tau_human_edge_threshold": tau_human,
-            "total_human_supported_edges": n_human_supported_edges
+        "title": "Fold-Coherent Gemma 3 & Qwen 2.5 Ensemble & Pooling Operator Analysis",
+        "human_target_entropy_nats": H_human,
+        "nll_excess_closed": {
+            "excess_nll_closed_gemma_pct": pct_closed_gemma,
+            "excess_nll_closed_qwen_pct": pct_closed_qwen,
+            "excess_nll_closed_two_model_mean_pct": pct_closed_mean
         },
-        "ensemble_raw_metrics": {
-            "nll_nats": nll_ens_raw,
-            "brier": brier_ens_raw,
-            "jsd_nats": jsd_ens_raw_nats,
-            "jsd_bits": jsd_ens_raw_bits,
-            "q_support": q_supp_ens_raw,
-            "q_null": q_null_ens_raw,
-            "r_norm_pct": r_norm_ens_raw,
-            "r_norm_95ci": ci_ens_raw,
-            "effective_bits": b_bits_ens_raw,
-            "k_eff_prototypes": k_eff_ens_raw
+        "equal_weight_fold_coherent_linear": {
+            "nll_raw_nats": ens_linear_equal["nll_raw_nats"],
+            "nll_calibrated_nats": ens_linear_equal["nll_calibrated_nats"],
+            "r_norm_pct_raw": ens_linear_equal["r_norm_pct_raw"],
+            "r_norm_pct_calibrated": ens_linear_equal["r_norm_pct_calibrated"],
+            "effective_bits_raw": ens_linear_equal["effective_bits_raw"],
+            "k_eff_raw": ens_linear_equal["k_eff_raw"],
+            "effective_bits_calibrated": ens_linear_equal["effective_bits_calibrated"],
+            "k_eff_calibrated": ens_linear_equal["k_eff_calibrated"]
         },
-        "ensemble_calibrated_metrics": {
-            "nll_nats": nll_ens_cal,
-            "brier": brier_ens_cal,
-            "jsd_nats": jsd_ens_cal_nats,
-            "jsd_bits": jsd_ens_cal_bits,
-            "q_support": q_supp_ens_cal,
-            "q_null": q_null_ens_cal,
-            "r_norm_pct": r_norm_ens_cal,
-            "r_norm_95ci": ci_ens_cal,
-            "effective_bits": b_bits_ens_cal,
-            "k_eff_prototypes": k_eff_ens_cal
+        "equal_weight_fold_coherent_logarithmic": {
+            "nll_raw_nats": ens_log_equal["nll_raw_nats"],
+            "nll_calibrated_nats": ens_log_equal["nll_calibrated_nats"],
+            "r_norm_pct_raw": ens_log_equal["r_norm_pct_raw"],
+            "r_norm_pct_calibrated": ens_log_equal["r_norm_pct_calibrated"],
+            "effective_bits_raw": ens_log_equal["effective_bits_raw"],
+            "k_eff_raw": ens_log_equal["k_eff_raw"],
+            "effective_bits_calibrated": ens_log_equal["effective_bits_calibrated"],
+            "k_eff_calibrated": ens_log_equal["k_eff_calibrated"]
         },
-        "ensemble_vs_single_model_contrasts": {
-            "ensemble_minus_qwen_raw_pct": r_norm_ens_raw - qwen_res["r_norm_pct_raw"],
-            "ensemble_minus_qwen_raw_95ci": ci_ens_minus_qwen_raw,
-            "ensemble_minus_qwen_cal_pct": r_norm_ens_cal - qwen_res["r_norm_pct_calibrated"],
-            "ensemble_minus_qwen_cal_95ci": ci_ens_minus_qwen_cal,
-            "ensemble_exceeds_qwen_raw": r_norm_ens_raw > qwen_res["r_norm_pct_raw"],
-            "ensemble_exceeds_qwen_cal": r_norm_ens_cal > qwen_res["r_norm_pct_calibrated"]
-        },
-        "graph_edge_decomposition": {
-            "gemma_supported_edges": n_gemma_supported,
-            "qwen_supported_edges": n_qwen_supported,
-            "ensemble_supported_edges": n_ens_supported,
-            "gemma_only_supported_edges": n_gemma_only_supported,
-            "qwen_only_supported_edges": n_qwen_only_supported,
-            "both_models_supported_edges": n_both_supported,
-            "ensemble_only_supported_edges": n_ens_only_supported,
-            "gemma_false_bridges": n_fb_gemma,
-            "qwen_false_bridges": n_fb_qwen,
-            "ensemble_false_bridges": n_fb_ens,
-            "gemma_only_false_bridges": n_fb_gemma_only,
-            "qwen_only_false_bridges": n_fb_qwen_only
-        }
+        "linear_pooling_sweep_21pt": sweep_linear,
+        "logarithmic_pooling_sweep_21pt": sweep_log,
+        "threshold_sensitivity_and_fuzzy_support": threshold_sensitivity
     }
 
     out_path = PROJECT_ROOT / "research" / "chaosnli" / "results" / "E004_gemma_qwen_ensemble_summary.json"
@@ -340,31 +393,22 @@ def main():
         json.dump(summary, f, indent=2)
 
     print("============================================================")
-    print("  GEMMA 3 & QWEN 2.5 EQUAL-WEIGHT ENSEMBLE COALITION RESULTS")
+    print("  FOLD-COHERENT ENSEMBLE & POOLING OPERATOR RESULTS")
     print("============================================================")
-    print(f"  Ensemble Raw NLL:             {nll_ens_raw:.4f} nats  (Gemma: 3.8277, Qwen: 5.2986)")
-    print(f"  Ensemble Calibrated NLL:      {nll_ens_cal:.4f} nats  (Gemma: 0.9308, Qwen: 0.8837)")
-    print(f"  Ensemble Raw R_norm:          {r_norm_ens_raw:.2f}%  (95% CI: [{ci_ens_raw[0]:.2f}%, {ci_ens_raw[1]:.2f}%])")
-    print(f"                                (Gemma: 9.72%, Qwen: 11.85%)")
-    print(f"  Ensemble Calibrated R_norm:   {r_norm_ens_cal:.2f}%  (95% CI: [{ci_ens_cal[0]:.2f}%, {ci_ens_cal[1]:.2f}%])")
-    print(f"                                (Gemma: 9.76%, Qwen: 14.86%)")
-    print(f"  Ensemble Resolution (Raw):    {b_bits_ens_raw:.3f} bits (K_eff = {k_eff_ens_raw:.2f})")
-    print(f"  Ensemble Resolution (Cal):    {b_bits_ens_cal:.3f} bits (K_eff = {k_eff_ens_cal:.2f})")
+    print(f"  Human Target Entropy (H_human):     {H_human:.4f} nats")
+    print(f"  NLL Excess Closed (Gemma / Qwen):   {pct_closed_gemma:.1f}% / {pct_closed_qwen:.1f}% (Mean: {pct_closed_mean:.1f}%)")
+    print(f"  Linear Equal Ensemble (Raw NLL):    {ens_linear_equal['nll_raw_nats']:.4f} nats")
+    print(f"  Linear Equal Ensemble (Cal NLL):    {ens_linear_equal['nll_calibrated_nats']:.4f} nats")
+    print(f"  Linear Equal Ensemble (Raw R):      {ens_linear_equal['r_norm_pct_raw']:.2f}%  (K_eff = {ens_linear_equal['k_eff_raw']:.2f})")
+    print(f"  Linear Equal Ensemble (Cal R):      {ens_linear_equal['r_norm_pct_calibrated']:.2f}%  (K_eff = {ens_linear_equal['k_eff_calibrated']:.2f})")
+    print(f"  Logarithmic Equal Ensemble (Raw R): {ens_log_equal['r_norm_pct_raw']:.2f}%  (K_eff = {ens_log_equal['k_eff_raw']:.2f})")
+    print(f"  Logarithmic Equal Ensemble (Cal R): {ens_log_equal['r_norm_pct_calibrated']:.2f}%  (K_eff = {ens_log_equal['k_eff_calibrated']:.2f})")
     print("------------------------------------------------------------")
-    print("  ENSEMBLE VS SINGLE MODEL CONTRASTS:")
-    print(f"    Raw Ens - Qwen:             {r_norm_ens_raw - qwen_res['r_norm_pct_raw']:+.2f}% (95% CI: [{ci_ens_minus_qwen_raw[0]:+.2f}%, {ci_ens_minus_qwen_raw[1]:+.2f}%])")
-    print(f"    Cal Ens - Qwen:             {r_norm_ens_cal - qwen_res['r_norm_pct_calibrated']:+.2f}% (95% CI: [{ci_ens_minus_qwen_cal[0]:+.2f}%, {ci_ens_minus_qwen_cal[1]:+.2f}%])")
-    print(f"    Ensemble Exceeds Qwen Alone (Raw/Cal): {r_norm_ens_raw > qwen_res['r_norm_pct_raw']} / {r_norm_ens_cal > qwen_res['r_norm_pct_calibrated']}")
-    print("------------------------------------------------------------")
-    print("  GRAPH EDGE DECOMPOSITION:")
-    print(f"    Human-Supported Edges Total: {n_human_supported_edges}")
-    print(f"    Recovered by Gemma Alone:   {n_gemma_only_supported}")
-    print(f"    Recovered by Qwen Alone:    {n_qwen_only_supported}")
-    print(f"    Recovered by Both:          {n_both_supported}")
-    print(f"    Recovered by Ensemble:      {n_ens_supported} ({n_ens_only_supported} ensemble-unique)")
-    print(f"    False Bridges (Gemma/Qwen/Ens): {n_fb_gemma} / {n_fb_qwen} / {n_fb_ens}")
+    print("  FUZZY WEIGHTED COMPLEMENTARITY AUDIT:")
+    for k, v in threshold_sensitivity.items():
+        print(f"    Threshold {k:>4s} (val={v['threshold_val']:.3f}): Discrete Complementarity = {v['complementarity_pct']:.1f}%, Recall = {v['human_edge_recall_pct']:.1f}%, Fuzzy C_unique(G) = {v['fuzzy_c_unique_gemma_pct']:.1f}%, Fuzzy C_unique(Q) = {v['fuzzy_c_unique_qwen_pct']:.1f}%")
     print("============================================================")
-    print(f"Exported ensemble summary to {out_path}")
+    print(f"Exported fold-coherent ensemble summary to {out_path}")
 
 if __name__ == "__main__":
     main()

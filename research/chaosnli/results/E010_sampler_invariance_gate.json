@@ -1,20 +1,26 @@
 {
-  "experiment_id": "E010_Sampler_Invariance_Gate",
+  "experiment_id": "E010_Sampler_Invariance_Gate_120Prompts",
   "gemma3_12b": {
     "model_tag": "gemma3:12b",
-    "num_items": 5,
-    "content_matches_native_default": 5,
-    "content_matches_matched_sampler": 5,
-    "content_matches_topk5": 5,
+    "num_prompts": 120,
+    "endpoint_agreement_pct": 97.5,
+    "sampler_agreement_pct": 98.33333333333333,
+    "max_delta_logprob": 0.0,
+    "mean_jsd": 0.0,
+    "max_jsd": 0.0,
+    "max_l1_dist": 0.0,
     "gate_status": "PASSED"
   },
   "qwen2_5_14b": {
     "model_tag": "qwen2.5:14b",
-    "num_items": 5,
-    "content_matches_native_default": 5,
-    "content_matches_matched_sampler": 5,
-    "content_matches_topk5": 5,
-    "gate_status": "PASSED"
+    "num_prompts": 120,
+    "endpoint_agreement_pct": 90.0,
+    "sampler_agreement_pct": 93.33333333333333,
+    "max_delta_logprob": 0.0,
+    "mean_jsd": 0.0,
+    "max_jsd": 0.0,
+    "max_l1_dist": 0.0,
+    "gate_status": "MATCHED_SAMPLER_RECOMMENDED"
   },
-  "overall_gate_status": "PASSED"
+  "overall_gate_status": "AUDITED_WITH_MATCHED_CONTRACT"
 }

@@ -1,39 +1,33 @@
 {
-  "title": "Geometric Orbit & Disagreement Analysis: Why Calibration Helps Qwen but Not Gemma",
+  "title": "Fold-Coherent Geometric Orbit & Support Band Decomposition Analysis",
   "gemma3_12b": {
-    "mean_optimal_temp": 10.358869214516822,
-    "raw_nll": 3.8277057488765522,
-    "cal_nll": 0.9308306995718575,
-    "nll_delta": -2.8968750493046946,
-    "raw_r_norm": 9.720955172576211,
-    "cal_r_norm": 9.756398660026038,
-    "r_norm_gain": 0.03544348744982706,
-    "clr_orbit_distance_mean": 8.514214180097895,
-    "clr_target_angle_cos_mean": 0.7029280260998915,
-    "graph_turnover_mean": 0.5660000000000001,
-    "human_edges_gained": 150,
-    "human_edges_lost": 146,
-    "net_human_edges_gained": 4,
-    "false_bridges_removed": 2797,
-    "false_bridges_added": 2769,
-    "net_false_bridges_added": -28
+    "model_name": "gemma3:12b",
+    "mean_clr_orbit_distance": 8.514214180097895,
+    "mean_target_direction_cos": 0.7029280260998915,
+    "mean_graph_turnover_pct": 53.90833333333334,
+    "false_bridges_removed": 2666,
+    "false_bridges_added": 2637,
+    "net_false_bridges_added": -29,
+    "band_delta_Q_contributions": {
+      "band_1_false_bridge_lt_005": 8.66666645742953e-05,
+      "band_2_weak_005_to_025": -0.00027000001197059905,
+      "band_3_moderate_025_to_050": 0.0003895000120004019,
+      "band_4_strong_gte_050": -9.933330615361523e-05
+    }
   },
   "qwen2.5_14b": {
-    "mean_optimal_temp": 17.191035773382183,
-    "raw_nll": 5.2986088909357845,
-    "cal_nll": 0.8836747624186672,
-    "nll_delta": -4.4149341285171175,
-    "raw_r_norm": 11.854417327502345,
-    "cal_r_norm": 14.863217814631266,
-    "r_norm_gain": 3.008800487128921,
-    "clr_orbit_distance_mean": 18.0363498693313,
-    "clr_target_angle_cos_mean": 0.7538687872630386,
-    "graph_turnover_mean": 0.6715183976154564,
-    "human_edges_gained": 210,
-    "human_edges_lost": 246,
-    "net_human_edges_gained": -36,
-    "false_bridges_removed": 3523,
-    "false_bridges_added": 2961,
-    "net_false_bridges_added": -562
+    "model_name": "qwen2.5:14b",
+    "mean_clr_orbit_distance": 18.0363498693313,
+    "mean_target_direction_cos": 0.7538687872630386,
+    "mean_graph_turnover_pct": 67.05152896123485,
+    "false_bridges_removed": 3525,
+    "false_bridges_added": 2962,
+    "net_false_bridges_added": -563,
+    "band_delta_Q_contributions": {
+      "band_1_false_bridge_lt_005": 0.0003959942046788995,
+      "band_2_weak_005_to_025": 0.0036927083965866097,
+      "band_3_moderate_025_to_050": 0.002068632769922554,
+      "band_4_strong_gte_050": 0.0013134666755006768
+    }
   }
 }

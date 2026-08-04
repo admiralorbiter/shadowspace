@@ -1,14 +1,16 @@
-"""Calibration Orbit & Geometric Disagreement Analysis (Gemma 3 vs Qwen 2.5).
+"""Fold-Coherent Calibration Orbit & Support Band Decomposition Analysis.
 
-Explains WHY scalar temperature calibration increases relational recovery for Qwen (+3.01%)
-while leaving Gemma's relational recovery static (+0.04%).
-
-Computes per-item geometric quantities in Centered Log-Ratio (CLR) space:
-  1. Calibration Orbit Movement: radial distance moved in CLR space under T*.
-  2. Alignment Angle to Human Target: cos(theta) between orbit vector and human target vector.
-  3. Graph Turnover: fraction of k=10 nearest neighbor identities changed under T*.
-  4. Edge Transitions: human-supported edges gained vs lost, false bridges gained vs removed.
-  5. Stratified breakdowns by source dataset (SNLI/MNLI), majority label, and entropy quintiles.
+Implements all required scientific fixes:
+  1. Fold-coherent calibration orbit and graph turnover:
+     For each fold f, applies T_f* to all 600 items, constructs complete coherent graph W_f,
+     and evaluates held-out focal rows.
+  2. Exact per-item support change Delta Q_i = (1/k) * sum_j (W_f,ij - W_raw,ij) * S_human,ij.
+  3. Support Band Partitioning:
+     - Band 1: S_ij < 0.05 (False bridges)
+     - Band 2: 0.05 <= S_ij < 0.25 (Weak support)
+     - Band 3: 0.25 <= S_ij < 0.50 (Moderate support)
+     - Band 4: S_ij >= 0.50 (Strong human agreement edges)
+  4. Precise paper-safe reporting of candidate mechanisms.
 """
 
 from __future__ import annotations
@@ -54,6 +56,110 @@ def compute_topk_weight_matrix(dist: np.ndarray, k: int = 10) -> np.ndarray:
     np.fill_diagonal(W, 0.0)
     return W
 
+def evaluate_fold_coherent_orbits(
+    model_name: str,
+    P_raw: np.ndarray,
+    logits: np.ndarray,
+    fitted_Ts: List[float],
+    P_human: np.ndarray,
+    S_human: np.ndarray,
+    strata_map: Dict
+) -> Dict:
+    N = len(P_human)
+    fold_ids = np.zeros(N, dtype=int)
+    for s_key, indices in strata_map.items():
+        for rank, idx in enumerate(indices):
+            fold_ids[idx] = rank % 5
+
+    from analyze_llm_lpe import compute_calibrated_probs_for_items
+
+    D_raw = distance_hellinger_matrix(P_raw, P_raw)
+    W_raw = compute_topk_weight_matrix(D_raw, k=10)
+
+    P_cal_coherent = np.zeros((N, 3), dtype=np.float64)
+    W_cal_coherent = np.zeros((N, N), dtype=np.float64)
+
+    clr_human = clr_transform(P_human)
+    clr_raw = clr_transform(P_raw)
+
+    clr_distances = np.zeros(N, dtype=np.float64)
+    cos_angles = np.zeros(N, dtype=np.float64)
+    turnover_rates = np.zeros(N, dtype=np.float64)
+
+    # Edge Support Bands
+    S_nodiag = S_human.copy()
+    np.fill_diagonal(S_nodiag, 0.0)
+
+    band_fb = (S_nodiag < 0.05)
+    band_weak = (S_nodiag >= 0.05) & (S_nodiag < 0.25)
+    band_mod = (S_nodiag >= 0.25) & (S_nodiag < 0.50)
+    band_strong = (S_nodiag >= 0.50)
+
+    band_delta_Q = {
+        "band_1_false_bridge_lt_005": 0.0,
+        "band_2_weak_005_to_025": 0.0,
+        "band_3_moderate_025_to_050": 0.0,
+        "band_4_strong_gte_050": 0.0
+    }
+
+    fb_removed_count = 0
+    fb_added_count = 0
+
+    for f in range(5):
+        val_mask = (fold_ids == f)
+        T_f = fitted_Ts[f]
+
+        # Apply T_f to all 600 items
+        P_f_all = compute_calibrated_probs_for_items(logits, T_f)
+        P_cal_coherent[val_mask] = P_f_all[val_mask]
+
+        clr_cal_f = clr_transform(P_f_all)
+
+        D_f = distance_hellinger_matrix(P_f_all, P_f_all)
+        W_f = compute_topk_weight_matrix(D_f, k=10)
+        W_cal_coherent[val_mask] = W_f[val_mask]
+
+        val_indices = np.where(val_mask)[0]
+        for v in val_indices:
+            v_cal = clr_cal_f[v] - clr_raw[v]
+            v_target = clr_human[v] - clr_raw[v]
+
+            norm_cal = np.linalg.norm(v_cal)
+            norm_target = np.linalg.norm(v_target)
+
+            clr_distances[v] = norm_cal
+            cos_angles[v] = np.sum(v_cal * v_target) / max(1e-12, norm_cal * norm_target)
+
+            # Turnover
+            min_w = np.minimum(W_raw[v], W_f[v])
+            turnover_rates[v] = 1.0 - (np.sum(min_w) / 10.0)
+
+            # Delta W for focal row v
+            dW_v = W_f[v] - W_raw[v]
+
+            band_delta_Q["band_1_false_bridge_lt_005"] += float(np.sum(dW_v[band_fb[v]] * S_nodiag[v, band_fb[v]]) / 10.0)
+            band_delta_Q["band_2_weak_005_to_025"] += float(np.sum(dW_v[band_weak[v]] * S_nodiag[v, band_weak[v]]) / 10.0)
+            band_delta_Q["band_3_moderate_025_to_050"] += float(np.sum(dW_v[band_mod[v]] * S_nodiag[v, band_mod[v]]) / 10.0)
+            band_delta_Q["band_4_strong_gte_050"] += float(np.sum(dW_v[band_strong[v]] * S_nodiag[v, band_strong[v]]) / 10.0)
+
+            fb_removed_count += int(np.sum((W_raw[v] > 0) & (W_f[v] == 0) & band_fb[v]))
+            fb_added_count += int(np.sum((W_raw[v] == 0) & (W_f[v] > 0) & band_fb[v]))
+
+    # Average Delta Q per band across N items
+    for b in band_delta_Q:
+        band_delta_Q[b] /= float(N)
+
+    return {
+        "model_name": model_name,
+        "mean_clr_orbit_distance": float(np.mean(clr_distances)),
+        "mean_target_direction_cos": float(np.mean(cos_angles)),
+        "mean_graph_turnover_pct": float(np.mean(turnover_rates) * 100.0),
+        "false_bridges_removed": fb_removed_count,
+        "false_bridges_added": fb_added_count,
+        "net_false_bridges_added": fb_added_count - fb_removed_count,
+        "band_delta_Q_contributions": band_delta_Q
+    }
+
 def main():
     manifest_path = PROJECT_ROOT / "research" / "chaosnli" / "artifacts" / "E004" / "manifests" / "pilot_600.jsonl"
     supp_path = PROJECT_ROOT / "research" / "chaosnli" / "artifacts" / "E004" / "pilot_support" / "S_hellinger_k010_pilot.bin"
@@ -68,158 +174,40 @@ def main():
         [it["human_p_entailment"], it["human_p_neutral"], it["human_p_contradiction"]]
         for it in items
     ], dtype=np.float64)
-    ds_ids = np.array([0 if it.get("source_dataset", "chaosnli_mnli") == "chaosnli_mnli" else 1 for it in items])
 
     S_human = np.frombuffer(supp_path.read_bytes(), dtype=np.float32).reshape(N, N).astype(np.float64)
 
     e008_path = PROJECT_ROOT / "research" / "chaosnli" / "results" / "E008_pilot_600_curve.json"
     with open(e008_path, "r", encoding="utf-8") as f:
         e008_data = json.load(f)
-    q_hh_k10 = e008_data.get("q_hh_relational", 0.26338)
 
-    from analyze_llm_lpe import extract_lpe_logits_and_probs, run_e004_pipeline, compute_calibrated_probs_for_items
-    
-    logits_gemma, perm_probs_gemma, _, _ = extract_lpe_logits_and_probs(gemma_path, items)
-    logits_qwen, perm_probs_qwen, _, _ = extract_lpe_logits_and_probs(qwen_path, items)
-
-    gemma_res = run_e004_pipeline(items, logits_gemma, perm_probs_gemma, S_human, q_hh_k10, e008_data)
-    qwen_res = run_e004_pipeline(items, logits_qwen, perm_probs_qwen, S_human, q_hh_k10, e008_data)
-
-    P_gemma_raw = np.mean(perm_probs_gemma, axis=1)
-    P_qwen_raw = np.mean(perm_probs_qwen, axis=1)
-
-    # Fold assignments
     strata_map = {}
     for idx, it in enumerate(items):
         s_key = it.get("stratum_key", f"{it.get('source_dataset', 'chaosnli_mnli')}_{it.get('human_majority_label', 'e')}")
         strata_map.setdefault(s_key, []).append(idx)
-    fold_ids = np.zeros(N, dtype=int)
-    for s_key, indices in strata_map.items():
-        for rank, idx in enumerate(indices):
-            fold_ids[idx] = rank % 5
 
-    P_gemma_cal = np.zeros((N, 3), dtype=np.float64)
-    P_qwen_cal = np.zeros((N, 3), dtype=np.float64)
+    from analyze_llm_lpe import extract_lpe_logits_and_probs, run_e004_pipeline
 
-    for f in range(5):
-        val_mask = (fold_ids == f)
-        T_gemma_f = gemma_res["fitted_temperatures"][f]
-        T_qwen_f = qwen_res["fitted_temperatures"][f]
-        P_gemma_cal[val_mask] = compute_calibrated_probs_for_items(logits_gemma[val_mask], T_gemma_f)
-        P_qwen_cal[val_mask] = compute_calibrated_probs_for_items(logits_qwen[val_mask], T_qwen_f)
+    logits_gemma, perm_probs_gemma, _, _ = extract_lpe_logits_and_probs(gemma_path, items)
+    logits_qwen, perm_probs_qwen, _, _ = extract_lpe_logits_and_probs(qwen_path, items)
 
-    # Compute CLR coordinates
-    clr_human = clr_transform(P_human)
-    clr_gemma_raw = clr_transform(P_gemma_raw)
-    clr_gemma_cal = clr_transform(P_gemma_cal)
-    clr_qwen_raw = clr_transform(P_qwen_raw)
-    clr_qwen_cal = clr_transform(P_qwen_cal)
+    gemma_res = run_e004_pipeline(items, logits_gemma, perm_probs_gemma, S_human, e008_data.get("q_hh_relational", 0.26338), e008_data)
+    qwen_res = run_e004_pipeline(items, logits_qwen, perm_probs_qwen, S_human, e008_data.get("q_hh_relational", 0.26338), e008_data)
 
-    # 1. Calibration Orbit Vectors and Angles to Target
-    # Vector from raw to calibrated
-    v_gemma_cal = clr_gemma_cal - clr_gemma_raw
-    v_qwen_cal = clr_qwen_cal - clr_qwen_raw
+    P_gemma_raw = np.mean(perm_probs_gemma, axis=1)
+    P_qwen_raw = np.mean(perm_probs_qwen, axis=1)
 
-    # Vector from raw to human target
-    v_gemma_target = clr_human - clr_gemma_raw
-    v_qwen_target = clr_human - clr_qwen_raw
-
-    norm_v_gemma_cal = np.linalg.norm(v_gemma_cal, axis=1)
-    norm_v_qwen_cal = np.linalg.norm(v_qwen_cal, axis=1)
-
-    norm_v_gemma_target = np.linalg.norm(v_gemma_target, axis=1)
-    norm_v_qwen_target = np.linalg.norm(v_qwen_target, axis=1)
-
-    dot_gemma = np.sum(v_gemma_cal * v_gemma_target, axis=1)
-    cos_theta_gemma = dot_gemma / (np.maximum(1e-12, norm_v_gemma_cal * norm_v_gemma_target))
-
-    dot_qwen = np.sum(v_qwen_cal * v_qwen_target, axis=1)
-    cos_theta_qwen = dot_qwen / (np.maximum(1e-12, norm_v_qwen_cal * norm_v_qwen_target))
-
-    # 2. Graph Turnover & Edge Transitions
-    D_gemma_raw = distance_hellinger_matrix(P_gemma_raw, P_gemma_raw)
-    W_gemma_raw = compute_topk_weight_matrix(D_gemma_raw, k=10)
-
-    D_gemma_cal = distance_hellinger_matrix(P_gemma_cal, P_gemma_cal)
-    W_gemma_cal = compute_topk_weight_matrix(D_gemma_cal, k=10)
-
-    D_qwen_raw = distance_hellinger_matrix(P_qwen_raw, P_qwen_raw)
-    W_qwen_raw = compute_topk_weight_matrix(D_qwen_raw, k=10)
-
-    D_qwen_cal = distance_hellinger_matrix(P_qwen_cal, P_qwen_cal)
-    W_qwen_cal = compute_topk_weight_matrix(D_qwen_cal, k=10)
-
-    # Turnover = 1 - (intersection of top-10 neighbors) / 10
-    min_W_gemma = np.minimum(W_gemma_raw, W_gemma_cal)
-    turnover_gemma = 1.0 - (np.sum(min_W_gemma, axis=1) / 10.0)
-
-    min_W_qwen = np.minimum(W_qwen_raw, W_qwen_cal)
-    turnover_qwen = 1.0 - (np.sum(min_W_qwen, axis=1) / 10.0)
-
-    # Edge Transitions with respect to Human Target
-    S_nodiag = S_human.copy()
-    np.fill_diagonal(S_nodiag, 0.0)
-    tau_human = float(np.percentile(S_nodiag[S_nodiag > 0], 90))
-    edge_human = (S_nodiag >= tau_human)
-
-    # Gemma edge transitions under calibration
-    edge_gemma_raw = (W_gemma_raw > 0)
-    edge_gemma_cal = (W_gemma_cal > 0)
-    gemma_edges_gained = np.sum((edge_gemma_cal & ~edge_gemma_raw) & edge_human)
-    gemma_edges_lost = np.sum((edge_gemma_raw & ~edge_gemma_cal) & edge_human)
-
-    # Qwen edge transitions under calibration
-    edge_qwen_raw = (W_qwen_raw > 0)
-    edge_qwen_cal = (W_qwen_cal > 0)
-    qwen_edges_gained = np.sum((edge_qwen_cal & ~edge_qwen_raw) & edge_human)
-    qwen_edges_lost = np.sum((edge_qwen_raw & ~edge_qwen_cal) & edge_human)
-
-    # False bridge transitions (S_ij < 0.05)
-    fb_mask = (S_nodiag < 0.05)
-    gemma_fb_removed = np.sum((edge_gemma_raw & ~edge_gemma_cal) & fb_mask)
-    gemma_fb_added = np.sum((edge_gemma_cal & ~edge_gemma_raw) & fb_mask)
-
-    qwen_fb_removed = np.sum((edge_qwen_raw & ~edge_qwen_cal) & fb_mask)
-    qwen_fb_added = np.sum((edge_qwen_cal & ~edge_qwen_raw) & fb_mask)
+    gemma_orbits = evaluate_fold_coherent_orbits(
+        "gemma3:12b", P_gemma_raw, logits_gemma, gemma_res["fitted_temperatures"], P_human, S_human, strata_map
+    )
+    qwen_orbits = evaluate_fold_coherent_orbits(
+        "qwen2.5:14b", P_qwen_raw, logits_qwen, qwen_res["fitted_temperatures"], P_human, S_human, strata_map
+    )
 
     summary = {
-        "title": "Geometric Orbit & Disagreement Analysis: Why Calibration Helps Qwen but Not Gemma",
-        "gemma3_12b": {
-            "mean_optimal_temp": gemma_res["mean_optimal_temp"],
-            "raw_nll": gemma_res["nll_raw_nats"],
-            "cal_nll": gemma_res["nll_calibrated_nats"],
-            "nll_delta": gemma_res["nll_calibrated_nats"] - gemma_res["nll_raw_nats"],
-            "raw_r_norm": gemma_res["r_norm_pct_raw"],
-            "cal_r_norm": gemma_res["r_norm_pct_calibrated"],
-            "r_norm_gain": gemma_res["r_norm_pct_calibrated"] - gemma_res["r_norm_pct_raw"],
-            "clr_orbit_distance_mean": float(np.mean(norm_v_gemma_cal)),
-            "clr_target_angle_cos_mean": float(np.mean(cos_theta_gemma)),
-            "graph_turnover_mean": float(np.mean(turnover_gemma)),
-            "human_edges_gained": int(gemma_edges_gained),
-            "human_edges_lost": int(gemma_edges_lost),
-            "net_human_edges_gained": int(gemma_edges_gained - gemma_edges_lost),
-            "false_bridges_removed": int(gemma_fb_removed),
-            "false_bridges_added": int(gemma_fb_added),
-            "net_false_bridges_added": int(gemma_fb_added - gemma_fb_removed)
-        },
-        "qwen2.5_14b": {
-            "mean_optimal_temp": qwen_res["mean_optimal_temp"],
-            "raw_nll": qwen_res["nll_raw_nats"],
-            "cal_nll": qwen_res["nll_calibrated_nats"],
-            "nll_delta": qwen_res["nll_calibrated_nats"] - qwen_res["nll_raw_nats"],
-            "raw_r_norm": qwen_res["r_norm_pct_raw"],
-            "cal_r_norm": qwen_res["r_norm_pct_calibrated"],
-            "r_norm_gain": qwen_res["r_norm_pct_calibrated"] - qwen_res["r_norm_pct_raw"],
-            "clr_orbit_distance_mean": float(np.mean(norm_v_qwen_cal)),
-            "clr_target_angle_cos_mean": float(np.mean(cos_theta_qwen)),
-            "graph_turnover_mean": float(np.mean(turnover_qwen)),
-            "human_edges_gained": int(qwen_edges_gained),
-            "human_edges_lost": int(qwen_edges_lost),
-            "net_human_edges_gained": int(qwen_edges_gained - qwen_edges_lost),
-            "false_bridges_removed": int(qwen_fb_removed),
-            "false_bridges_added": int(qwen_fb_added),
-            "net_false_bridges_added": int(qwen_fb_added - qwen_fb_removed)
-        }
+        "title": "Fold-Coherent Geometric Orbit & Support Band Decomposition Analysis",
+        "gemma3_12b": gemma_orbits,
+        "qwen2.5_14b": qwen_orbits
     }
 
     out_path = PROJECT_ROOT / "research" / "chaosnli" / "results" / "E004_calibration_orbit_analysis.json"
@@ -228,27 +216,27 @@ def main():
         json.dump(summary, f, indent=2)
 
     print("============================================================")
-    print("  GEOMETRIC ORBIT ANALYSIS: WHY CALIBRATION HELPS QWEN VS GEMMA")
+    print("  FOLD-COHERENT GEOMETRIC ORBIT & SUPPORT BAND DECOMPOSITION")
     print("============================================================")
-    print(f"  GEMMA 3 12B (Mean T* = {gemma_res['mean_optimal_temp']:.2f}):")
-    print(f"    NLL Delta:             {gemma_res['nll_calibrated_nats'] - gemma_res['nll_raw_nats']:.4f} nats")
-    print(f"    Relational Gain (R):   {gemma_res['r_norm_pct_calibrated'] - gemma_res['r_norm_pct_raw']:+.2f}%")
-    print(f"    CLR Orbit Distance:    {np.mean(norm_v_gemma_cal):.4f}")
-    print(f"    Cos Angle to Target:   {np.mean(cos_theta_gemma):.4f}")
-    print(f"    Graph Turnover Rate:   {np.mean(turnover_gemma)*100.0:.2f}%")
-    print(f"    Human Edges Gained:    +{gemma_edges_gained} / -{gemma_edges_lost} (Net: {gemma_edges_gained - gemma_edges_lost:+d})")
-    print(f"    False Bridges:         -{gemma_fb_removed} removed / +{gemma_fb_added} added (Net: {gemma_fb_added - gemma_fb_removed:+d})")
+    print(f"  GEMMA 3 12B:")
+    print(f"    CLR Orbit Distance:           {gemma_orbits['mean_clr_orbit_distance']:.4f}")
+    print(f"    Cos Angle to Target:          {gemma_orbits['mean_target_direction_cos']:.4f}")
+    print(f"    Fold-Coherent Turnover:       {gemma_orbits['mean_graph_turnover_pct']:.2f}%")
+    print(f"    False Bridges Removed/Added:  -{gemma_orbits['false_bridges_removed']} / +{gemma_orbits['false_bridges_added']} (Net: {gemma_orbits['net_false_bridges_added']:+d})")
+    print(f"    Band Delta Q Contributions:")
+    for b, v in gemma_orbits["band_delta_Q_contributions"].items():
+        print(f"      {b}: {v:+.6f}")
     print("------------------------------------------------------------")
-    print(f"  QWEN 2.5 14B (Mean T* = {qwen_res['mean_optimal_temp']:.2f}):")
-    print(f"    NLL Delta:             {qwen_res['nll_calibrated_nats'] - qwen_res['nll_raw_nats']:.4f} nats")
-    print(f"    Relational Gain (R):   {qwen_res['r_norm_pct_calibrated'] - qwen_res['r_norm_pct_raw']:+.2f}%")
-    print(f"    CLR Orbit Distance:    {np.mean(norm_v_qwen_cal):.4f}")
-    print(f"    Cos Angle to Target:   {np.mean(cos_theta_qwen):.4f}")
-    print(f"    Graph Turnover Rate:   {np.mean(turnover_qwen)*100.0:.2f}%")
-    print(f"    Human Edges Gained:    +{qwen_edges_gained} / -{qwen_edges_lost} (Net: {qwen_edges_gained - qwen_edges_lost:+d})")
-    print(f"    False Bridges:         -{qwen_fb_removed} removed / +{qwen_fb_added} added (Net: {qwen_fb_added - qwen_fb_removed:+d})")
+    print(f"  QWEN 2.5 14B:")
+    print(f"    CLR Orbit Distance:           {qwen_orbits['mean_clr_orbit_distance']:.4f}")
+    print(f"    Cos Angle to Target:          {qwen_orbits['mean_target_direction_cos']:.4f}")
+    print(f"    Fold-Coherent Turnover:       {qwen_orbits['mean_graph_turnover_pct']:.2f}%")
+    print(f"    False Bridges Removed/Added:  -{qwen_orbits['false_bridges_removed']} / +{qwen_orbits['false_bridges_added']} (Net: {qwen_orbits['net_false_bridges_added']:+d})")
+    print(f"    Band Delta Q Contributions:")
+    for b, v in qwen_orbits["band_delta_Q_contributions"].items():
+        print(f"      {b}: {v:+.6f}")
     print("============================================================")
-    print(f"Exported geometric orbit summary to {out_path}")
+    print(f"Exported fold-coherent orbit summary to {out_path}")
 
 if __name__ == "__main__":
     main()
