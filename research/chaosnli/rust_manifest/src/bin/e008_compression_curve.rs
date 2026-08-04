@@ -1,6 +1,6 @@
 /// E008: Audited Relational Rate-Distortion Compression Engine
 /// Fits 5-fold cross-validated Hellinger prototype quantization in square-root simplex z-space
-/// with multi-start k-means++, explicit 30-stratum fold assignments, analytic stratified nulls Q_null(K),
+/// with multi-start k-means++, seeded 30-stratum fold assignments, analytic stratified nulls Q_null(K),
 /// empirical human baseline recovery C_K, and log-linear interpolated effective bits b_eff.
 
 use rand::prelude::*;
@@ -18,9 +18,6 @@ use chaosnli_engine::topk::{compute_topk_weight_matrix, evaluate_q_support};
 struct ManifestItem {
     row_index: usize,
     source_dataset: String,
-    human_count_entailment: u32,
-    human_count_neutral: u32,
-    human_count_contradiction: u32,
     human_p_entailment: f64,
     human_p_neutral: f64,
     human_p_contradiction: f64,
@@ -388,7 +385,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         entropies[i] = ent;
     }
 
-    // Assign explicit 30-stratum fold IDs
+    // Assign explicit seeded 30-stratum fold IDs
     let n_folds = 5;
     let mut stratum_map: HashMap<String, Vec<usize>> = HashMap::new();
     for i in 0..n {
@@ -405,9 +402,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         stratum_map.entry(s_key).or_default().push(i);
     }
 
+    let mut rng_fold = ChaCha8Rng::seed_from_u64(2026_0803);
     let mut item_fold_ids = vec![0usize; n];
-    for (_s_key, indices) in stratum_map {
-        for (rank, &idx) in indices.iter().enumerate() {
+    for (_s_key, mut indices) in stratum_map {
+        indices.shuffle(&mut rng_fold);
+        for (rank, idx) in indices.into_iter().enumerate() {
             item_fold_ids[idx] = rank % n_folds;
         }
     }
