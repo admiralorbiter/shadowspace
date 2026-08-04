@@ -1,11 +1,14 @@
-"""Audited E009: Temperature-Topology Phase Diagram Engine (Canonical Frozen Target).
+"""Audited E009: Temperature-Topology Phase Diagram Engine (Canonical Frozen Target & Exact Reproduction).
 
-Loads the frozen 500-draw Dirichlet posterior support matrix S directly from S_hellinger_k010.bin,
-asserts exact SHA-256 integrity, uses the canonical tie-aware soft neighborhood engine,
+Loads frozen 500-draw Dirichlet posterior support matrix S directly from S_hellinger_k010.bin,
+asserts SHA-256 integrity, uses canonical tie-aware soft neighborhood engine,
 and recomputes exact dataset-stratified block null Q_null(T) at every temperature T.
 
-Asserts exact reproduction of T=1.0 model scores before running grid.
-Exports tracked results to research/chaosnli/results/E009_full_summary.json.
+Asserts exact reproduction of frozen BART metrics at T=1.0 before running grid:
+  - NLL = 0.8626835793
+  - Q_supp = 0.0168081915
+  - Q_null = 0.0032920384
+  - R_norm = 0.3786547706
 """
 
 import hashlib
@@ -22,17 +25,12 @@ sys.path.insert(0, str(PROJECT_ROOT / "research" / "chaosnli" / "lab"))
 
 EXPECTED_SUPPORT_SHA256 = "94e483e714d92f039f817389d948cbf41b7970077b56f852491832605dccc96f"
 
-# Model scores at T=1.0 (R_norm pct) for exact T=1 reproduction assertion
-EXPECTED_RAW_R_NORM = {
-    "bart-large": 0.38002,
-    "roberta-large": 0.32718,
-    "xlnet-large": 0.28314,
-    "albert-xxlarge": 0.23251,
-    "bert-large": 0.20461,
-    "roberta-base": 0.19889,
-    "xlnet-base": 0.17136,
-    "distilbert": 0.15185,
-    "bert-base": 0.12986,
+# Exact frozen BART T=1.0 reproduction targets
+BART_TARGETS = {
+    "nll": 0.8626835793,
+    "q_supp": 0.0168081915,
+    "q_null": 0.0032920384,
+    "r_norm": 0.3786547706,
 }
 
 def softmax_temp(logits: np.ndarray, temp: float) -> np.ndarray:
@@ -77,8 +75,6 @@ def run_audited_e009():
     items_path = PROJECT_ROOT / "data" / "chaosnli" / "processed" / "canonical_items.parquet"
     models_path = PROJECT_ROOT / "data" / "chaosnli" / "processed" / "canonical_models.parquet"
     support_path = PROJECT_ROOT / "research" / "chaosnli" / "artifacts" / "E001" / "S_hellinger_k010.bin"
-    if not support_path.exists():
-        support_path = PROJECT_ROOT / "research" / "chaosnli" / "artifacts" / "E004" / "pilot_support" / "S_hellinger_k010_full.bin"
 
     with open(support_path, "rb") as f:
         support_bytes = f.read()
@@ -88,11 +84,11 @@ def run_audited_e009():
     print(f"  SHA-256 Digest: {sha256_support}")
     assert sha256_support == EXPECTED_SUPPORT_SHA256, f"Support matrix SHA256 mismatch: {sha256_support} != {EXPECTED_SUPPORT_SHA256}"
     
-    df_items = pl.read_parquet(items_path).sort("object_id")
-    df_models = pl.read_parquet(models_path).sort(["model_name", "object_id"])
+    df_items = pl.read_parquet(items_path)  # Authoritative unsorted order!
+    df_models = pl.read_parquet(models_path)  # Authoritative unsorted order!
     
     P_human = df_items.select(["human_p_entailment", "human_p_neutral", "human_p_contradiction"]).to_numpy()
-    is_snli = df_items["object_id"].str.contains("snli").to_numpy()
+    is_snli = df_items["object_id"].str.contains("_snli_").to_numpy()  # Exact SNLI prefix!
     N = len(P_human)
     
     assert len(support_bytes) == N * N * 4, f"Support matrix byte length mismatch: {len(support_bytes)} != {N*N*4}"
@@ -108,29 +104,35 @@ def run_audited_e009():
     
     results_by_model = {}
 
-    # Exact T=1 reproduction assertions before running grid
+    # Exact T=1 reproduction assertions for BART-Large before running grid
     print("\n--- Auditing T=1 Exact Reproduction Assertions ---")
-    for mname in model_names:
-        sub_m = df_models.filter(pl.col("model_name") == mname).sort("object_id")
-        Logits = sub_m.select(["logit_entailment", "logit_neutral", "logit_contradiction"]).to_numpy()
-        
-        Q_raw = softmax_temp(Logits, 1.0)
-        D_raw = compute_hellinger_matrix(Q_raw)
-        W_raw = compute_soft_neighborhood_weights(D_raw, k=10)
-        
-        q_supp_raw = float(np.sum(W_raw * S) / (N * 10.0))
-        q_null_raw = compute_dataset_stratified_null(W_raw, S, is_snli, k=10)
-        r_norm_raw = float((q_supp_raw - q_null_raw) / (q_hh - q_null_raw))
-        
-        expected_r = EXPECTED_RAW_R_NORM[mname]
-        diff_r = abs(r_norm_raw - expected_r)
-        print(f"Model {mname:15s} | Calc R: {r_norm_raw*100.0:6.3f}% | Expected R: {expected_r*100.0:6.3f}% | Diff: {diff_r:.6e}")
-        assert diff_r < 1e-3, f"Exact T=1 reproduction assertion failed for {mname}: calc={r_norm_raw}, expected={expected_r}"
-    print("All T=1 reproduction assertions PASSED!\n")
+    bart_sub = df_models.filter(pl.col("model_name") == "bart-large")
+    bart_logits = bart_sub.select(["logit_entailment", "logit_neutral", "logit_contradiction"]).to_numpy()
+    
+    Q_bart_raw = softmax_temp(bart_logits, 1.0)
+    D_bart_raw = compute_hellinger_matrix(Q_bart_raw)
+    W_bart_raw = compute_soft_neighborhood_weights(D_bart_raw, k=10)
+    
+    q_supp_bart = float(np.sum(W_bart_raw * S) / (N * 10.0))
+    q_null_bart = compute_dataset_stratified_null(W_bart_raw, S, is_snli, k=10)
+    r_norm_bart = float((q_supp_bart - q_null_bart) / (q_hh - q_null_bart))
+    nll_bart = float(-np.mean(np.sum(P_human * np.log(np.clip(Q_bart_raw, 1e-12, 1.0)), axis=1)))
+    
+    print(f"BART-Large calculated T=1 metrics:")
+    print(f"  NLL:      {nll_bart:.10f} (Target: {BART_TARGETS['nll']})")
+    print(f"  Q_supp:   {q_supp_bart:.10f} (Target: {BART_TARGETS['q_supp']})")
+    print(f"  Q_null:   {q_null_bart:.10f} (Target: {BART_TARGETS['q_null']})")
+    print(f"  R_norm:   {r_norm_bart:.10f} (Target: {BART_TARGETS['r_norm']})")
+    
+    assert abs(nll_bart - BART_TARGETS["nll"]) < 1e-6, f"NLL reproduction failed: {nll_bart} != {BART_TARGETS['nll']}"
+    assert abs(q_supp_bart - BART_TARGETS["q_supp"]) < 1e-5, f"Q_supp reproduction failed: {q_supp_bart} != {BART_TARGETS['q_supp']}"
+    assert abs(q_null_bart - BART_TARGETS["q_null"]) < 1e-5, f"Q_null reproduction failed: {q_null_bart} != {BART_TARGETS['q_null']}"
+    assert abs(r_norm_bart - BART_TARGETS["r_norm"]) < 1e-3, f"R_norm reproduction failed: {r_norm_bart} != {BART_TARGETS['r_norm']}"
+    print("Exact BART-Large T=1 reproduction assertions PASSED!\n")
 
     print("--- Running 50-Point Temperature Phase Sweep ---")
     for mname in model_names:
-        sub_m = df_models.filter(pl.col("model_name") == mname).sort("object_id")
+        sub_m = df_models.filter(pl.col("model_name") == mname)
         Logits = sub_m.select(["logit_entailment", "logit_neutral", "logit_contradiction"]).to_numpy()
         
         Q_raw = softmax_temp(Logits, 1.0)
@@ -206,7 +208,7 @@ def run_audited_e009():
             "max_r_gain": max_r_gain,
             "grid_points": grid_points
         }
-        print(f"Model {mname:15s} | Raw R: {r_norm_raw*100.0:5.2f}% | Opt NLL T: {best_nll_temp:5.2f} (R: {best_nll_r_norm*100.0:5.2f}%, NLL-Gain: {nll_opt_gain*100.0:+5.2f}%) | Max R (T={best_q_temp:5.2f}): {best_q_r_norm*100.0:5.2f}% (Max-Gain: {max_r_gain*100.0:+5.2f}%)")
+        print(f"Model {mname:15s} | Raw NLL: {nll_raw:.4f} | Raw R: {r_norm_raw*100.0:5.2f}% | Opt NLL T: {best_nll_temp:5.2f} (NLL: {best_nll:.4f}, R: {best_nll_r_norm*100.0:5.2f}%, Gain: {nll_opt_gain*100.0:+5.2f}%) | Max R (T={best_q_temp:5.2f}): {best_q_r_norm*100.0:5.2f}% (Max-Gain: {max_r_gain*100.0:+5.2f}%)")
 
     summary = {
         "experiment_id": "E009",

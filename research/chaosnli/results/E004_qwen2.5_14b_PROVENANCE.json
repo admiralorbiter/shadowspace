@@ -1,0 +1,13 @@
+{
+  "experiment_id": "E004",
+  "model_tag": "qwen2.5:14b",
+  "subset": "pilot_600",
+  "n_items": 600,
+  "total_requests": 3600,
+  "temperature": 1.0,
+  "reasoning_control": "reasoning_effort=none",
+  "raw_responses_sha256": "45221d113d2218036c0dfec0ade257d0b1b10d5f9e5af003b2d92d56d37c12c7",
+  "manifest_sha256": "318c67354242771d2812b0d26dbd3d89e084ecc0afece250cae453d6531f4851",
+  "summary_sha256": "cb3d95c54d90f1937d6324ab4a024695120da7c731a99aae4f78a1e2c7f050c4",
+  "audit_status": "PASSED"
+}

@@ -1,0 +1,36 @@
+{
+  "model_tag": "qwen2.5:14b",
+  "n_items": 600,
+  "metrics": {
+    "nll_raw_nats": 5.298608890936125,
+    "nll_calibrated_nats": 0.8731641213777895,
+    "jsd_raw_bits": 0.2374993019929623,
+    "brier_score": 0.3821249527795376,
+    "mean_candidate_mass": 1.0000000017316881,
+    "mean_label_permutation_variance": 0.01896003357805554,
+    "cross_fitted_optimal_temperature_t_star": 14.669204626155537,
+    "q_support_raw": 0.04772322406491463,
+    "q_support_calibrated": 0.05119008804835687,
+    "q_null_stratified_raw": 0.016705693384569544,
+    "q_hh_relational": 0.2633796506666667,
+    "r_norm_pct_raw": 12.574302947138168,
+    "r_norm_pct_calibrated": 13.969974981735733,
+    "r_norm_95ci_raw": [
+      8.902898691549291,
+      16.66667860581984
+    ],
+    "prototype_equivalent_bits_raw": 1.6333058847403295,
+    "prototype_quantizers_k_eff_raw": 3.102230500332637,
+    "prototype_equivalent_bits_cal": 1.7446475534870247,
+    "prototype_quantizers_k_eff_cal": 3.3511297666873427
+  },
+  "provenance": {
+    "responses_path": "research\\chaosnli\\artifacts\\E004\\raw_responses\\pilot600_qwen2.5-14b_v2_abc_t10_lpe.jsonl",
+    "responses_sha256": "45221d113d2218036c0dfec0ade257d0b1b10d5f9e5af003b2d92d56d37c12c7",
+    "manifest_path": "research\\chaosnli\\artifacts\\E004\\manifests\\pilot_600.jsonl",
+    "manifest_sha256": "318c67354242771d2812b0d26dbd3d89e084ecc0afece250cae453d6531f4851",
+    "support_matrix_path": "research\\chaosnli\\artifacts\\E004\\pilot_support\\S_hellinger_k010_pilot.bin",
+    "support_matrix_sha256": "29ff35cfddbd1a4c30858eb2feac58aeb0c087aff99850736007a2a49fb40245",
+    "script": "analyze_llm_lpe.py"
+  }
+}

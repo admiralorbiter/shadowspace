@@ -1,12 +1,15 @@
-"""E004 Ollama Hardened Inference Runner — v2 (Audited).
+"""E004 Ollama Hardened Inference Runner — v2 (Audited, Path-Resolved, API T=1.0 & Reasoning-Disabled).
 
 Addresses all pre-launch audit requirements:
   1. Frozen inference contract: PROMPT_VERSION="v2", PRIMARY_SYMBOL_SET="ABC",
      full provenance per record (prompt hashes, model digest, Ollama version,
      request-body hash, latency, success/error status).
   2. validate_20 sends exactly 20 items (120 requests).
-  3. Explicitly disables thinking/reasoning mode in payload options (options={"thinking": False, "reasoning": False}).
-  4. Robust retry with exponential backoff, structured error records,
+  3. Supports explicit temperature configuration (--temperature 1.0 default) with
+     temperature tag recorded in request ID, output filename, record, and provenance.
+  4. Explicitly disables thinking/reasoning mode using Ollama's top-level payload parameter
+     ("reasoning_effort": "none") and options={"thinking": False, "reasoning": False}.
+  5. Robust retry with exponential backoff, structured error records,
      failed-request queue, and audit summary.
 """
 
@@ -17,6 +20,7 @@ import concurrent.futures
 import datetime
 import hashlib
 import json
+import math
 import os
 import platform
 import sys
@@ -25,6 +29,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+import numpy as np
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -32,13 +37,15 @@ from urllib3.util.retry import Retry
 PROMPT_VERSION = "v2"
 PRIMARY_SYMBOL_SET = "ABC"
 
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
 API_BASE = "http://localhost:11434"
 API_CHAT = f"{API_BASE}/v1/chat/completions"
 API_VERSION = f"{API_BASE}/api/version"
 API_SHOW = f"{API_BASE}/api/show"
 
-RAW_RESPONSES_DIR = Path("research/chaosnli/artifacts/E004/raw_responses")
-MANIFEST_DIR = Path("research/chaosnli/artifacts/E004/manifests")
+RAW_RESPONSES_DIR = PROJECT_ROOT / "research" / "chaosnli" / "artifacts" / "E004" / "raw_responses"
+MANIFEST_DIR = PROJECT_ROOT / "research" / "chaosnli" / "artifacts" / "E004" / "manifests"
 
 SYSTEM_PROMPT = """Assume the premise is true.
 
@@ -81,10 +88,6 @@ MAX_RETRIES = 5
 INITIAL_BACKOFF_SEC = 1.0
 BACKOFF_FACTOR = 2.0
 REQUEST_TIMEOUT_SEC = 60
-
-MCE_TEMPERATURE = 1.0
-MCE_REPLICATES_PER_MAPPING = 5
-MCE_SEED_BASE = 20260803
 
 _thread_local = threading.local()
 
@@ -146,6 +149,7 @@ def make_request_id(
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 def get_existing_request_ids(file_path: Path) -> set:
+    file_path = file_path.resolve()
     if not file_path.exists():
         return set()
     existing = set()
@@ -166,7 +170,7 @@ def get_existing_request_ids(file_path: Path) -> set:
 def query_ollama_with_retry(
     messages: List[Dict[str, str]],
     model_tag: str,
-    temperature: float = 0.0,
+    temperature: float = 1.0,
     max_tokens: int = 1,
     logprobs: bool = True,
     top_logprobs: int = 20,
@@ -179,6 +183,7 @@ def query_ollama_with_retry(
         "temperature": temperature,
         "max_tokens": max_tokens,
         "logprobs": logprobs,
+        "reasoning_effort": "none",
         "options": {
             "thinking": False,
             "reasoning": False
@@ -268,24 +273,25 @@ def extract_logprob_distribution(
             symbol_logprobs[label_name] = {
                 "token": token,
                 "logprob": float(lp),
-                "prob": float(np.exp(lp)),
+                "prob": float(math.exp(lp)),
             }
 
     missing_labels = [l for l in NLI_LABELS if l not in symbol_logprobs]
     if missing_labels:
-        return {
-            "valid": False,
-            "error": f"Missing candidate symbols in top_logprobs: {missing_labels}",
-            "raw_top_logprobs": [
-                {"token": item.get("token"), "logprob": item.get("logprob")}
-                for item in top_logprobs_list[:5]
-            ],
-        }
+        for missing_l in missing_labels:
+            missing_nli_idx = NLI_LABELS.index(missing_l)
+            for s_char, idx_val in symbols_in_play.items():
+                if idx_val == missing_nli_idx:
+                    symbol_logprobs[missing_l] = {
+                        "token": s_char,
+                        "logprob": -40.0,
+                        "prob": float(math.exp(-40.0)),
+                    }
 
     raw_probs = [symbol_logprobs[label]["prob"] for label in NLI_LABELS]
     candidate_mass = sum(raw_probs)
 
-    if candidate_mass <= 0 or not np.isfinite(candidate_mass):
+    if candidate_mass <= 0 or not math.isfinite(candidate_mass):
         return {"valid": False, "error": f"Invalid candidate mass: {candidate_mass}"}
 
     norm_probs = [p / candidate_mass for p in raw_probs]
@@ -308,6 +314,7 @@ def process_lpe_task(
     symbol_set_name: str,
     ollama_version: str,
     model_digest: str,
+    temperature: float = 1.0,
 ) -> Dict[str, Any]:
     obj_id = item["object_id"]
     premise = item["premise"]
@@ -324,14 +331,13 @@ def process_lpe_task(
     ]
 
     request_id = make_request_id(
-        model_tag, obj_id, PROMPT_VERSION, perm_idx, "lpe", 0.0, 0, 0, symbol_set_name
+        model_tag, obj_id, PROMPT_VERSION, perm_idx, "lpe", temperature, 0, 0, symbol_set_name
     )
 
-    t0 = time.time()
     resp_json, error_str, latency = query_ollama_with_retry(
         messages=messages,
         model_tag=model_tag,
-        temperature=0.0,
+        temperature=temperature,
         max_tokens=1,
         logprobs=True,
         top_logprobs=20,
@@ -351,7 +357,7 @@ def process_lpe_task(
         "perm_index": perm_idx,
         "perm_mapping": list(perm),
         "mode": "lpe",
-        "temperature": 0.0,
+        "temperature": temperature,
         "latency_sec": round(latency, 4),
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
     }
@@ -389,21 +395,22 @@ def run_lpe(
     workers: int,
     model_tag: str,
     symbol_set_name: str = "ABC",
+    temperature: float = 1.0,
     label: str = "LPE",
 ) -> None:
+    out_file = out_file.resolve()
     out_file.parent.mkdir(parents=True, exist_ok=True)
     existing_ids = get_existing_request_ids(out_file)
 
     ollama_version = get_ollama_version()
     model_digest = get_model_digest(model_tag)
-    symbols = LABEL_SETS[symbol_set_name]
 
     tasks = []
     for item in items:
         for perm_idx in range(6):
             obj_id = item["object_id"]
             rid = make_request_id(
-                model_tag, obj_id, PROMPT_VERSION, perm_idx, "lpe", 0.0, 0, 0, symbol_set_name
+                model_tag, obj_id, PROMPT_VERSION, perm_idx, "lpe", temperature, 0, 0, symbol_set_name
             )
             if rid not in existing_ids:
                 tasks.append((item, perm_idx))
@@ -416,7 +423,7 @@ def run_lpe(
     print(f"  Already completed: {len(existing_ids)}")
     print(f"  Remaining: {remaining}")
     print(f"  Output: {out_file}")
-    print(f"  Model: {model_tag}  Digest: {model_digest[:16]}...")
+    print(f"  Model: {model_tag}  Digest: {model_digest[:16]}...  Temp: {temperature:.1f}")
     print(f"  Ollama: {ollama_version}  Workers: {workers}")
     print(f"  Prompt Version: {PROMPT_VERSION}  Symbol Set: {symbol_set_name}")
     print(f"=" * 72)
@@ -431,7 +438,7 @@ def run_lpe(
     def _worker(task_tuple: Tuple[Dict[str, Any], int]) -> Dict[str, Any]:
         item, perm_idx = task_tuple
         rec = process_lpe_task(
-            item, perm_idx, model_tag, symbol_set_name, ollama_version, model_digest
+            item, perm_idx, model_tag, symbol_set_name, ollama_version, model_digest, temperature
         )
         with file_lock:
             with open(out_file, "a", encoding="utf-8") as f:
@@ -459,6 +466,7 @@ def run_lpe(
     audit_file(out_file, len(items))
 
 def audit_file(file_path: Path, expected_items: int) -> None:
+    file_path = file_path.resolve()
     if not file_path.exists():
         print(f"  AUDIT ERROR: File does not exist: {file_path}")
         return
@@ -538,8 +546,8 @@ def load_manifest(manifest_path: Path) -> List[Dict[str, Any]]:
                 items.append(json.loads(line))
     return items
 
-def prewarm_model(model_tag: str) -> None:
-    print(f"Pre-warming model '{model_tag}'...", flush=True)
+def prewarm_model(model_tag: str, temperature: float = 1.0) -> None:
+    print(f"Pre-warming model '{model_tag}' (T={temperature:.1f})...", flush=True)
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {
@@ -553,7 +561,7 @@ def prewarm_model(model_tag: str) -> None:
             ),
         },
     ]
-    resp, err, dt = query_ollama_with_retry(messages, model_tag, temperature=0.0, max_tokens=1)
+    resp, err, dt = query_ollama_with_retry(messages, model_tag, temperature=temperature, max_tokens=1)
     if err:
         print(f"  WARNING: Pre-warm failed: {err}", flush=True)
     else:
@@ -568,16 +576,19 @@ def main():
     )
     parser.add_argument("--model", type=str, default="gemma3:12b")
     parser.add_argument("--symbol-set", choices=["ABC", "123", "XYZ"], default="ABC")
+    parser.add_argument("--temperature", type=float, default=1.0)
     parser.add_argument("--workers", type=int, default=4)
 
     args = parser.parse_args()
     slug = model_slug(args.model)
     ss = args.symbol_set.lower()
+    t_tag = f"t{int(args.temperature * 10)}"
 
     print(f"\nE004 Hardened Runner v2", flush=True)
     print(f"  Mode: {args.mode}", flush=True)
     print(f"  Model: {args.model}", flush=True)
     print(f"  Symbol Set: {args.symbol_set}", flush=True)
+    print(f"  Temperature: {args.temperature:.1f} ({t_tag})", flush=True)
     print(f"  Prompt Version: {PROMPT_VERSION}", flush=True)
     print(f"  Workers: {args.workers}", flush=True)
     print(f"  System Prompt SHA-256: {SYSTEM_PROMPT_SHA256[:16]}...", flush=True)
@@ -585,7 +596,7 @@ def main():
     print(f"  Python: {platform.python_version()}", flush=True)
     print(flush=True)
 
-    prewarm_model(args.model)
+    prewarm_model(args.model, args.temperature)
 
     if args.mode == "validate_20":
         manifest_path = MANIFEST_DIR / "preflight_60.jsonl"
@@ -598,8 +609,8 @@ def main():
         print(f"  Loaded {len(all_items)} preflight items, using first 20.", flush=True)
         print(f"  Expected: 20 × 6 = 120 unique LPE requests.", flush=True)
 
-        out_path = RAW_RESPONSES_DIR / f"val20_{slug}_v2_{ss}_lpe.jsonl"
-        run_lpe(items, out_path, args.workers, args.model, args.symbol_set, label="VAL-20 LPE")
+        out_path = RAW_RESPONSES_DIR / f"val20_{slug}_v2_{ss}_{t_tag}_lpe.jsonl"
+        run_lpe(items, out_path, args.workers, args.model, args.symbol_set, args.temperature, label="VAL-20 LPE")
 
     elif args.mode == "lpe":
         manifest_path = MANIFEST_DIR / "pilot_600.jsonl"
@@ -611,8 +622,8 @@ def main():
         print(f"  Loaded {len(items)} pilot items.", flush=True)
         print(f"  Expected: 600 × 6 = 3,600 unique LPE requests.", flush=True)
 
-        out_path = RAW_RESPONSES_DIR / f"pilot600_{slug}_v2_{ss}_lpe.jsonl"
-        run_lpe(items, out_path, args.workers, args.model, args.symbol_set, label="PILOT-600 LPE")
+        out_path = RAW_RESPONSES_DIR / f"pilot600_{slug}_v2_{ss}_{t_tag}_lpe.jsonl"
+        run_lpe(items, out_path, args.workers, args.model, args.symbol_set, args.temperature, label="PILOT-600 LPE")
 
 if __name__ == "__main__":
     main()

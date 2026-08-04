@@ -1,4 +1,4 @@
-"""Generate data/chaosnli/processed/canonical_models.parquet with strict alignment & source object-order assertions."""
+"""Generate data/chaosnli/processed/canonical_models.parquet in authoritative item order."""
 
 import hashlib
 import json
@@ -14,14 +14,17 @@ def generate_canonical_models_hardened():
     items_path = PROJECT_ROOT / "data" / "chaosnli" / "processed" / "canonical_items.parquet"
     out_path = PROJECT_ROOT / "data" / "chaosnli" / "processed" / "canonical_models.parquet"
     
-    canon_df = pl.read_parquet(items_path).sort("object_id")
+    canon_df = pl.read_parquet(items_path)  # Authoritative unsorted order!
     object_ids = canon_df["object_id"].to_list()
     
     # Compute canonical item object-order SHA-256
     canon_obj_ids_json = json.dumps(object_ids).encode("utf-8")
     canon_obj_ids_sha256 = hashlib.sha256(canon_obj_ids_json).hexdigest()
     
-    # Assert source sidecar manifest matches canonical item object-order SHA-256
+    # Verify disk file SHA-256 against sidecar manifest
+    probs_bytes = probs_path.read_bytes()
+    sha256_probs_disk = hashlib.sha256(probs_bytes).hexdigest()
+    
     assert probs_manifest_path.exists(), f"Source manifest missing: {probs_manifest_path}"
     with open(probs_manifest_path, "r", encoding="utf-8") as f:
         src_manifest = json.load(f)
@@ -30,12 +33,11 @@ def generate_canonical_models_hardened():
     assert src_obj_ids_sha256 == canon_obj_ids_sha256, (
         f"Source object-order SHA256 mismatch! Source: {src_obj_ids_sha256}, Canonical: {canon_obj_ids_sha256}"
     )
+    assert src_manifest["model_probs_sha256"] == sha256_probs_disk, (
+        f"Model probs disk SHA256 mismatch! Manifest: {src_manifest['model_probs_sha256']}, Disk: {sha256_probs_disk}"
+    )
     
-    with open(probs_path, "rb") as f:
-        probs_content = f.read()
-        sha256_probs = hashlib.sha256(probs_content).hexdigest()
-        
-    model_probs = json.loads(probs_content.decode("utf-8"))
+    model_probs = json.loads(probs_bytes.decode("utf-8"))
     p_human = canon_df.select(
         ["human_p_entailment", "human_p_neutral", "human_p_contradiction"]
     ).to_numpy()
@@ -93,7 +95,7 @@ def generate_canonical_models_hardened():
         "output_path": str(out_path),
         "output_parquet_sha256": sha256_out_parquet,
         "canonical_object_ids_sha256": canon_obj_ids_sha256,
-        "source_probs_sha256": sha256_probs,
+        "source_probs_sha256": sha256_probs_disk,
         "label_order": ["entailment", "neutral", "contradiction"],
         "n_items": len(object_ids),
         "n_models": len(model_probs),
@@ -103,7 +105,7 @@ def generate_canonical_models_hardened():
     with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(manifest_info, f, indent=2)
         
-    print(f"Successfully verified object-order alignment & exported canonical models table to {out_path}")
+    print(f"Successfully verified authoritative object-order alignment & exported canonical models table to {out_path}")
     print(f"Sidecar manifest written to {manifest_path} (Parquet SHA256: {sha256_out_parquet[:12]}...)")
 
 if __name__ == "__main__":
