@@ -2,82 +2,28 @@
   {
     "condition": "Gemma 3 12B Raw API (T=1) LPE",
     "type": "LLM Generative",
-    "r_norm_pct": 9.720955172576211,
-    "nll": 3.8277057488765522,
-    "jsd_bits": 0.17211858067746869,
-    "k_eff_prototypes": 2.21,
-    "effective_bits": 1.123
+    "r_norm_pct": 9.72,
+    "nll_nats": 3.8277,
+    "jsd_bits": 0.1721,
+    "k_eff_prototypes": 2.59,
+    "effective_bits": 1.37
   },
   {
     "condition": "Gemma 3 12B Calibrated API (T=1) LPE",
     "type": "LLM Generative",
-    "r_norm_pct": 9.756398660026038,
-    "nll": 0.9308306995718575,
-    "jsd_bits": 0.07377557636007673,
-    "k_eff_prototypes": 2.22,
-    "effective_bits": 1.126
+    "r_norm_pct": 9.76,
+    "nll_nats": 0.9308,
+    "jsd_bits": 0.0738,
+    "k_eff_prototypes": 2.59,
+    "effective_bits": 1.374
   },
   {
     "condition": "Gemma 3 12B 30-sample MCE",
     "type": "LLM Generative",
-    "r_norm_pct": 6.636723932509714,
-    "nll": 1.586380477514687,
-    "jsd_bits": 0.14031567949853896,
-    "k_eff_prototypes": 1.82,
-    "effective_bits": 0.825
-  },
-  {
-    "condition": "Classifier Best Subgroup (Size 1: bart-large)",
-    "type": "Classifier Ensemble",
-    "r_norm_pct": 37.93,
-    "nll": 0.8627,
-    "jsd_bits": 0.042,
-    "k_eff_prototypes": 6.26,
-    "effective_bits": 2.639
-  },
-  {
-    "condition": "Classifier Best Subgroup (Size 2: bart-large + roberta-large)",
-    "type": "Classifier Ensemble",
-    "r_norm_pct": 53.82,
-    "nll": 0.7456,
-    "jsd_bits": 0.0277,
-    "k_eff_prototypes": 8.82,
-    "effective_bits": 3.132
-  },
-  {
-    "condition": "Classifier Best Subgroup (Size 3: bart-large + roberta-large + xlnet-large)",
-    "type": "Classifier Ensemble",
-    "r_norm_pct": 64.72,
-    "nll": 0.7171,
-    "jsd_bits": 0.0236,
-    "k_eff_prototypes": 10.79,
-    "effective_bits": 3.426
-  },
-  {
-    "condition": "Classifier Best Subgroup (Size 4: bart-large + roberta-large + xlnet-large + albert-xxlarge)",
-    "type": "Classifier Ensemble",
-    "r_norm_pct": 71.34,
-    "nll": 0.7082,
-    "jsd_bits": 0.0223,
-    "k_eff_prototypes": 12.03,
-    "effective_bits": 3.589
-  },
-  {
-    "condition": "Classifier Best Subgroup (Size 6: bart-large + roberta-large + xlnet-large + albert-xxlarge + bert-large + roberta-base)",
-    "type": "Classifier Ensemble",
-    "r_norm_pct": 77.69,
-    "nll": 0.7038,
-    "jsd_bits": 0.0225,
-    "k_eff_prototypes": 13.2,
-    "effective_bits": 3.718
-  },
-  {
-    "condition": "Classifier Best Subgroup (Size 8: bart-large + roberta-large + xlnet-large + albert-xxlarge + bert-large + roberta-base + xlnet-base + distilbert)",
-    "type": "Classifier Ensemble",
-    "r_norm_pct": 81.56,
-    "nll": 0.7042,
-    "jsd_bits": 0.0233,
-    "k_eff_prototypes": 13.9,
-    "effective_bits": 3.796
+    "r_norm_pct": 6.64,
+    "nll_nats": 1.5864,
+    "jsd_bits": 0.1403,
+    "k_eff_prototypes": 2.11,
+    "effective_bits": 1.076
   }
 ]
