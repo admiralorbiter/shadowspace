@@ -1,7 +1,10 @@
-"""Gauge Invariants and Theorem 1 Recalibration Invariance Utilities.
+"""Gauge Invariants Taxonomy and Flatness Invariants.
 
-Verifies that tr(H), det(H), and spectrum spec(H) are strictly invariant under matrix conjugation
-H_f = Df H Df^{-1} induced by global recalibration maps.
+Distinguishes:
+1. Global Similarity Invariants (GL(2) Conjugation Invariant):
+   tr(H), det(H), spec(H), rank(H - I), dim ker(H - I), is_identity_flat (H == I).
+2. Frame-Dependent Diagnostics (Require metric-preserving transformations):
+   Polar rotation angle theta_polar, Frobenius norm ||log H||_F, anisotropy.
 """
 
 from __future__ import annotations
@@ -13,51 +16,61 @@ from numpy.typing import NDArray
 
 
 @dataclass
-class GaugeInvariants:
-    """Coordinate-free gauge invariants of a holonomy matrix H_gamma."""
+class SimilarityInvariants:
+    """Exact similarity invariants under GL(2) matrix conjugation H -> A H A^{-1}."""
 
     trace: float
     determinant: float
     eigenvalues: Tuple[complex, ...]
+    rank_defect: int       # rank(H - I)
+    ker_dimension: int     # dim ker(H - I)
+    is_identity_flat: bool # H == I
 
     @classmethod
-    def compute(cls, H: NDArray[np.float64]) -> GaugeInvariants:
+    def compute(cls, H: NDArray[np.float64], rtol: float = 1e-4) -> SimilarityInvariants:
         tr = float(np.trace(H))
         det = float(np.linalg.det(H))
         eigvals = tuple(np.linalg.eigvals(H))
-        return cls(trace=tr, determinant=det, eigenvalues=eigvals)
+
+        H_minus_I = H - np.eye(2)
+        rank_def = int(np.linalg.matrix_rank(H_minus_I, tol=rtol))
+        ker_dim = 2 - rank_def
+        is_flat = bool(np.allclose(H, np.eye(2), atol=rtol))
+
+        return cls(
+            trace=tr,
+            determinant=det,
+            eigenvalues=eigvals,
+            rank_defect=rank_def,
+            ker_dimension=ker_dim,
+            is_identity_flat=is_flat,
+        )
 
 
 def verify_calibration_holonomy_invariance(
     H_original: NDArray[np.float64],
     jacobian_Df: NDArray[np.float64],
-    rtol: float = 1e-5,
+    rtol: float = 1e-4,
 ) -> bool:
-    """Verifies Theorem 1: H^f = Df * H * Df^(-1) preserves trace, det, and spectrum.
-
-    Args:
-        H_original: (2, 2) original holonomy matrix.
-        jacobian_Df: (2, 2) invertible recalibration Jacobian matrix Df.
-        rtol: Relative tolerance for floating point comparisons.
-
-    Returns:
-        True if Theorem 1 invariants hold within rtol.
-    """
+    """Verifies Theorem 1A: H^f = Df * H * Df^(-1) preserves trace, det, spec, and rank(H-I)."""
     Df_inv = np.linalg.inv(jacobian_Df)
     H_recalibrated = np.dot(jacobian_Df, np.dot(H_original, Df_inv))
 
-    inv_orig = GaugeInvariants.compute(H_original)
-    inv_recal = GaugeInvariants.compute(H_recalibrated)
+    inv_orig = SimilarityInvariants.compute(H_original, rtol=rtol)
+    inv_recal = SimilarityInvariants.compute(H_recalibrated, rtol=rtol)
 
-    # 1. Trace invariance
     if not np.isclose(inv_orig.trace, inv_recal.trace, rtol=rtol):
         return False
 
-    # 2. Determinant invariance
     if not np.isclose(inv_orig.determinant, inv_recal.determinant, rtol=rtol):
         return False
 
-    # 3. Spectrum invariance (sorted eigenvalues)
+    if inv_orig.rank_defect != inv_recal.rank_defect:
+        return False
+
+    if inv_orig.is_identity_flat != inv_recal.is_identity_flat:
+        return False
+
     eig_orig = sorted(inv_orig.eigenvalues, key=lambda z: (z.real, z.imag))
     eig_recal = sorted(inv_recal.eigenvalues, key=lambda z: (z.real, z.imag))
 

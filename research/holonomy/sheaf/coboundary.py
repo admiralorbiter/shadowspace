@@ -1,29 +1,29 @@
-"""Coboundary Operator delta for Cellular Sheaf.
+"""Data-Dependent Coboundary Operator delta for Cellular Sheaf.
 
-Constructs 0-cochains, 1-cochains, and coboundary linear operator matrix delta: C^0 -> C^1.
+Constructs 0-cochain and 1-cochain evaluation coboundary matrices delta_0: C^0 -> C^1.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 import numpy as np
 from numpy.typing import NDArray
 
-from research.holonomy.sheaf.restriction import LocalCalibrator
+from research.holonomy.sheaf.restriction import LocalCalibrator, build_evaluation_restriction_matrix
 
 
 @dataclass(frozen=True)
 class OverlapEdge:
-    """Pair of overlapping patches (U, V)."""
+    """Pair of overlapping patches (U, V) with overlap item ILR coordinates."""
 
     patch_U: str
     patch_V: str
-    overlap_item_ids: Tuple[str, ...]
+    overlap_item_coords: NDArray[np.float64]  # (m, 2) ILR coordinates
 
 
 class CoboundaryOperator:
-    """Coboundary operator delta mapping 0-cochain parameter vector to 1-cochain residuals."""
+    """Data-dependent coboundary operator delta_0 mapping 6D local parameter vectors to 2m evaluation residuals."""
 
     def __init__(self, patches: List[str], overlaps: List[OverlapEdge]) -> None:
         self.patches = sorted(patches)
@@ -32,33 +32,22 @@ class CoboundaryOperator:
         self.num_patches = len(self.patches)
         self.num_overlaps = len(self.overlaps)
 
-    def compute_residuals(
-        self, local_calibrators: List[LocalCalibrator]
-    ) -> NDArray[np.float64]:
-        """Calculates 1-cochain residuals (delta theta)_{U, V} = theta_U - theta_V."""
-        calib_map = {c.patch_id: c for c in local_calibrators}
-        residuals = []
-
-        for ov in self.overlaps:
-            cU = calib_map[ov.patch_U]
-            cV = calib_map[ov.patch_V]
-            res = cU.to_parameter_vector() - cV.to_parameter_vector()
-            residuals.append(res)
-
-        return np.concatenate(residuals) if residuals else np.zeros(0, dtype=np.float64)
-
     def build_matrix(self, param_dim: int = 6) -> NDArray[np.float64]:
-        """Builds explicit sparse/dense boundary matrix delta of shape (num_overlaps * param_dim, num_patches * param_dim)."""
-        M = self.num_overlaps * param_dim
-        N = self.num_patches * param_dim
-        delta_mat = np.zeros((M, N), dtype=np.float64)
+        """Builds data-dependent coboundary matrix delta_0 using item evaluation restriction blocks."""
+        if not self.overlaps:
+            return np.zeros((0, self.num_patches * param_dim), dtype=np.float64)
 
-        for ov_idx, ov in enumerate(self.overlaps):
+        total_eval_rows = sum(2 * ov.overlap_item_coords.shape[0] for ov in self.overlaps)
+        N = self.num_patches * param_dim
+        delta_mat = np.zeros((total_eval_rows, N), dtype=np.float64)
+
+        curr_row = 0
+        for ov in self.overlaps:
             u_idx = self.patch_to_idx[ov.patch_U]
             v_idx = self.patch_to_idx[ov.patch_V]
 
-            row_start = ov_idx * param_dim
-            row_end = row_start + param_dim
+            R_uv = build_evaluation_restriction_matrix(ov.overlap_item_coords)
+            num_rows = R_uv.shape[0]
 
             u_col_start = u_idx * param_dim
             u_col_end = u_col_start + param_dim
@@ -66,7 +55,9 @@ class CoboundaryOperator:
             v_col_start = v_idx * param_dim
             v_col_end = v_col_start + param_dim
 
-            delta_mat[row_start:row_end, u_col_start:u_col_end] = np.eye(param_dim)
-            delta_mat[row_start:row_end, v_col_start:v_col_end] = -np.eye(param_dim)
+            delta_mat[curr_row : curr_row + num_rows, u_col_start:u_col_end] = R_uv
+            delta_mat[curr_row : curr_row + num_rows, v_col_start:v_col_end] = -R_uv
+
+            curr_row += num_rows
 
         return delta_mat

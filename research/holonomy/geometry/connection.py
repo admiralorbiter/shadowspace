@@ -1,6 +1,8 @@
-"""Transport Connection Estimator.
+"""Homogeneous Affine Parallel Transport Connection (3x3 Representation).
 
-Estimates local parallel transport linear/affine maps T_{g,x}: F_x -> F_{gx} from paired orbits.
+Estimates and composes affine parallel transport operators in 3x3 homogeneous coordinates:
+T = [[A, b], [0, 1]]
+Composes both linear matrix transformations A and translational bias b.
 """
 
 from __future__ import annotations
@@ -12,21 +14,29 @@ from numpy.typing import NDArray
 
 @dataclass
 class ParallelTransportMap:
-    """Linear parallel transport operator T_{g,x} in GL(2) and optional translation vector b."""
+    """Homogeneous parallel transport operator T_g in Aff(2) represented as 3x3 matrix."""
 
     generator_name: str
     source_id: str
     target_id: str
-    matrix: NDArray[np.float64]  # Shape (2, 2)
-    bias: NDArray[np.float64]    # Shape (2,)
+    matrix_2d: NDArray[np.float64]  # (2, 2) Linear matrix A
+    bias_2d: NDArray[np.float64]    # (2,) Translation vector b
+
+    @property
+    def homogeneous_matrix(self) -> NDArray[np.float64]:
+        """Returns 3x3 homogeneous matrix representation [[A, b], [0, 1]]."""
+        H = np.eye(3, dtype=np.float64)
+        H[:2, :2] = self.matrix_2d
+        H[:2, 2] = self.bias_2d
+        return H
 
     def transform(self, vector: NDArray[np.float64]) -> NDArray[np.float64]:
-        """Apply transport T(v) = M v + b."""
-        return np.dot(self.matrix, vector) + self.bias
+        """Apply transport T(v) = A v + b."""
+        return np.dot(self.matrix_2d, vector) + self.bias_2d
 
 
 class ConnectionEstimator:
-    """Estimates parallel transport maps T_{g,x} via multivariate least squares regression or Procrustes."""
+    """Estimates affine parallel transport maps T_{g,x} via multivariate least squares regression."""
 
     def __init__(self, ridge_alpha: float = 1e-6) -> None:
         self.ridge_alpha = ridge_alpha
@@ -39,18 +49,7 @@ class ConnectionEstimator:
         source_coords: NDArray[np.float64],
         target_coords: NDArray[np.float64],
     ) -> ParallelTransportMap:
-        """Estimate T_g in GL(2) such that z_target - mean_target approx T_g (z_source - mean_source).
-
-        Args:
-            generator_name: Name of generator g.
-            source_id: Base vertex ID x.
-            target_id: Transformed vertex ID gx.
-            source_coords: Shape (M, 2) ILR coordinates near x.
-            target_coords: Shape (M, 2) ILR coordinates near gx.
-
-        Returns:
-            ParallelTransportMap containing (2, 2) matrix T_g and translation vector.
-        """
+        """Estimates affine map T_g such that z_target approx A z_source + b."""
         Z_src = np.atleast_2d(source_coords)
         Z_tgt = np.atleast_2d(target_coords)
 
@@ -60,13 +59,10 @@ class ConnectionEstimator:
         Z_src_c = Z_src - mean_src
         Z_tgt_c = Z_tgt - mean_tgt
 
-        # Ridge regression: T_g = (Z_src_c^T Z_src_c + alpha I)^(-1) Z_src_c^T Z_tgt_c
         d = Z_src_c.shape[1]
         cov = np.dot(Z_src_c.T, Z_src_c) + self.ridge_alpha * np.eye(d)
         cross = np.dot(Z_src_c.T, Z_tgt_c)
 
-        # Matrix T_g operates on column vectors v: T_g_mat @ v
-        # Since Z_tgt_c ~ Z_src_c @ T_g_mat^T, T_g_mat^T = cov^(-1) cross
         T_mat_T = np.linalg.solve(cov, cross)
         T_mat = T_mat_T.T
 
@@ -76,6 +72,6 @@ class ConnectionEstimator:
             generator_name=generator_name,
             source_id=source_id,
             target_id=target_id,
-            matrix=T_mat,
-            bias=bias,
+            matrix_2d=T_mat,
+            bias_2d=bias,
         )

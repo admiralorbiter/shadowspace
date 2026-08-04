@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-08-04T17:24:50.600753",
+  "phase": "E0.5",
+  "status": "PASSED",
+  "gates": {
+    "flat_world": true,
+    "planted_curvature_4corner": true,
+    "theorem1_prop1b_invariance": true,
+    "sheaf_cohomology_h0": true,
+    "glue_ood_solver": true
+  },
+  "cohomology": {
+    "dim_H0": 6,
+    "dim_H1": 0,
+    "fiedler_value": 0.0005248330063550637
+  },
+  "glue_ood": {
+    "coherent_score": 7.249992751495086e-14,
+    "incoherent_score": 1.7725000000002182
+  }
+}

@@ -1,16 +1,16 @@
-"""Generative Ambiguity World Simulator (Phase E0).
+"""Generative Ambiguity World Simulator (Phase E0.5).
 
 Generates exact human and model probability distributions p(x) in Delta^2 over
-formal Cayley complex states by mixing latent interpreters with context-dependent weights.
+canonical formal states by mixing latent interpreters with context-dependent weights.
 """
 
 from __future__ import annotations
 
-from typing import List, Sequence
+from typing import Sequence
 import numpy as np
 from numpy.typing import NDArray
 
-from research.holonomy.worlds.formulas import FormalState
+from research.holonomy.algebra.formulas import FormalState
 from research.holonomy.worlds.interpreters import STANDARD_INTERPRETERS, LatentInterpreter
 
 
@@ -41,13 +41,12 @@ class GenerativeWorld:
         for w, lbl in zip(weights, labels):
             p[lbl] += w
 
-        # Smooth slightly to keep strictly inside interior of simplex Delta^2
         p = (1.0 - self.epsilon) * p + (self.epsilon / self.num_classes)
         return p / p.sum()
 
 
 class FlatWorld(GenerativeWorld):
-    """Flat World: Interpreter weights w_r are invariant under all semantic transformations."""
+    """Flat World: Interpreter weights w_r are invariant under semantic transformations."""
 
     def __init__(self, base_weights: NDArray[np.float64] | None = None) -> None:
         super().__init__()
@@ -67,19 +66,16 @@ class CurvedWorld(GenerativeWorld):
     def __init__(self, rotation_angle: float = np.pi / 4) -> None:
         super().__init__()
         self.rotation_angle = rotation_angle
-        # Create non-commuting transition matrices for transformation generators
         c, s = np.cos(rotation_angle), np.sin(rotation_angle)
         self.K_g1 = np.array([
-            [c, -s, 0.0, 0.0],
-            [s,  c, 0.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 0.0, 1.0],
+            [c, -s, 0.0],
+            [s,  c, 0.0],
+            [0.0, 0.0, 1.0],
         ], dtype=np.float64)
 
     def get_weights(self, state: FormalState) -> NDArray[np.float64]:
-        # Context-dependent weight modulation based on state metadata
-        base_w = np.array([0.4, 0.3, 0.2, 0.1], dtype=np.float64)
-        if "swap" in state.id:
+        base_w = np.array([0.5, 0.3, 0.2], dtype=np.float64)
+        if "SWAP" in state.id:
             w = np.dot(self.K_g1, base_w)
             w = np.abs(w)
             return w / w.sum()
