@@ -1,7 +1,7 @@
 {
-  "timestamp_utc": "2026-08-04T23:19:39.452366+00:00",
-  "phase": "E2.0",
-  "git_commit_sha": "92beb69e2def8db3db2f4b840634fad604b6f264",
+  "timestamp_utc": "2026-08-04T23:27:11.331244+00:00",
+  "phase": "E2-A1",
+  "git_commit_sha": "4eb70bc39b96b21c7daa9089bd0e02127ab79e46",
   "environment": {
     "python_version": "3.13.7",
     "numpy_version": "2.2.6",
@@ -15,7 +15,7 @@
     "theorem1_prop1b_invariance": true,
     "sheaf_cohomology_h0": true,
     "glue_ood_solver": true,
-    "natural_language_model_audit_e2": true
+    "natural_language_orbit_smoke_test": true
   },
   "cohomology": {
     "dim_H0": 6,
@@ -27,8 +27,14 @@
     "incoherent_score": 1.7725000000002182
   },
   "natural_language_audit_summary": {
-    "num_orbits_audited": 5,
-    "model_name": "roberta-large-mnli"
+    "adapter_mode": "deterministic_sha256_mock",
+    "model_name": "roberta-large-mnli",
+    "num_active_orbits": 15,
+    "text_path_closure_rate": 1.0,
+    "train_orbit_count": 9,
+    "test_orbit_count": 3,
+    "mean_held_out_return_residual": 6.084347686672467e+24,
+    "artificial_curvature_detected": true
   },
   "monte_carlo_sweeps": [
     {
