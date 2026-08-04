@@ -1,9 +1,9 @@
 /// E007: Complete Ensemble Census & Exact Shapley Value Attribution Engine
-/// Evaluates all 511 non-empty subsets of 9 canonical NLI classifiers.
+/// Evaluates all 511 non-empty subsets of 9 canonical NLI classifiers with exact analytic stratified nulls.
 
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufRead, BufReader};
 use std::path::Path;
 
 use chaosnli_engine::distance::soft_label_nll;
@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Deserialize)]
 struct ManifestItem {
     row_index: usize,
+    source_dataset: String,
     human_p_entailment: f64,
     human_p_neutral: f64,
     human_p_contradiction: f64,
@@ -27,11 +28,9 @@ struct E007Summary {
     model_count: usize,
     total_ensemble_subsets: usize,
     q_hh_relational: f64,
-    q_null_stratified: f64,
     q_prior_nll: f64,
     all_models: Vec<String>,
     shapley_attributions: Vec<ShapleyResult>,
-    pareto_frontier_subsets: Vec<SubsetResult>,
     best_subset_by_size: HashMap<usize, SubsetResult>,
     subsets: Vec<SubsetResult>,
 }
@@ -53,28 +52,39 @@ fn resolve_path(rel_path: &str) -> String {
     if Path::new(&p3).exists() {
         return p3;
     }
-    rel_path.to_string()
+    panic!("Required artifact file not found: {}", rel_path);
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
     let subset = if args.len() > 1 { &args[1] } else { "preflight" };
 
-    let rel_manifest = if subset == "pilot" {
-        "research/chaosnli/artifacts/E004/manifests/pilot_600.jsonl"
-    } else {
-        "research/chaosnli/artifacts/E004/manifests/preflight_60.jsonl"
+    let (rel_manifest, rel_k10_bin, rel_k10_meta, expected_n) = match subset {
+        "preflight" => (
+            "research/chaosnli/artifacts/E004/manifests/preflight_60.jsonl",
+            "research/chaosnli/artifacts/E004/pilot_support/S_hellinger_k010_preflight.bin",
+            "research/chaosnli/artifacts/E004/pilot_support/S_hellinger_k010_preflight.manifest.json",
+            60,
+        ),
+        "pilot" => (
+            "research/chaosnli/artifacts/E004/manifests/pilot_600.jsonl",
+            "research/chaosnli/artifacts/E004/pilot_support/S_hellinger_k010_pilot.bin",
+            "research/chaosnli/artifacts/E004/pilot_support/S_hellinger_k010_pilot.manifest.json",
+            600,
+        ),
+        "full" => (
+            "research/chaosnli/artifacts/E004/manifests/full_3113.jsonl",
+            "research/chaosnli/artifacts/E004/pilot_support/S_hellinger_k010_full.bin",
+            "research/chaosnli/artifacts/E004/pilot_support/S_hellinger_k010_full.manifest.json",
+            3113,
+        ),
+        _ => panic!("Unknown subset: '{}'. Must be one of ['preflight', 'pilot', 'full'].", subset),
     };
+
     let manifest_path = resolve_path(rel_manifest);
-
-    let rel_k10_bin = format!("research/chaosnli/artifacts/E004/pilot_support/S_hellinger_k010_{}.bin", subset);
-    let k10_bin = resolve_path(&rel_k10_bin);
-
-    let rel_k10_meta = format!("research/chaosnli/artifacts/E004/pilot_support/S_hellinger_k010_{}.manifest.json", subset);
-    let k10_manifest = resolve_path(&rel_k10_meta);
-
-    let rel_probs_json = "research/chaosnli/rust_manifest/model_probs.json";
-    let probs_json_path = resolve_path(rel_probs_json);
+    let k10_bin = resolve_path(rel_k10_bin);
+    let k10_manifest = resolve_path(rel_k10_meta);
+    let probs_json_path = resolve_path("research/chaosnli/rust_manifest/model_probs.json");
 
     println!("=========================================================================");
     println!("   E007: COMPLETE ENSEMBLE CENSUS & SHAPLEY ATTRIBUTION ({})", subset.to_uppercase());
@@ -82,20 +92,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let file = File::open(&manifest_path)?;
     let reader = BufReader::new(file);
-    let items: Vec<ManifestItem> = serde_json::Deserializer::from_reader(reader)
-        .into_iter::<ManifestItem>()
-        .filter_map(Result::ok)
-        .collect();
+    let mut items = Vec::new();
+    for line in reader.lines() {
+        let line_str = line?;
+        let item: ManifestItem = serde_json::from_str(&line_str)?;
+        items.push(item);
+    }
 
     let n = items.len();
+    assert_eq!(n, expected_n, "Manifest item count mismatch for subset {}", subset);
     let row_indices: Vec<usize> = items.iter().map(|it| it.row_index).collect();
+    let source_datasets: Vec<String> = items.iter().map(|it| it.source_dataset.clone()).collect();
     println!("Loaded {} items from {}", n, manifest_path);
 
     let meta_file = File::open(&k10_manifest)?;
     let meta_json: serde_json::Value = serde_json::from_reader(meta_file)?;
-    let q_hh = meta_json["q_hh_relational"].as_f64().unwrap_or(0.77494);
+    let q_hh = meta_json["q_hh_relational"].as_f64().expect("Missing q_hh_relational in meta");
 
     let bin_bytes = std::fs::read(&k10_bin)?;
+    assert_eq!(bin_bytes.len(), n * n * 4, "Binary matrix byte length mismatch");
     let f32_floats: Vec<f32> = bin_bytes
         .chunks_exact(4)
         .map(|chunk| f32::from_le_bytes(chunk.try_into().unwrap()))
@@ -142,36 +157,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut sliced_model_probs: HashMap<String, Vec<Vec<f64>>> = HashMap::new();
     for m_name in &canonical_models {
-        if let Some(full_p) = full_model_probs.get(m_name) {
-            let mut sliced = Vec::with_capacity(n);
-            for &r_idx in &row_indices {
-                if r_idx < full_p.len() {
-                    sliced.push(full_p[r_idx].clone());
-                } else {
-                    sliced.push(vec![1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0]);
-                }
-            }
-            sliced_model_probs.insert(m_name.clone(), sliced);
-        } else {
-            eprintln!("Warning: Model {} missing from model_probs.json", m_name);
+        let full_p = full_model_probs.get(m_name).unwrap_or_else(|| panic!("Missing model prediction key: {}", m_name));
+        let mut sliced = Vec::with_capacity(n);
+        for &r_idx in &row_indices {
+            assert!(r_idx < full_p.len(), "Row index {} out of range for model {}", r_idx, m_name);
+            sliced.push(full_p[r_idx].clone());
         }
+        sliced_model_probs.insert(m_name.clone(), sliced);
     }
+    assert_eq!(sliced_model_probs.len(), 9, "Must have exactly 9 canonical classifier models");
 
-    // Dynamic scale-appropriate null expectation for top-k neighbor matrix
     let k_neighbors = 10usize;
-    let q_null_stratified = (k_neighbors as f64) / (n as f64);
 
     println!(
-        "Computing 511 ensemble subset evaluations and exact Shapley attributions (N={}, Q_null={:.5})...",
-        n, q_null_stratified
+        "Computing 511 ensemble subset evaluations with EXACT ANALYTIC STRATIFIED NULLS (N={})...",
+        n
     );
     let (subsets, shapley) = compute_ensemble_census_and_shapley(
         &canonical_models,
         &sliced_model_probs,
         &p_human,
         &s_k10,
+        &source_datasets,
         q_hh,
-        q_null_stratified,
         q_prior_nll,
         k_neighbors,
     );
@@ -195,9 +203,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for size in 1..=canonical_models.len() {
         if let Some(b) = best_by_size.get(&size) {
             println!(
-                "  Size {:>2}: R_norm = {:>6.2}% | NLL = {:.4} | JSD = {:.4} | Models: [{}]",
+                "  Size {:>2}: R_norm = {:>6.2}% | Q_null_analytic = {:.5} | NLL = {:.4} | JSD = {:.4} | Models: [{}]",
                 size,
                 b.r_normalized * 100.0,
+                b.q_null_analytic,
                 b.nll,
                 b.jsd_bits,
                 b.model_names.join(", ")
@@ -227,11 +236,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         model_count: canonical_models.len(),
         total_ensemble_subsets: subsets.len(),
         q_hh_relational: q_hh,
-        q_null_stratified,
         q_prior_nll,
         all_models: canonical_models,
         shapley_attributions: shapley,
-        pareto_frontier_subsets: best_by_size.values().cloned().collect(),
         best_subset_by_size: best_by_size,
         subsets,
     };
