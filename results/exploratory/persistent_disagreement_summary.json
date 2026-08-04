@@ -1,0 +1,9 @@
+{
+  "n_items": 3113,
+  "k_reference": 10,
+  "n_dirichlet_draws": 50,
+  "mean_posterior_edge_confidence": 0.12485783020782007,
+  "persistent_core_edges_count": 19,
+  "volatile_edges_count": 32543,
+  "persistent_core_percentage": 0.055070867511086634
+}
