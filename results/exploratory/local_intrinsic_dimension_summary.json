@@ -1,0 +1,33 @@
+{
+  "n_items": 3113,
+  "k_local_pca": 15,
+  "global_twonn_intrinsic_dim": 0.36319925692458,
+  "global_local_pca_pr_mean": 1.2540078861590087,
+  "entropy_band_disaggregation": {
+    "consensus_H_lt_05": {
+      "n": 349,
+      "local_pca_pr_mean": 1.1743933329210432,
+      "twonn_mu_mean": 29746.93346600637
+    },
+    "edge_ambiguity_05_10": {
+      "n": 1349,
+      "local_pca_pr_mean": 1.1340685023946724,
+      "twonn_mu_mean": 19376.58704344474
+    },
+    "diffuse_center_H_gte_10": {
+      "n": 1415,
+      "local_pca_pr_mean": 1.387989305083489,
+      "twonn_mu_mean": 22982.24338674518
+    }
+  },
+  "dataset_disaggregation": {
+    "snli": {
+      "n": 1514,
+      "local_pca_pr_mean": 1.1903396451600816
+    },
+    "mnli": {
+      "n": 1599,
+      "local_pca_pr_mean": 1.3142916365482367
+    }
+  }
+}

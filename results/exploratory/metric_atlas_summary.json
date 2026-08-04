@@ -1,0 +1,14 @@
+{
+  "n_items": 3113,
+  "k": 10,
+  "spearman_correlations": {
+    "hellinger_vs_fisher_rao": 0.9999999999997767,
+    "hellinger_vs_jsd": 0.9970912003836271,
+    "hellinger_vs_aitchison": 0.7347356116545061
+  },
+  "soft_neighborhood_overlaps": {
+    "hellinger_vs_fisher_rao": 1.0,
+    "hellinger_vs_jsd": 0.9995074419102687,
+    "hellinger_vs_aitchison": 0.8780597494378412
+  }
+}

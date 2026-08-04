@@ -179,6 +179,7 @@ docs/studies/chaosnli/
 ├── STUDY1_COMPUTATIONAL_AUDIT.md     # canonical Study 1 report
 ├── STUDY2A_EXPLORATORY_TEXT_SPACE.md # exploratory Study 2A report
 ├── STUDY2B_VARIERR_EXTERNAL_VALIDATION.md
+├── PERSISTENT_GEOMETRY_AND_METRIC_AUDIT.md # exploratory geometry & metric audit
 ├── UNIFIED_PAPER_DRAFT.md
 ├── LITERATURE_AND_MATH.md
 ├── DATA_PIPELINE_AND_AUTOMATION.md

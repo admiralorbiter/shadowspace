@@ -1,0 +1,161 @@
+{
+  "n_items": 3113,
+  "epsilons_evaluated": [
+    0.05,
+    0.1,
+    0.15,
+    0.2
+  ],
+  "models": {
+    "albert-xxlarge": {
+      "eps_0.05": {
+        "complexity_tier_counts": {
+          "tier_0_raw": 126,
+          "tier_1_scalar": 134,
+          "tier_2_diagonal": 5,
+          "tier_3_affine": 177,
+          "tier_4_mlp": 63,
+          "unreached_by_tested_maps": 2608
+        },
+        "unreached_pct": 83.77770639254737,
+        "items_with_tier_regressions": 2794
+      },
+      "eps_0.10": {
+        "complexity_tier_counts": {
+          "tier_0_raw": 417,
+          "tier_1_scalar": 502,
+          "tier_2_diagonal": 11,
+          "tier_3_affine": 307,
+          "tier_4_mlp": 66,
+          "unreached_by_tested_maps": 1810
+        },
+        "unreached_pct": 58.14327015740444,
+        "items_with_tier_regressions": 2794
+      },
+      "eps_0.15": {
+        "complexity_tier_counts": {
+          "tier_0_raw": 726,
+          "tier_1_scalar": 755,
+          "tier_2_diagonal": 8,
+          "tier_3_affine": 384,
+          "tier_4_mlp": 84,
+          "unreached_by_tested_maps": 1156
+        },
+        "unreached_pct": 37.13459685191134,
+        "items_with_tier_regressions": 2794
+      },
+      "eps_0.20": {
+        "complexity_tier_counts": {
+          "tier_0_raw": 1080,
+          "tier_1_scalar": 819,
+          "tier_2_diagonal": 16,
+          "tier_3_affine": 318,
+          "tier_4_mlp": 84,
+          "unreached_by_tested_maps": 796
+        },
+        "unreached_pct": 25.570189527786702,
+        "items_with_tier_regressions": 2794
+      }
+    },
+    "bart-large": {
+      "eps_0.05": {
+        "complexity_tier_counts": {
+          "tier_0_raw": 136,
+          "tier_1_scalar": 136,
+          "tier_2_diagonal": 34,
+          "tier_3_affine": 156,
+          "tier_4_mlp": 78,
+          "unreached_by_tested_maps": 2573
+        },
+        "unreached_pct": 82.65338901381304,
+        "items_with_tier_regressions": 2822
+      },
+      "eps_0.10": {
+        "complexity_tier_counts": {
+          "tier_0_raw": 423,
+          "tier_1_scalar": 505,
+          "tier_2_diagonal": 59,
+          "tier_3_affine": 318,
+          "tier_4_mlp": 70,
+          "unreached_by_tested_maps": 1738
+        },
+        "unreached_pct": 55.830388692579504,
+        "items_with_tier_regressions": 2822
+      },
+      "eps_0.15": {
+        "complexity_tier_counts": {
+          "tier_0_raw": 764,
+          "tier_1_scalar": 790,
+          "tier_2_diagonal": 62,
+          "tier_3_affine": 330,
+          "tier_4_mlp": 78,
+          "unreached_by_tested_maps": 1089
+        },
+        "unreached_pct": 34.98233215547703,
+        "items_with_tier_regressions": 2822
+      },
+      "eps_0.20": {
+        "complexity_tier_counts": {
+          "tier_0_raw": 1162,
+          "tier_1_scalar": 816,
+          "tier_2_diagonal": 44,
+          "tier_3_affine": 318,
+          "tier_4_mlp": 39,
+          "unreached_by_tested_maps": 734
+        },
+        "unreached_pct": 23.578541599743012,
+        "items_with_tier_regressions": 2822
+      }
+    },
+    "roberta-large": {
+      "eps_0.05": {
+        "complexity_tier_counts": {
+          "tier_0_raw": 112,
+          "tier_1_scalar": 141,
+          "tier_2_diagonal": 51,
+          "tier_3_affine": 167,
+          "tier_4_mlp": 61,
+          "unreached_by_tested_maps": 2581
+        },
+        "unreached_pct": 82.91037584323804,
+        "items_with_tier_regressions": 2807
+      },
+      "eps_0.10": {
+        "complexity_tier_counts": {
+          "tier_0_raw": 416,
+          "tier_1_scalar": 582,
+          "tier_2_diagonal": 51,
+          "tier_3_affine": 254,
+          "tier_4_mlp": 83,
+          "unreached_by_tested_maps": 1727
+        },
+        "unreached_pct": 55.47703180212014,
+        "items_with_tier_regressions": 2807
+      },
+      "eps_0.15": {
+        "complexity_tier_counts": {
+          "tier_0_raw": 786,
+          "tier_1_scalar": 870,
+          "tier_2_diagonal": 48,
+          "tier_3_affine": 293,
+          "tier_4_mlp": 78,
+          "unreached_by_tested_maps": 1038
+        },
+        "unreached_pct": 33.34404111789271,
+        "items_with_tier_regressions": 2807
+      },
+      "eps_0.20": {
+        "complexity_tier_counts": {
+          "tier_0_raw": 1164,
+          "tier_1_scalar": 868,
+          "tier_2_diagonal": 42,
+          "tier_3_affine": 276,
+          "tier_4_mlp": 55,
+          "unreached_by_tested_maps": 708
+        },
+        "unreached_pct": 22.74333440411179,
+        "items_with_tier_regressions": 2807
+      }
+    }
+  }
+}

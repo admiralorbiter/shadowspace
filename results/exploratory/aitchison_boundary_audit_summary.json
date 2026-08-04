@@ -1,0 +1,58 @@
+{
+  "n_total": 3113,
+  "n_boundary_zero": 720,
+  "n_strictly_interior": 2393,
+  "k": 10,
+  "multiplicative_epsilon_sweep": {
+    "eps_1e-12": {
+      "epsilon": 1e-12,
+      "overlap_all_n3113": 0.8778670093157727,
+      "overlap_boundary_n1007": 0.9894444444444445,
+      "overlap_interior_n2106": 0.8440451316339322
+    },
+    "eps_1e-09": {
+      "epsilon": 1e-09,
+      "overlap_all_n3113": 0.8778670093157727,
+      "overlap_boundary_n1007": 0.9894444444444445,
+      "overlap_interior_n2106": 0.8440451316339322
+    },
+    "eps_1e-06": {
+      "epsilon": 1e-06,
+      "overlap_all_n3113": 0.8778670093157727,
+      "overlap_boundary_n1007": 0.9894444444444445,
+      "overlap_interior_n2106": 0.8440451316339322
+    },
+    "eps_1e-04": {
+      "epsilon": 0.0001,
+      "overlap_all_n3113": 0.8780597494378412,
+      "overlap_boundary_n1007": 0.9894444444444445,
+      "overlap_interior_n2106": 0.8440451316339322
+    },
+    "eps_1e-03": {
+      "epsilon": 0.001,
+      "overlap_all_n3113": 0.8781882428525538,
+      "overlap_boundary_n1007": 0.9897222222222223,
+      "overlap_interior_n2106": 0.8440451316339322
+    }
+  },
+  "dirichlet_smoothing_sweep": {
+    "alpha_0.1": {
+      "alpha": 0.1,
+      "overlap_all_n3113": 0.8799229039511726,
+      "overlap_boundary_n1007": 0.9897222222222223,
+      "overlap_interior_n2106": 0.8463017133305475
+    },
+    "alpha_0.5": {
+      "alpha": 0.5,
+      "overlap_all_n3113": 0.8856408609058786,
+      "overlap_boundary_n1007": 0.99,
+      "overlap_interior_n2106": 0.8529043042206436
+    },
+    "alpha_1.0": {
+      "alpha": 1.0,
+      "overlap_all_n3113": 0.8912945711532284,
+      "overlap_boundary_n1007": 0.9895833333333334,
+      "overlap_interior_n2106": 0.8600919348098622
+    }
+  }
+}

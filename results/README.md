@@ -34,6 +34,20 @@ Promotion validates the locked model set, headline estimands, surface shape,
 geometry table, phase-diagram grid, and VariErr result, and records each input
 hash. Review the resulting diff before committing it.
 
+## Exploratory results
+
+Exploratory geometry summaries and audit packages are promoted to `results/exploratory/`:
+
+- `aitchison_boundary_audit_summary.json`
+- `local_intrinsic_dimension_summary.json`
+- `persistent_disagreement_summary.json`
+- `metric_atlas_summary.json`
+- `graph_persistence_summary.json`
+- `disagreement_zoo_summary.json`
+
+Corresponding HTML visualizers are promoted to `docs/viz/chaosnli/geometry_lens.html`.
+
+
 The phase-diagram cells were recomputed with the corrected boundary definition,
 cross-checked against the independent Rust implementation, and promoted from a
 fresh 100-repetition artifact.

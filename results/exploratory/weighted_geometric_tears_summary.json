@@ -1,0 +1,60 @@
+{
+  "n_items": 3113,
+  "k": 10,
+  "models": {
+    "albert-xxlarge": {
+      "fuzzy_mass_overlap": 0.010599212330661096,
+      "tear_mass": 0.9894007876693389,
+      "posterior_support_retained_pct": 8.67714505726232,
+      "human_core_loss_pct": 91.32285494273769
+    },
+    "bart-large": {
+      "fuzzy_mass_overlap": 0.010976367299046387,
+      "tear_mass": 0.9890236327009536,
+      "posterior_support_retained_pct": 8.242696142452964,
+      "human_core_loss_pct": 91.75730385754703
+    },
+    "bert-base": {
+      "fuzzy_mass_overlap": 0.00814740743426898,
+      "tear_mass": 0.991852592565731,
+      "posterior_support_retained_pct": 6.853135800144446,
+      "human_core_loss_pct": 93.14686419985556
+    },
+    "bert-large": {
+      "fuzzy_mass_overlap": 0.01033048036661914,
+      "tear_mass": 0.9896695196333809,
+      "posterior_support_retained_pct": 7.155306008401924,
+      "human_core_loss_pct": 92.84469399159806
+    },
+    "distilbert": {
+      "fuzzy_mass_overlap": 0.00891446437704067,
+      "tear_mass": 0.9910855356229593,
+      "posterior_support_retained_pct": 6.058618329481423,
+      "human_core_loss_pct": 93.94138167051858
+    },
+    "roberta-base": {
+      "fuzzy_mass_overlap": 0.009821536032586467,
+      "tear_mass": 0.9901784639674135,
+      "posterior_support_retained_pct": 7.586796613480088,
+      "human_core_loss_pct": 92.41320338651991
+    },
+    "roberta-large": {
+      "fuzzy_mass_overlap": 0.010749128624168781,
+      "tear_mass": 0.9892508713758312,
+      "posterior_support_retained_pct": 8.525426029619751,
+      "human_core_loss_pct": 91.47457397038025
+    },
+    "xlnet-base": {
+      "fuzzy_mass_overlap": 0.009251822614334663,
+      "tear_mass": 0.9907481773856653,
+      "posterior_support_retained_pct": 7.2487040727724175,
+      "human_core_loss_pct": 92.75129592722759
+    },
+    "xlnet-large": {
+      "fuzzy_mass_overlap": 0.010738218486371392,
+      "tear_mass": 0.9892617815136286,
+      "posterior_support_retained_pct": 8.066042789933208,
+      "human_core_loss_pct": 91.9339572100668
+    }
+  }
+}

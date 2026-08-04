@@ -1,0 +1,111 @@
+{
+  "n_items": 3113,
+  "cv_folds": 5,
+  "models": {
+    "albert-xxlarge": {
+      "tier_0_raw": {
+        "d_hellinger_mean": 0.29232357395335384,
+        "ambiguity_angle_deg_mean": 33.2588930558939,
+        "Q_support_raw": 0.010794731769996787
+      },
+      "tier_1_scalar_temp": {
+        "dof_description": "1 DoF (Positive Ray in CLR/ILR space)",
+        "heldout_d_hellinger_mean": 0.2137008531216279,
+        "heldout_ambiguity_angle_deg_mean": 33.25889305603682,
+        "angle_reduction_deg": -1.4291856587078655e-10,
+        "fold_coherent_Q_support": 0.010903308705428846
+      },
+      "tier_2_diagonal_ilr_scaling": {
+        "dof_description": "2 DoF (Positive Cone in ILR space, diag(a, b) > 0)",
+        "heldout_d_hellinger_mean": 0.21366054700918136,
+        "heldout_ambiguity_angle_deg_mean": 33.33786202454416,
+        "angle_reduction_deg": -0.07896896865025838,
+        "fold_coherent_Q_support": 0.010875682621265663
+      },
+      "tier_3_affine_ilr_map": {
+        "dof_description": "6 DoF (Affine Subspace in ILR space, A x + b)",
+        "heldout_d_hellinger_mean": 0.19336762800573487,
+        "heldout_ambiguity_angle_deg_mean": 28.985047876504705,
+        "angle_reduction_deg": 4.273845179389195,
+        "fold_coherent_Q_support": 0.010614840989399292
+      },
+      "tier_4_nonlinear_ilr_mlp": {
+        "dof_description": "Nonlinear ILR MLP (Simplex Surface)",
+        "heldout_d_hellinger_mean": 0.18892022069285488,
+        "heldout_ambiguity_angle_deg_mean": 28.256737597914242,
+        "angle_reduction_deg": 5.002155457979658,
+        "fold_coherent_Q_support": 0.010664953421137168
+      }
+    },
+    "bart-large": {
+      "tier_0_raw": {
+        "d_hellinger_mean": 0.28476249744804427,
+        "ambiguity_angle_deg_mean": 30.84675300810141,
+        "Q_support_raw": 0.010400256986829427
+      },
+      "tier_1_scalar_temp": {
+        "dof_description": "1 DoF (Positive Ray in CLR/ILR space)",
+        "heldout_d_hellinger_mean": 0.2091432241055691,
+        "heldout_ambiguity_angle_deg_mean": 30.846753009351076,
+        "angle_reduction_deg": -1.2496670365180762e-09,
+        "fold_coherent_Q_support": 0.010321876003854803
+      },
+      "tier_2_diagonal_ilr_scaling": {
+        "dof_description": "2 DoF (Positive Cone in ILR space, diag(a, b) > 0)",
+        "heldout_d_hellinger_mean": 0.20830847336802863,
+        "heldout_ambiguity_angle_deg_mean": 31.053591309009686,
+        "angle_reduction_deg": -0.20683830090827726,
+        "fold_coherent_Q_support": 0.010306456794089303
+      },
+      "tier_3_affine_ilr_map": {
+        "dof_description": "6 DoF (Affine Subspace in ILR space, A x + b)",
+        "heldout_d_hellinger_mean": 0.1874006574548198,
+        "heldout_ambiguity_angle_deg_mean": 27.276587881902316,
+        "angle_reduction_deg": 3.570165126199093,
+        "fold_coherent_Q_support": 0.010267266302601993
+      },
+      "tier_4_nonlinear_ilr_mlp": {
+        "dof_description": "Nonlinear ILR MLP (Simplex Surface)",
+        "heldout_d_hellinger_mean": 0.1843867238231207,
+        "heldout_ambiguity_angle_deg_mean": 26.588662587715874,
+        "angle_reduction_deg": 4.258090420385535,
+        "fold_coherent_Q_support": 0.010296819787985866
+      }
+    },
+    "roberta-large": {
+      "tier_0_raw": {
+        "d_hellinger_mean": 0.28286560389742893,
+        "ambiguity_angle_deg_mean": 29.029590515551725,
+        "Q_support_raw": 0.010664953421137168
+      },
+      "tier_1_scalar_temp": {
+        "dof_description": "1 DoF (Positive Ray in CLR/ILR space)",
+        "heldout_d_hellinger_mean": 0.2012638577261411,
+        "heldout_ambiguity_angle_deg_mean": 29.02959051565907,
+        "angle_reduction_deg": -1.0734524380495714e-10,
+        "fold_coherent_Q_support": 0.010900738837134598
+      },
+      "tier_2_diagonal_ilr_scaling": {
+        "dof_description": "2 DoF (Positive Cone in ILR space, diag(a, b) > 0)",
+        "heldout_d_hellinger_mean": 0.20052641720987271,
+        "heldout_ambiguity_angle_deg_mean": 29.21825037234686,
+        "angle_reduction_deg": -0.18865985679513386,
+        "fold_coherent_Q_support": 0.010901381304208162
+      },
+      "tier_3_affine_ilr_map": {
+        "dof_description": "6 DoF (Affine Subspace in ILR space, A x + b)",
+        "heldout_d_hellinger_mean": 0.18222107522570874,
+        "heldout_ambiguity_angle_deg_mean": 26.06395427750902,
+        "angle_reduction_deg": 2.9656362380427055,
+        "fold_coherent_Q_support": 0.010920655316415034
+      },
+      "tier_4_nonlinear_ilr_mlp": {
+        "dof_description": "Nonlinear ILR MLP (Simplex Surface)",
+        "heldout_d_hellinger_mean": 0.17813490340576715,
+        "heldout_ambiguity_angle_deg_mean": 25.04109863749267,
+        "angle_reduction_deg": 3.9884918780590546,
+        "fold_coherent_Q_support": 0.011039511725024093
+      }
+    }
+  }
+}

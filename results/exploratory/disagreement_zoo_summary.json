@@ -1,0 +1,555 @@
+{
+  "archetypes": {
+    "consensus_entailment": [
+      1.0,
+      0.0,
+      0.0
+    ],
+    "consensus_neutral": [
+      0.0,
+      1.0,
+      0.0
+    ],
+    "consensus_contradiction": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "binary_ambiguity_EN": [
+      0.5,
+      0.5,
+      0.0
+    ],
+    "binary_ambiguity_EC": [
+      0.5,
+      0.0,
+      0.5
+    ],
+    "binary_ambiguity_NC": [
+      0.0,
+      0.5,
+      0.5
+    ],
+    "diffuse_ambiguity": [
+      0.3333333333333333,
+      0.3333333333333333,
+      0.3333333333333333
+    ],
+    "dominant_shoulder_EN": [
+      0.7,
+      0.25,
+      0.05
+    ],
+    "dominant_shoulder_EC": [
+      0.7,
+      0.05,
+      0.25
+    ]
+  },
+  "pairwise_distances": {
+    "consensus_entailment": {
+      "consensus_entailment": {
+        "hellinger": 0.0,
+        "fisher_rao": 0.0,
+        "jsd": 0.0,
+        "aitchison": 0.0
+      },
+      "consensus_neutral": {
+        "hellinger": 0.999998999999,
+        "fisher_rao": 3.1415886535877933,
+        "jsd": 0.999999999959694,
+        "aitchison": 13.025388268121176
+      },
+      "consensus_contradiction": {
+        "hellinger": 0.999998999999,
+        "fisher_rao": 3.1415886535877933,
+        "jsd": 0.999999999959694,
+        "aitchison": 13.025388268121176
+      },
+      "binary_ambiguity_EN": {
+        "hellinger": 0.5411954468633963,
+        "fisher_rao": 1.570794326791068,
+        "jsd": 0.3112781244394799,
+        "aitchison": 7.25381285121785
+      },
+      "binary_ambiguity_EC": {
+        "hellinger": 0.5411954468633963,
+        "fisher_rao": 1.570794326791068,
+        "jsd": 0.3112781244394799,
+        "aitchison": 7.25381285121785
+      },
+      "binary_ambiguity_NC": {
+        "hellinger": 0.9999987928924903,
+        "fisher_rao": 3.1415878251626683,
+        "jsd": 0.9999999999405411,
+        "aitchison": 14.474470542791419
+      },
+      "diffuse_ambiguity": {
+        "hellinger": 0.6501142792692959,
+        "fisher_rao": 1.9106304078204799,
+        "jsd": 0.45914791698852386,
+        "aitchison": 7.520211422899155
+      },
+      "dominant_shoulder_EN": {
+        "hellinger": 0.40415250816879356,
+        "fisher_rao": 1.1592768384863033,
+        "jsd": 0.1691948550639093,
+        "aitchison": 6.1290631844522245
+      },
+      "dominant_shoulder_EC": {
+        "hellinger": 0.40415250816879356,
+        "fisher_rao": 1.1592768384863033,
+        "jsd": 0.1691948550639093,
+        "aitchison": 6.1290631844522245
+      }
+    },
+    "consensus_neutral": {
+      "consensus_entailment": {
+        "hellinger": 0.999998999999,
+        "fisher_rao": 3.1415886535877933,
+        "jsd": 0.999999999959694,
+        "aitchison": 13.025388268121176
+      },
+      "consensus_neutral": {
+        "hellinger": 0.0,
+        "fisher_rao": 0.0,
+        "jsd": 0.0,
+        "aitchison": 0.0
+      },
+      "consensus_contradiction": {
+        "hellinger": 0.999998999999,
+        "fisher_rao": 3.1415886535877933,
+        "jsd": 0.999999999959694,
+        "aitchison": 13.025388268121176
+      },
+      "binary_ambiguity_EN": {
+        "hellinger": 0.5411954468633963,
+        "fisher_rao": 1.570794326791068,
+        "jsd": 0.3112781244394799,
+        "aitchison": 7.25381285121785
+      },
+      "binary_ambiguity_EC": {
+        "hellinger": 0.9999987928924903,
+        "fisher_rao": 3.1415878251626683,
+        "jsd": 0.9999999999405411,
+        "aitchison": 14.474470542791419
+      },
+      "binary_ambiguity_NC": {
+        "hellinger": 0.5411954468633963,
+        "fisher_rao": 1.570794326791068,
+        "jsd": 0.3112781244394799,
+        "aitchison": 7.25381285121785
+      },
+      "diffuse_ambiguity": {
+        "hellinger": 0.6501142792692959,
+        "fisher_rao": 1.9106304078204799,
+        "jsd": 0.45914791698852386,
+        "aitchison": 7.520211422899155
+      },
+      "dominant_shoulder_EN": {
+        "hellinger": 0.7071060314642887,
+        "fisher_rao": 2.0943926538109845,
+        "jsd": 0.548794940657511,
+        "aitchison": 7.518756951163939
+      },
+      "dominant_shoulder_EC": {
+        "hellinger": 0.8811310149971993,
+        "fisher_rao": 2.6905630990245966,
+        "jsd": 0.8549974004457834,
+        "aitchison": 9.2832455559916
+      }
+    },
+    "consensus_contradiction": {
+      "consensus_entailment": {
+        "hellinger": 0.999998999999,
+        "fisher_rao": 3.1415886535877933,
+        "jsd": 0.999999999959694,
+        "aitchison": 13.025388268121176
+      },
+      "consensus_neutral": {
+        "hellinger": 0.999998999999,
+        "fisher_rao": 3.1415886535877933,
+        "jsd": 0.999999999959694,
+        "aitchison": 13.025388268121176
+      },
+      "consensus_contradiction": {
+        "hellinger": 0.0,
+        "fisher_rao": 0.0,
+        "jsd": 0.0,
+        "aitchison": 0.0
+      },
+      "binary_ambiguity_EN": {
+        "hellinger": 0.9999987928924903,
+        "fisher_rao": 3.1415878251626683,
+        "jsd": 0.9999999999405411,
+        "aitchison": 14.474470542791419
+      },
+      "binary_ambiguity_EC": {
+        "hellinger": 0.5411954468633963,
+        "fisher_rao": 1.570794326791068,
+        "jsd": 0.3112781244394799,
+        "aitchison": 7.25381285121785
+      },
+      "binary_ambiguity_NC": {
+        "hellinger": 0.5411954468633963,
+        "fisher_rao": 1.570794326791068,
+        "jsd": 0.3112781244394799,
+        "aitchison": 7.25381285121785
+      },
+      "diffuse_ambiguity": {
+        "hellinger": 0.6501142792692958,
+        "fisher_rao": 1.9106304078204797,
+        "jsd": 0.45914791698852386,
+        "aitchison": 7.520211422899155
+      },
+      "dominant_shoulder_EN": {
+        "hellinger": 0.8811310149971993,
+        "fisher_rao": 2.6905630990245966,
+        "jsd": 0.8549974004457834,
+        "aitchison": 9.2832455559916
+      },
+      "dominant_shoulder_EC": {
+        "hellinger": 0.7071060314642887,
+        "fisher_rao": 2.0943926538109845,
+        "jsd": 0.548794940657511,
+        "aitchison": 7.518756951163939
+      }
+    },
+    "binary_ambiguity_EN": {
+      "consensus_entailment": {
+        "hellinger": 0.5411954468633963,
+        "fisher_rao": 1.570794326791068,
+        "jsd": 0.3112781244394799,
+        "aitchison": 7.25381285121785
+      },
+      "consensus_neutral": {
+        "hellinger": 0.5411954468633963,
+        "fisher_rao": 1.570794326791068,
+        "jsd": 0.3112781244394799,
+        "aitchison": 7.25381285121785
+      },
+      "consensus_contradiction": {
+        "hellinger": 0.9999987928924903,
+        "fisher_rao": 3.1415878251626683,
+        "jsd": 0.9999999999405411,
+        "aitchison": 14.474470542791419
+      },
+      "binary_ambiguity_EN": {
+        "hellinger": 0.0,
+        "fisher_rao": 0.0,
+        "jsd": 0.0,
+        "aitchison": 0.0
+      },
+      "binary_ambiguity_EC": {
+        "hellinger": 0.7071057811858402,
+        "fisher_rao": 2.0943918364053316,
+        "jsd": 0.49999999996069416,
+        "aitchison": 12.045130124652626
+      },
+      "binary_ambiguity_NC": {
+        "hellinger": 0.7071057811858403,
+        "fisher_rao": 2.094391836405332,
+        "jsd": 0.49999999996069416,
+        "aitchison": 12.045130124652626
+      },
+      "diffuse_ambiguity": {
+        "hellinger": 0.42837231670826353,
+        "fisher_rao": 1.2309574173393607,
+        "jsd": 0.19087450460174915,
+        "aitchison": 6.9542591198922645
+      },
+      "dominant_shoulder_EN": {
+        "hellinger": 0.23417601817856332,
+        "fisher_rao": 0.6654146208529723,
+        "jsd": 0.06771780822088282,
+        "aitchison": 5.270347248152717
+      },
+      "dominant_shoulder_EC": {
+        "hellinger": 0.5002775616411547,
+        "fisher_rao": 1.446307796429395,
+        "jsd": 0.2912170745867393,
+        "aitchison": 7.429155226248317
+      }
+    },
+    "binary_ambiguity_EC": {
+      "consensus_entailment": {
+        "hellinger": 0.5411954468633963,
+        "fisher_rao": 1.570794326791068,
+        "jsd": 0.3112781244394799,
+        "aitchison": 7.25381285121785
+      },
+      "consensus_neutral": {
+        "hellinger": 0.9999987928924903,
+        "fisher_rao": 3.1415878251626683,
+        "jsd": 0.9999999999405411,
+        "aitchison": 14.474470542791419
+      },
+      "consensus_contradiction": {
+        "hellinger": 0.5411954468633963,
+        "fisher_rao": 1.570794326791068,
+        "jsd": 0.3112781244394799,
+        "aitchison": 7.25381285121785
+      },
+      "binary_ambiguity_EN": {
+        "hellinger": 0.7071057811858402,
+        "fisher_rao": 2.0943918364053316,
+        "jsd": 0.49999999996069416,
+        "aitchison": 12.045130124652626
+      },
+      "binary_ambiguity_EC": {
+        "hellinger": 0.0,
+        "fisher_rao": 0.0,
+        "jsd": 0.0,
+        "aitchison": 0.0
+      },
+      "binary_ambiguity_NC": {
+        "hellinger": 0.7071057811858403,
+        "fisher_rao": 2.094391836405332,
+        "jsd": 0.49999999996069416,
+        "aitchison": 12.045130124652626
+      },
+      "diffuse_ambiguity": {
+        "hellinger": 0.42837231670826337,
+        "fisher_rao": 1.2309574173393603,
+        "jsd": 0.19087450460174918,
+        "aitchison": 6.9542591198922645
+      },
+      "dominant_shoulder_EN": {
+        "hellinger": 0.5002775616411547,
+        "fisher_rao": 1.446307796429395,
+        "jsd": 0.2912170745867393,
+        "aitchison": 7.429155226248317
+      },
+      "dominant_shoulder_EC": {
+        "hellinger": 0.23417601817856332,
+        "fisher_rao": 0.6654146208529723,
+        "jsd": 0.06771780822088282,
+        "aitchison": 5.270347248152717
+      }
+    },
+    "binary_ambiguity_NC": {
+      "consensus_entailment": {
+        "hellinger": 0.9999987928924903,
+        "fisher_rao": 3.1415878251626683,
+        "jsd": 0.9999999999405411,
+        "aitchison": 14.474470542791419
+      },
+      "consensus_neutral": {
+        "hellinger": 0.5411954468633963,
+        "fisher_rao": 1.570794326791068,
+        "jsd": 0.3112781244394799,
+        "aitchison": 7.25381285121785
+      },
+      "consensus_contradiction": {
+        "hellinger": 0.5411954468633963,
+        "fisher_rao": 1.570794326791068,
+        "jsd": 0.3112781244394799,
+        "aitchison": 7.25381285121785
+      },
+      "binary_ambiguity_EN": {
+        "hellinger": 0.7071057811858403,
+        "fisher_rao": 2.094391836405332,
+        "jsd": 0.49999999996069416,
+        "aitchison": 12.045130124652626
+      },
+      "binary_ambiguity_EC": {
+        "hellinger": 0.7071057811858403,
+        "fisher_rao": 2.094391836405332,
+        "jsd": 0.49999999996069416,
+        "aitchison": 12.045130124652626
+      },
+      "binary_ambiguity_NC": {
+        "hellinger": 0.0,
+        "fisher_rao": 0.0,
+        "jsd": 0.0,
+        "aitchison": 0.0
+      },
+      "diffuse_ambiguity": {
+        "hellinger": 0.42837231670826337,
+        "fisher_rao": 1.2309574173393603,
+        "jsd": 0.19087450460174918,
+        "aitchison": 6.9542591198922645
+      },
+      "dominant_shoulder_EN": {
+        "hellinger": 0.698807476876343,
+        "fisher_rao": 2.067342298609246,
+        "jsd": 0.5347773908062546,
+        "aitchison": 8.528263736260934
+      },
+      "dominant_shoulder_EC": {
+        "hellinger": 0.698807476876343,
+        "fisher_rao": 2.067342298609246,
+        "jsd": 0.5347773908062546,
+        "aitchison": 8.528263736260934
+      }
+    },
+    "diffuse_ambiguity": {
+      "consensus_entailment": {
+        "hellinger": 0.6501142792692959,
+        "fisher_rao": 1.9106304078204799,
+        "jsd": 0.45914791698852386,
+        "aitchison": 7.520211422899155
+      },
+      "consensus_neutral": {
+        "hellinger": 0.6501142792692959,
+        "fisher_rao": 1.9106304078204799,
+        "jsd": 0.45914791698852386,
+        "aitchison": 7.520211422899155
+      },
+      "consensus_contradiction": {
+        "hellinger": 0.6501142792692958,
+        "fisher_rao": 1.9106304078204797,
+        "jsd": 0.45914791698852386,
+        "aitchison": 7.520211422899155
+      },
+      "binary_ambiguity_EN": {
+        "hellinger": 0.42837231670826353,
+        "fisher_rao": 1.2309574173393607,
+        "jsd": 0.19087450460174915,
+        "aitchison": 6.9542591198922645
+      },
+      "binary_ambiguity_EC": {
+        "hellinger": 0.42837231670826337,
+        "fisher_rao": 1.2309574173393603,
+        "jsd": 0.19087450460174918,
+        "aitchison": 6.9542591198922645
+      },
+      "binary_ambiguity_NC": {
+        "hellinger": 0.42837231670826337,
+        "fisher_rao": 1.2309574173393603,
+        "jsd": 0.19087450460174918,
+        "aitchison": 6.9542591198922645
+      },
+      "diffuse_ambiguity": {
+        "hellinger": 1.0536712127723509e-08,
+        "fisher_rao": 2.9802322387695312e-08,
+        "jsd": 0.0,
+        "aitchison": 0.0
+      },
+      "dominant_shoulder_EN": {
+        "hellinger": 0.3149278155259687,
+        "fisher_rao": 0.8982816982029916,
+        "jsd": 0.13686885049891293,
+        "aitchison": 1.8810484777744496
+      },
+      "dominant_shoulder_EC": {
+        "hellinger": 0.3149278155259687,
+        "fisher_rao": 0.8982816982029916,
+        "jsd": 0.13686885049891293,
+        "aitchison": 1.8810484777744496
+      }
+    },
+    "dominant_shoulder_EN": {
+      "consensus_entailment": {
+        "hellinger": 0.40415250816879356,
+        "fisher_rao": 1.1592768384863033,
+        "jsd": 0.1691948550639093,
+        "aitchison": 6.1290631844522245
+      },
+      "consensus_neutral": {
+        "hellinger": 0.7071060314642887,
+        "fisher_rao": 2.0943926538109845,
+        "jsd": 0.548794940657511,
+        "aitchison": 7.518756951163939
+      },
+      "consensus_contradiction": {
+        "hellinger": 0.8811310149971993,
+        "fisher_rao": 2.6905630990245966,
+        "jsd": 0.8549974004457834,
+        "aitchison": 9.2832455559916
+      },
+      "binary_ambiguity_EN": {
+        "hellinger": 0.23417601817856332,
+        "fisher_rao": 0.6654146208529723,
+        "jsd": 0.06771780822088282,
+        "aitchison": 5.270347248152717
+      },
+      "binary_ambiguity_EC": {
+        "hellinger": 0.5002775616411547,
+        "fisher_rao": 1.446307796429395,
+        "jsd": 0.2912170745867393,
+        "aitchison": 7.429155226248317
+      },
+      "binary_ambiguity_NC": {
+        "hellinger": 0.698807476876343,
+        "fisher_rao": 2.067342298609246,
+        "jsd": 0.5347773908062546,
+        "aitchison": 8.528263736260934
+      },
+      "diffuse_ambiguity": {
+        "hellinger": 0.3149278155259687,
+        "fisher_rao": 0.8982816982029916,
+        "jsd": 0.13686885049891293,
+        "aitchison": 1.8810484777744496
+      },
+      "dominant_shoulder_EN": {
+        "hellinger": 0.0,
+        "fisher_rao": 0.0,
+        "jsd": 0.0,
+        "aitchison": 0.0
+      },
+      "dominant_shoulder_EC": {
+        "hellinger": 0.27639320225002095,
+        "fisher_rao": 0.7868223199311271,
+        "jsd": 0.10499327350549374,
+        "aitchison": 2.2760889235617463
+      }
+    },
+    "dominant_shoulder_EC": {
+      "consensus_entailment": {
+        "hellinger": 0.40415250816879356,
+        "fisher_rao": 1.1592768384863033,
+        "jsd": 0.1691948550639093,
+        "aitchison": 6.1290631844522245
+      },
+      "consensus_neutral": {
+        "hellinger": 0.8811310149971993,
+        "fisher_rao": 2.6905630990245966,
+        "jsd": 0.8549974004457834,
+        "aitchison": 9.2832455559916
+      },
+      "consensus_contradiction": {
+        "hellinger": 0.7071060314642887,
+        "fisher_rao": 2.0943926538109845,
+        "jsd": 0.548794940657511,
+        "aitchison": 7.518756951163939
+      },
+      "binary_ambiguity_EN": {
+        "hellinger": 0.5002775616411547,
+        "fisher_rao": 1.446307796429395,
+        "jsd": 0.2912170745867393,
+        "aitchison": 7.429155226248317
+      },
+      "binary_ambiguity_EC": {
+        "hellinger": 0.23417601817856332,
+        "fisher_rao": 0.6654146208529723,
+        "jsd": 0.06771780822088282,
+        "aitchison": 5.270347248152717
+      },
+      "binary_ambiguity_NC": {
+        "hellinger": 0.698807476876343,
+        "fisher_rao": 2.067342298609246,
+        "jsd": 0.5347773908062546,
+        "aitchison": 8.528263736260934
+      },
+      "diffuse_ambiguity": {
+        "hellinger": 0.3149278155259687,
+        "fisher_rao": 0.8982816982029916,
+        "jsd": 0.13686885049891293,
+        "aitchison": 1.8810484777744496
+      },
+      "dominant_shoulder_EN": {
+        "hellinger": 0.27639320225002095,
+        "fisher_rao": 0.7868223199311271,
+        "jsd": 0.10499327350549374,
+        "aitchison": 2.2760889235617463
+      },
+      "dominant_shoulder_EC": {
+        "hellinger": 0.0,
+        "fisher_rao": 0.0,
+        "jsd": 0.0,
+        "aitchison": 0.0
+      }
+    }
+  }
+}

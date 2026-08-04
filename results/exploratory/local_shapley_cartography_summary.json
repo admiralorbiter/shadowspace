@@ -1,0 +1,171 @@
+{
+  "n_items": 3113,
+  "k": 10,
+  "region_counts": {
+    "center_diffuse_ambiguity": 410,
+    "corner_contradiction": 240,
+    "corner_entailment": 618,
+    "corner_neutral": 685,
+    "edge_EC_ambiguity": 29,
+    "edge_EN_ambiguity": 696,
+    "edge_NC_ambiguity": 435
+  },
+  "regional_recovery_by_model": {
+    "albert-xxlarge": {
+      "center_diffuse_ambiguity": 0.007804878048780489,
+      "corner_contradiction": 0.019269841269841274,
+      "corner_entailment": 0.01143895882973553,
+      "corner_neutral": 0.012405109489051097,
+      "edge_EC_ambiguity": 0.013793103448275864,
+      "edge_EN_ambiguity": 0.005007183908045977,
+      "edge_NC_ambiguity": 0.009606458675424192
+    },
+    "bart-large": {
+      "center_diffuse_ambiguity": 0.011707317073170733,
+      "corner_contradiction": 0.024860119047619044,
+      "corner_entailment": 0.010906769875216476,
+      "corner_neutral": 0.011396246089676747,
+      "edge_EC_ambiguity": 0.006896551724137932,
+      "edge_EN_ambiguity": 0.005018472906403941,
+      "edge_NC_ambiguity": 0.010398467432950191
+    },
+    "bert-base": {
+      "center_diffuse_ambiguity": 0.004634146341463414,
+      "corner_contradiction": 0.017707341269841272,
+      "corner_entailment": 0.008946843340047226,
+      "corner_neutral": 0.010451859575947168,
+      "edge_EC_ambiguity": 0.0,
+      "edge_EN_ambiguity": 0.005032726692209452,
+      "edge_NC_ambiguity": 0.004187739463601532
+    },
+    "bert-large": {
+      "center_diffuse_ambiguity": 0.004878048780487805,
+      "corner_contradiction": 0.0200218253968254,
+      "corner_entailment": 0.011908575512944445,
+      "corner_neutral": 0.011964546402502605,
+      "edge_EC_ambiguity": 0.006896551724137932,
+      "edge_EN_ambiguity": 0.005603448275862069,
+      "edge_NC_ambiguity": 0.010685823754789272
+    },
+    "distilbert": {
+      "center_diffuse_ambiguity": 0.0034146341463414634,
+      "corner_contradiction": 0.0135625,
+      "corner_entailment": 0.00935893664049004,
+      "corner_neutral": 0.010282586027111575,
+      "edge_EC_ambiguity": 0.010344827586206898,
+      "edge_EN_ambiguity": 0.006168582375478928,
+      "edge_NC_ambiguity": 0.011513409961685825
+    },
+    "roberta-base": {
+      "center_diffuse_ambiguity": 0.009837398373983739,
+      "corner_contradiction": 0.025422619047619048,
+      "corner_entailment": 0.008575813794260397,
+      "corner_neutral": 0.008343760862009037,
+      "edge_EC_ambiguity": 0.015517241379310346,
+      "edge_EN_ambiguity": 0.00440998656515898,
+      "edge_NC_ambiguity": 0.011252873563218392
+    },
+    "roberta-large": {
+      "center_diffuse_ambiguity": 0.009959349593495936,
+      "corner_contradiction": 0.01951884920634921,
+      "corner_entailment": 0.011126631369349816,
+      "corner_neutral": 0.009685088633993744,
+      "edge_EC_ambiguity": 0.017241379310344827,
+      "edge_EN_ambiguity": 0.0070334813653779174,
+      "edge_NC_ambiguity": 0.011237547892720308
+    },
+    "xlnet-base": {
+      "center_diffuse_ambiguity": 0.005121951219512196,
+      "corner_contradiction": 0.020302579365079367,
+      "corner_entailment": 0.011735005375782075,
+      "corner_neutral": 0.008935175530066041,
+      "edge_EC_ambiguity": 0.010344827586206898,
+      "edge_EN_ambiguity": 0.00575499452654625,
+      "edge_NC_ambiguity": 0.008007662835249042
+    },
+    "xlnet-large": {
+      "center_diffuse_ambiguity": 0.007235772357723578,
+      "corner_contradiction": 0.02052777777777778,
+      "corner_entailment": 0.014345396602678157,
+      "corner_neutral": 0.009889468196037539,
+      "edge_EC_ambiguity": 0.017241379310344827,
+      "edge_EN_ambiguity": 0.006422413793103449,
+      "edge_NC_ambiguity": 0.009329501915708813
+    }
+  },
+  "pluralistic_adversarial_pairs": {
+    "torn_twins_count": 30729,
+    "torn_twins_examples": [
+      {
+        "item_i": {
+          "id": "chaosnli_snli_2407214681.jpg#0r1n",
+          "prem": "Two young children in blue jerseys, one with the number 9 and one with the number 2 are standing on wooden steps in a bathroom and washing their hands in a sink.",
+          "hyp": "Two kids at a ballgame wash their hands."
+        },
+        "item_j": {
+          "id": "chaosnli_snli_428973409.jpg#4r1e",
+          "prem": "A group of young people with instruments are on stage.",
+          "hyp": "People are playing music."
+        },
+        "human_distance": 0.04514913364218477,
+        "bart_distance": 0.5325773505073212
+      },
+      {
+        "item_i": {
+          "id": "chaosnli_snli_2407214681.jpg#0r1n",
+          "prem": "Two young children in blue jerseys, one with the number 9 and one with the number 2 are standing on wooden steps in a bathroom and washing their hands in a sink.",
+          "hyp": "Two kids at a ballgame wash their hands."
+        },
+        "item_j": {
+          "id": "chaosnli_snli_4690670113.jpg#2r1n",
+          "prem": "Two people with bags next to a street at night.",
+          "hyp": "The people are together"
+        },
+        "human_distance": 0.03032808643677615,
+        "bart_distance": 0.4750812169201202
+      },
+      {
+        "item_i": {
+          "id": "chaosnli_snli_2407214681.jpg#0r1n",
+          "prem": "Two young children in blue jerseys, one with the number 9 and one with the number 2 are standing on wooden steps in a bathroom and washing their hands in a sink.",
+          "hyp": "Two kids at a ballgame wash their hands."
+        },
+        "item_j": {
+          "id": "chaosnli_snli_3307667255.jpg#0r1n",
+          "prem": "There are a lot of people in front of a tan building with colorful squares hanging from the top.",
+          "hyp": "Men and women stand in front of a building"
+        },
+        "human_distance": 0.04514913364218477,
+        "bart_distance": 0.4332188420771961
+      },
+      {
+        "item_i": {
+          "id": "chaosnli_snli_2407214681.jpg#0r1n",
+          "prem": "Two young children in blue jerseys, one with the number 9 and one with the number 2 are standing on wooden steps in a bathroom and washing their hands in a sink.",
+          "hyp": "Two kids at a ballgame wash their hands."
+        },
+        "item_j": {
+          "id": "chaosnli_snli_3640407952.jpg#0r1e",
+          "prem": "a skateboarder is performing stunt on a graffiti covered skateboard ramp.",
+          "hyp": "A skateboarder likes to skateboard on ramps."
+        },
+        "human_distance": 0.03962176090161979,
+        "bart_distance": 0.49985008278807413
+      },
+      {
+        "item_i": {
+          "id": "chaosnli_snli_2407214681.jpg#0r1n",
+          "prem": "Two young children in blue jerseys, one with the number 9 and one with the number 2 are standing on wooden steps in a bathroom and washing their hands in a sink.",
+          "hyp": "Two kids at a ballgame wash their hands."
+        },
+        "item_j": {
+          "id": "chaosnli_snli_4896595765.jpg#0r1n",
+          "prem": "Two little boys eat McDonald's while sitting at a table and chairs outside, where others are also eating.",
+          "hyp": "Two kids eat Happy Meals at an outside table."
+        },
+        "human_distance": 0.03776356599958291,
+        "bart_distance": 0.35385798144118297
+      }
+    ]
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "n_items": 3113,
+  "dirichlet_alpha": 0.5,
+  "models": {
+    "albert-xxlarge": {
+      "ambiguity_angle_deg_mean": 33.25889305809506,
+      "ambiguity_angle_deg_median": 24.191201823503324,
+      "orthogonal_error_ratio_mean": 45.32688528079171,
+      "itemwise_oracle_reachability_pct": 35.472527061591855,
+      "global_scalar_reachability_pct": 26.872828991489357,
+      "best_global_temp": 2.4164008605130616,
+      "relational_graph_reachability_pct": 1.116399608529387,
+      "best_relational_temp": 18.46876174479759
+    },
+    "bart-large": {
+      "ambiguity_angle_deg_mean": 30.846753022501968,
+      "ambiguity_angle_deg_median": 22.07129300692971,
+      "orthogonal_error_ratio_mean": 43.083619783347615,
+      "itemwise_oracle_reachability_pct": 32.44919688976239,
+      "global_scalar_reachability_pct": 26.537544534407846,
+      "best_global_temp": 2.4164008605130616,
+      "relational_graph_reachability_pct": 1.1024639243399281,
+      "best_relational_temp": 3.410951603860984
+    },
+    "bert-base": {
+      "ambiguity_angle_deg_mean": 39.262217791724304,
+      "ambiguity_angle_deg_median": 27.56587751804967,
+      "orthogonal_error_ratio_mean": 49.898897900239604,
+      "itemwise_oracle_reachability_pct": 27.799917833511977,
+      "global_scalar_reachability_pct": 17.56110728974595,
+      "best_global_temp": 2.0691931052111863,
+      "relational_graph_reachability_pct": 0.8539020318654111,
+      "best_relational_temp": 0.6299605249474366
+    },
+    "bert-large": {
+      "ambiguity_angle_deg_mean": 36.06251849568593,
+      "ambiguity_angle_deg_median": 25.003246584890988,
+      "orthogonal_error_ratio_mean": 47.00956253316193,
+      "itemwise_oracle_reachability_pct": 29.48608189483784,
+      "global_scalar_reachability_pct": 21.06642798174442,
+      "best_global_temp": 2.0691931052111863,
+      "relational_graph_reachability_pct": 1.0760351651774718,
+      "best_relational_temp": 0.6299605249474366
+    },
+    "distilbert": {
+      "ambiguity_angle_deg_mean": 46.160452790020855,
+      "ambiguity_angle_deg_median": 33.15234596214322,
+      "orthogonal_error_ratio_mean": 55.405954415653916,
+      "itemwise_oracle_reachability_pct": 25.708770718715808,
+      "global_scalar_reachability_pct": 11.570791787311759,
+      "best_global_temp": 1.7718749304469406,
+      "relational_graph_reachability_pct": 0.9284042865796802,
+      "best_relational_temp": 0.6299605249474366
+    },
+    "roberta-base": {
+      "ambiguity_angle_deg_mean": 35.03723334644441,
+      "ambiguity_angle_deg_median": 24.44586906073528,
+      "orthogonal_error_ratio_mean": 46.28329446006016,
+      "itemwise_oracle_reachability_pct": 30.21096371970604,
+      "global_scalar_reachability_pct": 21.730397532757518,
+      "best_global_temp": 2.0691931052111863,
+      "relational_graph_reachability_pct": 1.011463970587003,
+      "best_relational_temp": 0.6299605249474366
+    },
+    "roberta-large": {
+      "ambiguity_angle_deg_mean": 29.029590535489444,
+      "ambiguity_angle_deg_median": 21.22615281555083,
+      "orthogonal_error_ratio_mean": 41.47260820235865,
+      "itemwise_oracle_reachability_pct": 34.30845870996523,
+      "global_scalar_reachability_pct": 28.84933922564229,
+      "best_global_temp": 2.4164008605130616,
+      "relational_graph_reachability_pct": 1.1014083714051592,
+      "best_relational_temp": 1.4658665911120856
+    },
+    "xlnet-base": {
+      "ambiguity_angle_deg_mean": 36.77550659661593,
+      "ambiguity_angle_deg_median": 25.074226922764876,
+      "orthogonal_error_ratio_mean": 47.298951633997255,
+      "itemwise_oracle_reachability_pct": 28.384292145219938,
+      "global_scalar_reachability_pct": 20.853562866351595,
+      "best_global_temp": 2.0691931052111863,
+      "relational_graph_reachability_pct": 0.9586927955864673,
+      "best_relational_temp": 18.46876174479759
+    },
+    "xlnet-large": {
+      "ambiguity_angle_deg_mean": 30.56031882874488,
+      "ambiguity_angle_deg_median": 21.58695400903054,
+      "orthogonal_error_ratio_mean": 42.584040428278655,
+      "itemwise_oracle_reachability_pct": 33.670791444350094,
+      "global_scalar_reachability_pct": 27.913824685683203,
+      "best_global_temp": 2.4164008605130616,
+      "relational_graph_reachability_pct": 1.1069602400312326,
+      "best_relational_temp": 1.4658665911120856
+    }
+  }
+}
