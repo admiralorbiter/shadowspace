@@ -1,0 +1,39 @@
+{
+  "n_items": 3113,
+  "epsilon_tolerance": 0.15,
+  "models": {
+    "albert-xxlarge": {
+      "epsilon_tolerance": 0.15,
+      "complexity_tier_counts": {
+        "tier_0_raw": 726,
+        "tier_1_scalar": 354,
+        "tier_2_diagonal": 378,
+        "tier_3_affine": 309,
+        "unreached": 1346
+      },
+      "unreached_pct": 43.2380340507549
+    },
+    "bart-large": {
+      "epsilon_tolerance": 0.15,
+      "complexity_tier_counts": {
+        "tier_0_raw": 764,
+        "tier_1_scalar": 398,
+        "tier_2_diagonal": 344,
+        "tier_3_affine": 313,
+        "unreached": 1294
+      },
+      "unreached_pct": 41.56761965949245
+    },
+    "roberta-large": {
+      "epsilon_tolerance": 0.15,
+      "complexity_tier_counts": {
+        "tier_0_raw": 786,
+        "tier_1_scalar": 378,
+        "tier_2_diagonal": 364,
+        "tier_3_affine": 305,
+        "unreached": 1280
+      },
+      "unreached_pct": 41.11789270799871
+    }
+  }
+}
