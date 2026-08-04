@@ -92,6 +92,7 @@ def process_lpe_responses(input_path: Path, manifest_path: Path, output_prefix: 
     s_mapping = np.zeros(N, dtype=np.float64)
     mean_logits = np.zeros((N, 3), dtype=np.float64)
     probs_per_perm = np.zeros((N, 6, 3), dtype=np.float64)
+    logits_per_perm = np.zeros((N, 6, 3), dtype=np.float64)
 
     failed_items = []
     missing_tokens_count = 0
@@ -143,6 +144,7 @@ def process_lpe_responses(input_path: Path, manifest_path: Path, output_prefix: 
         mean_p = np.mean(item_probs, axis=0)
         q_lpe[i] = mean_p
         probs_per_perm[i] = item_probs
+        logits_per_perm[i] = item_logits
 
         jsd_sum = sum(jsd_single(item_probs[k], mean_p) for k in range(6))
         s_mapping[i] = jsd_sum / 6.0
@@ -160,6 +162,7 @@ def process_lpe_responses(input_path: Path, manifest_path: Path, output_prefix: 
     np.save(NORM_PROBS_DIR / f"{output_prefix}_lpe_mean_logits.npy", mean_logits)
     np.save(NORM_PROBS_DIR / f"{output_prefix}_lpe_order_sensitivity.npy", s_mapping)
     np.save(NORM_PROBS_DIR / f"{output_prefix}_lpe_probs_per_perm.npy", probs_per_perm)
+    np.save(NORM_PROBS_DIR / f"{output_prefix}_lpe_logits_per_perm.npy", logits_per_perm)
 
     meta_info = {
         "object_ids": manifest_obj_ids,

@@ -2,7 +2,8 @@
 
 Fits scalar temperature T strictly within the training fold of each of the 5 stratified CV folds
 by minimizing soft-label NLL against empirical human distributions.
-Applies each fold's T to construct coherent held-out predictions for pilot items.
+Preserves raw estimand equality at T=1: q_i(T) = (1/6) sum_pi softmax(logits_i_pi / T).
+Applies each fold's T to construct coherent full probability matrices Q^(f) for relational scoring.
 """
 
 from __future__ import annotations
@@ -13,36 +14,47 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
-import polars as pl
-from scipy.optimize import minimize_scalar
 from scipy.special import softmax
 
 NORM_PROBS_DIR = Path("research/chaosnli/artifacts/E004/normalized_probs")
 MANIFEST_DIR = Path("research/chaosnli/artifacts/E004/manifests")
 
-TEMPERATURE_GRID = np.array([
-    0.10, 0.125, 0.16, 0.20, 0.25,
-    0.32, 0.40, 0.50, 0.63, 0.80,
-    1.00,
-    1.25, 1.60, 2.00, 2.50,
-    3.20, 4.00, 5.00, 6.30, 8.00, 10.00
-])
+# Expanded logarithmic temperature grid T in [0.05, 100.0]
+TEMPERATURE_GRID = np.logspace(np.log10(0.05), np.log10(100.0), num=500)
+
+def compute_lpe_probs_at_temperature(logits_per_perm: np.ndarray, temp: float) -> np.ndarray:
+    """Compute (N, 3) LPE probabilities for a given scalar temperature T across 6 permutations."""
+    t_safe = max(1e-4, temp)
+    probs_per_perm = softmax(logits_per_perm / t_safe, axis=2)
+    return np.mean(probs_per_perm, axis=1)
 
 def soft_label_nll(p_human: np.ndarray, q_model: np.ndarray) -> float:
     """Compute mean soft-label cross-entropy NLL over items."""
     q_safe = np.clip(q_model, 1e-12, 1.0)
     return float(-np.mean(np.sum(p_human * np.log(q_safe), axis=1)))
 
-def build_stratified_folds(items: List[Dict], n_folds: int = 5, seed: int = 20260803) -> List[np.ndarray]:
-    """Build 5 stratified fold indices by (source_dataset, majority_label, entropy_quintile)."""
-    p_human = np.array([[it["human_p_entailment"], it["human_p_neutral"], it["human_p_contradiction"]] for it in items])
-    entropy = -np.sum(np.where(p_human > 1e-12, p_human * np.log2(np.clip(p_human, 1e-12, 1.0)), 0.0), axis=1)
+def find_best_temperature_vectorized(logits_perm: np.ndarray, p_human: np.ndarray, grid: np.ndarray) -> Tuple[float, float]:
+    """Fully vectorized NLL evaluation over grid for (M, 6, 3) logit tensors."""
+    # logits_perm: (M, 6, 3), grid: (G,)
+    logits_expanded = logits_perm[np.newaxis, :, :, :] / grid[:, np.newaxis, np.newaxis, np.newaxis]
+    max_l = np.max(logits_expanded, axis=3, keepdims=True)
+    exp_l = np.exp(logits_expanded - max_l)
+    probs_perm = exp_l / np.sum(exp_l, axis=3, keepdims=True)
+    q_grid = np.mean(probs_perm, axis=2)  # (G, M, 3)
 
+    q_safe = np.clip(q_grid, 1e-12, 1.0)
+    nll_grid = -np.mean(np.sum(p_human[np.newaxis, :, :] * np.log(q_safe), axis=2), axis=1)
+
+    best_idx = np.argmin(nll_grid)
+    return float(grid[best_idx]), float(nll_grid[best_idx])
+
+def build_stratified_folds(items: List[Dict], n_folds: int = 5, seed: int = 20260803) -> List[np.ndarray]:
+    """Build 5 stratified fold indices by (source_dataset, majority_label)."""
+    p_human = np.array([[it["human_p_entailment"], it["human_p_neutral"], it["human_p_contradiction"]] for it in items])
     datasets = [it["source_dataset"] for it in items]
     majority = np.argmax(p_human, axis=1)
-    entropy_q = pd.qcut(entropy, q=5, labels=False, duplicates="drop")
 
-    strata_keys = [f"{d}_{m}_{eq}" for d, m, eq in zip(datasets, majority, entropy_q)]
+    strata_keys = [f"{d}_{m}" for d, m in zip(datasets, majority)]
 
     rng = np.random.default_rng(seed)
     strata_map: Dict[str, List[int]] = {}
@@ -50,31 +62,44 @@ def build_stratified_folds(items: List[Dict], n_folds: int = 5, seed: int = 2026
         strata_map.setdefault(key, []).append(idx)
 
     folds = [[] for _ in range(n_folds)]
-    for key, indices in strata_map.items():
+    for key, indices in sorted(strata_map.items()):
         shuffled = rng.permutation(indices)
         for i, idx in enumerate(shuffled):
             folds[i % n_folds].append(idx)
 
-    return [np.array(sorted(fold), dtype=np.int64) for fold in folds]
+    fold_arrays = [np.array(sorted(fold), dtype=np.int64) for fold in folds]
+
+    # Assertions for fold integrity
+    assert all(len(f) > 0 for f in fold_arrays), "Found empty fold!"
+    assert sorted(np.concatenate(fold_arrays).tolist()) == list(range(len(items))), "Fold index mismatch!"
+
+    return fold_arrays
 
 def run_cross_fitted_calibration(subset: str = "pilot") -> None:
     manifest_file = MANIFEST_DIR / f"{subset}_600.jsonl" if subset == "pilot" else MANIFEST_DIR / f"{subset}_60.jsonl"
-    mean_logits_file = NORM_PROBS_DIR / f"{subset}_lpe_mean_logits.npy"
+    logits_per_perm_file = NORM_PROBS_DIR / f"{subset}_lpe_logits_per_perm.npy"
 
-    if not manifest_file.exists() or not mean_logits_file.exists():
-        raise FileNotFoundError(f"Required inputs missing: {manifest_file} or {mean_logits_file}")
+    if not manifest_file.exists() or not logits_per_perm_file.exists():
+        raise FileNotFoundError(f"Required inputs missing: {manifest_file} or {logits_per_perm_file}")
 
     items = []
     with open(manifest_file, "r", encoding="utf-8") as f:
         for line in f:
             items.append(json.loads(line))
 
-    mean_logits = np.load(mean_logits_file)
+    N = len(items)
+    logits_per_perm = np.load(logits_per_perm_file)  # (N, 6, 3)
     p_human = np.array([[it["human_p_entailment"], it["human_p_neutral"], it["human_p_contradiction"]] for it in items])
+
+    # Verification: raw LPE at T=1.0 matches q_lpe_raw
+    q_lpe_raw = np.load(NORM_PROBS_DIR / f"{subset}_lpe_probs.npy")
+    q_lpe_t1 = compute_lpe_probs_at_temperature(logits_per_perm, 1.0)
+    assert np.allclose(q_lpe_raw, q_lpe_t1, atol=1e-10), "q_raw and q(T=1.0) must match identically!"
 
     folds = build_stratified_folds(items, n_folds=5)
 
     oof_calibrated_probs = np.zeros_like(p_human)
+    fold_full_probs = np.zeros((5, N, 3), dtype=np.float64)
     fold_temperatures = []
 
     print("=========================================================================")
@@ -83,29 +108,27 @@ def run_cross_fitted_calibration(subset: str = "pilot") -> None:
 
     for fold_idx in range(5):
         val_idx = folds[fold_idx]
-        train_idx = np.setdiff1d(np.arange(len(items)), val_idx)
+        train_idx = np.setdiff1d(np.arange(N), val_idx)
 
-        train_logits = mean_logits[train_idx]
+        train_logits_perm = logits_per_perm[train_idx]
         train_p_human = p_human[train_idx]
 
-        best_t = 1.0
-        best_nll = float("inf")
+        best_t, best_nll = find_best_temperature_vectorized(train_logits_perm, train_p_human, TEMPERATURE_GRID)
 
-        for t_cand in TEMPERATURE_GRID:
-            q_train = softmax(train_logits / t_cand, axis=1)
-            nll_val = soft_label_nll(train_p_human, q_train)
-            if nll_val < best_nll:
-                best_nll = nll_val
-                best_t = t_cand
+        # Boundary check assertion
+        assert min(TEMPERATURE_GRID) < best_t < max(TEMPERATURE_GRID), f"Fitted T={best_t} hit search boundary!"
+        fold_temperatures.append(float(best_t))
 
-        fold_temperatures.append(best_t)
+        # Full coherent probability matrix for fold_idx
+        q_full_fold = compute_lpe_probs_at_temperature(logits_per_perm, best_t)
+        fold_full_probs[fold_idx] = q_full_fold
 
-        val_logits = mean_logits[val_idx]
-        oof_calibrated_probs[val_idx] = softmax(val_logits / best_t, axis=1)
+        # Held-out focal predictions for pointwise OOF NLL
+        oof_calibrated_probs[val_idx] = q_full_fold[val_idx]
 
         print(f"  Fold {fold_idx + 1}/5 -> Fitted T = {best_t:.4f} (Train NLL: {best_nll:.5f})")
 
-    raw_nll = soft_label_nll(p_human, softmax(mean_logits, axis=1))
+    raw_nll = soft_label_nll(p_human, q_lpe_raw)
     calib_nll = soft_label_nll(p_human, oof_calibrated_probs)
 
     print(f"  Raw LPE NLL:         {raw_nll:.5f} nats")
@@ -113,8 +136,25 @@ def run_cross_fitted_calibration(subset: str = "pilot") -> None:
     print("=========================================================================")
 
     np.save(NORM_PROBS_DIR / f"{subset}_lpe_calibrated_probs.npy", oof_calibrated_probs)
+    np.save(NORM_PROBS_DIR / f"{subset}_lpe_fold_calibrated_probs.npy", fold_full_probs)
+
+    # Save fold composition stats
+    fold_stats = []
+    for f_i, f_idx in enumerate(folds):
+        f_items = [items[i] for i in f_idx]
+        fold_stats.append({
+            "fold_index": f_i,
+            "count": len(f_items),
+            "datasets": pd.Series([it["source_dataset"] for it in f_items]).value_counts().to_dict(),
+            "majority_labels": pd.Series([np.argmax([it["human_p_entailment"], it["human_p_neutral"], it["human_p_contradiction"]]) for it in f_items]).value_counts().to_dict()
+        })
+
     with open(NORM_PROBS_DIR / f"{subset}_lpe_fold_temperatures.json", "w", encoding="utf-8") as f:
-        json.dump({"fold_temperatures": fold_temperatures, "mean_temperature": float(np.mean(fold_temperatures))}, f, indent=2)
+        json.dump({
+            "fold_temperatures": fold_temperatures,
+            "mean_temperature": float(np.mean(fold_temperatures)),
+            "fold_statistics": fold_stats
+        }, f, indent=2)
 
 def main():
     import argparse

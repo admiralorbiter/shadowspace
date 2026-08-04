@@ -134,7 +134,7 @@ def build_pilot_support_matrices(subset: str = "pilot") -> None:
     # Slice existing canonical models (from model_probs.json in E003 artifact / data) if available
     try:
         from shadowspace.chaosnli.models import load_model_predictions
-        preds = load_model_predictions(allow_synthetic=True)
+        preds = load_model_predictions(allow_synthetic=False)
         row_indices = [it["row_index"] for it in items]
 
         classifier_probs = {}

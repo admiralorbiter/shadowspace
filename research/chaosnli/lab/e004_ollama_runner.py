@@ -145,7 +145,7 @@ def process_single_lpe_task(task_args: Tuple) -> Optional[dict]:
     assert f"{sym_n} = Neutral" in user_prompt, f"Prompt mapping error for Neutral: {sym_n}"
     assert f"{sym_c} = Contradiction" in user_prompt, f"Prompt mapping error for Contradiction: {sym_c}"
     
-    req_id = make_request_id(model_tag, object_id, "v1", perm_idx, "lpe", 1.0, 42, 0, symbol_set_name)
+    req_id = make_request_id(model_tag, object_id, "v2", perm_idx, "lpe", 1.0, 42, 0, symbol_set_name)
     if req_id in existing_ids:
         return None
 
@@ -235,7 +235,7 @@ def process_single_mce_task(task_args: Tuple) -> Optional[dict]:
     )
 
     seed = 1000 + perm_idx * 100 + rep
-    req_id = make_request_id(model_tag, object_id, "v1", perm_idx, f"mce_t{temperature:.1f}", temperature, seed, rep, symbol_set_name)
+    req_id = make_request_id(model_tag, object_id, "v2", perm_idx, f"mce_t{temperature:.1f}", temperature, seed, rep, symbol_set_name)
     if req_id in existing_ids:
         return None
 

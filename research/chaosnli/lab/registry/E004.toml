@@ -1,9 +1,9 @@
 # Experiment E004: Relational Alignment of Generative LLM Judgment Distributions
 id = "E004"
 title = "Relational Alignment of Generative LLM Judgment Distributions"
-status = "stage1a_preflight_passed"
-analysis_status = "preflight_complete"
-methodological_audit = "passed_clean"
+status = "stage1a_transport_passed_analysis_patch_completed"
+analysis_status = "preflight_pointwise_and_relational_results_patched"
+methodological_audit = "conditional_pass_requires_crossfit_correction"
 manuscript_status = "not_started"
 submission_status = "not_applicable"
 
@@ -21,6 +21,9 @@ stage = 1
 model_panel = ["gemma3:12b"]
 elicitation_methods = ["lpe", "mce", "self_report_exploratory"]
 label_symbol_sets = [["A", "B", "C"], ["1", "2", "3"], ["X", "Y", "Z"]]
+primary_symbol_set = ["A", "B", "C"]
+secondary_symbol_sets = [["1", "2", "3"], ["X", "Y", "Z"]]
+secondary_symbol_set_status = "exploratory_preflight_only"
 n_permutations = 6
 
 pilot_n = 600
@@ -34,8 +37,8 @@ practical_margins = { nll = 0.02, jsd = 0.01, normalized_recovery_r = 0.05, gap_
 model_digest = "f4031aab637d1ffae40e28e08d6d678ad94dbe15951d2ea1ebc441c9df48ed92"
 model_sha256 = "2274d7d84a797265a6f2ea309bc0c50ebdc2a7a40b991ee7e28b12f628042fa9"
 
-# Stage 1A Preflight Completed Cleanly
-preflight_status = "passed_100pct_alignment"
+# Stage 1A Preflight Analysis Patch Cycle Completed
+preflight_status = "passed_analysis_patch_completed"
 
 estimands = [
   "pointwise_nll",
