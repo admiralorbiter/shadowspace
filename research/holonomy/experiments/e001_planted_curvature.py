@@ -1,4 +1,4 @@
-"""Experiment E001: End-to-End Derived Curvature & 3-Group Monte Carlo Loop Inference (Phase E0.7.1).
+"""Experiment E001: End-to-End Derived Curvature & 3-Group Monte Carlo Loop Inference (Phase E0.7.2).
 
 Derives target observations strictly by propagating ILR weights sequentially around the 4-corner loop:
 u_0 -> u_1 -> u_2 -> u_3 -> u_0 via CurvedWorld.transform_weights_along_edge().
@@ -7,7 +7,7 @@ Evaluates independent 3-group Monte Carlo loop holonomy experiments (50 seeds pe
 - Group 1 (Calibration): 50 flat trials calibrate null thresholds tau_OLS and tau_TLS at 95th percentile.
 - Group 2 (Validation): 50 independent flat trials evaluate empirical FPR under tau.
 - Group 3 (Power): 50 independent curved trials evaluate empirical Detection Power under tau.
-Computes true matrix holonomy RMSE ||H_gamma,b - H_gamma||_F and curvature statistic RMSE.
+Computes true matrix holonomy RMSE ||H_gamma,b - H_hom_true||_F against 3x3 homogeneous ground truth.
 """
 
 from __future__ import annotations
@@ -146,7 +146,6 @@ def _run_single_derived_trial(
         ols_maps.append(t_ols)
         tls_maps.append(t_tls)
 
-        # Advance vertex weight coordinate to next corner
         u_curr = curved_world.transform_weights_along_edge(g_name, u_curr)
 
     p_ols = PathTransport(ols_maps)
@@ -160,12 +159,19 @@ def run_e001_monte_carlo_sweeps(num_seeds: int = 50) -> List[MonteCarloLoopMetri
     results = []
     curved_world = CurvedWorld(rotation_angle=np.pi / 4)
 
-    K_a = curved_world.K_a
+    K_a, c_a = curved_world.K_a, curved_world.c_a
+    S_b, c_b = curved_world.S_b, curved_world.c_b
     K_a_inv = np.linalg.inv(K_a)
-    S_b_inv = np.linalg.inv(curved_world.S_b)
-    H_true = np.dot(S_b_inv, np.dot(K_a_inv, np.dot(curved_world.S_b, K_a)))
-    H_hom_true = np.eye(3, dtype=np.float64)
-    H_hom_true[:2, :2] = H_true
+    S_b_inv = np.linalg.inv(S_b)
+
+    # Build exact 3x3 homogeneous ground truth ParallelTransportMap objects
+    T01_true = ParallelTransportMap("swap", "0", "1", K_a, c_a)
+    T12_true = ParallelTransportMap("neg", "1", "2", S_b, c_b)
+    T23_true = ParallelTransportMap("swap_inv", "2", "3", K_a_inv, -np.dot(K_a_inv, c_a))
+    T30_true = ParallelTransportMap("neg_inv", "3", "0", S_b_inv, -np.dot(S_b_inv, c_b))
+
+    H_hom_true = PathTransport([T01_true, T12_true, T23_true, T30_true]).compute_homogeneous_matrix()
+    H_true_linear = H_hom_true[:2, :2]
 
     for N in [50, 250]:
         for r in [0.02]:
@@ -245,12 +251,12 @@ def run_e001_monte_carlo_sweeps(num_seeds: int = 50) -> List[MonteCarloLoopMetri
                 ols_edge_rmse = float(np.sqrt(np.mean([(m - K_a)**2 for m in ols_mats])))
                 tls_edge_rmse = float(np.sqrt(np.mean([(m - K_a)**2 for m in tls_mats])))
 
-                # True matrix holonomy RMSE ||H_b - H_true||_F
+                # True 3x3 homogeneous matrix holonomy RMSE ||H_b - H_hom_true||_F
                 ols_mat_h_rmse = float(np.sqrt(np.mean([np.linalg.norm(h - H_hom_true, "fro")**2 for h in ols_h_mats])))
                 tls_mat_h_rmse = float(np.sqrt(np.mean([np.linalg.norm(h - H_hom_true, "fro")**2 for h in tls_h_mats])))
 
                 # Scalar curvature statistic RMSE
-                true_stat = float(np.linalg.norm(H_true - np.eye(2), "fro"))
+                true_stat = float(np.linalg.norm(H_true_linear - np.eye(2), "fro"))
                 ols_stat_rmse = float(np.sqrt(np.mean([(s - true_stat)**2 for s in ols_loop_stat])))
                 tls_stat_rmse = float(np.sqrt(np.mean([(s - true_stat)**2 for s in tls_loop_stat])))
 

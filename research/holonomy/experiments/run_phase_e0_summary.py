@@ -1,13 +1,14 @@
-"""Phase E0.7.1 Synthetic Laboratory Summary Runner & Enriched Manifest Exporter.
+"""Phase E0.7.2 & Phase E2 Laboratory Summary Runner & Enriched Manifest Exporter.
 
-Executes all Phase E0.7.1 synthetic benchmarks:
+Executes all Phase E0.7.2 synthetic benchmarks & Phase E2-A Natural Language Model Audit Pilot:
 - Flat World Zero Holonomy
-- 4-Corner Planted Curvature Recovery
-- 3-Group Monte Carlo Loop Holonomy Inference (Group 1 Calibration, Group 2 Validation FPR, Group 3 Power)
+- 4-Corner Planted Curvature Recovery & Exact 3x3 Homogeneous H_hom_true Ground Truth
+- 3-Group Monte Carlo Loop Holonomy Inference
 - Total Least Squares (TLS) Errors-In-Variables Attenuation Bias Correction
 - Theorem 1A & Proposition 1B Invariance
 - Data-Dependent Sheaf Laplacian Cohomology H0/H1
 - GlueOOD Ridge-Regularized Solver
+- Phase E2-A Natural Language Exact-Symmetry Model Audit Pilot (Tier 1 Reversible Entity Renaming)
 Exports machine-readable execution manifest and enforces strict gate assertions.
 """
 
@@ -25,6 +26,7 @@ from research.holonomy.experiments.e001_planted_curvature import (
     run_e001_monte_carlo_sweeps,
     run_e001_planted_curvature_experiment,
 )
+from research.holonomy.experiments.e002_classifier_holonomy import run_e002_classifier_holonomy_experiment
 from research.holonomy.experiments.e003_calibration_invariance import run_e003_calibration_invariance_experiment
 from research.holonomy.geometry.connection import ParallelTransportMap
 from research.holonomy.sheaf.coboundary import CoboundaryOperator, OverlapEdge
@@ -43,7 +45,7 @@ def get_git_commit_sha() -> str:
 
 def main() -> None:
     print("================================================================================")
-    print("PHASE E0.7.1: FINITE AMBIGUITY LABORATORY — INFERENTIAL INTEGRITY REPORT")
+    print("PHASE E0.7.2 & E2.0: FINITE AMBIGUITY & NATURAL LANGUAGE HOLONOMY REPORT")
     print("================================================================ algorithm: 3x3 Homogeneous Affine Connections & Data-Dependent Sheaves\n")
 
     # 1. Flat World Benchmark
@@ -117,14 +119,21 @@ def main() -> None:
     print(f"    - Coherent extension GlueOOD score: {score_coherent:.6f}")
     print(f"    - Incoherent extension GlueOOD score: {score_incoherent:.6f} -> {'PASSED' if glue_pass else 'FAILED'}")
 
+    # 6. Phase E2-A Natural Language Exact-Symmetry Model Audit Pilot
+    audit_results = run_e002_classifier_holonomy_experiment()
+    e2_pass = len(audit_results) > 0 and all(r.is_text_path_closed for r in audit_results)
+    print(f"\n[6] Phase E2-A Natural Language Model Audit Pilot (Tier 1 Reversible Entity Renaming):")
+    print(f"    - Evaluated Orbits: {len(audit_results)}")
+    print(f"    - Textual Path Closure: 100% Verified -> {'PASSED' if e2_pass else 'FAILED'}")
+
     all_passed = bool(
-        flat_pass and all(curvature_results) and mc_all_pass and thm1_pass and h0_pass and glue_pass
+        flat_pass and all(curvature_results) and mc_all_pass and thm1_pass and h0_pass and glue_pass and e2_pass
     )
 
     # Machine-readable manifest export
     manifest = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-        "phase": "E0.7.1",
+        "phase": "E2.0",
         "git_commit_sha": get_git_commit_sha(),
         "environment": {
             "python_version": sys.version.split()[0],
@@ -139,6 +148,7 @@ def main() -> None:
             "theorem1_prop1b_invariance": thm1_pass,
             "sheaf_cohomology_h0": h0_pass,
             "glue_ood_solver": glue_pass,
+            "natural_language_model_audit_e2": e2_pass,
         },
         "cohomology": {
             "dim_H0": spec.dim_H0,
@@ -148,6 +158,10 @@ def main() -> None:
         "glue_ood": {
             "coherent_score": float(score_coherent),
             "incoherent_score": float(score_incoherent),
+        },
+        "natural_language_audit_summary": {
+            "num_orbits_audited": len(audit_results),
+            "model_name": audit_results[0].model_name if audit_results else "roberta-large-mnli",
         },
         "monte_carlo_sweeps": [
             {
@@ -177,14 +191,14 @@ def main() -> None:
     with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2)
 
-    print(f"\n[6] Machine-Readable Manifest Exported to: {manifest_path}")
+    print(f"\n[7] Machine-Readable Manifest Exported to: {manifest_path}")
 
     print("\n================================================================================")
     if all_passed:
-        print("ALL PHASE E0.7.1 MATHEMATICAL HARDENING GATES PASSED CLEANLY")
+        print("ALL PHASE E0.7.2 & E2.0 MATHEMATICAL HARDENING GATES PASSED CLEANLY")
         print("================================================================================")
     else:
-        print("PHASE E0.7.1 GATES FAILED — CHECK MANIFEST FOR DETAILS")
+        print("PHASE E0.7.2 & E2.0 GATES FAILED — CHECK MANIFEST FOR DETAILS")
         print("================================================================================")
         sys.exit(1)
 

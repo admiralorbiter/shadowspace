@@ -1,8 +1,8 @@
-"""Generative Ambiguity World Simulator (Phase E0.7.1).
+"""Generative Ambiguity World Simulator (Phase E0.7.2).
 
 Generates human and model probability distributions p(x) in Delta^2 over canonical formal states
 by transforming interpreter weights in ILR weight space: u(gx) = K_g u(x) + c_g.
-Uses an identity observation matrix L_x = I_3 so ILR weight dynamics map directly to ILR observation space.
+Supports epsilon = 0.0 for exact ground truth ILR mapping without smoothing scale distortion.
 """
 
 from __future__ import annotations
@@ -23,13 +23,12 @@ class GenerativeWorld:
         self,
         interpreters: Sequence[LatentInterpreter] | None = None,
         num_classes: int = 3,
-        epsilon: float = 1e-4,
+        epsilon: float = 0.0,
     ) -> None:
         self.interpreters = list(interpreters or STANDARD_INTERPRETERS)
         self.num_classes = num_classes
         self.epsilon = epsilon
         self.num_interpreters = len(self.interpreters)
-        # Identity observation matrix L_x mapping weight vector w in Delta^2 to class probabilities p in Delta^2
         self.observation_matrix_L = np.eye(3, dtype=np.float64)
 
     def generate_distribution_from_weights(
@@ -37,8 +36,11 @@ class GenerativeWorld:
     ) -> NDArray[np.float64]:
         """Maps weight vector w in Delta^2 to class probability vector p in Delta^2 via L_x."""
         w_clean = weights / weights.sum()
-        p = np.dot(self.observation_matrix_L, w_clean)
-        p = (1.0 - self.epsilon) * p + (self.epsilon / self.num_classes)
+        p_raw = np.dot(self.observation_matrix_L, w_clean)
+        if self.epsilon > 0.0:
+            p = (1.0 - self.epsilon) * p_raw + (self.epsilon / self.num_classes)
+        else:
+            p = p_raw
         return p / p.sum()
 
 
