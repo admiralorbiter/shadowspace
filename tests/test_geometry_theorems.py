@@ -97,3 +97,38 @@ def test_ambiguity_angle_temperature_invariance():
         assert np.allclose(theta_T, theta_1, atol=1e-12), f"Ambiguity angle changed at T={T}"
 
 
+def probs_to_ilr(p: np.ndarray, alpha: float = 1e-12) -> np.ndarray:
+    """Isometric Log-Ratio (ILR) transform for 3-class probability vectors to 2D orthonormal space."""
+    p_safe = np.clip(p, alpha, 1.0)
+    p_safe = p_safe / np.sum(p_safe, axis=-1, keepdims=True)
+    log_p = np.log(p_safe)
+    x1 = (log_p[..., 0] - log_p[..., 1]) / np.sqrt(2.0)
+    x2 = (log_p[..., 0] + log_p[..., 1] - 2.0 * log_p[..., 2]) / np.sqrt(6.0)
+    return np.stack([x1, x2], axis=-1)
+
+
+def ilr_to_probs(x: np.ndarray) -> np.ndarray:
+    """Inverse ILR transform from 2D orthonormal space to 3-class probability simplex."""
+    x1 = x[..., 0]
+    x2 = x[..., 1]
+    clr1 = x1 / np.sqrt(2.0) + x2 / np.sqrt(6.0)
+    clr2 = -x1 / np.sqrt(2.0) + x2 / np.sqrt(6.0)
+    clr3 = -2.0 * x2 / np.sqrt(6.0)
+    clr = np.stack([clr1, clr2, clr3], axis=-1)
+    clr_max = np.max(clr, axis=-1, keepdims=True)
+    exp_clr = np.exp(clr - clr_max)
+    return exp_clr / np.sum(exp_clr, axis=-1, keepdims=True)
+
+
+def test_ilr_roundtrip_identity():
+    """Assert theorem: ilr_to_probs(probs_to_ilr(P)) == P."""
+    rng = np.random.default_rng(20260803)
+    P = rng.dirichlet([0.5, 0.5, 0.5], size=100)
+    
+    X_ilr = probs_to_ilr(P)
+    P_rec = ilr_to_probs(X_ilr)
+    
+    assert np.allclose(P_rec, P, atol=1e-10), "ILR roundtrip identity failed!"
+
+
+

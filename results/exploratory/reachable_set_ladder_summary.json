@@ -5,106 +5,106 @@
     "albert-xxlarge": {
       "tier_0_raw": {
         "d_hellinger_mean": 0.29232357395335384,
-        "ambiguity_angle_deg_mean": 33.25889305809506,
-        "relational_overlap_O": 0.010599212330661096
+        "ambiguity_angle_deg_mean": 33.2588930558939,
+        "Q_support_raw": 0.12612832519231493
       },
       "tier_1_scalar_temp": {
-        "dof_description": "1 DoF (Positive Ray in CLR space)",
-        "heldout_d_hellinger_mean": 0.2136615196498566,
-        "heldout_ambiguity_angle_deg_mean": 33.2588930582368,
-        "angle_reduction_deg": -1.4173906492942479e-10,
-        "heldout_relational_overlap_O": 0.010684622155871754
+        "dof_description": "1 DoF (Positive Ray in CLR/ILR space)",
+        "heldout_d_hellinger_mean": 0.2137008531216279,
+        "heldout_ambiguity_angle_deg_mean": 33.25889305603682,
+        "angle_reduction_deg": -1.4291856587078655e-10,
+        "fold_coherent_Q_support": 0.010903308705428846
       },
-      "tier_2_diagonal_scaling": {
-        "dof_description": "3 params / 2 CLR DoF (Positive Cone, w = exp(s) > 0)",
-        "heldout_d_hellinger_mean": 0.20984891513654555,
-        "heldout_ambiguity_angle_deg_mean": 33.009859350703046,
-        "angle_reduction_deg": 0.2490337073920159,
-        "heldout_relational_overlap_O": 0.010429098955440105
+      "tier_2_diagonal_ilr_scaling": {
+        "dof_description": "2 DoF (Positive Cone in ILR space, diag(a, b) > 0)",
+        "heldout_d_hellinger_mean": 0.21366054700918136,
+        "heldout_ambiguity_angle_deg_mean": 33.33786202454416,
+        "angle_reduction_deg": -0.07896896865025838,
+        "fold_coherent_Q_support": 0.010875682621265663
       },
-      "tier_3_affine_softmax": {
-        "dof_description": "12 params / 8 identifiable DoF / 6 CLR DoF (Affine Subspace)",
-        "heldout_d_hellinger_mean": 0.19217814333396552,
-        "heldout_ambiguity_angle_deg_mean": 28.764703148914208,
-        "angle_reduction_deg": 4.494189909180854,
-        "heldout_relational_overlap_O": 0.010927619334300993
+      "tier_3_affine_ilr_map": {
+        "dof_description": "6 DoF (Affine Subspace in ILR space, A x + b)",
+        "heldout_d_hellinger_mean": 0.19336762800573487,
+        "heldout_ambiguity_angle_deg_mean": 28.985047876504705,
+        "angle_reduction_deg": 4.273845179389195,
+        "fold_coherent_Q_support": 0.010614840989399292
       },
-      "tier_4_nonlinear_mlp": {
-        "dof_description": "2-Layer MLP (Flexible Simplex Surface)",
-        "heldout_d_hellinger_mean": 0.3053758817029838,
-        "heldout_ambiguity_angle_deg_mean": 32.16378766004611,
-        "angle_reduction_deg": 1.0951053980489505,
-        "heldout_relational_overlap_O": 0.009883393991167843
+      "tier_4_nonlinear_ilr_mlp": {
+        "dof_description": "Nonlinear ILR MLP (Simplex Surface)",
+        "heldout_d_hellinger_mean": 0.22622805481195374,
+        "heldout_ambiguity_angle_deg_mean": 29.876392216230563,
+        "angle_reduction_deg": 3.3825008396633365,
+        "fold_coherent_Q_support": 0.010522325730806296
       }
     },
     "bart-large": {
       "tier_0_raw": {
-        "d_hellinger_mean": 0.2847624974480442,
-        "ambiguity_angle_deg_mean": 30.846753022501968,
-        "relational_overlap_O": 0.010976367299046387
+        "d_hellinger_mean": 0.28476249744804427,
+        "ambiguity_angle_deg_mean": 30.84675300810141,
+        "Q_support_raw": 0.12612832519231493
       },
       "tier_1_scalar_temp": {
-        "dof_description": "1 DoF (Positive Ray in CLR space)",
-        "heldout_d_hellinger_mean": 0.20915567903051713,
-        "heldout_ambiguity_angle_deg_mean": 30.846753023740373,
-        "angle_reduction_deg": -1.2384049341562786e-09,
-        "heldout_relational_overlap_O": 0.010815845467307081
+        "dof_description": "1 DoF (Positive Ray in CLR/ILR space)",
+        "heldout_d_hellinger_mean": 0.2091432241055691,
+        "heldout_ambiguity_angle_deg_mean": 30.846753009351076,
+        "angle_reduction_deg": -1.2496670365180762e-09,
+        "fold_coherent_Q_support": 0.010321876003854803
       },
-      "tier_2_diagonal_scaling": {
-        "dof_description": "3 params / 2 CLR DoF (Positive Cone, w = exp(s) > 0)",
-        "heldout_d_hellinger_mean": 0.2062624781517545,
-        "heldout_ambiguity_angle_deg_mean": 30.7670808887109,
-        "angle_reduction_deg": 0.07967213379106752,
-        "heldout_relational_overlap_O": 0.010274179723264209
+      "tier_2_diagonal_ilr_scaling": {
+        "dof_description": "2 DoF (Positive Cone in ILR space, diag(a, b) > 0)",
+        "heldout_d_hellinger_mean": 0.20830847336802863,
+        "heldout_ambiguity_angle_deg_mean": 31.053591309009686,
+        "angle_reduction_deg": -0.20683830090827726,
+        "fold_coherent_Q_support": 0.010306456794089303
       },
-      "tier_3_affine_softmax": {
-        "dof_description": "12 params / 8 identifiable DoF / 6 CLR DoF (Affine Subspace)",
-        "heldout_d_hellinger_mean": 0.187138378330393,
-        "heldout_ambiguity_angle_deg_mean": 27.332862247619875,
-        "angle_reduction_deg": 3.5138907748820927,
-        "heldout_relational_overlap_O": 0.011011635507298854
+      "tier_3_affine_ilr_map": {
+        "dof_description": "6 DoF (Affine Subspace in ILR space, A x + b)",
+        "heldout_d_hellinger_mean": 0.1874006574548198,
+        "heldout_ambiguity_angle_deg_mean": 27.276587881902316,
+        "angle_reduction_deg": 3.570165126199093,
+        "fold_coherent_Q_support": 0.010267266302601993
       },
-      "tier_4_nonlinear_mlp": {
-        "dof_description": "2-Layer MLP (Flexible Simplex Surface)",
-        "heldout_d_hellinger_mean": 0.3029866058402179,
-        "heldout_ambiguity_angle_deg_mean": 30.24964254530872,
-        "angle_reduction_deg": 0.5971104771932474,
-        "heldout_relational_overlap_O": 0.01017698678877606
+      "tier_4_nonlinear_ilr_mlp": {
+        "dof_description": "Nonlinear ILR MLP (Simplex Surface)",
+        "heldout_d_hellinger_mean": 0.2188331020650923,
+        "heldout_ambiguity_angle_deg_mean": 28.232956390559004,
+        "angle_reduction_deg": 2.6137966175424054,
+        "fold_coherent_Q_support": 0.01040154192097655
       }
     },
     "roberta-large": {
       "tier_0_raw": {
         "d_hellinger_mean": 0.28286560389742893,
-        "ambiguity_angle_deg_mean": 29.029590535489444,
-        "relational_overlap_O": 0.010749128624168781
+        "ambiguity_angle_deg_mean": 29.029590515551725,
+        "Q_support_raw": 0.12612832519231493
       },
       "tier_1_scalar_temp": {
-        "dof_description": "1 DoF (Positive Ray in CLR space)",
-        "heldout_d_hellinger_mean": 0.20129181585301115,
-        "heldout_ambiguity_angle_deg_mean": 29.02959053559678,
-        "angle_reduction_deg": -1.0733458566392073e-10,
-        "heldout_relational_overlap_O": 0.010683257920649504
+        "dof_description": "1 DoF (Positive Ray in CLR/ILR space)",
+        "heldout_d_hellinger_mean": 0.2012638577261411,
+        "heldout_ambiguity_angle_deg_mean": 29.02959051565907,
+        "angle_reduction_deg": -1.0734524380495714e-10,
+        "fold_coherent_Q_support": 0.010900738837134598
       },
-      "tier_2_diagonal_scaling": {
-        "dof_description": "3 params / 2 CLR DoF (Positive Cone, w = exp(s) > 0)",
-        "heldout_d_hellinger_mean": 0.19716268822018684,
-        "heldout_ambiguity_angle_deg_mean": 28.629471332731693,
-        "angle_reduction_deg": 0.40011920275775026,
-        "heldout_relational_overlap_O": 0.011039061235013692
+      "tier_2_diagonal_ilr_scaling": {
+        "dof_description": "2 DoF (Positive Cone in ILR space, diag(a, b) > 0)",
+        "heldout_d_hellinger_mean": 0.20052641720987271,
+        "heldout_ambiguity_angle_deg_mean": 29.21825037234686,
+        "angle_reduction_deg": -0.18865985679513386,
+        "fold_coherent_Q_support": 0.010901381304208162
       },
-      "tier_3_affine_softmax": {
-        "dof_description": "12 params / 8 identifiable DoF / 6 CLR DoF (Affine Subspace)",
-        "heldout_d_hellinger_mean": 0.18228729961106657,
-        "heldout_ambiguity_angle_deg_mean": 25.977953871668255,
-        "angle_reduction_deg": 3.0516366638211885,
-        "heldout_relational_overlap_O": 0.01117917908553951
+      "tier_3_affine_ilr_map": {
+        "dof_description": "6 DoF (Affine Subspace in ILR space, A x + b)",
+        "heldout_d_hellinger_mean": 0.18222107522570874,
+        "heldout_ambiguity_angle_deg_mean": 26.06395427750902,
+        "angle_reduction_deg": 2.9656362380427055,
+        "fold_coherent_Q_support": 0.010920655316415034
       },
-      "tier_4_nonlinear_mlp": {
-        "dof_description": "2-Layer MLP (Flexible Simplex Surface)",
-        "heldout_d_hellinger_mean": 0.3012599949934824,
-        "heldout_ambiguity_angle_deg_mean": 29.218499792717882,
-        "angle_reduction_deg": -0.18890925722843832,
-        "heldout_relational_overlap_O": 0.01219310305641819
+      "tier_4_nonlinear_ilr_mlp": {
+        "dof_description": "Nonlinear ILR MLP (Simplex Surface)",
+        "heldout_d_hellinger_mean": 0.21259203704731788,
+        "heldout_ambiguity_angle_deg_mean": 26.752161008996254,
+        "angle_reduction_deg": 2.277429506555471,
+        "fold_coherent_Q_support": 0.010581432701574045
       }
     }
   }
