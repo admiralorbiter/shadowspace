@@ -1,0 +1,13 @@
+{
+  "lpe_raw_600_sha256": "717e24bf2984d54861c9efc2085bfe28ca0b196e685692767c163d68bb9c70da",
+  "lpe_val_20_sha256": "3918ffb7e6ed04bfb5d45bd828c6bd0de52614e35834ae6748d911e77f1ee89c",
+  "manifest_pilot_600_sha256": "318c67354242771d2812b0d26dbd3d89e084ecc0afece250cae453d6531f4851",
+  "manifest_preflight_60_sha256": "a5134a5117548b3fa2fb8e43d2b059566d08637aadffebfeadf25f0463b515fd",
+  "runner_file": "research/chaosnli/lab/e004_ollama_runner.py",
+  "audit_file": "research/chaosnli/lab/e004_extraction_audit.py",
+  "prompt_version": "v2",
+  "symbol_set": "ABC",
+  "ollama_version": "0.32.5",
+  "model_tag": "gemma3:12b",
+  "timestamp_utc": "2026-08-03T22:57:00Z"
+}

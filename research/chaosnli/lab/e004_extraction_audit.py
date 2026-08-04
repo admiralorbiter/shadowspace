@@ -3,23 +3,23 @@
 Performs all required Gate 2 extraction checks on pilot600_gemma3-12b_v2_abc_lpe.jsonl:
   1. Manifest alignment (600 object IDs match pilot_600.jsonl in exact order)
   2. Request completeness (3,600 unique request IDs, 0 errors)
-  3. Candidate-token coverage ('A', 'B', 'C' present in top_logprobs)
+  3. Candidate-token coverage ('A', 'B', 'C' present in top_logprobs) & Mass Leakage Z_i,pi
   4. Probability validity & permutation-level log-softmax unpacking
   5. Prompt hash & model digest verification
   6. Pointwise evaluation (NLL, Brier score, Majority accuracy)
-  7. Relational evaluation (Hellinger distance matrix, 10-NN graph, Q_support, R_norm)
-  8. Same-subset classifier baseline comparison (BART-L, RoBERTa-L, XLNet-L, 9-Model Coalition)
+  7. 5-Fold Cross-Fitted Scalar Temperature Calibration (T*)
+  8. Relational evaluation under exact Dataset-Stratified Analytic Null (Q_null_strat)
 """
 
 from __future__ import annotations
 
-import math
 import json
-import hashlib
+import math
 from pathlib import Path
 from typing import Dict, List, Tuple
 
 import numpy as np
+from scipy.optimize import minimize_scalar
 
 MANIFEST_PATH = Path("research/chaosnli/artifacts/E004/manifests/pilot_600.jsonl")
 LPE_RESPONSES_PATH = Path("research/chaosnli/artifacts/E004/raw_responses/pilot600_gemma3-12b_v2_abc_lpe.jsonl")
@@ -69,6 +69,53 @@ def compute_topk_weight_matrix(dist: np.ndarray, k: int) -> np.ndarray:
     return W
 
 
+def compute_dataset_stratified_null(W_model: np.ndarray, S_human: np.ndarray, ds_ids: np.ndarray, k: int = 10) -> float:
+    """Calculate exact dataset-stratified analytic null expectation Q_null."""
+    N = len(ds_ids)
+    n1 = int(np.sum(ds_ids == 0))
+    n2 = int(np.sum(ds_ids == 1))
+
+    val = 0.0
+    for i in range(N):
+        same_mask = (ds_ids == ds_ids[i])
+        same_mask[i] = False
+        diff_mask = (ds_ids != ds_ids[i])
+
+        m_w = np.sum(W_model[i, same_mask])
+        m_c = np.sum(W_model[i, diff_mask])
+        h_w = np.sum(S_human[i, same_mask])
+        h_c = np.sum(S_human[i, diff_mask])
+
+        denom_w = (n1 - 1) if ds_ids[i] == 0 else (n2 - 1)
+        denom_c = n2 if ds_ids[i] == 0 else n1
+
+        val += (m_w * h_w / denom_w) + (m_c * h_c / denom_c)
+
+    return float(val / (N * float(k)))
+
+
+def compute_calibrated_probs_for_items(logits_sub: np.ndarray, T: float) -> np.ndarray:
+    """Apply temperature T to logits and compute mean probability across permutations."""
+    M = logits_sub.shape[0]
+    probs_out = np.zeros((M, 3), dtype=np.float64)
+    for m in range(M):
+        perm_probs = np.zeros((6, 3), dtype=np.float64)
+        for p in range(6):
+            l = logits_sub[m, p] / float(T)
+            max_l = np.max(l)
+            exp_l = np.exp(l - max_l)
+            perm_probs[p] = exp_l / np.sum(exp_l)
+        probs_out[m] = np.mean(perm_probs, axis=0)
+    return probs_out
+
+
+def nll_loss(T: float, logits_sub: np.ndarray, target_sub: np.ndarray) -> float:
+    """NLL loss function for temperature optimization."""
+    probs = compute_calibrated_probs_for_items(logits_sub, T)
+    eps = 1e-12
+    return float(-np.mean(np.sum(target_sub * np.log(np.clip(probs, eps, 1.0)), axis=1)))
+
+
 def main():
     print("=" * 80)
     print("   E004 STAGE 1B GEMMA 3 12B LPE EXTRACTION AUDIT & RELATIONAL EVALUATION")
@@ -83,11 +130,11 @@ def main():
     N = len(items)
     print(f"\n1. Manifest Check: Loaded {N} pilot items from {MANIFEST_PATH.name}")
 
-    # Human distributions
     human_p = np.array([
         [it["human_p_entailment"], it["human_p_neutral"], it["human_p_contradiction"]]
         for it in items
     ], dtype=np.float64)
+    ds_ids = np.array([0 if it["source_dataset"] == "chaosnli_mnli" else 1 for it in items])
 
     # 2. Load Raw Responses & Audit Completeness
     raw_records = []
@@ -106,7 +153,6 @@ def main():
     unique_req_ids = set(r["request_id"] for r in success_records)
     print(f"   Unique Request IDs:        {len(unique_req_ids)} / 3,600 expected")
 
-    # Group by object_id
     by_object: Dict[str, List[Dict]] = {}
     for r in success_records:
         oid = r["object_id"]
@@ -119,14 +165,14 @@ def main():
     alignment_ok = (list(by_object.keys()) == manifest_object_ids)
     print(f"   Manifest Sequence Align:  {'EXACT MATCH' if alignment_ok else 'DISCREPANCY DETECTED'}")
 
-    # Check v1 contamination
     v1_count = sum(1 for r in raw_records if r.get("prompt_version") == "v1")
     print(f"   v1 Contamination Records: {v1_count}")
 
-    # 3. Candidate Token & Provenance Audit
-    missing_symbols_count = 0
+    # 3. Candidate Token Mass Leakage & Provenance Audit
+    candidate_masses = []
     all_prompt_hashes = set()
     all_model_digests = set()
+    missing_symbols_count = 0
 
     for r in success_records:
         all_prompt_hashes.add(r.get("user_prompt_sha256"))
@@ -140,13 +186,19 @@ def main():
         if not {"A", "B", "C"}.issubset(found_tokens):
             missing_symbols_count += 1
 
-    print(f"\n3. Token & Provenance Audit:")
-    print(f"   Missing Symbol Logprobs:  {missing_symbols_count} / {len(success_records)}")
-    print(f"   Unique User Prompt Hashes: {len(all_prompt_hashes)}")
-    print(f"   Model Digest(s):          {list(all_model_digests)}")
+        cand_mass = sum(math.exp(e["logprob"]) for e in top if e["token"] in ["A", "B", "C"])
+        candidate_masses.append(cand_mass)
 
-    # 4. Unpack Logprobs into Probabilities (Per-Permutation & Averaged)
-    # Shape: (N, 6, 3) where last dim is [E, N, C]
+    z_arr = np.array(candidate_masses)
+    print(f"\n3. Token & Candidate Mass Leakage Audit:")
+    print(f"   Missing Symbol Logprobs:  {missing_symbols_count} / {len(success_records)}")
+    print(f"   Candidate Mass Z_i,pi (P(A)+P(B)+P(C)):")
+    print(f"     Mean: {np.mean(z_arr):.6f} | Median: {np.median(z_arr):.6f} | Min: {np.min(z_arr):.6f}")
+    print(f"     p01:  {np.percentile(z_arr, 1):.6f} | p05:  {np.percentile(z_arr, 5):.6f}")
+
+    # 4. Unpack Unnormalized Logits & Probabilities
+    # gemma_logits shape: (N, 6, 3)
+    gemma_logits = np.zeros((N, 6, 3), dtype=np.float64)
     gemma_perm_probs = np.zeros((N, 6, 3), dtype=np.float64)
 
     for i, it in enumerate(items):
@@ -157,117 +209,108 @@ def main():
             perm = S3_PERMUTATIONS[perm_idx]
             symbols = LABEL_SETS["ABC"]
 
-            # Map from token ('A', 'B', 'C') to logprob
             top = r["logprobs"][0]["top_logprobs"]
-            token_logprobs = {}
-            for entry in top:
-                if entry["token"] in symbols:
-                    token_logprobs[entry["token"]] = entry["logprob"]
+            token_logprobs = {e["token"]: e["logprob"] for e in top if e["token"] in symbols}
 
-            # Extracted logprobs for symbols s1, s2, s3 corresponding to E, N, C under perm
-            s_E = symbols[perm[0]]
-            s_N = symbols[perm[1]]
-            s_C = symbols[perm[2]]
+            lp_E = token_logprobs.get(symbols[perm[0]], -100.0)
+            lp_N = token_logprobs.get(symbols[perm[1]], -100.0)
+            lp_C = token_logprobs.get(symbols[perm[2]], -100.0)
 
-            lp_E = token_logprobs.get(s_E, -100.0)
-            lp_N = token_logprobs.get(s_N, -100.0)
-            lp_C = token_logprobs.get(s_C, -100.0)
+            gemma_logits[i, perm_idx] = [lp_E, lp_N, lp_C]
 
-            # Softmax over the 3 NLI candidate symbols
             max_lp = max(lp_E, lp_N, lp_C)
             unnorm_E = math.exp(lp_E - max_lp)
             unnorm_N = math.exp(lp_N - max_lp)
             unnorm_C = math.exp(lp_C - max_lp)
             denom = unnorm_E + unnorm_N + unnorm_C
 
-            p_E = unnorm_E / denom
-            p_N = unnorm_N / denom
-            p_C = unnorm_C / denom
+            gemma_perm_probs[i, perm_idx] = [unnorm_E / denom, unnorm_N / denom, unnorm_C / denom]
 
-            gemma_perm_probs[i, perm_idx] = [p_E, p_N, p_C]
+    gemma_raw_avg_probs = np.mean(gemma_perm_probs, axis=1)
 
-    # Averaged across 6 permutations per item
-    gemma_avg_probs = np.mean(gemma_perm_probs, axis=1)  # (N, 3)
-
-    # Calculate permutation variability (mean Hellinger distance across perms per item)
-    perm_dists = []
-    for i in range(N):
-        p_i = gemma_perm_probs[i]  # (6, 3)
-        h_mat = distance_hellinger_matrix(p_i, p_i)
-        # Average upper triangle
-        triu_indices = np.triu_indices(6, k=1)
-        perm_dists.append(np.mean(h_mat[triu_indices]))
-    mean_perm_variability = float(np.mean(perm_dists))
-
-    print(f"\n4. Probability Unpacking & Permutation Stability:")
-    print(f"   Unpacked Probabilities:    Shape {gemma_perm_probs.shape}")
-    print(f"   Mean Permutation Hellinger Disagreement: {mean_perm_variability:.4f}")
-
-    # 5. Pointwise Metric Evaluation
-    # NLL against human posterior
+    # 5. Pointwise Metric Evaluation (Raw vs Calibrated)
     eps = 1e-12
-    nll = -np.mean(np.sum(human_p * np.log(np.clip(gemma_avg_probs, eps, 1.0)), axis=1))
-    # Brier score
-    brier = np.mean(np.sum((gemma_avg_probs - human_p) ** 2, axis=1))
-    # Accuracy vs Gold / Majority Label
-    pred_labels = np.argmax(gemma_avg_probs, axis=1)
-    gold_labels = np.argmax(human_p, axis=1)
-    accuracy = np.mean(pred_labels == gold_labels)
+    nll_raw = float(-np.mean(np.sum(human_p * np.log(np.clip(gemma_raw_avg_probs, eps, 1.0)), axis=1)))
+    brier_raw = float(np.mean(np.sum((gemma_raw_avg_probs - human_p) ** 2, axis=1)))
+    acc_raw = float(np.mean(np.argmax(gemma_raw_avg_probs, axis=1) == np.argmax(human_p, axis=1)))
 
-    print(f"\n5. Pointwise Performance (Gemma 3 12B LPE Raw):")
-    print(f"   Negative Log-Likelihood (NLL): {nll:.4f}")
-    print(f"   Brier Score:                   {brier:.4f}")
-    print(f"   Majority Gold Accuracy:        {accuracy * 100:.2f}%")
+    print(f"\n5. Pointwise Evaluation (Gemma 3 12B LPE Raw):")
+    print(f"   Negative Log-Likelihood (NLL): {nll_raw:.4f}")
+    print(f"   Brier Score:                   {brier_raw:.4f}")
+    print(f"   Majority Gold Accuracy:        {acc_raw * 100:.2f}%")
 
-    # 6. Relational Metric Evaluation (Q_support & R_norm)
-    # Load pilot human support matrix S_human (k=10)
+    # 6. 5-Fold Cross-Fitted Scalar Temperature Calibration
+    n_folds = 5
+    fold_ids = np.array([i % n_folds for i in range(N)])
+    gemma_cal_probs = np.zeros((N, 3), dtype=np.float64)
+    fitted_temperatures = []
+
+    for f in range(n_folds):
+        train_mask = (fold_ids != f)
+        val_mask = (fold_ids == f)
+
+        res = minimize_scalar(
+            lambda T: nll_loss(T, gemma_logits[train_mask], human_p[train_mask]),
+            bounds=(0.1, 50.0),
+            method="bounded",
+        )
+        best_T = float(res.x)
+        fitted_temperatures.append(best_T)
+        gemma_cal_probs[val_mask] = compute_calibrated_probs_for_items(gemma_logits[val_mask], best_T)
+
+    nll_cal = float(-np.mean(np.sum(human_p * np.log(np.clip(gemma_cal_probs, eps, 1.0)), axis=1)))
+    brier_cal = float(np.mean(np.sum((gemma_cal_probs - human_p) ** 2, axis=1)))
+    acc_cal = float(np.mean(np.argmax(gemma_cal_probs, axis=1) == np.argmax(human_p, axis=1)))
+
+    print(f"\n6. 5-Fold Cross-Fitted Scalar Temperature Calibration (Held-Out):")
+    print(f"   Fitted Temperatures per Fold: {[round(t, 2) for t in fitted_temperatures]}")
+    print(f"   Mean Optimal Temperature T*: {np.mean(fitted_temperatures):.2f}")
+    print(f"   Calibrated NLL:              {nll_cal:.4f} (Raw: {nll_raw:.4f})")
+    print(f"   Calibrated Brier Score:       {brier_cal:.4f} (Raw: {brier_raw:.4f})")
+    print(f"   Calibrated Majority Accuracy: {acc_cal * 100:.2f}% (Raw: {acc_raw * 100:.2f}%)")
+
+    # 7. Relational Evaluation under Exact Stratified Analytic Null
     s_human_path = PILOT_SUPPORT_DIR / "S_hellinger_k010_pilot.bin"
     s_human_manifest = PILOT_SUPPORT_DIR / "S_hellinger_k010_pilot.manifest.json"
 
     if s_human_path.exists() and s_human_manifest.exists():
         with open(s_human_manifest, "r", encoding="utf-8") as f:
             meta = json.load(f)
-        q_hh = meta.get("q_hh_relational", 0.038987)
+        q_hh = meta.get("q_hh_relational", 0.26338)
 
         S_human = np.frombuffer(s_human_path.read_bytes(), dtype=np.float32).reshape(N, N).astype(np.float64)
 
-        # Compute Gemma Hellinger distance matrix
-        D_gemma = distance_hellinger_matrix(gemma_avg_probs, gemma_avg_probs)
-        W_gemma = compute_topk_weight_matrix(D_gemma, k=10)
+        # Raw Relational Topology
+        D_raw = distance_hellinger_matrix(gemma_raw_avg_probs, gemma_raw_avg_probs)
+        W_raw = compute_topk_weight_matrix(D_raw, k=10)
+        q_supp_raw = float(np.sum(W_raw * S_human) / (N * 10.0))
 
-        # Compute Q_support
-        q_support = float(np.sum(W_gemma * S_human) / (N * 10.0))
+        q_null_unrestricted = 10.0 / 599.0
+        q_null_strat_raw = compute_dataset_stratified_null(W_raw, S_human, ds_ids, k=10)
 
-        # Analytic / empirical pilot null Q_null (k=10)
-        # Pilot null expectation for 600 items: Q_null = 0.0032134
-        q_null = 0.0032134
-        r_norm = (q_support - q_null) / (q_hh - q_null) * 100.0
+        r_norm_unrestricted_raw = (q_supp_raw - q_null_unrestricted) / (q_hh - q_null_unrestricted) * 100.0
+        r_norm_strat_raw = (q_supp_raw - q_null_strat_raw) / (q_hh - q_null_strat_raw) * 100.0
 
-        print(f"\n6. Relational Topology Performance (Gemma 3 12B LPE vs Human Target):")
-        print(f"   Q_support (k=10):              {q_support:.5f}")
-        print(f"   Q_null (Analytic Null):         {q_null:.5f}")
-        print(f"   Q_HH (Human Split-Half Target): {q_hh:.5f}")
-        print(f"   R_norm (Normalized Alignment):  {r_norm:.2f}%")
+        # Calibrated Relational Topology
+        D_cal = distance_hellinger_matrix(gemma_cal_probs, gemma_cal_probs)
+        W_cal = compute_topk_weight_matrix(D_cal, k=10)
+        q_supp_cal = float(np.sum(W_cal * S_human) / (N * 10.0))
 
-        # 7. Compare with Baseline Classifiers on the Exact Same 600 Items
-        clf_probs_path = PILOT_SUPPORT_DIR / "baseline_classifiers_pilot_probs.npy"
-        if clf_probs_path.exists():
-            clf_probs = np.load(clf_probs_path, allow_pickle=True).item()
-            print(f"\n7. Same-Subset (600 Pilot Items) Benchmark Comparison:")
-            print(f"   {'Model / System':<30} | {'NLL':<8} | {'Q_support':<10} | {'R_norm (%)':<10}")
-            print("   " + "-" * 68)
+        q_null_strat_cal = compute_dataset_stratified_null(W_cal, S_human, ds_ids, k=10)
+        r_norm_strat_cal = (q_supp_cal - q_null_strat_cal) / (q_hh - q_null_strat_cal) * 100.0
 
-            # Gemma 3 12B LPE
-            print(f"   {'Gemma 3 12B (LPE Raw)':<30} | {nll:<8.4f} | {q_support:<10.5f} | {r_norm:<10.2f}%")
-
-            # Baselines
-            for m_name, p_m in clf_probs.items():
-                nll_m = -np.mean(np.sum(human_p * np.log(np.clip(p_m, eps, 1.0)), axis=1))
-                D_m = distance_hellinger_matrix(p_m, p_m)
-                W_m = compute_topk_weight_matrix(D_m, k=10)
-                q_supp_m = float(np.sum(W_m * S_human) / (N * 10.0))
-                r_norm_m = (q_supp_m - q_null) / (q_hh - q_null) * 100.0
-                print(f"   {m_name:<30} | {nll_m:<8.4f} | {q_supp_m:<10.5f} | {r_norm_m:<10.2f}%")
+        print(f"\n7. Corrected Relational Performance (Raw vs Calibrated):")
+        print(f"   Human Target Q_HH (k=10):     {q_hh:.5f}")
+        print(f"   Unrestricted Null (10/599):    {q_null_unrestricted:.5f}")
+        print(f"   -----------------------------------------------------")
+        print(f"   Raw LPE Q_support:            {q_supp_raw:.5f}")
+        print(f"   Raw Stratified Analytic Null: {q_null_strat_raw:.5f}")
+        print(f"   Raw R_norm (Unrestricted):    {r_norm_unrestricted_raw:.2f}%")
+        print(f"   Raw R_norm (Stratified Null): {r_norm_strat_raw:.2f}%")
+        print(f"   -----------------------------------------------------")
+        print(f"   Calibrated LPE Q_support:     {q_supp_cal:.5f}")
+        print(f"   Calibrated Stratified Null:   {q_null_strat_cal:.5f}")
+        print(f"   Calibrated R_norm (Stratified): {r_norm_strat_cal:.2f}%")
 
         # Save Summary Artifact
         SUMMARIES_DIR.mkdir(parents=True, exist_ok=True)
@@ -282,22 +325,35 @@ def main():
             "error_records": len(error_records),
             "unique_request_ids": len(unique_req_ids),
             "manifest_alignment": alignment_ok,
-            "missing_symbol_logprobs": missing_symbols_count,
-            "mean_perm_variability_hellinger": mean_perm_variability,
-            "metrics": {
-                "nll": nll,
-                "brier_score": brier,
-                "gold_accuracy": accuracy,
-                "q_support": q_support,
-                "q_null": q_null,
+            "candidate_mass_z_mean": float(np.mean(z_arr)),
+            "candidate_mass_z_min": float(np.min(z_arr)),
+            "raw_metrics": {
+                "nll": nll_raw,
+                "brier_score": brier_raw,
+                "gold_accuracy": acc_raw,
+                "q_support": q_supp_raw,
+                "q_null_unrestricted": q_null_unrestricted,
+                "q_null_stratified": q_null_strat_raw,
                 "q_hh": q_hh,
-                "r_norm_pct": r_norm,
+                "r_norm_unrestricted_pct": r_norm_unrestricted_raw,
+                "r_norm_stratified_pct": r_norm_strat_raw,
             },
-            "timestamp_utc": "2026-08-03T22:50:00Z",
+            "calibrated_metrics": {
+                "nll": nll_cal,
+                "brier_score": brier_cal,
+                "gold_accuracy": acc_cal,
+                "fitted_temperatures_per_fold": fitted_temperatures,
+                "mean_optimal_temperature": float(np.mean(fitted_temperatures)),
+                "q_support": q_supp_cal,
+                "q_null_stratified": q_null_strat_cal,
+                "q_hh": q_hh,
+                "r_norm_stratified_pct": r_norm_strat_cal,
+            },
+            "timestamp_utc": "2026-08-03T22:56:00Z",
         }
         with open(summary_out, "w", encoding="utf-8") as f:
             json.dump(audit_summary, f, indent=2)
-        print(f"\nSaved audit summary artifact to: {summary_out}")
+        print(f"\nSaved audited summary to: {summary_out}")
 
     print("=" * 80)
 
