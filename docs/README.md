@@ -440,3 +440,17 @@ current status.
 - [Study 2A exploratory text-space analysis](studies/chaosnli/STUDY2A_EXPLORATORY_TEXT_SPACE.md)
 - [Study 2B VariErr external validation](studies/chaosnli/STUDY2B_VARIERR_EXTERNAL_VALIDATION.md)
 - [Unified paper draft](studies/chaosnli/UNIFIED_PAPER_DRAFT.md)
+
+## 15. Geometry of Human Disagreement — Knowledge Base
+
+The [`docs/temp/`](temp/README.md) directory contains the foundational research knowledge base for human disagreement geometry, analytical toolkit definitions, and moonshot applications:
+
+- [01 — Geometry of Human Disagreement](temp/01_geometry_of_human_disagreement.md): Simplex geometry, ambiguity classification, and annotator vs item spaces.
+- [02 — Mathematical Toolkit and Experiment Ledger](temp/02_math_and_experiment_ledger.md): Dirichlet posteriors, distance metrics (Hellinger, Fisher–Rao, JSD, Aitchison), fractional soft overlap $Q_{NX}^{\text{soft}}(k)$, and exact null definitions.
+- [03 — Dataset Landscape and Triangulation Plan](temp/03_dataset_landscape.md): Primary ChaosNLI scope and external validation datasets (VariErr, Abductive NLI).
+- [04 — Moonshot Application Portfolio](temp/04_moonshot_portfolio.md): PluralityBench, resolution-preserving distillation, and domain applications.
+- [05 — Annotated Research Lineage](temp/05_annotated_research_lineage.md): Literature mapping across psychometrics, information geometry, and crowdsourcing.
+- [06 — High-Attention Hooks and Demonstrations](temp/06_high_attention_hooks.md): Visualization concepts, interactive hooks, and claim boundaries.
+
+> **E004 Ollama Dependency Link**: Experiment E004 (evaluating Gemma 3:12b via Ollama for Log-Probability Extraction LPE and Monte Carlo Elicitation MCE) evaluates predicted LLM distributions directly against the 100-vote human distributions and Dirichlet posteriors defined in [`02_math_and_experiment_ledger.md`](temp/02_math_and_experiment_ledger.md). Baseline metrics and $Q_{NX}^{\text{soft}}(k)$ reference bounds from Milestone 1 are locked in `results/canonical_results.json`.
+

@@ -22,6 +22,7 @@ shadowspace = "shadowspace.cli:main"
 [project.optional-dependencies]
 datasets = [
     "scikit-learn>=1.4.0",
+    "pillow>=10.0.0",
 ]
 research = [
     "scipy>=1.12.0",
@@ -84,6 +85,7 @@ mypy_path = "src"
 # Pytest
 # ---------------------------------------------------------------------------
 [tool.pytest.ini_options]
+pythonpath = ["src"]
 testpaths = ["tests"]
 addopts = "--cov=shadowspace --cov-report=term-missing -v"
 
