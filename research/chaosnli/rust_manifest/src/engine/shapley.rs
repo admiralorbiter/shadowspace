@@ -14,6 +14,7 @@ pub struct SubsetResult {
     pub nll: f64,
     pub jsd_bits: f64,
     pub q_support: f64,
+    pub q_excess: f64,
     pub r_normalized: f64,
 }
 
@@ -23,6 +24,7 @@ pub struct ShapleyResult {
     pub shapley_r_normalized: f64,
     pub shapley_nll_reduction: f64,
     pub shapley_q_support: f64,
+    pub shapley_q_excess: f64,
 }
 
 fn factorial(n: usize) -> f64 {
@@ -46,7 +48,8 @@ pub fn compute_ensemble_census_and_shapley(
     p_human: &[Vec<f64>],
     s_target: &[Vec<f64>],
     q_hh: f64,
-    q_null: f64,
+    q_null_global: f64,
+    q_prior_nll: f64,
     k: usize,
 ) -> (Vec<SubsetResult>, Vec<ShapleyResult>) {
     let m_num = model_names.len();
@@ -95,9 +98,10 @@ pub fn compute_ensemble_census_and_shapley(
             let dist_ens = distance_hellinger_matrix(&q_ens);
             let w_ens = compute_topk_weight_matrix(&dist_ens, k);
             let q_supp = evaluate_q_support(&w_ens, s_target, k);
+            let q_exc = q_supp - q_null_global;
 
             // R normalized
-            let r_norm = (q_supp - q_null) / (q_hh - q_null).max(1e-12);
+            let r_norm = (q_supp - q_null_global) / (q_hh - q_null_global).max(1e-12);
 
             let res = SubsetResult {
                 subset_mask: mask,
@@ -106,6 +110,7 @@ pub fn compute_ensemble_census_and_shapley(
                 nll: mean_nll,
                 jsd_bits: mean_jsd,
                 q_support: q_supp,
+                q_excess: q_exc,
                 r_normalized: r_norm,
             };
 
@@ -126,6 +131,7 @@ pub fn compute_ensemble_census_and_shapley(
         let mut phi_r = 0.0;
         let mut phi_nll = 0.0;
         let mut phi_q = 0.0;
+        let mut phi_exc = 0.0;
 
         for mask in 0..total_subsets {
             if (mask & bit) == 0 {
@@ -138,15 +144,20 @@ pub fn compute_ensemble_census_and_shapley(
                 let r_a = if mask == 0 { 0.0 } else { subset_results[mask].as_ref().unwrap().r_normalized };
                 let r_a_i = subset_results[mask_with_i].as_ref().unwrap().r_normalized;
 
-                let nll_a = if mask == 0 { 10.0 } else { subset_results[mask].as_ref().unwrap().nll };
+                // NLL reduction characteristic v(A) = q_prior_nll - NLL(A), v(empty) = 0
+                let nll_a = if mask == 0 { q_prior_nll } else { subset_results[mask].as_ref().unwrap().nll };
                 let nll_a_i = subset_results[mask_with_i].as_ref().unwrap().nll;
 
-                let q_a = if mask == 0 { q_null } else { subset_results[mask].as_ref().unwrap().q_support };
+                let q_a = if mask == 0 { q_null_global } else { subset_results[mask].as_ref().unwrap().q_support };
                 let q_a_i = subset_results[mask_with_i].as_ref().unwrap().q_support;
 
+                let exc_a = if mask == 0 { 0.0 } else { subset_results[mask].as_ref().unwrap().q_excess };
+                let exc_a_i = subset_results[mask_with_i].as_ref().unwrap().q_excess;
+
                 phi_r += weight * (r_a_i - r_a);
-                phi_nll += weight * (nll_a - nll_a_i); // positive for reduction
+                phi_nll += weight * (nll_a - nll_a_i); // NLL reduction
                 phi_q += weight * (q_a_i - q_a);
+                phi_exc += weight * (exc_a_i - exc_a);
             }
         }
 
@@ -155,8 +166,40 @@ pub fn compute_ensemble_census_and_shapley(
             shapley_r_normalized: phi_r,
             shapley_nll_reduction: phi_nll,
             shapley_q_support: phi_q,
+            shapley_q_excess: phi_exc,
         });
     }
+
+    // Shapley Efficiency Assertions
+    let grand_mask = total_subsets - 1;
+    let grand_res = subset_results[grand_mask].as_ref().unwrap();
+
+    let sum_phi_r: f64 = shapley_results.iter().map(|s| s.shapley_r_normalized).sum();
+    let sum_phi_nll: f64 = shapley_results.iter().map(|s| s.shapley_nll_reduction).sum();
+    let sum_phi_exc: f64 = shapley_results.iter().map(|s| s.shapley_q_excess).sum();
+
+    let target_nll_red = q_prior_nll - grand_res.nll;
+    let target_r = grand_res.r_normalized;
+    let target_exc = grand_res.q_excess;
+
+    assert!(
+        (sum_phi_r - target_r).abs() < 1e-6,
+        "Shapley efficiency failed for R_normalized: sum={:.6}, grand={:.6}",
+        sum_phi_r,
+        target_r
+    );
+    assert!(
+        (sum_phi_nll - target_nll_red).abs() < 1e-6,
+        "Shapley efficiency failed for NLL reduction: sum={:.6}, grand={:.6}",
+        sum_phi_nll,
+        target_nll_red
+    );
+    assert!(
+        (sum_phi_exc - target_exc).abs() < 1e-6,
+        "Shapley efficiency failed for Q_excess: sum={:.6}, grand={:.6}",
+        sum_phi_exc,
+        target_exc
+    );
 
     let flat_subsets: Vec<SubsetResult> = subset_results.into_iter().flatten().collect();
 

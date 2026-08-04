@@ -6,6 +6,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 
+use chaosnli_engine::distance::soft_label_nll;
 use chaosnli_engine::shapley::{compute_ensemble_census_and_shapley, ShapleyResult, SubsetResult};
 use serde::{Deserialize, Serialize};
 
@@ -27,6 +28,7 @@ struct E007Summary {
     total_ensemble_subsets: usize,
     q_hh_relational: f64,
     q_null_stratified: f64,
+    q_prior_nll: f64,
     all_models: Vec<String>,
     shapley_attributions: Vec<ShapleyResult>,
     pareto_frontier_subsets: Vec<SubsetResult>,
@@ -111,6 +113,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|it| vec![it.human_p_entailment, it.human_p_neutral, it.human_p_contradiction])
         .collect();
 
+    // Calculate global class prior NLL baseline
+    let mean_p0 = p_human.iter().map(|v| v[0]).sum::<f64>() / (n as f64);
+    let mean_p1 = p_human.iter().map(|v| v[1]).sum::<f64>() / (n as f64);
+    let mean_p2 = p_human.iter().map(|v| v[2]).sum::<f64>() / (n as f64);
+    let prior_vec = vec![mean_p0, mean_p1, mean_p2];
+
+    let mut total_prior_nll = 0.0;
+    for i in 0..n {
+        total_prior_nll += soft_label_nll(&p_human[i], &prior_vec);
+    }
+    let q_prior_nll = total_prior_nll / (n as f64);
+
     let probs_file = File::open(&probs_json_path)?;
     let full_model_probs: HashMap<String, Vec<Vec<f64>>> = serde_json::from_reader(probs_file)?;
 
@@ -153,6 +167,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &s_k10,
         q_hh,
         q_null_stratified,
+        q_prior_nll,
         10,
     );
 
@@ -185,12 +200,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    println!("\n--- EXACT SHAPLEY ATTRIBUTION VALUES (R_normalized Contribution) ---");
+    println!("\n--- EXACT SHAPLEY ATTRIBUTION VALUES ---");
+    println!("Prior NLL baseline: {:.4} nats", q_prior_nll);
     let mut sorted_shapley = shapley.clone();
     sorted_shapley.sort_by(|a, b| b.shapley_r_normalized.partial_cmp(&a.shapley_r_normalized).unwrap());
     for s in &sorted_shapley {
         println!(
-            "  {:>15}: phi_R = {:>+6.2}% | phi_NLL = {:>+.4} nats | phi_Q = {:>+.5}",
+            "  {:>15}: phi_R = {:>+6.2}% | phi_NLL_reduction = {:>+.4} nats | phi_Q = {:>+.5}",
             s.model_name,
             s.shapley_r_normalized * 100.0,
             s.shapley_nll_reduction,
@@ -207,6 +223,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         total_ensemble_subsets: subsets.len(),
         q_hh_relational: q_hh,
         q_null_stratified,
+        q_prior_nll,
         all_models: canonical_models,
         shapley_attributions: shapley,
         pareto_frontier_subsets: best_by_size.values().cloned().collect(),

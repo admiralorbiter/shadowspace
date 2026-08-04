@@ -1,5 +1,5 @@
 /// E005: Conditional Null Ladder Experiment
-/// Evaluates the 6-level hierarchical null ladder N0..N5 across all model conditions.
+/// Evaluates the 6-level strictly nested hierarchical null ladder N0..N5 across all 9 classifiers + ensembles + human target.
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Deserialize)]
 struct ManifestItem {
+    row_index: usize,
     source_dataset: String,
     human_count_entailment: u32,
     human_count_neutral: u32,
@@ -115,8 +116,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let rel_k10_meta = format!("research/chaosnli/artifacts/E004/pilot_support/S_hellinger_k010_{}.manifest.json", subset);
     let k10_manifest = resolve_path(&rel_k10_meta);
 
+    let rel_probs_json = "research/chaosnli/rust_manifest/model_probs.json";
+    let probs_json_path = resolve_path(rel_probs_json);
+
     println!("=========================================================================");
-    println!("   E005: CONDITIONAL NULL LADDER (Subset: {})", subset.to_uppercase());
+    println!("   E005: STRICTLY NESTED CONDITIONAL NULL LADDER (Subset: {})", subset.to_uppercase());
     println!("=========================================================================");
 
     let file = File::open(&manifest_path)?;
@@ -127,6 +131,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .collect();
 
     let n = items.len();
+    let row_indices: Vec<usize> = items.iter().map(|it| it.row_index).collect();
     println!("Loaded {} items from {}", n, manifest_path);
 
     let meta_file = File::open(&k10_manifest)?;
@@ -161,6 +166,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         entropies[i] = ent;
     }
 
+    // Precompute Strictly Nested Group Keys N0..N5
     let keys_n0 = vec!["global".to_string(); n];
     let mut keys_n1 = vec!["".to_string(); n];
     let mut keys_n2 = vec!["".to_string(); n];
@@ -191,21 +197,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let margin_bin = compute_margin_bin(margin);
 
         keys_n1[i] = d.clone();
-        keys_n2[i] = format!("{}_{}", d, maj);
-        keys_n3[i] = format!("{}_{}_{}", d, maj, eq);
-        keys_n4[i] = format!("{}_{}_{}_{}", d, top1, top2, margin_bin);
+        keys_n2[i] = format!("{}_{}", keys_n1[i], maj);
+        keys_n3[i] = format!("{}_{}", keys_n2[i], eq);
+        keys_n4[i] = format!("{}_{}_{}_{}", keys_n3[i], top1, top2, margin_bin);
         keys_n5[i] = format!("{}_{}_{}", it.human_count_entailment, it.human_count_neutral, it.human_count_contradiction);
     }
 
     let null_levels = vec![
         ("N0", "Global Identity Permutation", keys_n0),
         ("N1", "Dataset Stratified (SNLI/MNLI)", keys_n1),
-        ("N2", "Dataset x Majority Label", keys_n2),
-        ("N3", "Dataset x Majority Label x Entropy Quintile", keys_n3),
-        ("N4", "Dataset x Top-2 Label Pair x Margin Bin", keys_n4),
+        ("N2", "N1 + Majority Label", keys_n2),
+        ("N3", "N2 + Entropy Quintile", keys_n3),
+        ("N4", "N3 + Top-2 Label Pair + Margin Bin", keys_n4),
         ("N5", "Exact 100-Vote Profile", keys_n5),
     ];
 
+    // Load available model probability matrices
     let mut conditions: HashMap<String, Vec<Vec<f64>>> = HashMap::new();
     conditions.insert("00_human_empirical".to_string(), p_human.clone());
 
@@ -213,6 +220,51 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mean_p1 = p_human.iter().map(|v| v[1]).sum::<f64>() / (n as f64);
     let mean_p2 = p_human.iter().map(|v| v[2]).sum::<f64>() / (n as f64);
     conditions.insert("01_global_class_prior".to_string(), vec![vec![mean_p0, mean_p1, mean_p2]; n]);
+
+    // Load 9 canonical models from model_probs.json
+    let probs_file = File::open(&probs_json_path)?;
+    let full_model_probs: HashMap<String, Vec<Vec<f64>>> = serde_json::from_reader(probs_file)?;
+
+    let canonical_models = vec![
+        "bart-large",
+        "roberta-large",
+        "xlnet-large",
+        "albert-xxlarge",
+        "bert-large",
+        "roberta-base",
+        "xlnet-base",
+        "distilbert",
+        "bert-base",
+    ];
+
+    for m_name in &canonical_models {
+        if let Some(full_p) = full_model_probs.get(*m_name) {
+            let mut sliced = Vec::with_capacity(n);
+            for &r_idx in &row_indices {
+                if r_idx < full_p.len() {
+                    sliced.push(full_p[r_idx].clone());
+                } else {
+                    sliced.push(vec![1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0]);
+                }
+            }
+            conditions.insert(format!("model_{}", m_name), sliced);
+        }
+    }
+
+    // Add E003 equal 3-model ensemble (BART + RoBERTa + XLNet)
+    if let (Some(p_b), Some(p_r), Some(p_x)) = (
+        conditions.get("model_bart-large"),
+        conditions.get("model_roberta-large"),
+        conditions.get("model_xlnet-large"),
+    ) {
+        let mut ens3 = vec![vec![0.0; 3]; n];
+        for i in 0..n {
+            for c in 0..3 {
+                ens3[i][c] = (p_b[i][c] + p_r[i][c] + p_x[i][c]) / 3.0;
+            }
+        }
+        conditions.insert("ensemble_e003_anchor_3model".to_string(), ens3);
+    }
 
     let mut condition_results = HashMap::new();
 
@@ -235,9 +287,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         for (lvl_id, lvl_name, keys) in &null_levels {
             let res = compute_conditional_null(lvl_id, lvl_name, &w_mod, &s_k10, keys, 10000, 42, 10);
+            let inf_str = if res.is_informative { "true" } else { "NON-INFORMATIVE (0 movable)" };
             println!(
-                "  [{}] {:<42} | Groups: {:>3} | Informative: {:<5} | Q_null: {:.5} | Excess: {:+.5} | p: {:.4}",
-                res.level_id, res.level_name, res.n_groups, res.is_informative, res.null_mean, res.q_excess, res.p_value_monte_carlo
+                "  [{}] {:<42} | Groups: {:>3} | Informative: {:<25} | Q_null: {:.5} | Excess: {:+.5} | p: {:.4}",
+                res.level_id, res.level_name, res.n_groups, inf_str, res.null_mean, res.q_excess, res.p_value_monte_carlo
             );
             ladder_results.push(res);
         }
@@ -258,7 +311,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let summary = E005Summary {
         experiment_id: "E005".to_string(),
-        title: "Conditional Null Ladder".to_string(),
+        title: "Strictly Nested Conditional Null Ladder".to_string(),
         subset: subset.to_string(),
         object_count: n,
         q_hh_relational: q_hh,
