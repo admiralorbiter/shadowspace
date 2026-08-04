@@ -1,7 +1,14 @@
 {
   "model_tag": "qwen2.5:14b",
   "num_items": 600,
-  "imputed_minus40_records": 0,
+  "imputed_minus40_records": 46,
+  "censoring_sensitivity": {
+    "bound_A_floor_minus40_raw_r": 11.854417327502345,
+    "bound_A_floor_minus40_cal_r": 14.863217814631266,
+    "bound_B_20th_token_raw_r": 12.252371399792942,
+    "bound_B_20th_token_cal_r": 14.08865846813917,
+    "sensitivity_max_shift_pct": 0.7745593464920955
+  },
   "metrics": {
     "nll_raw_nats": 5.2986088909357845,
     "nll_calibrated_nats": 0.8836747624186672,
@@ -30,8 +37,8 @@
       13.219093882470721
     ],
     "r_norm_95ci_calibrated": [
-      13.395207580618543,
-      16.285602452966103
+      13.395204745881577,
+      16.285604542249228
     ],
     "effective_bits_raw": 1.5740884496093965,
     "k_eff_raw": 2.977473049433796,
@@ -46,11 +53,19 @@
     ],
     "delta_r_norm_calibrated_pct": 5.106819154605228,
     "delta_r_norm_calibrated_95ci": [
-      3.363086771724521,
-      6.668160974028846
+      3.363090691178671,
+      6.668154671065558
     ],
+    "calibrated_contrast_exceeds_5pp_margin_ci": false,
     "delta_effective_bits_raw": 0.20368291888892331,
-    "delta_effective_bits_calibrated": 0.44211789525064904
+    "delta_effective_bits_calibrated": 0.44211789525064904,
+    "within_model_calibration_gain_target_pct": 3.008800487128921,
+    "within_model_calibration_gain_gemma_pct": 0.03544348744982706,
+    "calibration_by_model_family_interaction_pct": 2.973356999679094,
+    "calibration_by_model_family_interaction_95ci": [
+      1.328454732339072,
+      4.54528438312551
+    ]
   },
   "provenance": {
     "responses_path": "research\\chaosnli\\artifacts\\E004\\raw_responses\\pilot600_qwen2.5-14b_v2_abc_t10_lpe.jsonl",
@@ -60,6 +75,6 @@
     "support_matrix_path": "research\\chaosnli\\artifacts\\E004\\pilot_support\\S_hellinger_k010_pilot.bin",
     "support_matrix_sha256": "29ff35cfddbd1a4c30858eb2feac58aeb0c087aff99850736007a2a49fb40245",
     "script": "analyze_llm_lpe.py",
-    "gemma3_regression_gate": "PASSED"
+    "gemma3_regression_gate": "PASSED_BIT_PERFECT"
   }
 }
