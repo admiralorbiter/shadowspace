@@ -8,6 +8,8 @@
   "reasoning_control": "reasoning_effort=none",
   "raw_responses_sha256": "45221d113d2218036c0dfec0ade257d0b1b10d5f9e5af003b2d92d56d37c12c7",
   "manifest_sha256": "318c67354242771d2812b0d26dbd3d89e084ecc0afece250cae453d6531f4851",
-  "summary_sha256": "8664634a0dd802ef9a64cc047de119cceacbb295fa677ae8baa0816e5d5c0e2e",
+  "support_matrix_sha256": "29ff35cfddbd1a4c30858eb2feac58aeb0c087aff99850736007a2a49fb40245",
+  "summary_sha256": "19a33f5557d2f24213070ac1693035308b7fda6adfadf80a4c86ef40633c0dcf",
+  "gemma3_regression_gate": "PASSED_EXACT_MATCH",
   "audit_status": "PASSED"
 }

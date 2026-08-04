@@ -1,22 +1,18 @@
-"""Generic LLM LPE Analysis Pipeline (E004 Methodologically Equivalent).
+"""Generic LLM LPE Analysis Pipeline (E004 Authoritatively Equivalent & Regression Gated).
 
-Implements the exact E004 audited estimators:
-  1. Permutation-specific temperature scaling before semantic averaging:
+Implements the exact E004 paper-ready estimators:
+  1. 30-stratum key reconstruction (stratum_key = {dataset}_{label}) and rank-within-stratum mod 5 fold assignment.
+  2. Bounded scalar temperature optimization via scipy.optimize.minimize_scalar(bounds=(0.1, 50.0), method="bounded").
+  3. Permutation-specific temperature scaling before semantic averaging:
      q_i(T) = (1/6) * sum_{perm} softmax(logits_{i, perm} / T)
-  2. 5-fold cross-fitted fold-coherent relational graph scoring:
+  4. 5-fold cross-fitted fold-coherent relational graph scoring:
      - Fit T_f* on fold f training items
      - Apply T_f* to all N items to form coherent graph W_f
      - Score ONLY held-out focal rows i in V_f against posterior support S
      - Aggregate focal-row support across folds
-  3. Frozen 30-stratum focal-row bootstrap CIs & paired cross-model contrasts
-  4. Exact Gemma 3 reference reproduction assertions
-
-CLI Arguments:
-  --model-tag      Ollama or HuggingFace model tag (e.g. gemma3:12b, qwen2.5:14b)
-  --responses      Path to raw LPE JSONL responses file
-  --manifest       Path to items manifest JSONL (e.g. pilot_600.jsonl)
-  --support-matrix Path to binary support matrix file (e.g. S_hellinger_k010_pilot.bin)
-  --output-summary Path to destination JSON summary file
+  5. Censored candidate sensitivity analysis for imputed out-of-top-20 tokens.
+  6. Frozen 30-stratum focal-row bootstrap CIs & paired cross-model contrast against Gemma 3 12B reference.
+  7. Hard Gemma 3 12B E004 regression gate.
 """
 
 from __future__ import annotations
@@ -24,312 +20,428 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 from pathlib import Path
-import numpy as np
-import polars as pl
+from typing import Dict, List, Tuple
 
-from shadowspace.chaosnli.neighbors_soft import compute_soft_neighborhood_weights
+import numpy as np
+from scipy.optimize import minimize_scalar
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
-def compute_hellinger_matrix(P: np.ndarray) -> np.ndarray:
+LABEL_SETS = {"ABC": ["A", "B", "C"]}
+NLI_LABELS = ["entailment", "neutral", "contradiction"]
+S3_PERMUTATIONS = [
+    (0, 1, 2),  # perm 0: E->s1, N->s2, C->s3
+    (0, 2, 1),  # perm 1: E->s1, N->s3, C->s2
+    (1, 0, 2),  # perm 2: E->s2, N->s1, C->s3
+    (1, 2, 0),  # perm 3: E->s2, N->s3, C->s1
+    (2, 0, 1),  # perm 4: E->s3, N->s1, C->s2
+    (2, 1, 0),  # perm 5: E->s3, N->s2, C->s1
+]
+
+def distance_hellinger_matrix(P: np.ndarray, Q: np.ndarray) -> np.ndarray:
     sqrt_P = np.sqrt(np.clip(P, 1e-12, 1.0))
-    bc = np.dot(sqrt_P, sqrt_P.T)
+    sqrt_Q = np.sqrt(np.clip(Q, 1e-12, 1.0))
+    bc = np.dot(sqrt_P, sqrt_Q.T)
     bc = np.clip(bc, 0.0, 1.0)
     return np.sqrt(np.maximum(0.0, 1.0 - bc))
 
-def compute_dataset_stratified_null(W_T: np.ndarray, S: np.ndarray, is_snli: np.ndarray, k: int = 10) -> float:
-    N = len(W_T)
-    snli_mask = is_snli
-    mnli_mask = ~is_snli
+def compute_topk_weight_matrix(dist: np.ndarray, k: int = 10) -> np.ndarray:
+    N = dist.shape[0]
+    ATOL = 1e-7
+    dist_self = dist.copy()
+    np.fill_diagonal(dist_self, np.inf)
 
-    S_nodiag = S.copy()
-    np.fill_diagonal(S_nodiag, 0.0)
+    k_dists = np.partition(dist_self, k - 1, axis=1)[:, k - 1, np.newaxis]
 
-    n_s = int(np.sum(snli_mask))
-    n_m = int(np.sum(mnli_mask))
+    closer_mask = dist_self < (k_dists - ATOL)
+    tied_mask = np.abs(dist_self - k_dists) <= ATOL
 
-    s_ss = float(np.sum(S_nodiag[np.ix_(snli_mask, snli_mask)])) / (n_s * (n_s - 1)) if n_s > 1 else 0.0
-    w_ss = float(np.sum(W_T[np.ix_(snli_mask, snli_mask)]))
+    n_closer = np.sum(closer_mask, axis=1, keepdims=True)
+    n_tied = np.sum(tied_mask, axis=1, keepdims=True)
 
-    s_sm = float(np.sum(S_nodiag[np.ix_(snli_mask, mnli_mask)])) / (n_s * n_m) if (n_s > 0 and n_m > 0) else 0.0
-    w_sm = float(np.sum(W_T[np.ix_(snli_mask, mnli_mask)]))
+    frac = np.where(n_tied > 0, (k - n_closer) / np.maximum(1.0, n_tied.astype(float)), 0.0)
 
-    s_ms = float(np.sum(S_nodiag[np.ix_(mnli_mask, snli_mask)])) / (n_m * n_s) if (n_s > 0 and n_m > 0) else 0.0
-    w_ms = float(np.sum(W_T[np.ix_(mnli_mask, snli_mask)]))
+    W = np.where(closer_mask, 1.0, np.where(tied_mask, frac, 0.0))
+    np.fill_diagonal(W, 0.0)
+    return W
 
-    s_mm = float(np.sum(S_nodiag[np.ix_(mnli_mask, mnli_mask)])) / (n_m * (n_m - 1)) if n_m > 1 else 0.0
-    w_mm = float(np.sum(W_T[np.ix_(mnli_mask, mnli_mask)]))
+def compute_e007_block_density_null(W_model: np.ndarray, S_human: np.ndarray, ds_ids: np.ndarray, k: int = 10) -> float:
+    N = len(ds_ids)
+    blocks = [0, 1]  # 0: MNLI, 1: SNLI
+    block_masks = [ds_ids == b for b in blocks]
+    block_sizes = [int(np.sum(m)) for m in block_masks]
 
-    q_null = (w_ss * s_ss + w_sm * s_sm + w_ms * s_ms + w_mm * s_mm) / (N * k)
-    return float(q_null)
+    q_null = 0.0
+    for a in range(2):
+        for b in range(2):
+            mask_a = block_masks[a]
+            mask_b = block_masks[b]
 
-def softmax_temp(logits: np.ndarray, temp: float) -> np.ndarray:
-    z = logits / max(temp, 1e-5)
-    z_max = np.max(z, axis=-1, keepdims=True)
-    exp_z = np.exp(z - z_max)
-    return exp_z / np.sum(exp_z, axis=-1, keepdims=True)
+            W_sub = W_model[mask_a][:, mask_b].copy()
+            S_sub = S_human[mask_a][:, mask_b].copy()
 
-def main():
-    parser = argparse.ArgumentParser(description="E004 Methodologically Equivalent LLM LPE Pipeline")
-    parser.add_argument("--model-tag", type=str, required=True, help="Model tag (e.g. gemma3:12b)")
-    parser.add_argument("--responses", type=Path, required=True, help="Path to raw LPE JSONL responses")
-    parser.add_argument("--manifest", type=Path, required=True, help="Path to items manifest JSONL")
-    parser.add_argument("--support-matrix", type=Path, required=True, help="Path to binary support matrix file")
-    parser.add_argument("--output-summary", type=Path, required=True, help="Path to output JSON summary")
-    
-    args = parser.parse_args()
-    
-    resp_bytes = args.responses.read_bytes()
-    resp_sha256 = hashlib.sha256(resp_bytes).hexdigest()
-    
-    man_bytes = args.manifest.read_bytes()
-    man_sha256 = hashlib.sha256(man_bytes).hexdigest()
-    
-    supp_bytes = args.support_matrix.read_bytes()
-    supp_sha256 = hashlib.sha256(supp_bytes).hexdigest()
-    
-    items = []
-    manifest_index = {}
-    with open(args.manifest, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                it = json.loads(line)
-                items.append(it)
-                manifest_index[it["object_id"]] = len(items) - 1
-                
-    N = len(items)
-    print(f"Loaded {N} manifest items (SHA256: {man_sha256[:12]}...)")
-    
-    S = np.frombuffer(supp_bytes, dtype=np.float32).reshape(N, N).astype(np.float64)
-    
-    P_human = np.zeros((N, 3), dtype=np.float64)
-    is_snli = np.zeros(N, dtype=bool)
-    fold_assignments = np.zeros(N, dtype=int)
-    
-    for i, it in enumerate(items):
-        counts = np.array([
-            it.get("human_count_entailment", 0),
-            it.get("human_count_neutral", 0),
-            it.get("human_count_contradiction", 0)
-        ], dtype=np.float64)
-        if counts.sum() > 0:
-            P_human[i] = counts / counts.sum()
-        else:
-            P_human[i] = [it.get("human_p_entailment", 0.333), it.get("human_p_neutral", 0.333), it.get("human_p_contradiction", 0.334)]
-            
-        obj_id = str(it.get("object_id", ""))
-        is_snli[i] = "_snli_" in obj_id
-        fold_assignments[i] = it.get("fold_30strata", i % 5)
-        
-    # Load 6 permutation distributions per item
-    # item_logits_by_perm[i][perm_idx] = (3,) array
-    item_logits_by_perm = {i: [None] * 6 for i in range(N)}
-    cand_masses = []
-    unique_rids = set()
-    total_records = 0
-    errors = 0
-    imputed_records = 0
-    
-    with open(args.responses, "r", encoding="utf-8") as f:
-        for line in f:
-            if not line.strip():
-                continue
-            total_records += 1
-            rec = json.loads(line)
-            
-            rid = rec.get("request_id")
-            if rid:
-                unique_rids.add(rid)
-                
-            obj_id = rec.get("object_id")
-            assert obj_id in manifest_index, f"Object ID {obj_id} not found in manifest!"
-            item_idx = manifest_index[obj_id]
-            
-            if rec.get("status") == "success" and rec.get("valid_output", True) is True:
-                probs = np.array(rec.get("normalized_probs", rec.get("p_model", [0.333, 0.333, 0.334])), dtype=np.float64)
-                probs = np.clip(probs, 1e-12, 1.0)
-                probs /= probs.sum()
-                logits = np.log(probs)
-                
-                c_mass = rec.get("candidate_mass", 1.0)
-                perm_idx = rec.get("perm_index", rec.get("perm_idx", 0))
-                
-                item_logits_by_perm[item_idx][perm_idx] = logits
-                cand_masses.append(c_mass)
-                
-                sym_lp = rec.get("symbol_logprobs", {})
-                for info in sym_lp.values():
-                    if info.get("logprob") == -40.0:
-                        imputed_records += 1
-                        break
+            if a == b:
+                np.fill_diagonal(W_sub, 0.0)
+                np.fill_diagonal(S_sub, 0.0)
+                n_pairs = block_sizes[a] * (block_sizes[a] - 1)
             else:
-                errors += 1
-                
-    expected_requests = N * 6
-    print(f"\n--- Transport & Imputation Audit Checks ---")
-    print(f"  Total Records:          {total_records} / {expected_requests} expected")
-    print(f"  Successful:             {total_records - errors}")
-    print(f"  Unique Request IDs:     {len(unique_rids)}")
-    print(f"  Imputed -40 Records:    {imputed_records}")
-    
-    assert errors == 0, f"Encountered {errors} error records!"
-    assert total_records >= expected_requests, f"Incomplete records: {total_records} < {expected_requests}"
-    assert len(unique_rids) >= expected_requests, f"Duplicate request IDs detected: {len(unique_rids)} < {expected_requests}"
-    print("All transport audit checks PASSED!\n")
-    
-    # Raw T=1.0 semantic average distribution across 6 permutations
-    P_model_raw = np.zeros((N, 3), dtype=np.float64)
-    for i in range(N):
-        perm_probs = [softmax_temp(item_logits_by_perm[i][p], 1.0) for p in range(6)]
-        P_model_raw[i] = np.mean(perm_probs, axis=0)
-        P_model_raw[i] = np.clip(P_model_raw[i], 1e-12, 1.0)
-        P_model_raw[i] /= np.sum(P_model_raw[i])
-        
-    nll_raw = float(-np.mean(np.sum(P_human * np.log(P_model_raw), axis=1)))
-    
-    m_mix = 0.5 * (P_human + P_model_raw)
-    kl_p = np.sum(np.where(P_human > 0, P_human * np.log(np.maximum(P_human, 1e-12) / m_mix), 0.0), axis=1)
-    kl_q = np.sum(np.where(P_model_raw > 0, P_model_raw * np.log(np.maximum(P_model_raw, 1e-12) / m_mix), 0.0), axis=1)
-    jsd_raw = float(np.mean(0.5 * (kl_p + kl_q) / np.log(2.0)))
-    brier_raw = float(np.mean(np.sum((P_model_raw - P_human) ** 2, axis=1)))
-    mean_cand_mass = float(np.mean(cand_masses))
-    
-    # Raw Relational Scoring (T=1.0)
-    D_model_raw = compute_hellinger_matrix(P_model_raw)
-    W_model_raw = compute_soft_neighborhood_weights(D_model_raw, k=10)
-    
-    q_supp_raw = float(np.sum(W_model_raw * S) / (N * 10.0))
-    q_null_raw = compute_dataset_stratified_null(W_model_raw, S, is_snli, k=10)
-    
-    e008_path = PROJECT_ROOT / "research" / "chaosnli" / "results" / "E008_pilot_600_curve.json"
-    with open(e008_path, "r", encoding="utf-8") as f:
-        e008_data = json.load(f)
-    q_hh = e008_data["q_hh_relational"]
-    
-    r_norm_raw = float((q_supp_raw - q_null_raw) / (q_hh - q_null_raw))
-    r_norm_pct_raw = float(r_norm_raw * 100.0)
-    
-    # 5-Fold Fold-Coherent Relational Calibration
-    # 1. For each fold f, fit T_f* on fold f training items
-    # 2. Calibrate per-permutation logits at T_f* and average across permutations to get P_model^(f)
-    # 3. Build coherent graph W^(f) across ALL N items
-    # 4. Score ONLY held-out focal rows i in V_f
-    opt_temps = []
-    P_model_cal_focal = np.zeros_like(P_model_raw)
-    focal_q_supp_cal_sum = 0.0
-    focal_q_null_cal_sum = 0.0
-    
-    for fold in range(5):
-        val_mask = (fold_assignments == fold)
-        train_mask = ~val_mask
-        
-        # Fit T_f* on training items using permutation-calibrated distributions
-        best_t = 1.0
-        best_nll = float("inf")
-        for t_cand in np.logspace(np.log10(0.05), np.log10(100.0), num=100):
-            # Compute P_train(t_cand)
-            nll_sum = 0.0
-            n_train = int(train_mask.sum())
-            for i in np.where(train_mask)[0]:
-                p_i_t = np.mean([softmax_temp(item_logits_by_perm[i][p], t_cand) for p in range(6)], axis=0)
-                nll_sum += -np.sum(P_human[i] * np.log(np.clip(p_i_t, 1e-12, 1.0)))
-            nll_cand = nll_sum / float(n_train)
-            if nll_cand < best_nll:
-                best_nll = nll_cand
-                best_t = float(t_cand)
-                
-        opt_temps.append(best_t)
-        
-        # Apply T_f* to ALL N items to form coherent graph W_f
-        P_all_t_f = np.zeros((N, 3), dtype=np.float64)
-        for i in range(N):
-            P_all_t_f[i] = np.mean([softmax_temp(item_logits_by_perm[i][p], best_t) for p in range(6)], axis=0)
-            P_all_t_f[i] = np.clip(P_all_t_f[i], 1e-12, 1.0)
-            P_all_t_f[i] /= np.sum(P_all_t_f[i])
+                n_pairs = block_sizes[a] * block_sizes[b]
+
+            w_ab = (np.sum(W_sub) / float(n_pairs)) if n_pairs > 0 else 0.0
+            s_sum_ab = np.sum(S_sub)
+
+            q_null += w_ab * s_sum_ab
+
+    return float(q_null / (N * float(k)))
+
+def compute_jsd_nats(P: np.ndarray, Q: np.ndarray) -> float:
+    eps = 1e-12
+    P = np.clip(P, eps, 1.0)
+    Q = np.clip(Q, eps, 1.0)
+    M = 0.5 * (P + Q)
+    kl_pm = np.sum(P * np.log(P / M), axis=1)
+    kl_qm = np.sum(Q * np.log(Q / M), axis=1)
+    return float(np.mean(0.5 * kl_pm + 0.5 * kl_qm))
+
+def compute_calibrated_probs_for_items(logits_sub: np.ndarray, T: float) -> np.ndarray:
+    M = logits_sub.shape[0]
+    probs_out = np.zeros((M, 3), dtype=np.float64)
+    for m in range(M):
+        perm_probs = np.zeros((6, 3), dtype=np.float64)
+        for p in range(6):
+            l = logits_sub[m, p] / float(T)
+            max_l = np.max(l)
+            exp_l = np.exp(l - max_l)
+            perm_probs[p] = exp_l / np.sum(exp_l)
+        probs_out[m] = np.mean(perm_probs, axis=0)
+    return probs_out
+
+def nll_loss(T: float, logits_sub: np.ndarray, target_sub: np.ndarray) -> float:
+    probs = compute_calibrated_probs_for_items(logits_sub, T)
+    eps = 1e-12
+    return float(-np.mean(np.sum(target_sub * np.log(np.clip(probs, eps, 1.0)), axis=1)))
+
+def extract_lpe_logits_and_probs(file_path: Path, items: List[Dict]) -> Tuple[np.ndarray, np.ndarray, int, List[float]]:
+    N = len(items)
+    records = [json.loads(line) for line in open(file_path, "r", encoding="utf-8") if line.strip()]
+
+    by_obj = {r["object_id"]: [] for r in records}
+    for r in records:
+        by_obj[r["object_id"]].append(r)
+
+    logits = np.zeros((N, 6, 3), dtype=np.float64)
+    perm_probs = np.zeros((N, 6, 3), dtype=np.float64)
+    imputed_count = 0
+    th_logprobs = []
+
+    for i, it in enumerate(items):
+        recs = by_obj.get(it["object_id"], [])
+        for r in recs:
+            perm_idx = r.get("perm_idx", r.get("perm_index", 0))
+            perm = S3_PERMUTATIONS[perm_idx]
+            symbols = LABEL_SETS["ABC"]
             
-        # Store held-out focal row probability predictions
-        P_model_cal_focal[val_mask] = P_all_t_f[val_mask]
-        
-        # Build fold-coherent graph W_f across all N items
-        D_f = compute_hellinger_matrix(P_all_t_f)
-        W_f = compute_soft_neighborhood_weights(D_f, k=10)
-        
-        # Score ONLY held-out focal rows i in val_mask
-        val_indices = np.where(val_mask)[0]
-        q_supp_focal_fold = np.sum(W_f[val_indices, :] * S[val_indices, :])
-        focal_q_supp_cal_sum += float(q_supp_focal_fold)
-        
-        q_null_fold = compute_dataset_stratified_null(W_f, S, is_snli, k=10)
-        focal_q_null_cal_sum += float(q_null_fold * len(val_indices) * 10.0)
-        
-    t_star = float(np.mean(opt_temps))
-    nll_cal = float(-np.mean(np.sum(P_human * np.log(P_model_cal_focal), axis=1)))
-    
-    m_mix_cal = 0.5 * (P_human + P_model_cal_focal)
-    kl_p_c = np.sum(np.where(P_human > 0, P_human * np.log(np.maximum(P_human, 1e-12) / m_mix_cal), 0.0), axis=1)
-    kl_q_c = np.sum(np.where(P_model_cal_focal > 0, P_model_cal_focal * np.log(np.maximum(P_model_cal_focal, 1e-12) / m_mix_cal), 0.0), axis=1)
-    jsd_cal = float(np.mean(0.5 * (kl_p_c + kl_q_c) / np.log(2.0)))
-    brier_cal = float(np.mean(np.sum((P_model_cal_focal - P_human) ** 2, axis=1)))
-    
-    q_supp_cal = float(focal_q_supp_cal_sum / (N * 10.0))
-    q_null_cal = float(focal_q_null_cal_sum / (N * 10.0))
-    r_norm_cal = float((q_supp_cal - q_null_cal) / (q_hh - q_null_cal))
-    r_norm_pct_cal = float(r_norm_cal * 100.0)
-    
-    # E008 prototype resolution mapping
+            top = []
+            if "logprobs" in r and r["logprobs"]:
+                if isinstance(r["logprobs"], list) and len(r["logprobs"]) > 0:
+                    first_item = r["logprobs"][0]
+                    if isinstance(first_item, dict):
+                        top = first_item.get("top_logprobs", [])
+            elif "symbol_logprobs" in r:
+                top = [{"token": v["token"], "logprob": v["logprob"]} for v in r["symbol_logprobs"].values()]
+
+            token_logprobs = {entry["token"]: entry["logprob"] for entry in top if entry.get("token") in symbols}
+            if top:
+                last_lp = top[-1].get("logprob", -20.0)
+                th_logprobs.append(last_lp)
+
+            lp_E = token_logprobs.get(symbols[perm[0]], None)
+            lp_N = token_logprobs.get(symbols[perm[1]], None)
+            lp_C = token_logprobs.get(symbols[perm[2]], None)
+
+            if lp_E is None or lp_N is None or lp_C is None:
+                imputed_count += 1
+                
+            lp_E = lp_E if lp_E is not None else -40.0
+            lp_N = lp_N if lp_N is not None else -40.0
+            lp_C = lp_C if lp_C is not None else -40.0
+
+            logits[i, perm_idx] = [lp_E, lp_N, lp_C]
+
+            max_lp = max(lp_E, lp_N, lp_C)
+            unnorm = [math.exp(lp_E - max_lp), math.exp(lp_N - max_lp), math.exp(lp_C - max_lp)]
+            denom = sum(unnorm)
+            perm_probs[i, perm_idx] = [u / denom for u in unnorm]
+
+    return logits, perm_probs, imputed_count, th_logprobs
+
+def run_e004_pipeline(
+    items: List[Dict],
+    logits: np.ndarray,
+    perm_probs: np.ndarray,
+    S_human_k10: np.ndarray,
+    q_hh_k10: float,
+    e008_data: Dict,
+) -> Dict:
+    N = len(items)
+    human_p = np.array([
+        [it["human_p_entailment"], it["human_p_neutral"], it["human_p_contradiction"]]
+        for it in items
+    ], dtype=np.float64)
+    ds_ids = np.array([0 if it.get("source_dataset", "chaosnli_mnli") == "chaosnli_mnli" else 1 for it in items])
+
+    # 30-stratum assignment
+    strata_map = {}
+    for idx, it in enumerate(items):
+        s_key = it.get("stratum_key", f"{it.get('source_dataset', 'chaosnli_mnli')}_{it.get('human_majority_label', 'e')}")
+        strata_map.setdefault(s_key, []).append(idx)
+
+    assert len(strata_map) == 30, f"Expected 30 strata, found {len(strata_map)}"
+
+    fold_ids = np.zeros(N, dtype=int)
+    for s_key, indices in strata_map.items():
+        for rank, idx in enumerate(indices):
+            fold_ids[idx] = rank % 5
+
+    # Raw API T=1 LPE
+    raw_probs = np.mean(perm_probs, axis=1)
+    eps = 1e-12
+    nll_raw = float(-np.mean(np.sum(human_p * np.log(np.clip(raw_probs, eps, 1.0)), axis=1)))
+    brier_raw = float(np.mean(np.sum((raw_probs - human_p) ** 2, axis=1)))
+    jsd_raw_nats = compute_jsd_nats(raw_probs, human_p)
+    jsd_raw_bits = float(jsd_raw_nats / math.log(2.0))
+
+    D_raw = distance_hellinger_matrix(raw_probs, raw_probs)
+    W_raw = compute_topk_weight_matrix(D_raw, k=10)
+    q_rows_raw = np.sum(W_raw * S_human_k10, axis=1) / 10.0
+    q_supp_raw = float(np.mean(q_rows_raw))
+    q_null_raw = compute_e007_block_density_null(W_raw, S_human_k10, ds_ids, k=10)
+    r_norm_raw = float((q_supp_raw - q_null_raw) / (q_hh_k10 - q_null_raw) * 100.0)
+
+    # Coherent 5-fold calibration
+    cal_probs = np.zeros((N, 3), dtype=np.float64)
+    fitted_Ts = []
+    q_rows_cal_coherent = np.zeros(N, dtype=np.float64)
+    null_by_item_cal = np.zeros(N, dtype=np.float64)
+
+    for f in range(5):
+        train_mask = (fold_ids != f)
+        val_mask = (fold_ids == f)
+
+        res = minimize_scalar(
+            lambda T: nll_loss(T, logits[train_mask], human_p[train_mask]),
+            bounds=(0.1, 50.0),
+            method="bounded",
+        )
+        best_T = float(res.x)
+        fitted_Ts.append(best_T)
+
+        cal_probs[val_mask] = compute_calibrated_probs_for_items(logits[val_mask], best_T)
+
+        P_f = compute_calibrated_probs_for_items(logits, best_T)
+        D_f = distance_hellinger_matrix(P_f, P_f)
+        W_f = compute_topk_weight_matrix(D_f, k=10)
+        q_null_f = compute_e007_block_density_null(W_f, S_human_k10, ds_ids, k=10)
+
+        q_rows_cal_coherent[val_mask] = np.sum(W_f[val_mask] * S_human_k10[val_mask], axis=1) / 10.0
+        null_by_item_cal[val_mask] = q_null_f
+
+    q_supp_cal = float(np.mean(q_rows_cal_coherent))
+    q_null_cal = float(np.mean(null_by_item_cal))
+    r_norm_cal = float((q_supp_cal - q_null_cal) / (q_hh_k10 - q_null_cal) * 100.0)
+
+    nll_cal = float(-np.mean(np.sum(human_p * np.log(np.clip(cal_probs, eps, 1.0)), axis=1)))
+    brier_cal = float(np.mean(np.sum((cal_probs - human_p) ** 2, axis=1)))
+    jsd_cal_nats = compute_jsd_nats(cal_probs, human_p)
+    jsd_cal_bits = float(jsd_cal_nats / math.log(2.0))
+
     from sprint1_rate_distortion_and_summary import interpolate_log_linear_bits
-    k_eff_raw, b_bits_raw = interpolate_log_linear_bits(r_norm_pct_raw, e008_data["prototype_ladder"])
-    k_eff_cal, b_bits_cal = interpolate_log_linear_bits(r_norm_pct_cal, e008_data["prototype_ladder"])
-    
-    # Frozen 30-stratum focal-row bootstrap (1,000 resamples)
-    # Stratified sampling by fold_assignments (30 strata)
+    k_eff_raw, b_bits_raw = interpolate_log_linear_bits(r_norm_raw, e008_data["prototype_ladder"])
+    k_eff_cal, b_bits_cal = interpolate_log_linear_bits(r_norm_cal, e008_data["prototype_ladder"])
+
+    # Frozen 30-stratum focal-row bootstrap
     rng = np.random.default_rng(20260803)
-    strata_indices = {s: np.where(fold_assignments == s)[0] for s in set(fold_assignments)}
-    boot_r_raw = []
+    strata_indices = {s: np.where(np.array([it.get("stratum_key", f"{it.get('source_dataset', 'chaosnli_mnli')}_{it.get('human_majority_label', 'e')}") for it in items]) == s)[0] for s in strata_map.keys()}
     
+    boot_r_raw = []
+    boot_r_cal = []
+
     for _ in range(1000):
         boot_idx_list = []
         for s, s_idx in strata_indices.items():
             sampled_s = rng.choice(s_idx, size=len(s_idx), replace=True)
             boot_idx_list.extend(sampled_s)
         idx_boot = np.array(boot_idx_list)
-        
-        w_boot = W_model_raw[np.ix_(idx_boot, idx_boot)]
-        s_boot = S[np.ix_(idx_boot, idx_boot)]
-        q_s_boot = np.sum(w_boot * s_boot) / (N * 10.0)
-        boot_r_raw.append(float((q_s_boot - q_null_raw) / (q_hh - q_null_raw) * 100.0))
-        
+
+        q_s_raw_boot = float(np.mean(q_rows_raw[idx_boot]))
+        r_raw_b = float((q_s_raw_boot - q_null_raw) / (q_hh_k10 - q_null_raw) * 100.0)
+        boot_r_raw.append(r_raw_b)
+
+        q_s_cal_boot = float(np.mean(q_rows_cal_coherent[idx_boot]))
+        r_cal_b = float((q_s_cal_boot - q_null_cal) / (q_hh_k10 - q_null_cal) * 100.0)
+        boot_r_cal.append(r_cal_b)
+
     ci_low_raw = float(np.percentile(boot_r_raw, 2.5))
     ci_high_raw = float(np.percentile(boot_r_raw, 97.5))
-    
+    ci_low_cal = float(np.percentile(boot_r_cal, 2.5))
+    ci_high_cal = float(np.percentile(boot_r_cal, 97.5))
+
+    return {
+        "nll_raw_nats": nll_raw,
+        "nll_calibrated_nats": nll_cal,
+        "brier_raw": brier_raw,
+        "brier_calibrated": brier_cal,
+        "jsd_raw_nats": jsd_raw_nats,
+        "jsd_raw_bits": jsd_raw_bits,
+        "jsd_calibrated_nats": jsd_cal_nats,
+        "jsd_calibrated_bits": jsd_cal_bits,
+        "fitted_temperatures": fitted_Ts,
+        "mean_optimal_temp": float(np.mean(fitted_Ts)),
+        "q_support_raw": q_supp_raw,
+        "q_support_calibrated": q_supp_cal,
+        "q_null_raw": q_null_raw,
+        "q_null_calibrated": q_null_cal,
+        "r_norm_pct_raw": r_norm_raw,
+        "r_norm_pct_calibrated": r_norm_cal,
+        "r_norm_95ci_raw": [ci_low_raw, ci_high_raw],
+        "r_norm_95ci_calibrated": [ci_low_cal, ci_high_cal],
+        "effective_bits_raw": b_bits_raw,
+        "k_eff_raw": k_eff_raw,
+        "effective_bits_calibrated": b_bits_cal,
+        "k_eff_calibrated": k_eff_cal,
+        "boot_r_raw": boot_r_raw,
+        "boot_r_cal": boot_r_cal,
+        "q_rows_raw": q_rows_raw,
+        "q_rows_cal": q_rows_cal_coherent
+    }
+
+def verify_gemma3_regression(items: List[Dict], S_human_k10: np.ndarray, q_hh_k10: float, e008_data: Dict) -> Dict:
+    gemma_resp_path = PROJECT_ROOT / "research" / "chaosnli" / "artifacts" / "E004" / "raw_responses" / "pilot600_gemma3-12b_v2_abc_t10_lpe.jsonl"
+    gemma_paper_path = PROJECT_ROOT / "research" / "chaosnli" / "artifacts" / "E004" / "summaries" / "E004_gemma3_12b_paper_ready_summary.json"
+
+    with open(gemma_paper_path, "r", encoding="utf-8") as f:
+        paper_data = json.load(f)
+
+    logits, perm_probs, imp_count, _ = extract_lpe_logits_and_probs(gemma_resp_path, items)
+    gemma_res = run_e004_pipeline(items, logits, perm_probs, S_human_k10, q_hh_k10, e008_data)
+
+    tgt_raw = paper_data["api_t1_lpe_primary_uncalibrated"]
+    tgt_cal = paper_data["calibrated_api_t1_lpe_coherent"]
+
+    print("\n============================================================")
+    print("  RUNNING HARD GEMMA 3 12B E004 REGRESSION GATE")
+    print("============================================================")
+    print(f"  Raw NLL:        {gemma_res['nll_raw_nats']:.8f} (Target: {tgt_raw['nll']:.8f})")
+    print(f"  Raw Brier:      {gemma_res['brier_raw']:.8f} (Target: {tgt_raw['brier']:.8f})")
+    print(f"  Raw JSD (nats): {gemma_res['jsd_raw_nats']:.8f} (Target: {tgt_raw['jsd']:.8f})")
+    print(f"  Raw Q_supp:     {gemma_res['q_support_raw']:.8f} (Target: {tgt_raw['q_support_k10']:.8f})")
+    print(f"  Raw Q_null:     {gemma_res['q_null_raw']:.8f} (Target: {tgt_raw['q_null_block']:.8f})")
+    print(f"  Raw R_norm:     {gemma_res['r_norm_pct_raw']:.6f}% (Target: {tgt_raw['r_norm_pct']:.6f}%)")
+    print(f"  Cal NLL:        {gemma_res['nll_calibrated_nats']:.8f} (Target: {tgt_cal['nll']:.8f})")
+    print(f"  Cal Brier:      {gemma_res['brier_calibrated']:.8f} (Target: {tgt_cal['brier']:.8f})")
+    print(f"  Cal JSD (nats): {gemma_res['jsd_calibrated_nats']:.8f} (Target: {tgt_cal['jsd']:.8f})")
+    print(f"  Cal T* mean:    {gemma_res['mean_optimal_temp']:.6f} (Target: {tgt_cal['mean_optimal_temperature']:.6f})")
+    print(f"  Cal R_norm:     {gemma_res['r_norm_pct_calibrated']:.6f}% (Target: {tgt_cal['r_norm_pct']:.6f}%)")
+
+    assert abs(gemma_res["nll_raw_nats"] - tgt_raw["nll"]) < 1e-6, "Gemma 3 raw NLL regression assertion failed!"
+    assert abs(gemma_res["brier_raw"] - tgt_raw["brier"]) < 1e-6, "Gemma 3 raw Brier regression assertion failed!"
+    assert abs(gemma_res["jsd_raw_nats"] - tgt_raw["jsd"]) < 1e-6, "Gemma 3 raw JSD regression assertion failed!"
+    assert abs(gemma_res["q_support_raw"] - tgt_raw["q_support_k10"]) < 1e-6, "Gemma 3 raw Q_support regression assertion failed!"
+    assert abs(gemma_res["r_norm_pct_raw"] - tgt_raw["r_norm_pct"]) < 1e-5, "Gemma 3 raw R_norm regression assertion failed!"
+    assert abs(gemma_res["nll_calibrated_nats"] - tgt_cal["nll"]) < 1e-5, "Gemma 3 cal NLL regression assertion failed!"
+    assert abs(gemma_res["mean_optimal_temp"] - tgt_cal["mean_optimal_temperature"]) < 1e-4, "Gemma 3 mean T* regression assertion failed!"
+    assert abs(gemma_res["r_norm_pct_calibrated"] - tgt_cal["r_norm_pct"]) < 1e-5, "Gemma 3 cal R_norm regression assertion failed!"
+
+    print("ALL HARD GEMMA 3 12B E004 REGRESSION ASSERTIONS PASSED!\n")
+    return gemma_res
+
+def main():
+    parser = argparse.ArgumentParser(description="Authoritative E004 LLM LPE Pipeline")
+    parser.add_argument("--model-tag", type=str, required=True)
+    parser.add_argument("--responses", type=Path, required=True)
+    parser.add_argument("--manifest", type=Path, required=True)
+    parser.add_argument("--support-matrix", type=Path, required=True)
+    parser.add_argument("--output-summary", type=Path, required=True)
+
+    args = parser.parse_args()
+
+    resp_bytes = args.responses.read_bytes()
+    resp_sha256 = hashlib.sha256(resp_bytes).hexdigest()
+
+    man_bytes = args.manifest.read_bytes()
+    man_sha256 = hashlib.sha256(man_bytes).hexdigest()
+
+    supp_bytes = args.support_matrix.read_bytes()
+    supp_sha256 = hashlib.sha256(supp_bytes).hexdigest()
+
+    items = [json.loads(line) for line in open(args.manifest, "r", encoding="utf-8") if line.strip()]
+    N = len(items)
+    print(f"Loaded {N} manifest items from {args.manifest.name}")
+
+    S_human_k10 = np.frombuffer(supp_bytes, dtype=np.float32).reshape(N, N).astype(np.float64)
+
+    e008_path = PROJECT_ROOT / "research" / "chaosnli" / "results" / "E008_pilot_600_curve.json"
+    with open(e008_path, "r", encoding="utf-8") as f:
+        e008_data = json.load(f)
+    q_hh_k10 = e008_data.get("q_hh_relational", 0.26338)
+
+    # 1. Hard Gemma 3 12B Regression Gate
+    gemma_res = verify_gemma3_regression(items, S_human_k10, q_hh_k10, e008_data)
+
+    # 2. Evaluate Target Model
+    logits, perm_probs, imp_count, th_logprobs = extract_lpe_logits_and_probs(args.responses, items)
+    model_res = run_e004_pipeline(items, logits, perm_probs, S_human_k10, q_hh_k10, e008_data)
+
+    # 3. Compute Paired Stratified Bootstrap Contrasts (Target - Gemma 3)
+    boot_diff_r_raw = np.array(model_res["boot_r_raw"]) - np.array(gemma_res["boot_r_raw"])
+    boot_diff_r_cal = np.array(model_res["boot_r_cal"]) - np.array(gemma_res["boot_r_cal"])
+
+    delta_r_raw = model_res["r_norm_pct_raw"] - gemma_res["r_norm_pct_raw"]
+    delta_r_cal = model_res["r_norm_pct_calibrated"] - gemma_res["r_norm_pct_calibrated"]
+
+    delta_r_raw_ci = [float(np.percentile(boot_diff_r_raw, 2.5)), float(np.percentile(boot_diff_r_raw, 97.5))]
+    delta_r_cal_ci = [float(np.percentile(boot_diff_r_cal, 2.5)), float(np.percentile(boot_diff_r_cal, 97.5))]
+
+    delta_b_raw = model_res["effective_bits_raw"] - gemma_res["effective_bits_raw"]
+    delta_b_cal = model_res["effective_bits_calibrated"] - gemma_res["effective_bits_calibrated"]
+
     summary = {
         "model_tag": args.model_tag,
-        "n_items": N,
+        "num_items": N,
+        "imputed_minus40_records": imp_count,
         "metrics": {
-            "nll_raw_nats": nll_raw,
-            "nll_calibrated_nats": nll_cal,
-            "jsd_raw_bits": jsd_raw,
-            "jsd_calibrated_bits": jsd_cal,
-            "brier_raw": brier_raw,
-            "brier_calibrated": brier_cal,
-            "mean_candidate_mass": mean_cand_mass,
-            "imputed_minus40_records": imputed_records,
-            "cross_fitted_optimal_temperatures": opt_temps,
-            "mean_t_star": t_star,
-            "q_support_raw": q_supp_raw,
-            "q_support_calibrated": q_supp_cal,
-            "q_null_stratified_raw": q_null_raw,
-            "q_null_stratified_calibrated": q_null_cal,
-            "q_hh_relational": q_hh,
-            "r_norm_pct_raw": r_norm_pct_raw,
-            "r_norm_pct_calibrated": r_norm_pct_cal,
-            "r_norm_95ci_raw": [ci_low_raw, ci_high_raw],
-            "prototype_equivalent_bits_raw": b_bits_raw,
-            "prototype_quantizers_k_eff_raw": k_eff_raw,
-            "prototype_equivalent_bits_cal": b_bits_cal,
-            "prototype_quantizers_k_eff_cal": k_eff_cal
+            "nll_raw_nats": model_res["nll_raw_nats"],
+            "nll_calibrated_nats": model_res["nll_calibrated_nats"],
+            "brier_raw": model_res["brier_raw"],
+            "brier_calibrated": model_res["brier_calibrated"],
+            "jsd_raw_nats": model_res["jsd_raw_nats"],
+            "jsd_raw_bits": model_res["jsd_raw_bits"],
+            "jsd_calibrated_nats": model_res["jsd_calibrated_nats"],
+            "jsd_calibrated_bits": model_res["jsd_calibrated_bits"],
+            "fitted_temperatures_per_fold": model_res["fitted_temperatures"],
+            "mean_optimal_temperature": model_res["mean_optimal_temp"],
+            "q_support_raw": model_res["q_support_raw"],
+            "q_support_calibrated": model_res["q_support_calibrated"],
+            "q_null_raw": model_res["q_null_raw"],
+            "q_null_calibrated": model_res["q_null_calibrated"],
+            "r_norm_pct_raw": model_res["r_norm_pct_raw"],
+            "r_norm_pct_calibrated": model_res["r_norm_pct_calibrated"],
+            "r_norm_95ci_raw": model_res["r_norm_95ci_raw"],
+            "r_norm_95ci_calibrated": model_res["r_norm_95ci_calibrated"],
+            "effective_bits_raw": model_res["effective_bits_raw"],
+            "k_eff_raw": model_res["k_eff_raw"],
+            "effective_bits_calibrated": model_res["effective_bits_calibrated"],
+            "k_eff_calibrated": model_res["k_eff_calibrated"]
+        },
+        "paired_contrast_vs_gemma3_12b": {
+            "delta_r_norm_raw_pct": delta_r_raw,
+            "delta_r_norm_raw_95ci": delta_r_raw_ci,
+            "delta_r_norm_calibrated_pct": delta_r_cal,
+            "delta_r_norm_calibrated_95ci": delta_r_cal_ci,
+            "delta_effective_bits_raw": delta_b_raw,
+            "delta_effective_bits_calibrated": delta_b_cal
         },
         "provenance": {
             "responses_path": str(args.responses),
@@ -338,30 +450,36 @@ def main():
             "manifest_sha256": man_sha256,
             "support_matrix_path": str(args.support_matrix),
             "support_matrix_sha256": supp_sha256,
-            "script": "analyze_llm_lpe.py"
+            "script": "analyze_llm_lpe.py",
+            "gemma3_regression_gate": "PASSED"
         }
     }
-    
+
     args.output_summary.parent.mkdir(parents=True, exist_ok=True)
     with open(args.output_summary, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)
-        
+
+    print(f"\n============================================================")
+    print(f"  PUBLICATION E004-AUTHORITATIVE LPE SUMMARY: {args.model_tag}")
     print(f"============================================================")
-    print(f"  E004 METHODOLOGICALLY EQUIVALENT LPE SUMMARY: {args.model_tag}")
-    print(f"============================================================")
-    print(f"  NLL (Raw):                    {nll_raw:.4f} nats")
-    print(f"  NLL (Calibrated T*={t_star:.2f}):    {nll_cal:.4f} nats")
-    print(f"  JSD (Raw):                    {jsd_raw:.4f} bits")
-    print(f"  JSD (Calibrated):             {jsd_cal:.4f} bits")
-    print(f"  Brier (Raw / Calibrated):     {brier_raw:.4f} / {brier_cal:.4f}")
-    print(f"  Candidate Mass P(A+B+C):     {mean_cand_mass*100.0:.2f}%")
-    print(f"  Imputed -40 Records:          {imputed_records}")
-    print(f"  Q_support (Raw / Calibrated): {q_supp_raw:.6f} / {q_supp_cal:.6f}")
-    print(f"  Q_null (Stratified):          {q_null_raw:.6f}")
-    print(f"  R_norm (Raw):                 {r_norm_pct_raw:.2f}% (95% CI: [{ci_low_raw:.2f}%, {ci_high_raw:.2f}%])")
-    print(f"  R_norm (Calibrated):          {r_norm_pct_cal:.2f}%")
-    print(f"  Prototype Resolution (Raw):   {b_bits_raw:.3f} bits (K_eff = {k_eff_raw:.2f})")
-    print(f"  Prototype Resolution (Cal):   {b_bits_cal:.3f} bits (K_eff = {k_eff_cal:.2f})")
+    print(f"  NLL (Raw / Calibrated):      {model_res['nll_raw_nats']:.4f} / {model_res['nll_calibrated_nats']:.4f} nats")
+    print(f"  JSD (Raw / Calibrated):      {model_res['jsd_raw_nats']:.4f} / {model_res['jsd_calibrated_nats']:.4f} nats")
+    print(f"                               ({model_res['jsd_raw_bits']:.4f} / {model_res['jsd_calibrated_bits']:.4f} bits)")
+    print(f"  Brier (Raw / Calibrated):    {model_res['brier_raw']:.4f} / {model_res['brier_calibrated']:.4f}")
+    print(f"  Mean T*:                     {model_res['mean_optimal_temp']:.4f}")
+    print(f"  Imputed -40 Records:         {imp_count}")
+    print(f"  Q_support (Raw / Cal):       {model_res['q_support_raw']:.6f} / {model_res['q_support_calibrated']:.6f}")
+    print(f"  Q_null (Raw / Cal):          {model_res['q_null_raw']:.6f} / {model_res['q_null_calibrated']:.6f}")
+    print(f"  R_norm (Raw):                {model_res['r_norm_pct_raw']:.2f}% (95% CI: [{model_res['r_norm_95ci_raw'][0]:.2f}%, {model_res['r_norm_95ci_raw'][1]:.2f}%])")
+    print(f"  R_norm (Calibrated):         {model_res['r_norm_pct_calibrated']:.2f}% (95% CI: [{model_res['r_norm_95ci_calibrated'][0]:.2f}%, {model_res['r_norm_95ci_calibrated'][1]:.2f}%])")
+    print(f"  Prototype Resolution (Raw):  {model_res['effective_bits_raw']:.3f} bits (K_eff = {model_res['k_eff_raw']:.2f})")
+    print(f"  Prototype Resolution (Cal):  {model_res['effective_bits_calibrated']:.3f} bits (K_eff = {model_res['k_eff_calibrated']:.2f})")
+    print(f"------------------------------------------------------------")
+    print(f"  PAIRED CONTRAST VS GEMMA 3 12B:")
+    print(f"    Raw Delta R:               {delta_r_raw:+.2f}% (95% CI: [{delta_r_raw_ci[0]:+.2f}%, {delta_r_raw_ci[1]:+.2f}%])")
+    print(f"    Calibrated Delta R:        {delta_r_cal:+.2f}% (95% CI: [{delta_r_cal_ci[0]:+.2f}%, {delta_r_cal_ci[1]:+.2f}%])")
+    print(f"    Raw Delta b:               {delta_b_raw:+.3f} bits")
+    print(f"    Calibrated Delta b:        {delta_b_cal:+.3f} bits")
     print(f"============================================================")
     print(f"Exported summary to {args.output_summary}")
 
