@@ -14,7 +14,7 @@ from research.holonomy.geometry.connection import ConnectionEstimator, ParallelT
 from research.holonomy.geometry.holonomy import HolonomyResult, evaluate_holonomy
 from research.holonomy.geometry.parallel_transport import PathTransport
 from research.holonomy.geometry.simplex_bundle import ilr_transform
-from research.holonomy.natural_language.model_adapter import NLIModelAdapter
+from research.holonomy.natural_language.model_adapter import HuggingFaceNLIAdapter, NLIModelAdapter
 from research.holonomy.natural_language.orbit_builder import OrbitBuilder
 from research.holonomy.natural_language.orbit_schema import SemanticOrbit
 from research.holonomy.natural_language.transforms.entity_rename import ReversibleEntityRenameTransform
@@ -25,6 +25,7 @@ class ModelAuditResult:
     """Audit result for a model evaluated on natural language orbit splits."""
 
     model_name: str
+    is_live_model: bool
     num_active_orbits: int
     text_path_closure_rate: float
     train_orbit_count: int
@@ -38,15 +39,24 @@ class ModelAuditResult:
 
 def run_e002_classifier_holonomy_experiment(
     model_name: str = "roberta-large-mnli",
+    use_live_model: bool = False,
     num_base_items: int = 15,
 ) -> List[ModelAuditResult]:
     """Audits NLI model on Tier 1 natural language reversible entity-renaming semantic squares."""
     builder = OrbitBuilder()
-    adapter = NLIModelAdapter()  # Standard [E, N, C] alignment
-    estimator = ConnectionEstimator()
-
     transform_a = ReversibleEntityRenameTransform("rename_a", "Alice", "Bob")
     transform_b = ReversibleEntityRenameTransform("rename_b", "Charlie", "David")
+    estimator = ConnectionEstimator()
+
+    if use_live_model:
+        hf_adapter = HuggingFaceNLIAdapter(model_name=model_name, use_mock_fallback=True)
+        hf_adapter.load()
+        predict_fn = hf_adapter.predict
+        is_live = hf_adapter.is_loaded
+    else:
+        mock_adapter = NLIModelAdapter()
+        predict_fn = mock_adapter.predict_mock_orbit_vertices
+        is_live = False
 
     # Generate baseline NLI items containing active entities Alice & Charlie
     baseline_items = []
@@ -96,10 +106,10 @@ def run_e002_classifier_holonomy_experiment(
         v2 = orb.get_vertex("x2")
         v3 = orb.get_vertex("x3")
 
-        z0 = ilr_transform(adapter.predict_mock_orbit_vertices(v0.premise, v0.hypothesis))
-        z1 = ilr_transform(adapter.predict_mock_orbit_vertices(v1.premise, v1.hypothesis))
-        z2 = ilr_transform(adapter.predict_mock_orbit_vertices(v2.premise, v2.hypothesis))
-        z3 = ilr_transform(adapter.predict_mock_orbit_vertices(v3.premise, v3.hypothesis))
+        z0 = ilr_transform(predict_fn(v0.premise, v0.hypothesis))
+        z1 = ilr_transform(predict_fn(v1.premise, v1.hypothesis))
+        z2 = ilr_transform(predict_fn(v2.premise, v2.hypothesis))
+        z3 = ilr_transform(predict_fn(v3.premise, v3.hypothesis))
 
         edge_pairs["rename_a"][0].append(z0)
         edge_pairs["rename_a"][1].append(z1)
@@ -130,7 +140,7 @@ def run_e002_classifier_holonomy_experiment(
 
     for orb in (test_orbits or val_orbits):
         v0 = orb.get_vertex("x0")
-        z0 = ilr_transform(adapter.predict_mock_orbit_vertices(v0.premise, v0.hypothesis))
+        z0 = ilr_transform(predict_fn(v0.premise, v0.hypothesis))
         z0_returned = np.dot(A_gamma, z0) + b_gamma
         res_norm = float(np.linalg.norm(z0_returned - z0))
         test_residuals.append(res_norm)
@@ -140,6 +150,7 @@ def run_e002_classifier_holonomy_experiment(
 
     result = ModelAuditResult(
         model_name=model_name,
+        is_live_model=is_live,
         num_active_orbits=len(active_orbits),
         text_path_closure_rate=text_closure_rate,
         train_orbit_count=len(train_orbits),
