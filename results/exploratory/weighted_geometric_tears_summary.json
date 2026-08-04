@@ -3,58 +3,58 @@
   "k": 10,
   "models": {
     "albert-xxlarge": {
-      "fuzzy_mass_overlap": 0.010599212330661096,
-      "tear_mass": 0.9894007876693389,
-      "posterior_support_retained_pct": 8.67714505726232,
-      "human_core_loss_pct": 91.32285494273769
+      "fuzzy_mass_overlap": 0.010829558152879708,
+      "tear_mass": 0.9891704418471203,
+      "posterior_support_retained_pct": 9.05961224393788,
+      "human_core_loss_pct": 90.94038775606212
     },
     "bart-large": {
-      "fuzzy_mass_overlap": 0.010976367299046387,
-      "tear_mass": 0.9890236327009536,
-      "posterior_support_retained_pct": 8.242696142452964,
-      "human_core_loss_pct": 91.75730385754703
+      "fuzzy_mass_overlap": 0.018695469323480887,
+      "tear_mass": 0.9813045306765191,
+      "posterior_support_retained_pct": 13.397762156893112,
+      "human_core_loss_pct": 86.60223784310689
     },
     "bert-base": {
-      "fuzzy_mass_overlap": 0.00814740743426898,
-      "tear_mass": 0.991852592565731,
-      "posterior_support_retained_pct": 6.853135800144446,
-      "human_core_loss_pct": 93.14686419985556
+      "fuzzy_mass_overlap": 0.008674002140915087,
+      "tear_mass": 0.9913259978590849,
+      "posterior_support_retained_pct": 6.266545242016599,
+      "human_core_loss_pct": 93.73345475798341
     },
     "bert-large": {
-      "fuzzy_mass_overlap": 0.01033048036661914,
-      "tear_mass": 0.9896695196333809,
-      "posterior_support_retained_pct": 7.155306008401924,
-      "human_core_loss_pct": 92.84469399159806
+      "fuzzy_mass_overlap": 0.010545177776144691,
+      "tear_mass": 0.9894548222238553,
+      "posterior_support_retained_pct": 8.360183300348867,
+      "human_core_loss_pct": 91.63981669965113
     },
     "distilbert": {
-      "fuzzy_mass_overlap": 0.00891446437704067,
-      "tear_mass": 0.9910855356229593,
-      "posterior_support_retained_pct": 6.058618329481423,
-      "human_core_loss_pct": 93.94138167051858
+      "fuzzy_mass_overlap": 0.008454521528726475,
+      "tear_mass": 0.9915454784712735,
+      "posterior_support_retained_pct": 6.623232872463191,
+      "human_core_loss_pct": 93.37676712753681
     },
     "roberta-base": {
-      "fuzzy_mass_overlap": 0.009821536032586467,
-      "tear_mass": 0.9901784639674135,
-      "posterior_support_retained_pct": 7.586796613480088,
-      "human_core_loss_pct": 92.41320338651991
+      "fuzzy_mass_overlap": 0.011194607673085027,
+      "tear_mass": 0.988805392326915,
+      "posterior_support_retained_pct": 8.129435141315884,
+      "human_core_loss_pct": 91.8705648586841
     },
     "roberta-large": {
-      "fuzzy_mass_overlap": 0.010749128624168781,
-      "tear_mass": 0.9892508713758312,
-      "posterior_support_retained_pct": 8.525426029619751,
-      "human_core_loss_pct": 91.47457397038025
+      "fuzzy_mass_overlap": 0.017981914220269506,
+      "tear_mass": 0.9820180857797305,
+      "posterior_support_retained_pct": 12.025529057295902,
+      "human_core_loss_pct": 87.9744709427041
     },
     "xlnet-base": {
-      "fuzzy_mass_overlap": 0.009251822614334663,
-      "tear_mass": 0.9907481773856653,
-      "posterior_support_retained_pct": 7.2487040727724175,
-      "human_core_loss_pct": 92.75129592722759
+      "fuzzy_mass_overlap": 0.008839735593670704,
+      "tear_mass": 0.9911602644063293,
+      "posterior_support_retained_pct": 7.3112511928033,
+      "human_core_loss_pct": 92.6887488071967
     },
     "xlnet-large": {
-      "fuzzy_mass_overlap": 0.010738218486371392,
-      "tear_mass": 0.9892617815136286,
-      "posterior_support_retained_pct": 8.066042789933208,
-      "human_core_loss_pct": 91.9339572100668
+      "fuzzy_mass_overlap": 0.013086456321278039,
+      "tear_mass": 0.986913543678722,
+      "posterior_support_retained_pct": 10.38366715648426,
+      "human_core_loss_pct": 89.61633284351575
     }
   }
 }

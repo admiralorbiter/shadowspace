@@ -10,151 +10,151 @@
     "albert-xxlarge": {
       "eps_0.05": {
         "complexity_tier_counts": {
-          "tier_0_raw": 126,
-          "tier_1_scalar": 134,
-          "tier_2_diagonal": 5,
-          "tier_3_affine": 177,
-          "tier_4_mlp": 63,
-          "unreached_by_tested_maps": 2608
+          "tier_0_raw": 156,
+          "tier_1_scalar": 45,
+          "tier_2_diagonal": 3,
+          "tier_3_affine": 47,
+          "tier_4_mlp": 205,
+          "unreached_by_tested_maps": 2657
         },
-        "unreached_pct": 83.77770639254737,
-        "items_with_tier_regressions": 2794
+        "unreached_pct": 85.35175072277545,
+        "items_with_tier_regressions": 2885
       },
       "eps_0.10": {
         "complexity_tier_counts": {
-          "tier_0_raw": 417,
-          "tier_1_scalar": 502,
-          "tier_2_diagonal": 11,
-          "tier_3_affine": 307,
-          "tier_4_mlp": 66,
-          "unreached_by_tested_maps": 1810
+          "tier_0_raw": 590,
+          "tier_1_scalar": 69,
+          "tier_2_diagonal": 2,
+          "tier_3_affine": 88,
+          "tier_4_mlp": 510,
+          "unreached_by_tested_maps": 1854
         },
-        "unreached_pct": 58.14327015740444,
-        "items_with_tier_regressions": 2794
+        "unreached_pct": 59.55669771924189,
+        "items_with_tier_regressions": 2885
       },
       "eps_0.15": {
         "complexity_tier_counts": {
-          "tier_0_raw": 726,
-          "tier_1_scalar": 755,
-          "tier_2_diagonal": 8,
-          "tier_3_affine": 384,
-          "tier_4_mlp": 84,
-          "unreached_by_tested_maps": 1156
+          "tier_0_raw": 1112,
+          "tier_1_scalar": 87,
+          "tier_2_diagonal": 4,
+          "tier_3_affine": 128,
+          "tier_4_mlp": 645,
+          "unreached_by_tested_maps": 1137
         },
-        "unreached_pct": 37.13459685191134,
-        "items_with_tier_regressions": 2794
+        "unreached_pct": 36.524253132026985,
+        "items_with_tier_regressions": 2885
       },
       "eps_0.20": {
         "complexity_tier_counts": {
-          "tier_0_raw": 1080,
-          "tier_1_scalar": 819,
-          "tier_2_diagonal": 16,
-          "tier_3_affine": 318,
-          "tier_4_mlp": 84,
-          "unreached_by_tested_maps": 796
+          "tier_0_raw": 1683,
+          "tier_1_scalar": 91,
+          "tier_2_diagonal": 2,
+          "tier_3_affine": 121,
+          "tier_4_mlp": 570,
+          "unreached_by_tested_maps": 646
         },
-        "unreached_pct": 25.570189527786702,
-        "items_with_tier_regressions": 2794
+        "unreached_pct": 20.7516864760681,
+        "items_with_tier_regressions": 2885
       }
     },
     "bart-large": {
       "eps_0.05": {
         "complexity_tier_counts": {
-          "tier_0_raw": 136,
-          "tier_1_scalar": 136,
-          "tier_2_diagonal": 34,
-          "tier_3_affine": 156,
-          "tier_4_mlp": 78,
-          "unreached_by_tested_maps": 2573
+          "tier_0_raw": 241,
+          "tier_1_scalar": 85,
+          "tier_2_diagonal": 1,
+          "tier_3_affine": 59,
+          "tier_4_mlp": 335,
+          "unreached_by_tested_maps": 2392
         },
-        "unreached_pct": 82.65338901381304,
-        "items_with_tier_regressions": 2822
+        "unreached_pct": 76.8390619980726,
+        "items_with_tier_regressions": 2905
       },
       "eps_0.10": {
         "complexity_tier_counts": {
-          "tier_0_raw": 423,
-          "tier_1_scalar": 505,
-          "tier_2_diagonal": 59,
-          "tier_3_affine": 318,
-          "tier_4_mlp": 70,
-          "unreached_by_tested_maps": 1738
+          "tier_0_raw": 854,
+          "tier_1_scalar": 131,
+          "tier_2_diagonal": 0,
+          "tier_3_affine": 84,
+          "tier_4_mlp": 566,
+          "unreached_by_tested_maps": 1478
         },
-        "unreached_pct": 55.830388692579504,
-        "items_with_tier_regressions": 2822
+        "unreached_pct": 47.47831673626727,
+        "items_with_tier_regressions": 2905
       },
       "eps_0.15": {
         "complexity_tier_counts": {
-          "tier_0_raw": 764,
-          "tier_1_scalar": 790,
-          "tier_2_diagonal": 62,
-          "tier_3_affine": 330,
-          "tier_4_mlp": 78,
-          "unreached_by_tested_maps": 1089
+          "tier_0_raw": 1527,
+          "tier_1_scalar": 165,
+          "tier_2_diagonal": 0,
+          "tier_3_affine": 74,
+          "tier_4_mlp": 559,
+          "unreached_by_tested_maps": 788
         },
-        "unreached_pct": 34.98233215547703,
-        "items_with_tier_regressions": 2822
+        "unreached_pct": 25.31320269836171,
+        "items_with_tier_regressions": 2905
       },
       "eps_0.20": {
         "complexity_tier_counts": {
-          "tier_0_raw": 1162,
-          "tier_1_scalar": 816,
-          "tier_2_diagonal": 44,
-          "tier_3_affine": 318,
-          "tier_4_mlp": 39,
-          "unreached_by_tested_maps": 734
+          "tier_0_raw": 2157,
+          "tier_1_scalar": 103,
+          "tier_2_diagonal": 2,
+          "tier_3_affine": 84,
+          "tier_4_mlp": 453,
+          "unreached_by_tested_maps": 314
         },
-        "unreached_pct": 23.578541599743012,
-        "items_with_tier_regressions": 2822
+        "unreached_pct": 10.086733054930935,
+        "items_with_tier_regressions": 2905
       }
     },
     "roberta-large": {
       "eps_0.05": {
         "complexity_tier_counts": {
-          "tier_0_raw": 112,
-          "tier_1_scalar": 141,
-          "tier_2_diagonal": 51,
-          "tier_3_affine": 167,
-          "tier_4_mlp": 61,
-          "unreached_by_tested_maps": 2581
+          "tier_0_raw": 209,
+          "tier_1_scalar": 60,
+          "tier_2_diagonal": 3,
+          "tier_3_affine": 62,
+          "tier_4_mlp": 301,
+          "unreached_by_tested_maps": 2478
         },
-        "unreached_pct": 82.91037584323804,
-        "items_with_tier_regressions": 2807
+        "unreached_pct": 79.60167041439126,
+        "items_with_tier_regressions": 2858
       },
       "eps_0.10": {
         "complexity_tier_counts": {
-          "tier_0_raw": 416,
-          "tier_1_scalar": 582,
-          "tier_2_diagonal": 51,
-          "tier_3_affine": 254,
-          "tier_4_mlp": 83,
-          "unreached_by_tested_maps": 1727
+          "tier_0_raw": 750,
+          "tier_1_scalar": 95,
+          "tier_2_diagonal": 0,
+          "tier_3_affine": 115,
+          "tier_4_mlp": 565,
+          "unreached_by_tested_maps": 1588
         },
-        "unreached_pct": 55.47703180212014,
-        "items_with_tier_regressions": 2807
+        "unreached_pct": 51.01188564086091,
+        "items_with_tier_regressions": 2858
       },
       "eps_0.15": {
         "complexity_tier_counts": {
-          "tier_0_raw": 786,
-          "tier_1_scalar": 870,
-          "tier_2_diagonal": 48,
-          "tier_3_affine": 293,
-          "tier_4_mlp": 78,
-          "unreached_by_tested_maps": 1038
+          "tier_0_raw": 1412,
+          "tier_1_scalar": 99,
+          "tier_2_diagonal": 3,
+          "tier_3_affine": 126,
+          "tier_4_mlp": 570,
+          "unreached_by_tested_maps": 903
         },
-        "unreached_pct": 33.34404111789271,
-        "items_with_tier_regressions": 2807
+        "unreached_pct": 29.00738837134597,
+        "items_with_tier_regressions": 2858
       },
       "eps_0.20": {
         "complexity_tier_counts": {
-          "tier_0_raw": 1164,
-          "tier_1_scalar": 868,
-          "tier_2_diagonal": 42,
-          "tier_3_affine": 276,
-          "tier_4_mlp": 55,
-          "unreached_by_tested_maps": 708
+          "tier_0_raw": 1976,
+          "tier_1_scalar": 85,
+          "tier_2_diagonal": 1,
+          "tier_3_affine": 110,
+          "tier_4_mlp": 486,
+          "unreached_by_tested_maps": 455
         },
-        "unreached_pct": 22.74333440411179,
-        "items_with_tier_regressions": 2807
+        "unreached_pct": 14.61612592354642,
+        "items_with_tier_regressions": 2858
       }
     }
   }
