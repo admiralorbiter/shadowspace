@@ -1,0 +1,99 @@
+{
+  "n_items": 3113,
+  "n_models": 9,
+  "temperature_grid_count": 50,
+  "temp_min": 0.049999999999999996,
+  "temp_max": 100.0,
+  "models": {
+    "albert-xxlarge": {
+      "n_items": 3113,
+      "d_raw_mean": 0.2992099472787173,
+      "d_min_orbit_mean": 0.1467563225294546,
+      "sharpness_error_mean": 0.1524536247492627,
+      "directional_error_mean": 0.1467563225294546,
+      "unreachable_error_percentage": 50.010798229050316,
+      "optimal_temp_median": 2.4164008605130616,
+      "optimal_temp_mean": 10.61631146539831
+    },
+    "bart-large": {
+      "n_items": 3113,
+      "d_raw_mean": 0.2913931751487742,
+      "d_min_orbit_mean": 0.13939735692029592,
+      "sharpness_error_mean": 0.15199581822847838,
+      "directional_error_mean": 0.13939735692029592,
+      "unreachable_error_percentage": 49.340212474163835,
+      "optimal_temp_median": 2.4164008605130616,
+      "optimal_temp_mean": 9.43190328331255
+    },
+    "bert-base": {
+      "n_items": 3113,
+      "d_raw_mean": 0.29024905479616453,
+      "d_min_orbit_mean": 0.16126144274558793,
+      "sharpness_error_mean": 0.12898761205057663,
+      "directional_error_mean": 0.16126144274558793,
+      "unreachable_error_percentage": 56.55500981848244,
+      "optimal_temp_median": 2.0691931052111863,
+      "optimal_temp_mean": 14.167624009303045
+    },
+    "bert-large": {
+      "n_items": 3113,
+      "d_raw_mean": 0.2948548596214829,
+      "d_min_orbit_mean": 0.15286977646983427,
+      "sharpness_error_mean": 0.14198508315164862,
+      "directional_error_mean": 0.15286977646983427,
+      "unreachable_error_percentage": 53.42546512727364,
+      "optimal_temp_median": 2.4164008605130616,
+      "optimal_temp_mean": 12.567489164903686
+    },
+    "distilbert": {
+      "n_items": 3113,
+      "d_raw_mean": 0.29802568942038205,
+      "d_min_orbit_mean": 0.1800561263401596,
+      "sharpness_error_mean": 0.11796956308022245,
+      "directional_error_mean": 0.1800561263401596,
+      "unreachable_error_percentage": 61.58028878221422,
+      "optimal_temp_median": 1.7718749304469406,
+      "optimal_temp_mean": 18.42554331192184
+    },
+    "roberta-base": {
+      "n_items": 3113,
+      "d_raw_mean": 0.28983190994250363,
+      "d_min_orbit_mean": 0.14921122965792838,
+      "sharpness_error_mean": 0.14062068028457528,
+      "directional_error_mean": 0.14921122965792838,
+      "unreachable_error_percentage": 52.86045284626909,
+      "optimal_temp_median": 2.0691931052111863,
+      "optimal_temp_mean": 11.897062325183349
+    },
+    "roberta-large": {
+      "n_items": 3113,
+      "d_raw_mean": 0.28961837430440296,
+      "d_min_orbit_mean": 0.13375889303309063,
+      "sharpness_error_mean": 0.15585948127131236,
+      "directional_error_mean": 0.13375889303309063,
+      "unreachable_error_percentage": 47.55717031553073,
+      "optimal_temp_median": 2.4164008605130616,
+      "optimal_temp_mean": 8.325939500530126
+    },
+    "xlnet-base": {
+      "n_items": 3113,
+      "d_raw_mean": 0.2917545811658419,
+      "d_min_orbit_mean": 0.15198789292222326,
+      "sharpness_error_mean": 0.13976668824361863,
+      "directional_error_mean": 0.15198789292222326,
+      "unreachable_error_percentage": 53.59642774168339,
+      "optimal_temp_median": 2.4164008605130616,
+      "optimal_temp_mean": 13.153010884031325
+    },
+    "xlnet-large": {
+      "n_items": 3113,
+      "d_raw_mean": 0.2923483645715993,
+      "d_min_orbit_mean": 0.13707355244048242,
+      "sharpness_error_mean": 0.1552748121311169,
+      "directional_error_mean": 0.13707355244048242,
+      "unreachable_error_percentage": 48.2803905739714,
+      "optimal_temp_median": 2.4164008605130616,
+      "optimal_temp_mean": 9.227175384617484
+    }
+  }
+}
