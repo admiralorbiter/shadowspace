@@ -48,7 +48,7 @@ where $A_{g,x} \in \text{GL}(C-1)$ is the linear transport matrix and $b_{g,x} \
 ## 3. Loop Holonomy & Gauge Invariants Taxonomy
 
 Let $\gamma = (x_0 \xrightarrow{g_1} x_1 \dots \xrightarrow{g_k} x_k = x_0)$ be a closed loop in $X$. The homogeneous holonomy matrix is:
-$$\mathbf{H}_\gamma = \mathbf{T}_{g_k, x_{k-1}} \cdots \mathbf{T}_{g_1, x_0} = \begin{pmatrix} A_\gamma & b_\gamma \\ \mathbf{0}^\top & 1 \end{pmatrix}$$
+$$\mathbf{H}_\gamma = \mathbf{T}_{g_k, x_{k-1}} \dots \mathbf{T}_{g_1, x_0} = \begin{pmatrix} A_\gamma & b_\gamma \\ \mathbf{0}^\top & 1 \end{pmatrix}$$
 
 ### Similarity Invariants vs. Frame Diagnostics
 1. **Global Similarity Invariants ($\text{GL}(C-1)$ Conjugation Invariant)**:
@@ -77,9 +77,9 @@ which corrects errors-in-variables attenuation bias under symmetric measurement 
 
 ### 3-Group Monte Carlo Loop Holonomy Inference
 Statistical testing evaluates the 4-edge loop holonomy statistic $S_\gamma = \|\mathbf{H}_\gamma - I_3\|_F$:
-1. **Group 1 (Calibration)**: 500 flat trials establish null threshold $\tau_{0.95} = Q_{0.95}(S_{\gamma, \text{flat}})$.
-2. **Group 2 (Validation)**: 500 independent flat trials evaluate empirical $\text{FPR} = \Pr(S_{\gamma, \text{flat}} > \tau_{0.95})$.
-3. **Group 3 (Power)**: 500 independent curved trials evaluate empirical $\text{Power} = \Pr(S_{\gamma, \text{curved}} > \tau_{0.95})$.
+1. **Group 1 (Calibration)**: 50 flat trials establish null threshold $\tau_{0.95} = Q_{0.95}(S_{\gamma, \text{flat}})$.
+2. **Group 2 (Validation)**: 50 independent flat trials evaluate empirical $\text{FPR} = \Pr(S_{\gamma, \text{flat}} > \tau_{0.95})$.
+3. **Group 3 (Power)**: 50 independent curved trials evaluate empirical $\text{Power} = \Pr(S_{\gamma, \text{curved}} > \tau_{0.95})$.
 
 ---
 
@@ -116,3 +116,36 @@ $$v^* = \arg\min_{v \in \mathbb{R}^{C-1}} \sum_{j=1}^m \| A_j v + b_j - s_j \|^2
 
 The normalized residual energy measures contextual incompatibility:
 $$\text{GlueOOD}(x^*) = \frac{1}{m} \sum_{j=1}^m \| A_j v^* + b_j - s_j \|^2$$
+
+---
+
+## 8. Natural Language Semantic Orbits & Pre-Trained Model Audits (Phase E2)
+
+### A. Natural Language Orbit Construction & Verification
+Natural language semantic squares are defined by 4-corner orbits ($x_0 \xrightarrow{a} x_1 \xrightarrow{b} x_2 \xrightarrow{a^{-1}} x_3 \xrightarrow{b^{-1}} x_0$).
+- **Tier 1 Exact-Symmetry Renaming**: $a: e_1 \leftrightarrow e_2$ and $b: e_3 \leftrightarrow e_4$ form exact commuting squares $a b(x) = b a(x)$.
+- **Strict Verification Rules**:
+  - `SemanticOrbit.is_closed` defaults to `False`.
+  - Orbits are validated by checking dual-path commutativity ($x_{ab} = b(a(x_0)) == a(b(x_0)) = x_{ba}$) and byte-for-byte inverse closure ($b^{-1} a^{-1} b a(x_0) == x_0$).
+
+### B. Pre-Trained Model Adapter & Label Alignment
+Models (e.g. `roberta-large-mnli`, `deberta-large-mnli`) expose classifier logits in various label orders (e.g., `0: CONTRADICTION, 1: NEUTRAL, 2: ENTAILMENT`).
+The `NLIModelAdapter` inspects `model.config.id2label` string names to safely align probability tensors of shape `(3,)`, `(N, 3)`, and `(B, N, 3)` into standard `[Entailment, Neutral, Contradiction]` order:
+$$p_{\text{aligned}} = p_{\text{raw}}[..., \pi_{\text{align}}]$$
+
+### C. Dirichlet Human Posterior Sampling
+Human annotation counts $(n_E, n_N, n_C)$ are modeled via a Dirichlet posterior with Jeffreys prior $\alpha = 1/2$:
+$$p^H \sim \text{Dirichlet}\left(n_E + \frac{1}{2}, \; n_N + \frac{1}{2}, \; n_C + \frac{1}{2}\right)$$
+
+### D. Cross-Orbit Connection Estimation & Held-Out Residual Evaluation
+Transport connections $T_a, T_b, T_{a^{-1}}, T_{b^{-1}}$ are fit across **train orbits** using model prediction pairs $(X_g \to Y_g)$.
+Loop holonomy $H_\gamma^M$ and held-out return residuals $r_i = \|A_\gamma z_i + b_\gamma - z_i\|$ are evaluated on held-out **test orbits**.
+
+---
+
+## 9. Two-Commit Manifest Provenance Protocol
+
+To guarantee mathematical reproducibility across environments, results are published via the Two-Commit protocol:
+1. **Code Commit $C_{\text{code}}$**: Code modifications are committed cleanly.
+2. **Benchmark Execution**: `python -m research.holonomy.experiments.run_phase_e0_summary` runs against $C_{\text{code}}$ and exports `results/holonomy/phase_e0_manifest.json` recording $C_{\text{code}}$'s commit SHA.
+3. **Results Commit $C_{\text{results}}$**: The generated manifest is committed in a results-only commit referencing $C_{\text{code}}$.
