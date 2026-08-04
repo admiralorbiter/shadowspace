@@ -1,0 +1,14 @@
+# Experiment E011: Identity-Constrained vs Free Structural Alignment (Gromov-Wasserstein)
+id = "E011"
+title = "Identity-Constrained vs Free Structural Alignment"
+status = "exploratory"
+claim_status = "none"
+multiplicity_family = "E005-E013_exploratory_portfolio"
+analysis_status = "not_started"
+
+dataset_release = "chaosnli-canonical-2026-08-02"
+question = """
+Do models recover the global shape of human disagreement space while assigning items to incorrect positions?
+"""
+
+stage = 1

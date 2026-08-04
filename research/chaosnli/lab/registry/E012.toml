@@ -1,0 +1,14 @@
+# Experiment E012: Linguistic Predictors of Relational Failure
+id = "E012"
+title = "Linguistic Predictors of Relational Failure"
+status = "exploratory"
+claim_status = "none"
+multiplicity_family = "E005-E013_exploratory_portfolio"
+analysis_status = "not_started"
+
+dataset_release = "chaosnli-canonical-2026-08-02"
+question = """
+Which surface linguistic cues (negation, vagueness, modals, length, overlap) correlate with unrecovered relational edges?
+"""
+
+stage = 1

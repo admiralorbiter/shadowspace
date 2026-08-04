@@ -1,0 +1,16 @@
+# Experiment E008: Relational Rate-Distortion of Human Judgments
+id = "E008"
+title = "Relational Rate-Distortion of Human Judgments"
+status = "exploratory"
+claim_status = "none"
+multiplicity_family = "E005-E013_exploratory_portfolio"
+analysis_status = "not_started"
+
+dataset_release = "chaosnli-canonical-2026-08-02"
+question = """
+How many bits or prototype states K in {2..128} are required to preserve human disagreement geometry,
+and where do models fall on the relational rate-distortion curve?
+"""
+
+stage = 1
+prototype_counts = [2, 3, 4, 6, 8, 12, 16, 24, 32, 64, 128]

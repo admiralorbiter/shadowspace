@@ -1,0 +1,29 @@
+# Experiment E007: Exact Ensemble Subset Census and Shapley Attribution
+id = "E007"
+title = "Exact Ensemble Subset Census and Shapley Attribution"
+status = "exploratory"
+claim_status = "none"
+multiplicity_family = "E005-E013_exploratory_portfolio"
+analysis_status = "preflight_complete"
+methodological_audit = "passed_clean"
+
+dataset_release = "chaosnli-canonical-2026-08-02"
+question = """
+Why does ensembling improve relational alignment: model family diversity, capacity, or probability softening?
+What is the exact Shapley contribution phi_m of each model across all 511 non-empty subsets?
+"""
+
+stage = 1
+n_models = 9
+n_subsets = 511
+canonical_models = [
+  "bart-large",
+  "roberta-large",
+  "xlnet-large",
+  "albert-xxlarge",
+  "bert-large",
+  "roberta-base",
+  "xlnet-base",
+  "distilbert",
+  "bert-base"
+]

@@ -1,0 +1,29 @@
+# Experiment E005: Hierarchical Conditional Null Decomposition
+id = "E005"
+title = "Hierarchical Conditional Null Decomposition"
+status = "exploratory"
+claim_status = "none"
+multiplicity_family = "E005-E013_exploratory_portfolio"
+analysis_status = "preflight_complete"
+methodological_audit = "passed_clean"
+
+dataset_release = "chaosnli-canonical-2026-08-02"
+partition = "hierarchical_conditional_null_ladder"
+
+unit_of_analysis = "item_and_edge"
+question = """
+Which level of human information (dataset, majority label, entropy quintile, top-two pair, margin)
+accounts for model-human relational alignment, and does any model survive the full conditional ladder?
+"""
+
+stage = 1
+null_hierarchy = [
+  "N0_global_identity",
+  "N1_dataset_stratified",
+  "N2_dataset_x_majority_label",
+  "N3_dataset_x_majority_label_x_entropy_quintile",
+  "N4_dataset_x_top2_pair_x_margin_bin",
+  "N5_exact_100vote_profile"
+]
+
+n_permutations = 10000

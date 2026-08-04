@@ -1,0 +1,14 @@
+# Experiment E010: Persistent Connectivity of Disagreement Graphs
+id = "E010"
+title = "Persistent Connectivity of Disagreement Graphs"
+status = "exploratory"
+claim_status = "none"
+multiplicity_family = "E005-E013_exploratory_portfolio"
+analysis_status = "not_started"
+
+dataset_release = "chaosnli-canonical-2026-08-02"
+question = """
+How do connected components, reciprocal edges, and global graph topology evolve across support thresholds?
+"""
+
+stage = 1

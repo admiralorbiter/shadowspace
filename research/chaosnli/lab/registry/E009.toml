@@ -1,0 +1,16 @@
+# Experiment E009: Temperature-Topology Phase Diagram
+id = "E009"
+title = "Temperature-Topology Phase Diagram"
+status = "exploratory"
+claim_status = "none"
+multiplicity_family = "E005-E013_exploratory_portfolio"
+analysis_status = "not_started"
+
+dataset_release = "chaosnli-canonical-2026-08-02"
+question = """
+Does any scalar temperature T in [0.05, 100] improve relational recovery R, or does calibration
+relationally degrade neighborhoods across all operating points?
+"""
+
+stage = 1
+temperature_grid_size = 50
