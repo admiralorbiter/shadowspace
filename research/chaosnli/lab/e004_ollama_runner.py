@@ -66,7 +66,7 @@ def get_session() -> requests.Session:
     tid = threading.get_ident()
     if tid not in _THREAD_LOCAL_SESSIONS:
         session = requests.Session()
-        adapter = HTTPAdapter(pool_connections=32, pool_maxsize=32)
+        adapter = HTTPAdapter(pool_connections=16, pool_maxsize=16)
         session.mount("http://", adapter)
         session.mount("https://", adapter)
         _THREAD_LOCAL_SESSIONS[tid] = session
@@ -98,97 +98,90 @@ def get_existing_request_ids(file_path: Path) -> set[str]:
                 rec = json.loads(line)
                 if "request_id" in rec:
                     existing.add(rec["request_id"])
-            except Exception:
+            except json.JSONDecodeError:
                 pass
     return existing
 
-def prewarm_model(model_tag: str = "gemma3:12b") -> None:
-    print(f"Pre-warming model '{model_tag}'...", flush=True)
+def query_ollama(
+    messages: List[Dict[str, str]],
+    model_tag: str,
+    temperature: float = 0.0,
+    max_tokens: int = 1,
+    logprobs: bool = True,
+    top_logprobs: int = 20,
+    seed: Optional[int] = None
+) -> Dict:
+    session = get_session()
     payload = {
         "model": model_tag,
-        "messages": [{"role": "user", "content": "Respond with 1."}],
-        "max_tokens": 1,
-        "temperature": 1.0,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "logprobs": logprobs,
+        "top_logprobs": top_logprobs if logprobs else None,
     }
-    session = get_session()
-    try:
-        resp = session.post(API_URL, json=payload, timeout=30)
-        resp.raise_for_status()
-        print("  Pre-warming complete.", flush=True)
-    except Exception as e:
-        print(f"  Warning: Pre-warming failed: {e}", flush=True)
+    if seed is not None:
+        payload["seed"] = seed
 
-def send_chat_completion(payload: dict) -> dict:
-    session = get_session()
-    resp = session.post(API_URL, json=payload, timeout=180)
+    resp = session.post(API_URL, json=payload, timeout=30)
     resp.raise_for_status()
     return resp.json()
 
-def process_single_lpe_task(task_args: Tuple) -> Optional[dict]:
-    model_tag, item, perm_idx, perm, symbols, symbol_set_name, existing_ids = task_args
+def process_single_lpe_task(task_tuple) -> Optional[Dict]:
+    model_tag, item, perm_idx, perm, symbols, symbol_set_name, existing_ids = task_tuple
     object_id = item["object_id"]
-    premise = item["premise"]
-    hypothesis = item["hypothesis"]
+    req_id = make_request_id(model_tag, object_id, "v1", perm_idx, "lpe", 0.0, 0, 0, symbol_set_name)
 
-    sym_e, sym_n, sym_c = symbols[perm[0]], symbols[perm[1]], symbols[perm[2]]
-
-    user_prompt = USER_PROMPT_TEMPLATE.format(
-        premise=premise,
-        hypothesis=hypothesis,
-        symbol_1=sym_e,
-        symbol_2=sym_n,
-        symbol_3=sym_c,
-    )
-
-    # Automated prompt-consistency verification
-    assert f"{sym_e} = Entailment" in user_prompt, f"Prompt mapping error for Entailment: {sym_e}"
-    assert f"{sym_n} = Neutral" in user_prompt, f"Prompt mapping error for Neutral: {sym_n}"
-    assert f"{sym_c} = Contradiction" in user_prompt, f"Prompt mapping error for Contradiction: {sym_c}"
-    
-    req_id = make_request_id(model_tag, object_id, "v2", perm_idx, "lpe", 1.0, 42, 0, symbol_set_name)
     if req_id in existing_ids:
         return None
 
-    payload = {
-        "model": model_tag,
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt}
-        ],
+    symbol_1, symbol_2, symbol_3 = symbols[perm[0]], symbols[perm[1]], symbols[perm[2]]
+    user_content = USER_PROMPT_TEMPLATE.format(
+        premise=item["premise"],
+        hypothesis=item["hypothesis"],
+        symbol_1=symbol_1,
+        symbol_2=symbol_2,
+        symbol_3=symbol_3,
+    )
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": user_content},
+    ]
+
+    t0 = time.time()
+    resp_json = query_ollama(messages, model_tag, temperature=0.0, max_tokens=1, logprobs=True, top_logprobs=20)
+    dt = time.time() - t0
+
+    choice = resp_json["choices"][0]
+    logprobs_content = choice.get("logprobs", {}).get("content", [])
+
+    return {
+        "request_id": req_id,
+        "timestamp_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "object_id": object_id,
+        "row_index": item["row_index"],
+        "prompt_version": "v1",
+        "symbol_set": symbol_set_name,
+        "perm_idx": perm_idx,
+        "perm_tuple": list(perm),
+        "symbol_mapping": {"E": symbol_1, "N": symbol_2, "C": symbol_3},
+        "mode": "lpe",
+        "temperature": 0.0,
         "max_tokens": 1,
-        "temperature": 1.0,
-        "top_p": 1.0,
-        "seed": 42,
-        "logprobs": True,
-        "top_logprobs": 10,
+        "response_text": choice["message"]["content"],
+        "logprobs": logprobs_content,
+        "latency_sec": round(dt, 4),
     }
 
-    try:
-        resp_json = send_chat_completion(payload)
-        return {
-            "request_id": req_id,
-            "object_id": object_id,
-            "permutation_index": perm_idx,
-            "symbol_mapping": {"entailment": sym_e, "neutral": sym_n, "contradiction": sym_c},
-            "mode": "lpe",
-            "temperature": 1.0,
-            "seed": 42,
-            "replicate": 0,
-            "response": resp_json,
-            "timestamp_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        }
-    except Exception as e:
-        print(f"  Error on item {object_id} perm {perm_idx}: {e}", flush=True)
-        return None
-
-def run_lpe(manifest_path: Path, output_path: Path, max_workers: int = 4, model_tag: str = "gemma3:12b", symbol_set_name: str = "ABC") -> None:
-    existing_ids = get_existing_request_ids(output_path)
+def run_lpe(manifest_path: Path, output_path: Path, max_workers: int = 4, model_tag: str = "gemma3:12b", symbol_set_name: str = "ABC"):
     symbols = LABEL_SETS[symbol_set_name]
+    existing_ids = get_existing_request_ids(output_path)
 
     items = []
     with open(manifest_path, "r", encoding="utf-8") as f:
         for line in f:
-            items.append(json.loads(line))
+            if line.strip():
+                items.append(json.loads(line))
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -198,7 +191,7 @@ def run_lpe(manifest_path: Path, output_path: Path, max_workers: int = 4, model_
             task_list.append((model_tag, item, perm_idx, perm, symbols, symbol_set_name, existing_ids))
 
     total_tasks = len(task_list)
-    print(f"Starting High-Throughput Multi-Worker LPE run (workers={max_workers}) over {len(items)} items x 6 perms ({total_tasks} tasks)...", flush=True)
+    print(f"Starting Multi-Worker LPE run (workers={max_workers}) over {len(items)} items x 6 perms ({total_tasks} tasks)...", flush=True)
     print(f"  Existing completed requests: {len(existing_ids)}", flush=True)
 
     completed = 0
@@ -218,116 +211,40 @@ def run_lpe(manifest_path: Path, output_path: Path, max_workers: int = 4, model_
                         rate = completed / max(0.1, elapsed)
                         print(f"  Completed {completed}/{total_tasks} LPE requests ({rate:.2f} req/sec | Elapsed: {elapsed:.1f}s)", flush=True)
 
-def process_single_mce_task(task_args: Tuple) -> Optional[dict]:
-    model_tag, item, perm_idx, perm, rep, temperature, symbols, symbol_set_name, existing_ids = task_args
-    object_id = item["object_id"]
-    premise = item["premise"]
-    hypothesis = item["hypothesis"]
-
-    sym_e, sym_n, sym_c = symbols[perm[0]], symbols[perm[1]], symbols[perm[2]]
-
-    user_prompt = USER_PROMPT_TEMPLATE.format(
-        premise=premise,
-        hypothesis=hypothesis,
-        symbol_1=sym_e,
-        symbol_2=sym_n,
-        symbol_3=sym_c,
-    )
-
-    seed = 1000 + perm_idx * 100 + rep
-    req_id = make_request_id(model_tag, object_id, "v2", perm_idx, f"mce_t{temperature:.1f}", temperature, seed, rep, symbol_set_name)
-    if req_id in existing_ids:
-        return None
-
+def prewarm_model(model_tag: str):
+    print(f"Pre-warming model '{model_tag}' on Ollama...", flush=True)
+    session = get_session()
     payload = {
         "model": model_tag,
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt}
-        ],
+        "messages": [{"role": "system", "content": "Hi"}, {"role": "user", "content": "Ping"}],
         "max_tokens": 1,
-        "temperature": temperature,
-        "top_p": 1.0,
-        "seed": seed,
-        "logprobs": False,
     }
-
-    try:
-        resp_json = send_chat_completion(payload)
-        return {
-            "request_id": req_id,
-            "object_id": object_id,
-            "permutation_index": perm_idx,
-            "symbol_mapping": {"entailment": sym_e, "neutral": sym_n, "contradiction": sym_c},
-            "mode": "mce",
-            "temperature": temperature,
-            "seed": seed,
-            "replicate": rep,
-            "response": resp_json,
-            "timestamp_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        }
-    except Exception as e:
-        print(f"  Error on item {object_id} perm {perm_idx} rep {rep}: {e}", flush=True)
-        return None
-
-def run_mce(manifest_path: Path, output_path: Path, max_workers: int = 8, replicates_per_perm: int = 5, temperature: float = 1.0, model_tag: str = "gemma3:12b", symbol_set_name: str = "ABC") -> None:
-    existing_ids = get_existing_request_ids(output_path)
-    symbols = LABEL_SETS[symbol_set_name]
-
-    items = []
-    with open(manifest_path, "r", encoding="utf-8") as f:
-        for line in f:
-            items.append(json.loads(line))
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    task_list = []
-    for item in items:
-        for perm_idx, perm in enumerate(S3_PERMUTATIONS):
-            for rep in range(replicates_per_perm):
-                task_list.append((model_tag, item, perm_idx, perm, rep, temperature, symbols, symbol_set_name, existing_ids))
-
-    total_tasks = len(task_list)
-    print(f"Starting Multi-Worker MCE run (workers={max_workers}, T={temperature}) over {len(items)} items x 6 perms x {replicates_per_perm} reps ({total_tasks} tasks)...", flush=True)
-    print(f"  Existing completed requests: {len(existing_ids)}", flush=True)
-
-    completed = 0
-    t0 = time.time()
-
-    with open(output_path, "a", encoding="utf-8") as out_f:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_to_task = {executor.submit(process_single_mce_task, task): task for task in task_list}
-            for future in concurrent.futures.as_completed(future_to_task):
-                res = future.result()
-                if res is not None:
-                    out_f.write(json.dumps(res) + "\n")
-                    out_f.flush()
-                    completed += 1
-                    if completed % 50 == 0 or completed == total_tasks:
-                        elapsed = time.time() - t0
-                        rate = completed / max(0.1, elapsed)
-                        print(f"  Completed {completed}/{total_tasks} MCE requests ({rate:.2f} req/sec | Elapsed: {elapsed:.1f}s)", flush=True)
+    resp = session.post(API_URL, json=payload, timeout=60)
+    resp.raise_for_status()
+    print("  Model ready.", flush=True)
 
 def main():
     parser = argparse.ArgumentParser(description="E004 Optimized High-Throughput Ollama Runner")
-    parser.add_argument("--mode", choices=["preflight", "lpe", "mce", "mce_convergence", "mce_temp"], required=True)
-    parser.add_argument("--subset", choices=["preflight", "pilot", "convergence", "temp_sensitivity"], default="preflight")
-    parser.add_argument("--workers", type=int, default=8)
+    parser.add_argument("--mode", choices=["preflight", "lpe", "mce", "validate_20"], required=True)
+    parser.add_argument("--subset", choices=["preflight", "pilot"], default="pilot")
+    parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--model", default="gemma3:12b")
     parser.add_argument("--symbol-set", choices=["ABC", "123", "XYZ"], default="ABC")
 
     args = parser.parse_args()
     prewarm_model(args.model)
 
-    if args.mode in ["preflight", "lpe"]:
-        manifest = MANIFEST_DIR / f"{args.subset}_60.jsonl" if args.subset in ["preflight", "convergence"] else MANIFEST_DIR / f"{args.subset}_600.jsonl"
+    if args.mode == "validate_20":
+        print("\n--- Running 20-Item Deterministic Validation under Overnight Ollama Config ---")
+        manifest = MANIFEST_DIR / "preflight_60.jsonl"
+        out_val = RAW_RESPONSES_DIR / "val20_check_responses.jsonl"
+        run_lpe(manifest, out_val, max_workers=args.workers, model_tag=args.model, symbol_set_name=args.symbol_set)
+        print("Validation complete. Check logprobs in val20_check_responses.jsonl")
+
+    elif args.mode in ["preflight", "lpe"]:
+        manifest = MANIFEST_DIR / "preflight_60.jsonl" if args.subset == "preflight" else MANIFEST_DIR / "pilot_600.jsonl"
         out_lpe = RAW_RESPONSES_DIR / f"{args.subset}_lpe_responses.jsonl"
         run_lpe(manifest, out_lpe, max_workers=args.workers, model_tag=args.model, symbol_set_name=args.symbol_set)
-
-    elif args.mode == "mce":
-        manifest = MANIFEST_DIR / f"{args.subset}_60.jsonl" if args.subset == "preflight" else MANIFEST_DIR / f"{args.subset}_600.jsonl"
-        out_mce = RAW_RESPONSES_DIR / f"{args.subset}_mce_responses.jsonl"
-        run_mce(manifest, out_mce, max_workers=args.workers, replicates_per_perm=5, temperature=1.0, model_tag=args.model, symbol_set_name=args.symbol_set)
 
 if __name__ == "__main__":
     main()
