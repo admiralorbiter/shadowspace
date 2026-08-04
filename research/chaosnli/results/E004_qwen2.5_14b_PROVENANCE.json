@@ -9,8 +9,8 @@
   "raw_responses_sha256": "45221d113d2218036c0dfec0ade257d0b1b10d5f9e5af003b2d92d56d37c12c7",
   "manifest_sha256": "318c67354242771d2812b0d26dbd3d89e084ecc0afece250cae453d6531f4851",
   "support_matrix_sha256": "29ff35cfddbd1a4c30858eb2feac58aeb0c087aff99850736007a2a49fb40245",
-  "summary_sha256": "ac20c18bab453c21b087e10129decab985aabf2714a27093cf7284e3996fca2e",
-  "gemma3_regression_gate": "PASSED_BIT_PERFECT",
-  "censoring_audit": "PASSED_SENSITIVITY_BOUNDED",
+  "summary_sha256": "84426e77a5899bc961000b444606b5cb0b5ca625a10d0aaf16d4f0fb96ac2844",
+  "gemma3_regression_gate": "PASSED_NUMERICALLY_EXACT_WITHIN_TOLERANCE",
+  "censoring_audit": "BOUND_A_AND_BOUND_B_BOOTSTRAP_COMPLETE",
   "audit_status": "PAPER_READY_FREEZE"
 }

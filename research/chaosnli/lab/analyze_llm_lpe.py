@@ -2,14 +2,14 @@
 
 Implements all required final scientific audit fixes:
   1. Direct detection of -40.0 imputed tokens and Censoring Sensitivity Analysis
-     (Bound A: floor -40.0, Bound B: 20th-token logprob threshold).
-  2. Resampled item-level fold null in calibrated bootstrap:
+     (Bound A: primary floor -40.0, Bound B: fixed -20.0 stress test bound).
+  2. Full 30-stratum paired bootstrap evaluation under both Bound A and Bound B.
+  3. Resampled item-level fold null in calibrated bootstrap:
      null_cal_b = mean(null_by_item_cal[boot_indices])
-  3. Within-model calibration effects & Calibration-by-Model Family Interaction Contrast:
-     Delta Delta R = (R_Qwen,cal - R_Qwen,raw) - (R_Gemma,cal - R_Gemma,raw)
-  4. Hardened Gemma 3 12B E004 regression gate asserting all 5 fold temperatures,
-     calibrated Brier, JSD, Q_supp, Q_null, and raw metrics.
-  5. 30-stratum focal-row bootstrap CIs for raw, calibrated, paired contrasts, and interaction.
+  4. Within-model calibration effects & Calibration-by-Model Interaction Contrast under both bounds:
+     Delta Delta R = (R_Target,cal - R_Target,raw) - (R_Gemma,cal - R_Gemma,raw)
+  5. Hardened Gemma 3 12B E004 regression gate numerically reproducing all frozen estimands
+     and fold temperatures within predetermined tight tolerances.
 """
 
 from __future__ import annotations
@@ -125,7 +125,8 @@ def extract_lpe_logits_and_probs(
 ) -> Tuple[np.ndarray, np.ndarray, int, List[float]]:
     """Extract logits and probabilities from raw LPE JSONL file.
     
-    Supports both raw OpenAI API logprobs format (Gemma 3) and processed symbol_logprobs format (Qwen 2.5).
+    If imputation_bound == "floor", missing candidate tokens are assigned primary floor -40.0.
+    If imputation_bound == "fixed_minus20_stress_test", missing candidate tokens are assigned fixed -20.0 stress test bound.
     """
     N = len(items)
     records = [json.loads(line) for line in open(file_path, "r", encoding="utf-8") if line.strip()]
@@ -186,8 +187,7 @@ def extract_lpe_logits_and_probs(
                 if lp_E is None or lp_N is None or lp_C is None:
                     imputed_count += 1
 
-            th_lp = -20.0 if not th_logprobs else th_logprobs[-1]
-            default_val = -40.0 if imputation_bound == "floor" else th_lp
+            default_val = -40.0 if imputation_bound == "floor" else -20.0
 
             lp_E = lp_E if (lp_E is not None and lp_E != -40.0) else default_val
             lp_N = lp_N if (lp_N is not None and lp_N != -40.0) else default_val
@@ -397,7 +397,7 @@ def verify_gemma3_regression(items: List[Dict], S_human_k10: np.ndarray, q_hh_k1
     for f in range(5):
         assert abs(gemma_res["fitted_temperatures"][f] - tgt_fold_Ts[f]) < 1e-4, f"Fold {f} T* assertion failed: {gemma_res['fitted_temperatures'][f]} != {tgt_fold_Ts[f]}"
 
-    print("ALL HARD GEMMA 3 12B E004 REGRESSION ASSERTIONS PASSED (100% BIT-PERFECT REPRODUCTION)!\n")
+    print("ALL HARD GEMMA 3 12B E004 REGRESSION ASSERTIONS PASSED (NUMERICALLY REPRODUCED WITHIN FROZEN TOLERANCES)!\n")
     return gemma_res
 
 def main():
@@ -433,62 +433,90 @@ def main():
     # 1. Hard Gemma 3 12B Regression Gate
     gemma_res = verify_gemma3_regression(items, S_human_k10, q_hh_k10, e008_data)
 
-    # 2. Censoring Sensitivity Analysis (Bound A: floor -40.0, Bound B: 20th token threshold)
+    # 2. Censoring Sensitivity Analysis (Bound A: primary floor -40.0, Bound B: fixed -20.0 stress test bound)
     logits_A, perm_probs_A, imp_count_A, _ = extract_lpe_logits_and_probs(args.responses, items, imputation_bound="floor")
-    logits_B, perm_probs_B, imp_count_B, _ = extract_lpe_logits_and_probs(args.responses, items, imputation_bound="20th_token")
+    logits_B, perm_probs_B, imp_count_B, _ = extract_lpe_logits_and_probs(args.responses, items, imputation_bound="fixed_minus20_stress_test")
 
     model_res_A = run_e004_pipeline(items, logits_A, perm_probs_A, S_human_k10, q_hh_k10, e008_data)
     model_res_B = run_e004_pipeline(items, logits_B, perm_probs_B, S_human_k10, q_hh_k10, e008_data)
 
+    shift_raw = abs(model_res_A['r_norm_pct_raw'] - model_res_B['r_norm_pct_raw'])
+    shift_cal = abs(model_res_A['r_norm_pct_calibrated'] - model_res_B['r_norm_pct_calibrated'])
+
     print("============================================================")
     print(f"  CENSORING SENSITIVITY AUDIT ({imp_count_A} IMPUTED RECORDS)")
     print("============================================================")
-    print(f"  Bound A (Floor -40.0):         Raw R = {model_res_A['r_norm_pct_raw']:.6f}%, Cal R = {model_res_A['r_norm_pct_calibrated']:.6f}%")
-    print(f"  Bound B (20th Token Threshold): Raw R = {model_res_B['r_norm_pct_raw']:.6f}%, Cal R = {model_res_B['r_norm_pct_calibrated']:.6f}%")
-    print(f"  Sensitivity Shift:             Delta R_raw = {abs(model_res_A['r_norm_pct_raw'] - model_res_B['r_norm_pct_raw']):.6f}%, Delta R_cal = {abs(model_res_A['r_norm_pct_calibrated'] - model_res_B['r_norm_pct_calibrated']):.6f}%")
-    print("  [PASS] Censoring sensitivity shift is < 0.001% (complete mathematical stability)!\n")
+    print(f"  Bound A (Primary Floor -40.0): Raw R = {model_res_A['r_norm_pct_raw']:.6f}%, Cal R = {model_res_A['r_norm_pct_calibrated']:.6f}%")
+    print(f"  Bound B (Fixed -20.0 Stress):  Raw R = {model_res_B['r_norm_pct_raw']:.6f}%, Cal R = {model_res_B['r_norm_pct_calibrated']:.6f}%")
+    print(f"  Censoring sensitivity shift:  Delta R_raw = {shift_raw:.4f}%, Delta R_cal = {shift_cal:.4f}%\n")
 
     model_res = model_res_A
 
-    # 3. Compute Paired Stratified Bootstrap Contrasts (Target - Gemma 3)
-    boot_diff_r_raw = np.array(model_res["boot_r_raw"]) - np.array(gemma_res["boot_r_raw"])
-    boot_diff_r_cal = np.array(model_res["boot_r_cal"]) - np.array(gemma_res["boot_r_cal"])
+    # 3. Compute Paired Stratified Bootstrap Contrasts under Bound A
+    boot_diff_r_raw_A = np.array(model_res_A["boot_r_raw"]) - np.array(gemma_res["boot_r_raw"])
+    boot_diff_r_cal_A = np.array(model_res_A["boot_r_cal"]) - np.array(gemma_res["boot_r_cal"])
 
-    # 4. Calibration-by-Model Family Interaction Contrast
-    target_cal_effect = np.array(model_res["boot_r_cal"]) - np.array(model_res["boot_r_raw"])
+    target_cal_effect_A = np.array(model_res_A["boot_r_cal"]) - np.array(model_res_A["boot_r_raw"])
     gemma_cal_effect = np.array(gemma_res["boot_r_cal"]) - np.array(gemma_res["boot_r_raw"])
-    boot_interaction = target_cal_effect - gemma_cal_effect
+    boot_interaction_A = target_cal_effect_A - gemma_cal_effect
 
-    delta_r_raw = model_res["r_norm_pct_raw"] - gemma_res["r_norm_pct_raw"]
-    delta_r_cal = model_res["r_norm_pct_calibrated"] - gemma_res["r_norm_pct_calibrated"]
+    delta_r_raw_A = model_res_A["r_norm_pct_raw"] - gemma_res["r_norm_pct_raw"]
+    delta_r_cal_A = model_res_A["r_norm_pct_calibrated"] - gemma_res["r_norm_pct_calibrated"]
 
-    target_cal_gain = model_res["r_norm_pct_calibrated"] - model_res["r_norm_pct_raw"]
+    target_cal_gain_A = model_res_A["r_norm_pct_calibrated"] - model_res_A["r_norm_pct_raw"]
     gemma_cal_gain = gemma_res["r_norm_pct_calibrated"] - gemma_res["r_norm_pct_raw"]
-    interaction_gain = target_cal_gain - gemma_cal_gain
+    interaction_gain_A = target_cal_gain_A - gemma_cal_gain
 
-    delta_r_raw_ci = [float(np.percentile(boot_diff_r_raw, 2.5)), float(np.percentile(boot_diff_r_raw, 97.5))]
-    delta_r_cal_ci = [float(np.percentile(boot_diff_r_cal, 2.5)), float(np.percentile(boot_diff_r_cal, 97.5))]
-    interaction_ci = [float(np.percentile(boot_interaction, 2.5)), float(np.percentile(boot_interaction, 97.5))]
+    delta_r_raw_ci_A = [float(np.percentile(boot_diff_r_raw_A, 2.5)), float(np.percentile(boot_diff_r_raw_A, 97.5))]
+    delta_r_cal_ci_A = [float(np.percentile(boot_diff_r_cal_A, 2.5)), float(np.percentile(boot_diff_r_cal_A, 97.5))]
+    interaction_ci_A = [float(np.percentile(boot_interaction_A, 2.5)), float(np.percentile(boot_interaction_A, 97.5))]
 
-    delta_b_raw = model_res["effective_bits_raw"] - gemma_res["effective_bits_raw"]
-    delta_b_cal = model_res["effective_bits_calibrated"] - gemma_res["effective_bits_calibrated"]
+    delta_b_raw_A = model_res_A["effective_bits_raw"] - gemma_res["effective_bits_raw"]
+    delta_b_cal_A = model_res_A["effective_bits_calibrated"] - gemma_res["effective_bits_calibrated"]
 
-    # Test practical margin exceedance (CI(Delta R_cal - 5) > 0)
-    cal_exceeds_5pp_margin = delta_r_cal_ci[0] > 5.0
+    cal_exceeds_5pp_margin_A = delta_r_cal_ci_A[0] > 5.0
+
+    # 4. Compute Paired Stratified Bootstrap Contrasts under Bound B (Fixed -20 Stress Test)
+    boot_diff_r_raw_B = np.array(model_res_B["boot_r_raw"]) - np.array(gemma_res["boot_r_raw"])
+    boot_diff_r_cal_B = np.array(model_res_B["boot_r_cal"]) - np.array(gemma_res["boot_r_cal"])
+
+    target_cal_effect_B = np.array(model_res_B["boot_r_cal"]) - np.array(model_res_B["boot_r_raw"])
+    boot_interaction_B = target_cal_effect_B - gemma_cal_effect
+
+    delta_r_raw_B = model_res_B["r_norm_pct_raw"] - gemma_res["r_norm_pct_raw"]
+    delta_r_cal_B = model_res_B["r_norm_pct_calibrated"] - gemma_res["r_norm_pct_calibrated"]
+
+    target_cal_gain_B = model_res_B["r_norm_pct_calibrated"] - model_res_B["r_norm_pct_raw"]
+    interaction_gain_B = target_cal_gain_B - gemma_cal_gain
+
+    delta_r_raw_ci_B = [float(np.percentile(boot_diff_r_raw_B, 2.5)), float(np.percentile(boot_diff_r_raw_B, 97.5))]
+    delta_r_cal_ci_B = [float(np.percentile(boot_diff_r_cal_B, 2.5)), float(np.percentile(boot_diff_r_cal_B, 97.5))]
+    interaction_ci_B = [float(np.percentile(boot_interaction_B, 2.5)), float(np.percentile(boot_interaction_B, 97.5))]
+
+    delta_b_raw_B = model_res_B["effective_bits_raw"] - gemma_res["effective_bits_raw"]
+    delta_b_cal_B = model_res_B["effective_bits_calibrated"] - gemma_res["effective_bits_calibrated"]
 
     summary = {
         "model_tag": args.model_tag,
         "num_items": N,
         "imputed_minus40_records": imp_count_A,
         "censoring_sensitivity": {
-            "bound_A_floor_minus40_raw_r": model_res_A["r_norm_pct_raw"],
-            "bound_A_floor_minus40_cal_r": model_res_A["r_norm_pct_calibrated"],
-            "bound_B_20th_token_raw_r": model_res_B["r_norm_pct_raw"],
-            "bound_B_20th_token_cal_r": model_res_B["r_norm_pct_calibrated"],
-            "sensitivity_max_shift_pct": float(max(
-                abs(model_res_A["r_norm_pct_raw"] - model_res_B["r_norm_pct_raw"]),
-                abs(model_res_A["r_norm_pct_calibrated"] - model_res_B["r_norm_pct_calibrated"])
-            ))
+            "bound_A_primary_floor_minus40_raw_r": model_res_A["r_norm_pct_raw"],
+            "bound_A_primary_floor_minus40_cal_r": model_res_A["r_norm_pct_calibrated"],
+            "bound_B_fixed_minus20_stress_raw_r": model_res_B["r_norm_pct_raw"],
+            "bound_B_fixed_minus20_stress_cal_r": model_res_B["r_norm_pct_calibrated"],
+            "sensitivity_max_shift_pct": float(max(shift_raw, shift_cal)),
+            "bound_B_paired_contrasts": {
+                "delta_r_norm_raw_pct": delta_r_raw_B,
+                "delta_r_norm_raw_95ci": delta_r_raw_ci_B,
+                "delta_r_norm_calibrated_pct": delta_r_cal_B,
+                "delta_r_norm_calibrated_95ci": delta_r_cal_ci_B,
+                "delta_effective_bits_raw": delta_b_raw_B,
+                "delta_effective_bits_calibrated": delta_b_cal_B,
+                "within_model_calibration_gain_target_pct": target_cal_gain_B,
+                "two_model_calibration_interaction_pct": interaction_gain_B,
+                "two_model_calibration_interaction_95ci": interaction_ci_B
+            }
         },
         "metrics": {
             "nll_raw_nats": model_res["nll_raw_nats"],
@@ -515,17 +543,17 @@ def main():
             "k_eff_calibrated": model_res["k_eff_calibrated"]
         },
         "paired_contrast_vs_gemma3_12b": {
-            "delta_r_norm_raw_pct": delta_r_raw,
-            "delta_r_norm_raw_95ci": delta_r_raw_ci,
-            "delta_r_norm_calibrated_pct": delta_r_cal,
-            "delta_r_norm_calibrated_95ci": delta_r_cal_ci,
-            "calibrated_contrast_exceeds_5pp_margin_ci": cal_exceeds_5pp_margin,
-            "delta_effective_bits_raw": delta_b_raw,
-            "delta_effective_bits_calibrated": delta_b_cal,
-            "within_model_calibration_gain_target_pct": target_cal_gain,
+            "delta_r_norm_raw_pct": delta_r_raw_A,
+            "delta_r_norm_raw_95ci": delta_r_raw_ci_A,
+            "delta_r_norm_calibrated_pct": delta_r_cal_A,
+            "delta_r_norm_calibrated_95ci": delta_r_cal_ci_A,
+            "calibrated_contrast_exceeds_5pp_margin_ci": cal_exceeds_5pp_margin_A,
+            "delta_effective_bits_raw": delta_b_raw_A,
+            "delta_effective_bits_calibrated": delta_b_cal_A,
+            "within_model_calibration_gain_target_pct": target_cal_gain_A,
             "within_model_calibration_gain_gemma_pct": gemma_cal_gain,
-            "calibration_by_model_family_interaction_pct": interaction_gain,
-            "calibration_by_model_family_interaction_95ci": interaction_ci
+            "two_model_calibration_interaction_pct": interaction_gain_A,
+            "two_model_calibration_interaction_95ci": interaction_ci_A
         },
         "provenance": {
             "responses_path": str(args.responses),
@@ -535,7 +563,7 @@ def main():
             "support_matrix_path": str(args.support_matrix),
             "support_matrix_sha256": supp_sha256,
             "script": "analyze_llm_lpe.py",
-            "gemma3_regression_gate": "PASSED_BIT_PERFECT"
+            "gemma3_regression_gate": "PASSED_NUMERICALLY_EXACT_WITHIN_TOLERANCE"
         }
     }
 
@@ -559,17 +587,16 @@ def main():
     print(f"  Prototype Resolution (Raw):  {model_res['effective_bits_raw']:.3f} bits (K_eff = {model_res['k_eff_raw']:.2f})")
     print(f"  Prototype Resolution (Cal):  {model_res['effective_bits_calibrated']:.3f} bits (K_eff = {model_res['k_eff_calibrated']:.2f})")
     print(f"------------------------------------------------------------")
-    print(f"  PAIRED CONTRAST VS GEMMA 3 12B:")
-    print(f"    Raw Delta R:               {delta_r_raw:+.2f}% (95% CI: [{delta_r_raw_ci[0]:+.2f}%, {delta_r_raw_ci[1]:+.2f}%])")
-    print(f"    Calibrated Delta R:        {delta_r_cal:+.2f}% (95% CI: [{delta_r_cal_ci[0]:+.2f}%, {delta_r_cal_ci[1]:+.2f}%])")
-    print(f"    Exceeds 5pp Margin (CI>5): {cal_exceeds_5pp_margin}")
-    print(f"    Raw Delta b:               {delta_b_raw:+.3f} bits")
-    print(f"    Calibrated Delta b:        {delta_b_cal:+.3f} bits")
+    print(f"  PAIRED CONTRAST VS GEMMA 3 12B (BOUND A - PRIMARY FLOOR):")
+    print(f"    Raw Delta R:               {delta_r_raw_A:+.2f}% (95% CI: [{delta_r_raw_ci_A[0]:+.2f}%, {delta_r_raw_ci_A[1]:+.2f}%])")
+    print(f"    Calibrated Delta R:        {delta_r_cal_A:+.2f}% (95% CI: [{delta_r_cal_ci_A[0]:+.2f}%, {delta_r_cal_ci_A[1]:+.2f}%])")
+    print(f"    Exceeds 5pp Margin (CI>5): {cal_exceeds_5pp_margin_A}")
+    print(f"    Two-Model Interaction:     {interaction_gain_A:+.2f}% (95% CI: [{interaction_ci_A[0]:+.2f}%, {interaction_ci_A[1]:+.2f}%])")
     print(f"------------------------------------------------------------")
-    print(f"  CALIBRATION-BY-MODEL FAMILY INTERACTION:")
-    print(f"    Qwen Calibration Gain:     {target_cal_gain:+.2f}%")
-    print(f"    Gemma Calibration Gain:    {gemma_cal_gain:+.2f}%")
-    print(f"    Interaction (Delta Delta R): {interaction_gain:+.2f}% (95% CI: [{interaction_ci[0]:+.2f}%, {interaction_ci[1]:+.2f}%])")
+    print(f"  PAIRED CONTRAST VS GEMMA 3 12B (BOUND B - FIXED -20 STRESS):")
+    print(f"    Raw Delta R:               {delta_r_raw_B:+.2f}% (95% CI: [{delta_r_raw_ci_B[0]:+.2f}%, {delta_r_raw_ci_B[1]:+.2f}%])")
+    print(f"    Calibrated Delta R:        {delta_r_cal_B:+.2f}% (95% CI: [{delta_r_cal_ci_B[0]:+.2f}%, {delta_r_cal_ci_B[1]:+.2f}%])")
+    print(f"    Two-Model Interaction:     {interaction_gain_B:+.2f}% (95% CI: [{interaction_ci_B[0]:+.2f}%, {interaction_ci_B[1]:+.2f}%])")
     print(f"============================================================")
     print(f"Exported summary to {args.output_summary}")
 
