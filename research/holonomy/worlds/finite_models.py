@@ -1,12 +1,14 @@
-"""Finite First-Order Model Structure & Recursive Formula Evaluator for Phase E0.6.
+"""Finite First-Order Model Structure & 64-Model Bounded Logic Evaluator for Phase E0.7.
 
 Implements model-theoretic satisfaction M, rho |= phi for arbitrary finite domain models M.
+Enumerates all 2^3 x 2^3 = 64 interpretations over domain D = {e1, e2, e3} and unary predicates P, Q.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, Set, Tuple
+from itertools import product
+from typing import Dict, List, Sequence, Set, Tuple
 
 from research.holonomy.algebra.formulas import And, Atom, Formula, Implies, Not, Or, QuantifiedFormula, Swap
 
@@ -31,6 +33,31 @@ class FiniteModel:
 
     def evaluate_binary(self, pred: str, entity1: str, entity2: str) -> bool:
         return (entity1, entity2) in self.binary_predicates.get(pred, set())
+
+
+def generate_all_64_finite_models() -> List[FiniteModel]:
+    """Generates all 2^3 x 2^3 = 64 First-Order structures over domain D = {e1, e2, e3} for predicates P and Q."""
+    entities = ["e1", "e2", "e3"]
+    domain = set(entities)
+    models = []
+
+    # Subsets of {e1, e2, e3}
+    from itertools import combinations
+    subsets = []
+    for r in range(len(entities) + 1):
+        for combo in combinations(entities, r):
+            subsets.append(set(combo))
+
+    for p_set in subsets:
+        for q_set in subsets:
+            models.append(
+                FiniteModel(domain=domain, unary_predicates={"P": p_set, "Q": q_set})
+            )
+
+    return models
+
+
+ALL_64_MODELS = generate_all_64_finite_models()
 
 
 def evaluate_formula(

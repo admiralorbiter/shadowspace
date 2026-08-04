@@ -1,7 +1,7 @@
 {
-  "timestamp_utc": "2026-08-04T22:37:54.768386+00:00",
-  "phase": "E0.6",
-  "git_commit_sha": "99c162d3fca39125b33f2d7f95d93c2536703c09",
+  "timestamp_utc": "2026-08-04T22:45:07.360226+00:00",
+  "phase": "E0.7",
+  "git_commit_sha": "5f87e4e77dded1e5667b53289fef9250217ef50d",
   "environment": {
     "python_version": "3.13.7",
     "numpy_version": "2.2.6",
@@ -23,5 +23,29 @@
   "glue_ood": {
     "coherent_score": 7.249992751495086e-14,
     "incoherent_score": 1.7725000000002182
-  }
+  },
+  "monte_carlo_sweeps": [
+    {
+      "sample_size": 50,
+      "perturbation_radius": 0.02,
+      "measurement_noise": 0.005,
+      "ols_matrix_bias_norm": 0.0982511528910058,
+      "tls_matrix_bias_norm": 0.02281338064462063,
+      "ols_holonomy_rmse": 0.06863435600581973,
+      "tls_holonomy_rmse": 0.05272870532638395,
+      "false_positive_rate": 0.06,
+      "detection_power": 1.0
+    },
+    {
+      "sample_size": 250,
+      "perturbation_radius": 0.02,
+      "measurement_noise": 0.005,
+      "ols_matrix_bias_norm": 0.08086970804305701,
+      "tls_matrix_bias_norm": 0.004859216585443944,
+      "ols_holonomy_rmse": 0.0456010416668856,
+      "tls_holonomy_rmse": 0.02248607819732379,
+      "false_positive_rate": 0.06,
+      "detection_power": 1.0
+    }
+  ]
 }

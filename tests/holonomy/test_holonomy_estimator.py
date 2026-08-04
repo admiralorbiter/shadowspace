@@ -1,14 +1,14 @@
-"""Unit tests for Phase E0.5 holonomy estimation, 3x3 homogeneous composition, and sweeps."""
+"""Unit tests for Phase E0.7 holonomy estimation, 3x3 homogeneous composition, and Monte Carlo sweeps."""
 
 import numpy as np
 import pytest
 
 from research.holonomy.experiments.e000_flat_world import run_e000_flat_world_experiment
 from research.holonomy.experiments.e001_planted_curvature import (
-    run_e001_estimator_sweeps,
+    run_e001_monte_carlo_sweeps,
     run_e001_planted_curvature_experiment,
 )
-from research.holonomy.geometry.connection import ParallelTransportMap
+from research.holonomy.geometry.connection import ConnectionEstimator, ParallelTransportMap
 from research.holonomy.geometry.holonomy import evaluate_holonomy
 from research.holonomy.geometry.parallel_transport import PathTransport
 
@@ -21,13 +21,12 @@ def test_e001_planted_curvature_4corner_recovery():
     assert run_e001_planted_curvature_experiment(np.pi / 4)
 
 
-def test_e001_estimator_sweeps():
-    results = run_e001_estimator_sweeps()
+def test_e001_monte_carlo_sweeps():
+    results = run_e001_monte_carlo_sweeps(num_seeds=5)
     assert len(results) > 0
-    # RMSE should decrease with sample size N
-    rmse_20 = [r.matrix_rmse for r in results if r.sample_size == 20][0]
-    rmse_500 = [r.matrix_rmse for r in results if r.sample_size == 500][0]
-    assert rmse_500 <= rmse_20
+    # TLS bias should be small
+    res_250 = [r for r in results if r.sample_size == 250][0]
+    assert res_250.tls_matrix_bias_norm < 0.1
 
 
 def test_3x3_homogeneous_affine_composition():

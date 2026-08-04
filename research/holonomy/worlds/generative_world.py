@@ -1,7 +1,8 @@
-"""Generative Ambiguity World Simulator (Phase E0.5).
+"""Generative Ambiguity World Simulator (Phase E0.7).
 
 Generates exact human and model probability distributions p(x) in Delta^2 over
-canonical formal states by mixing latent interpreters with context-dependent weights.
+canonical formal states by transforming interpreter weights in ILR space:
+u(x) = ilr(w(x)), u(gx) = K_g u(x) + c_g, w(gx) = ilr_inverse(u(gx)).
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from research.holonomy.algebra.formulas import FormalState
+from research.holonomy.geometry.simplex_bundle import HELMERT_V3, ilr_inverse, ilr_transform
 from research.holonomy.worlds.interpreters import STANDARD_INTERPRETERS, LatentInterpreter
 
 
@@ -61,23 +63,22 @@ class FlatWorld(GenerativeWorld):
 
 
 class CurvedWorld(GenerativeWorld):
-    """Curved World: Interpreter weights transform under K_g(x), inducing planted holonomy."""
+    """Curved World: Interpreter weights transform in ILR space: u(gx) = K_g u(x) + c_g."""
 
     def __init__(self, rotation_angle: float = np.pi / 4) -> None:
         super().__init__()
         self.rotation_angle = rotation_angle
         c, s = np.cos(rotation_angle), np.sin(rotation_angle)
-        self.K_g1 = np.array([
-            [c, -s, 0.0],
-            [s,  c, 0.0],
-            [0.0, 0.0, 1.0],
-        ], dtype=np.float64)
+        # K_g operates in 2D ILR weight space for 3-interpreter simplex Delta^2
+        self.K_g1 = np.array([[c, -s], [s, c]], dtype=np.float64)
+        self.base_weights = np.array([0.5, 0.3, 0.2], dtype=np.float64)
 
     def get_weights(self, state: FormalState) -> NDArray[np.float64]:
-        base_w = np.array([0.5, 0.3, 0.2], dtype=np.float64)
         p_id = state.premise.canonical_id()
         if "Q(x)" in p_id and p_id.find("Q(x)") < p_id.find("P(x)"):
-            w = np.dot(self.K_g1, base_w)
-            w = np.abs(w)
-            return w / w.sum()
-        return base_w
+            # Map base weights into ILR weight space
+            u_base = ilr_transform(self.base_weights)
+            u_transformed = np.dot(self.K_g1, u_base)
+            # Map back to probability simplex Delta^2 via inverse ILR
+            return ilr_inverse(u_transformed)
+        return self.base_weights.copy()

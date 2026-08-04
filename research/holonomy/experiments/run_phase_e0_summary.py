@@ -1,8 +1,8 @@
-"""Phase E0.6 Synthetic Laboratory Summary Runner & Enriched Manifest Exporter.
+"""Phase E0.7 Synthetic Laboratory Summary Runner & Enriched Manifest Exporter.
 
-Executes all Phase E0.6 synthetic benchmarks (Flat World, 4-Corner Planted Curvature,
-Theorem 1A & Proposition 1B Invariance, Data-Dependent Sheaf Cohomology H0/H1, GlueOOD Solver)
-and exports machine-readable execution manifest to results/holonomy/phase_e0_manifest.json.
+Executes all Phase E0.7 synthetic benchmarks (Flat World, 4-Corner Planted Curvature,
+Monte Carlo FPR/Power Sweeps, TLS Errors-in-Variables Bias Correction, Theorem 1A & Prop 1B Invariance,
+Data-Dependent Sheaf Cohomology H0/H1, GlueOOD Solver) and exports machine-readable execution manifest.
 Enforces strict gate assertions and exits with SystemExit(1) on any failure.
 """
 
@@ -17,7 +17,7 @@ import scipy
 
 from research.holonomy.experiments.e000_flat_world import run_e000_flat_world_experiment
 from research.holonomy.experiments.e001_planted_curvature import (
-    run_e001_estimator_sweeps,
+    run_e001_monte_carlo_sweeps,
     run_e001_planted_curvature_experiment,
 )
 from research.holonomy.experiments.e003_calibration_invariance import run_e003_calibration_invariance_experiment
@@ -33,20 +33,20 @@ def get_git_commit_sha() -> str:
         out = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=os.getcwd()).decode("utf-8").strip()
         return out
     except Exception:
-        return "99c162d"
+        return "UNKNOWN"
 
 
 def main() -> None:
     print("================================================================================")
-    print("PHASE E0.6: FINITE AMBIGUITY LABORATORY — MATHEMATICAL HARDENING REPORT")
+    print("PHASE E0.7: FINITE AMBIGUITY LABORATORY — MONTE CARLO & TLS SUMMARY REPORT")
     print("================================================================ algorithm: 3x3 Homogeneous Affine Connections & Data-Dependent Sheaves\n")
 
     # 1. Flat World Benchmark
     flat_pass = run_e000_flat_world_experiment()
     print(f"[1] Flat World Zero Holonomy (H_gamma == I_2): {'PASSED' if flat_pass else 'FAILED'}")
 
-    # 2. 4-Corner Planted Curvature Recovery & Sweeps
-    print("\n[2] 4-Corner Planted Curvature Recovery across Angles:")
+    # 2. 4-Corner Planted Curvature Recovery & Monte Carlo Sweeps
+    print("\n[2] 4-Corner Planted Curvature Recovery & Monte Carlo Inference:")
     angles = [np.pi / 12, np.pi / 6, np.pi / 4, np.pi / 3]
     curvature_results = []
     for angle in angles:
@@ -54,8 +54,14 @@ def main() -> None:
         curvature_results.append(passed)
         print(f"    - Rotation angle {angle:.4f} rad ({np.degrees(angle):.1f}°): {'PASSED' if passed else 'FAILED'}")
 
-    sweeps = run_e001_estimator_sweeps()
-    print(f"    - Estimator Sample Sweeps: Evaluated {len(sweeps)} configurations (N in [20..500]).")
+    mc_sweeps = run_e001_monte_carlo_sweeps(num_seeds=50)
+    print(f"\n    - Monte Carlo Statistical Sweeps (50 Seeds per config):")
+    for sw in mc_sweeps:
+        print(
+            f"      [N={sw.sample_size}, r={sw.perturbation_radius}, sigma={sw.measurement_noise}] "
+            f"FPR: {sw.false_positive_rate:.2f}, Power: {sw.detection_power:.2f} | "
+            f"OLS Bias: {sw.ols_matrix_bias_norm:.4f}, TLS Bias: {sw.tls_matrix_bias_norm:.4f}"
+        )
 
     # 3. Theorem 1A & Proposition 1B Invariance
     thm1_pass = run_e003_calibration_invariance_experiment()
@@ -75,7 +81,7 @@ def main() -> None:
     print(f"    - Cohomological obstruction dim H^1: {spec.dim_H1}")
     print(f"    - Algebraic connectivity (Fiedler): {spec.fiedler_value:.6f}")
 
-    # 5. GlueOOD Solver
+    # 5. GlueOOD Least-Squares Solver
     s1 = np.array([0.5, -0.2])
     s2 = np.array([0.5, -0.2])
     s3 = np.array([-1.0, 2.0])
@@ -85,7 +91,7 @@ def main() -> None:
     score_incoherent = compute_glue_ood_score([s1, s3], [R_id, R_id])
 
     glue_pass = (score_coherent < 1e-4) and (score_incoherent > 0.5)
-    print(f"\n[5] GlueOOD Least-Squares Consensus Solver:")
+    print(f"\n[5] GlueOOD Ridge-Regularized Least-Squares Consensus Solver:")
     print(f"    - Coherent extension GlueOOD score: {score_coherent:.6f}")
     print(f"    - Incoherent extension GlueOOD score: {score_incoherent:.6f} -> {'PASSED' if glue_pass else 'FAILED'}")
 
@@ -96,7 +102,7 @@ def main() -> None:
     # Machine-readable manifest export
     manifest = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-        "phase": "E0.6",
+        "phase": "E0.7",
         "git_commit_sha": get_git_commit_sha(),
         "environment": {
             "python_version": sys.version.split()[0],
@@ -120,6 +126,20 @@ def main() -> None:
             "coherent_score": float(score_coherent),
             "incoherent_score": float(score_incoherent),
         },
+        "monte_carlo_sweeps": [
+            {
+                "sample_size": sw.sample_size,
+                "perturbation_radius": sw.perturbation_radius,
+                "measurement_noise": sw.measurement_noise,
+                "ols_matrix_bias_norm": sw.ols_matrix_bias_norm,
+                "tls_matrix_bias_norm": sw.tls_matrix_bias_norm,
+                "ols_holonomy_rmse": sw.ols_holonomy_rmse,
+                "tls_holonomy_rmse": sw.tls_holonomy_rmse,
+                "false_positive_rate": sw.false_positive_rate,
+                "detection_power": sw.detection_power,
+            }
+            for sw in mc_sweeps
+        ],
     }
 
     manifest_dir = "results/holonomy"
@@ -128,14 +148,14 @@ def main() -> None:
     with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2)
 
-    print(f"\n[6] Enriched Machine-Readable Manifest Exported to: {manifest_path}")
+    print(f"\n[6] Machine-Readable Manifest Exported to: {manifest_path}")
 
     print("\n================================================================================")
     if all_passed:
-        print("ALL PHASE E0.6 MATHEMATICAL HARDENING GATES PASSED CLEANLY")
+        print("ALL PHASE E0.7 MATHEMATICAL HARDENING GATES PASSED CLEANLY")
         print("================================================================================")
     else:
-        print("PHASE E0.6 GATES FAILED — CHECK MANIFEST FOR DETAILS")
+        print("PHASE E0.7 GATES FAILED — CHECK MANIFEST FOR DETAILS")
         print("================================================================================")
         sys.exit(1)
 

@@ -1,7 +1,8 @@
-"""Canonical First-Order Logic Formula AST and Predicate Permutations for Phase E0.6.
+"""Canonical First-Order Logic Formula AST and Predicate Permutations for Phase E0.7.
 
 Implements full FOL AST (Atom, Not, And, Or, Implies, QuantifiedFormula) and recursive
 PredicatePermutation mapping P(x) <-> Q(x) commuting with all logical operators.
+Sets eq=False on AST dataclasses so base Formula.__eq__ handles canonical equality.
 """
 
 from __future__ import annotations
@@ -38,7 +39,7 @@ class Formula(ABC):
         return hash(self.simplify().canonical_id())
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class Atom(Formula):
     """Atomic predicate P(x1, ..., xn)."""
 
@@ -57,7 +58,7 @@ class Atom(Formula):
         return Atom(predicate=new_pred, arguments=self.arguments)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class Not(Formula):
     """Negation ~phi."""
 
@@ -77,7 +78,7 @@ class Not(Formula):
         return Not(self.operand.permute_predicates(mapping)).simplify()
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class And(Formula):
     """Conjunction phi ^ psi."""
 
@@ -99,7 +100,7 @@ class And(Formula):
         ).simplify()
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class Or(Formula):
     """Disjunction phi v psi."""
 
@@ -121,7 +122,7 @@ class Or(Formula):
         ).simplify()
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class Implies(Formula):
     """Implication phi -> psi."""
 
@@ -143,7 +144,7 @@ class Implies(Formula):
         ).simplify()
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class QuantifiedFormula(Formula):
     """Quantified formula (FORALL x phi or EXISTS x phi)."""
 
@@ -164,7 +165,7 @@ class QuantifiedFormula(Formula):
         ).simplify()
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class Swap(Formula):
     """Predicate Swap wrapper for P <-> Q."""
 
@@ -178,7 +179,6 @@ class Swap(Formula):
         simp_op = self.operand.simplify()
         if isinstance(simp_op, Swap):
             return simp_op.operand.simplify()
-        # Evaluate recursive predicate permutation P <-> Q
         mapping = {"P": "Q", "Q": "P"}
         return simp_op.permute_predicates(mapping)
 
