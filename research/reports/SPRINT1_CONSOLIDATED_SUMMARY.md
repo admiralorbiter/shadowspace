@@ -20,3 +20,17 @@
 2. **Geometrically Verified Calibration Paradox**:
    - Scalar temperature calibration reduces NLL from **3.8277 nats** to **0.9308 nats** (91.3% NLL gap closed), but its prototype-equivalent resolution remains static at **1.374 bits** ($K = 2.59$).
    - Log-linear interpolation $b = \log_2 K \implies K = 2^b$ strictly enforces mathematical pair consistency across resolution tiers.
+
+---
+
+### Generative LLM Cross-Model Extension
+
+The E004 generative-model analysis was extended from Gemma 3 12B to Qwen 2.5 14B using the same 600-item pilot, six label-symbol permutations, posterior-support target, cross-fitted calibration estimator, and 30-stratum focal-row bootstrap.
+
+Qwen showed a modest but statistically detectable raw relational advantage over Gemma under the primary analysis convention:
+
+$$\Delta R_{\mathrm{raw}} = +2.13 \text{ percentage points}, \qquad 95\% \text{ CI} = [+0.56, +3.78].$$
+
+Calibration affected the two models differently. Gemma’s relational recovery was essentially unchanged, while Qwen’s increased by approximately three percentage points. The resulting two-model interaction was positive under both the primary (-40) censored-token convention and a fixed (-20) stress-test convention.
+
+The complete methods, paired contrasts, censoring sensitivity analysis, claim boundaries, and reproducibility record are documented in [`E004_QWEN25_CROSS_MODEL_EXTENSION.md`](file:///c:/Users/admir/Github/shadowspace/research/reports/E004_QWEN25_CROSS_MODEL_EXTENSION.md).
