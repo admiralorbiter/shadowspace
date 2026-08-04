@@ -1,10 +1,11 @@
 {
-  "status": "stage_1b_scientifically_complete",
+  "status": "stage_1b_scientifically_complete_paper_ready",
   "model_tag": "gemma3:12b",
   "prompt_version": "v2",
   "symbol_set": "ABC",
   "num_items": 600,
   "empirical_target_entropy": 0.6542667055904634,
+  "mean_label_order_variability_hellinger": 0.07873060089591184,
   "api_t0_lpe_diagnostic": {
     "accuracy": 0.6483333333333333,
     "nll": 3.8597449333382383,
@@ -19,9 +20,10 @@
     "nll": 3.8277057488765522,
     "brier": 0.38886315303076613,
     "jsd": 0.17211858067746869,
-    "q_support": 0.040773333383956924,
+    "q_support_k10": 0.04077333338395692,
+    "q_support_k50": 0.17390436669565582,
     "q_null_block": 0.016803806063701493,
-    "r_norm_pct": 9.720955172576213
+    "r_norm_pct": 9.720955172576211
   },
   "calibrated_api_t1_lpe_coherent": {
     "accuracy": 0.6483333333333333,
@@ -36,42 +38,56 @@
       10.509217501169232
     ],
     "mean_optimal_temperature": 10.358869214516822,
-    "q_support": 0.0408801667424074,
-    "q_null_block": 0.0168253458511498,
+    "q_support_k10": 0.0408801667424074,
+    "q_support_k50": 0.17630720005193726,
+    "q_null_block": 0.016825345851149802,
     "r_norm_pct": 9.756398660026038,
-    "nll_gap_closure_pct": 91.28503840127294
+    "nll_gap_closure_pct": 91.28503840127294,
+    "q_gap_closure_pct": 0.04799206049251825
   },
   "mce_30_samples_api_t1": {
     "accuracy": 0.6533333333333333,
     "nll": 1.586380477514687,
     "brier": 0.3558637990257832,
     "jsd": 0.14031567949853896,
-    "q_support": 0.03310714196945839,
+    "q_support_k10": 0.03310714196945839,
+    "q_support_k50": 0.15905859847682804,
     "q_null_block": 0.0167382319028807,
     "r_norm_pct": 6.636723932509714,
     "nll_gap_closure_pct": 70.62764530182935
   },
   "mce_finite_sample_control_from_t1": {
     "sim_nll_mean": 1.5958219167812318,
+    "sim_nll_95_ci": [
+      1.5898505973134403,
+      1.601798862885136
+    ],
     "sim_r_norm_mean": 6.515236373768893,
     "sim_r_norm_95_ci": [
       6.247009704837556,
       6.799154902284216
     ],
+    "actual_mce_percentile_rank": 80.10000000000001,
+    "two_sided_mc_tail_p_value": 0.411,
     "actual_mce_within_ci": true
   },
-  "sample_budget_sensitivity_curve": [
+  "replicate_subset_sensitivity_curve": [
     {
       "samples_per_item": 6,
       "num_replicates": 1,
-      "accuracy_mean": 0.6475333333333334,
-      "nll_mean": 1.1637189106989085,
-      "nll_95_ci": [
+      "num_combinatorial_subsets": 5,
+      "accuracy_median": 0.6483333333333333,
+      "accuracy_range": [
+        0.645,
+        0.65
+      ],
+      "nll_median": 1.1634365210754762,
+      "nll_range": [
         1.1607948011832707,
         1.1693382092956162
       ],
-      "r_norm_mean": 6.337047095658932,
-      "r_norm_95_ci": [
+      "r_norm_median": 6.410328837550386,
+      "r_norm_range": [
         6.091206409545206,
         6.42657451439054
       ]
@@ -79,14 +95,19 @@
     {
       "samples_per_item": 12,
       "num_replicates": 2,
-      "accuracy_mean": 0.6502333333333332,
-      "nll_mean": 1.328330573698204,
-      "nll_95_ci": [
+      "num_combinatorial_subsets": 10,
+      "accuracy_median": 0.65,
+      "accuracy_range": [
+        0.6466666666666666,
+        0.655
+      ],
+      "nll_median": 1.328008577920013,
+      "nll_range": [
         1.322973987556311,
         1.3335522289145503
       ],
-      "r_norm_mean": 6.600348607991984,
-      "r_norm_95_ci": [
+      "r_norm_median": 6.607285845321429,
+      "r_norm_range": [
         6.255022812973508,
         6.930448777548633
       ]
@@ -94,14 +115,19 @@
     {
       "samples_per_item": 18,
       "num_replicates": 3,
-      "accuracy_mean": 0.6519000000000001,
-      "nll_mean": 1.4385593466476094,
-      "nll_95_ci": [
+      "num_combinatorial_subsets": 10,
+      "accuracy_median": 0.6525,
+      "accuracy_range": [
+        0.6483333333333333,
+        0.655
+      ],
+      "nll_median": 1.4389156623841237,
+      "nll_range": [
         1.433129238671417,
         1.4424599421221123
       ],
-      "r_norm_mean": 6.63547404582777,
-      "r_norm_95_ci": [
+      "r_norm_median": 6.664107660016535,
+      "r_norm_range": [
         6.442223038816403,
         6.8061707523329975
       ]
@@ -109,14 +135,19 @@
     {
       "samples_per_item": 24,
       "num_replicates": 4,
-      "accuracy_mean": 0.6508666666666666,
-      "nll_mean": 1.5204017379259402,
-      "nll_95_ci": [
+      "num_combinatorial_subsets": 5,
+      "accuracy_median": 0.6516666666666666,
+      "accuracy_range": [
+        0.6483333333333333,
+        0.6516666666666666
+      ],
+      "nll_median": 1.5217655617852677,
+      "nll_range": [
         1.5171121719189764,
         1.522513076735953
       ],
-      "r_norm_mean": 6.632840528456684,
-      "r_norm_95_ci": [
+      "r_norm_median": 6.6145084592769186,
+      "r_norm_range": [
         6.5885528029276,
         6.714844323072663
       ]
@@ -124,14 +155,19 @@
     {
       "samples_per_item": 30,
       "num_replicates": 5,
-      "accuracy_mean": 0.6533333333333334,
-      "nll_mean": 1.5863804775146875,
-      "nll_95_ci": [
+      "num_combinatorial_subsets": 1,
+      "accuracy_median": 0.6533333333333333,
+      "accuracy_range": [
+        0.6533333333333333,
+        0.6533333333333333
+      ],
+      "nll_median": 1.586380477514687,
+      "nll_range": [
         1.586380477514687,
         1.586380477514687
       ],
-      "r_norm_mean": 6.636723932509714,
-      "r_norm_95_ci": [
+      "r_norm_median": 6.636723932509714,
+      "r_norm_range": [
         6.636723932509714,
         6.636723932509714
       ]
@@ -155,17 +191,17 @@
       -0.09231281882685345
     ],
     "delta_r_norm_cal_vs_raw": [
-      -1.7681993951941704,
-      2.158776564198133
+      -0.9384744190970287,
+      1.0312111293464667
     ],
     "delta_r_norm_mce_vs_cal": [
-      -4.049073009616787,
-      0.18529383696745075
+      -4.266041694393419,
+      -2.069832430794095
     ],
     "delta_acc_mce_vs_raw": [
       -1.0000000000000009,
       1.8333333333333313
     ]
   },
-  "timestamp_utc": "2026-08-04T11:30:00Z"
+  "timestamp_utc": "2026-08-04T12:58:00Z"
 }
