@@ -1,7 +1,8 @@
 {
-  "e001_sha256": "94e483e714d92f039f817389d948cbf41b7970077b56f852491832605dccc96f",
-  "e004_sha256": "94e483e714d92f039f817389d948cbf41b7970077b56f852491832605dccc96f",
-  "binary_match": true,
-  "q_hh_relational": 0.038987226212620456,
-  "n_objects": 3113
+  "parquet_object_id_sha256": "121c49cbd40b171d100ba88c1a23d809818c28bad9249bea99a52ec8f5af19d6",
+  "e001_object_id_sha256": "121c49cbd40b171d100ba88c1a23d809818c28bad9249bea99a52ec8f5af19d6",
+  "object_id_sequence_match": true,
+  "reconstructed_bart_q_support_full_posterior": 0.016784150673842507,
+  "e001_recorded_bart_q_support_split_half": 0.010483520719563313,
+  "discrepancy_explanation": "E001 evaluated BART against 50-vote split-half sampling target (S_50), whereas E007 evaluates BART against 100-vote full expected support target (S_100). Under S_100, BART Q_support is 0.01678 and Q_HH is 0.038987, yielding exact R_norm = 37.93%."
 }

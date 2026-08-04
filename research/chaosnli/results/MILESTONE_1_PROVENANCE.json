@@ -1,33 +1,514 @@
 {
   "milestone": "Milestone 1 \u2014 Full-Data Confirmation",
-  "status": "full_data_runs_complete_audit_pending",
+  "status": "full_data_audited_and_reconciled",
+  "methodological_audit": "passed_real_bootstrap_and_crossfit",
   "dataset_release": "chaosnli-canonical-2026-08-02",
   "object_count": 3113,
   "object_id_sha256": "121c49cbd40b171d100ba88c1a23d809818c28bad9249bea99a52ec8f5af19d6",
-  "support_matrix_sha256": "94e483e714d92f039f817389d948cbf41b7970077b56f852491832605dccc96f",
+  "object_id_sequence_match": true,
+  "reconstructed_bart_q_support_full_posterior": 0.016784150673842507,
+  "e001_recorded_bart_q_support_split_half": 0.010483520719563313,
   "q_hh_relational": 0.038987226212620456,
   "experiments": {
     "E005": {
-      "d_size_matched_family_point": 0.0211,
-      "d_size_95_ci": [
-        0.0166,
-        0.0257
+      "d_size_matched_family_point": 0.01986988456494334,
+      "d_size_ci_95": [
+        -0.01884749568813579,
+        0.054527612121818454
       ],
-      "p_boot_gt_zero": 1.0,
-      "ladder_levels": 6
+      "p_boot_gt_zero": 0.859,
+      "family_differences": {
+        "roberta": 0.024390165611569918,
+        "xlnet": 0.013134733706624142,
+        "bert": 0.022084754376635964
+      },
+      "bootstrap_method": "real_focal_row_item_resampling_30strata_exact_nulls"
     },
     "E007": {
-      "subsets_evaluated": 511,
-      "best_single_model": "bart-large",
-      "best_single_r_norm": 0.3793,
-      "best_pair_r_norm": 0.5382,
-      "best_triplet_r_norm": 0.6472,
-      "grand_coalition_r_norm": 0.8444
+      "crossfit_method": "genuine_5fold_stratified_train_selection_heldout_evaluation",
+      "held_out_summary_by_size": [
+        {
+          "coalition_size": 1,
+          "selected_models": [
+            "bart-large"
+          ],
+          "held_out_r_normalized_mean": 0.3510839092114784,
+          "held_out_nll_mean": 0.8626750037133938,
+          "top_mask_selection_frequency": 1.0
+        },
+        {
+          "coalition_size": 2,
+          "selected_models": [
+            "bart-large",
+            "roberta-large"
+          ],
+          "held_out_r_normalized_mean": 0.4858582335095322,
+          "held_out_nll_mean": 0.7456353038666258,
+          "top_mask_selection_frequency": 1.0
+        },
+        {
+          "coalition_size": 3,
+          "selected_models": [
+            "bart-large",
+            "roberta-large",
+            "xlnet-large"
+          ],
+          "held_out_r_normalized_mean": 0.5693223682159347,
+          "held_out_nll_mean": 0.7171001093104323,
+          "top_mask_selection_frequency": 1.0
+        },
+        {
+          "coalition_size": 4,
+          "selected_models": [
+            "bart-large",
+            "roberta-large",
+            "xlnet-large",
+            "albert-xxlarge"
+          ],
+          "held_out_r_normalized_mean": 0.6269289765532406,
+          "held_out_nll_mean": 0.7081935027331416,
+          "top_mask_selection_frequency": 1.0
+        },
+        {
+          "coalition_size": 5,
+          "selected_models": [
+            "bart-large",
+            "roberta-large",
+            "xlnet-large",
+            "albert-xxlarge",
+            "bert-large"
+          ],
+          "held_out_r_normalized_mean": 0.6569458817202833,
+          "held_out_nll_mean": 0.7045757181074908,
+          "top_mask_selection_frequency": 1.0
+        },
+        {
+          "coalition_size": 6,
+          "selected_models": [
+            "bart-large",
+            "roberta-large",
+            "xlnet-large",
+            "albert-xxlarge",
+            "bert-large",
+            "roberta-base"
+          ],
+          "held_out_r_normalized_mean": 0.6901075698614108,
+          "held_out_nll_mean": 0.7039592934238224,
+          "top_mask_selection_frequency": 0.6
+        },
+        {
+          "coalition_size": 7,
+          "selected_models": [
+            "bart-large",
+            "roberta-large",
+            "xlnet-large",
+            "albert-xxlarge",
+            "bert-large",
+            "roberta-base",
+            "xlnet-base"
+          ],
+          "held_out_r_normalized_mean": 0.7042098106753336,
+          "held_out_nll_mean": 0.703668567298816,
+          "top_mask_selection_frequency": 0.8
+        },
+        {
+          "coalition_size": 8,
+          "selected_models": [
+            "bart-large",
+            "roberta-large",
+            "xlnet-large",
+            "albert-xxlarge",
+            "bert-large",
+            "roberta-base",
+            "xlnet-base",
+            "bert-base"
+          ],
+          "held_out_r_normalized_mean": 0.7259389302364168,
+          "held_out_nll_mean": 0.7045855902240163,
+          "top_mask_selection_frequency": 0.6
+        },
+        {
+          "coalition_size": 9,
+          "selected_models": [
+            "bart-large",
+            "roberta-large",
+            "xlnet-large",
+            "albert-xxlarge",
+            "bert-large",
+            "roberta-base",
+            "xlnet-base",
+            "distilbert",
+            "bert-base"
+          ],
+          "held_out_r_normalized_mean": 0.7269721016180537,
+          "held_out_nll_mean": 0.7057174846513209,
+          "top_mask_selection_frequency": 1.0
+        }
+      ]
     },
     "E008": {
-      "cross_validation": "5fold_dataset_label_entropy_stratified",
-      "n_restarts_per_fold": 20,
-      "k18_r_normalized": 1.0087
+      "prototype_ladder": [
+        {
+          "k_prototypes": 1,
+          "effective_bits": 0.0,
+          "nll": 1.0619432298414226,
+          "jsd_bits": 0.1569836594463082,
+          "q_support_k10": 0.0031828435312314133,
+          "q_null_analytic_k10": 0.0032133676260022326,
+          "r_normalized_k10": -0.0008532513957618577,
+          "c_empirical_retained_k10": -0.00024675911399448566,
+          "min_cluster_size": 615,
+          "median_cluster_size": 624,
+          "max_cluster_size": 629,
+          "empty_cluster_count": 0,
+          "zero_distance_tie_frac_k10": 1.0
+        },
+        {
+          "k_prototypes": 2,
+          "effective_bits": 1.0,
+          "nll": 0.855840573602209,
+          "jsd_bits": 0.07728605580730465,
+          "q_support_k10": 0.006098604298033147,
+          "q_null_analytic_k10": 0.003213367625962451,
+          "r_normalized_k10": 0.0806520958616065,
+          "c_empirical_retained_k10": 0.023324473672686512,
+          "min_cluster_size": 259,
+          "median_cluster_size": 334,
+          "max_cluster_size": 357,
+          "empty_cluster_count": 0,
+          "zero_distance_tie_frac_k10": 1.0
+        },
+        {
+          "k_prototypes": 3,
+          "effective_bits": 1.584962500721156,
+          "nll": 0.7766561953731778,
+          "jsd_bits": 0.04466299408869451,
+          "q_support_k10": 0.008912131340219925,
+          "q_null_analytic_k10": 0.00321336762595942,
+          "r_normalized_k10": 0.1592996657169489,
+          "c_empirical_retained_k10": 0.04606924121920819,
+          "min_cluster_size": 154,
+          "median_cluster_size": 197,
+          "max_cluster_size": 266,
+          "empty_cluster_count": 0,
+          "zero_distance_tie_frac_k10": 1.0
+        },
+        {
+          "k_prototypes": 4,
+          "effective_bits": 2.0,
+          "nll": 0.750200927804351,
+          "jsd_bits": 0.034456648781433515,
+          "q_support_k10": 0.011412086076177823,
+          "q_null_analytic_k10": 0.0032133676259731886,
+          "r_normalized_k10": 0.22918183204494577,
+          "c_empirical_retained_k10": 0.06627906628689957,
+          "min_cluster_size": 123,
+          "median_cluster_size": 154,
+          "max_cluster_size": 187,
+          "empty_cluster_count": 0,
+          "zero_distance_tie_frac_k10": 1.0
+        },
+        {
+          "k_prototypes": 6,
+          "effective_bits": 2.584962500721156,
+          "nll": 0.7164289501196434,
+          "jsd_bits": 0.023469923396051195,
+          "q_support_k10": 0.016189756749236187,
+          "q_null_analytic_k10": 0.0032133676259796027,
+          "r_normalized_k10": 0.36273384074097054,
+          "c_empirical_retained_k10": 0.10490212099470973,
+          "min_cluster_size": 43,
+          "median_cluster_size": 112,
+          "max_cluster_size": 164,
+          "empty_cluster_count": 0,
+          "zero_distance_tie_frac_k10": 1.0
+        },
+        {
+          "k_prototypes": 8,
+          "effective_bits": 3.0,
+          "nll": 0.7012921207543394,
+          "jsd_bits": 0.0176817089121914,
+          "q_support_k10": 0.0207918998639956,
+          "q_null_analytic_k10": 0.003213367625967697,
+          "r_normalized_k10": 0.49137926219081274,
+          "c_empirical_retained_k10": 0.14210619751207246,
+          "min_cluster_size": 26,
+          "median_cluster_size": 79,
+          "max_cluster_size": 148,
+          "empty_cluster_count": 0,
+          "zero_distance_tie_frac_k10": 1.0
+        },
+        {
+          "k_prototypes": 10,
+          "effective_bits": 3.321928094887362,
+          "nll": 0.6913086385006615,
+          "jsd_bits": 0.014300244483818532,
+          "q_support_k10": 0.02486267478075962,
+          "q_null_analytic_k10": 0.003213367625973437,
+          "r_normalized_k10": 0.6051711503904424,
+          "c_empirical_retained_k10": 0.17501465292319052,
+          "min_cluster_size": 22,
+          "median_cluster_size": 61,
+          "max_cluster_size": 108,
+          "empty_cluster_count": 0,
+          "zero_distance_tie_frac_k10": 1.0
+        },
+        {
+          "k_prototypes": 12,
+          "effective_bits": 3.584962500721156,
+          "nll": 0.6845677275303158,
+          "jsd_bits": 0.012056483758548052,
+          "q_support_k10": 0.028666759781409746,
+          "q_null_analytic_k10": 0.0032133676259690413,
+          "r_normalized_k10": 0.7115081559845583,
+          "c_empirical_retained_k10": 0.20576716667893344,
+          "min_cluster_size": 16,
+          "median_cluster_size": 50,
+          "max_cluster_size": 99,
+          "empty_cluster_count": 0,
+          "zero_distance_tie_frac_k10": 1.0
+        },
+        {
+          "k_prototypes": 14,
+          "effective_bits": 3.807354922057604,
+          "nll": 0.679421987362806,
+          "jsd_bits": 0.010231883047501165,
+          "q_support_k10": 0.03258170115366999,
+          "q_null_analytic_k10": 0.003213367625969467,
+          "r_normalized_k10": 0.820943971044245,
+          "c_empirical_retained_k10": 0.23741585181152972,
+          "min_cluster_size": 14,
+          "median_cluster_size": 41,
+          "max_cluster_size": 85,
+          "empty_cluster_count": 0,
+          "zero_distance_tie_frac_k10": 1.0
+        },
+        {
+          "k_prototypes": 16,
+          "effective_bits": 4.0,
+          "nll": 0.6761462553688783,
+          "jsd_bits": 0.009087148570104453,
+          "q_support_k10": 0.03582119297718498,
+          "q_null_analytic_k10": 0.003213367625969049,
+          "r_normalized_k10": 0.9114986931653819,
+          "c_empirical_retained_k10": 0.2636041511915734,
+          "min_cluster_size": 14,
+          "median_cluster_size": 37,
+          "max_cluster_size": 69,
+          "empty_cluster_count": 0,
+          "zero_distance_tie_frac_k10": 1.0
+        },
+        {
+          "k_prototypes": 18,
+          "effective_bits": 4.169925001442312,
+          "nll": 0.6736941142391727,
+          "jsd_bits": 0.00820208698767532,
+          "q_support_k10": 0.03929968855478714,
+          "q_null_analytic_k10": 0.003213367625970863,
+          "r_normalized_k10": 1.0087343762879213,
+          "c_empirical_retained_k10": 0.2917245751781668,
+          "min_cluster_size": 12,
+          "median_cluster_size": 35,
+          "max_cluster_size": 73,
+          "empty_cluster_count": 0,
+          "zero_distance_tie_frac_k10": 1.0
+        },
+        {
+          "k_prototypes": 20,
+          "effective_bits": 4.321928094887363,
+          "nll": 0.6720732016255065,
+          "jsd_bits": 0.007595509492682389,
+          "q_support_k10": 0.04163930305689805,
+          "q_null_analytic_k10": 0.003213367625969002,
+          "r_normalized_k10": 1.0741344923096214,
+          "c_empirical_retained_k10": 0.31063819754648386,
+          "min_cluster_size": 6,
+          "median_cluster_size": 30,
+          "max_cluster_size": 63,
+          "empty_cluster_count": 0,
+          "zero_distance_tie_frac_k10": 0.9958239640218439
+        },
+        {
+          "k_prototypes": 22,
+          "effective_bits": 4.459431618637297,
+          "nll": 0.67009373788205,
+          "jsd_bits": 0.0068934182943197935,
+          "q_support_k10": 0.04464809357102847,
+          "q_null_analytic_k10": 0.0032133676259694516,
+          "r_normalized_k10": 1.1582403347599848,
+          "c_empirical_retained_k10": 0.3349614899171881,
+          "min_cluster_size": 6,
+          "median_cluster_size": 26,
+          "max_cluster_size": 58,
+          "empty_cluster_count": 0,
+          "zero_distance_tie_frac_k10": 0.991969161580469
+        },
+        {
+          "k_prototypes": 24,
+          "effective_bits": 4.584962500721156,
+          "nll": 0.6687591276670124,
+          "jsd_bits": 0.006398098331853025,
+          "q_support_k10": 0.04716312069129312,
+          "q_null_analytic_k10": 0.003213367625968971,
+          "r_normalized_k10": 1.228543825063461,
+          "c_empirical_retained_k10": 0.3552931612911749,
+          "min_cluster_size": 5,
+          "median_cluster_size": 25,
+          "max_cluster_size": 51,
+          "empty_cluster_count": 0,
+          "zero_distance_tie_frac_k10": 0.9861869579184067
+        },
+        {
+          "k_prototypes": 26,
+          "effective_bits": 4.700439718141092,
+          "nll": 0.6670709194120173,
+          "jsd_bits": 0.005783271767189747,
+          "q_support_k10": 0.05057221995816323,
+          "q_null_analytic_k10": 0.003213367625968878,
+          "r_normalized_k10": 1.3238396472519607,
+          "c_empirical_retained_k10": 0.3828525802003425,
+          "min_cluster_size": 2,
+          "median_cluster_size": 23,
+          "max_cluster_size": 51,
+          "empty_cluster_count": 0,
+          "zero_distance_tie_frac_k10": 0.9797622871827819
+        },
+        {
+          "k_prototypes": 28,
+          "effective_bits": 4.807354922057604,
+          "nll": 0.6664219345963268,
+          "jsd_bits": 0.005546558396284138,
+          "q_support_k10": 0.05226785309954749,
+          "q_null_analytic_k10": 0.003213367625968956,
+          "r_normalized_k10": 1.3712383123212353,
+          "c_empirical_retained_k10": 0.39656020805201736,
+          "min_cluster_size": 1,
+          "median_cluster_size": 21,
+          "max_cluster_size": 54,
+          "empty_cluster_count": 0,
+          "zero_distance_tie_frac_k10": 0.9469964664310954
+        },
+        {
+          "k_prototypes": 30,
+          "effective_bits": 4.906890595608519,
+          "nll": 0.6654851960963973,
+          "jsd_bits": 0.005212459107277942,
+          "q_support_k10": 0.05433298121483126,
+          "q_null_analytic_k10": 0.003213367625968861,
+          "r_normalized_k10": 1.4289656080861461,
+          "c_empirical_retained_k10": 0.4132548615000112,
+          "min_cluster_size": 3,
+          "median_cluster_size": 20,
+          "max_cluster_size": 41,
+          "empty_cluster_count": 0,
+          "zero_distance_tie_frac_k10": 0.9447478316736267
+        },
+        {
+          "k_prototypes": 32,
+          "effective_bits": 5.0,
+          "nll": 0.6645629077132308,
+          "jsd_bits": 0.00486721472544743,
+          "q_support_k10": 0.056669330747057496,
+          "q_null_analytic_k10": 0.003213367625968938,
+          "r_normalized_k10": 1.4942744571879885,
+          "c_empirical_retained_k10": 0.43214208960233974,
+          "min_cluster_size": 2,
+          "median_cluster_size": 18,
+          "max_cluster_size": 41,
+          "empty_cluster_count": 0,
+          "zero_distance_tie_frac_k10": 0.9293286219081273
+        },
+        {
+          "k_prototypes": 34,
+          "effective_bits": 5.087462841250339,
+          "nll": 0.6641439223588568,
+          "jsd_bits": 0.00470255284017805,
+          "q_support_k10": 0.05731408257870662,
+          "q_null_analytic_k10": 0.0032133676259694247,
+          "r_normalized_k10": 1.5122974454012295,
+          "c_empirical_retained_k10": 0.4373543126647591,
+          "min_cluster_size": 2,
+          "median_cluster_size": 18,
+          "max_cluster_size": 42,
+          "empty_cluster_count": 0,
+          "zero_distance_tie_frac_k10": 0.9261162865403149
+        },
+        {
+          "k_prototypes": 36,
+          "effective_bits": 5.169925001442312,
+          "nll": 0.6634562522693062,
+          "jsd_bits": 0.004506897338233893,
+          "q_support_k10": 0.05928493667191128,
+          "q_null_analytic_k10": 0.0032133676259692595,
+          "r_normalized_k10": 1.5673894642962778,
+          "c_empirical_retained_k10": 0.45328684771626704,
+          "min_cluster_size": 2,
+          "median_cluster_size": 16,
+          "max_cluster_size": 38,
+          "empty_cluster_count": 0,
+          "zero_distance_tie_frac_k10": 0.8824285255380662
+        },
+        {
+          "k_prototypes": 40,
+          "effective_bits": 5.321928094887363,
+          "nll": 0.6621173825906599,
+          "jsd_bits": 0.004050958422573599,
+          "q_support_k10": 0.06397340670057655,
+          "q_null_analytic_k10": 0.00321336762596902,
+          "r_normalized_k10": 1.6984480141395588,
+          "c_empirical_retained_k10": 0.4911887976004355,
+          "min_cluster_size": 1,
+          "median_cluster_size": 15,
+          "max_cluster_size": 42,
+          "empty_cluster_count": 0,
+          "zero_distance_tie_frac_k10": 0.8416318663668487
+        },
+        {
+          "k_prototypes": 48,
+          "effective_bits": 5.584962500721156,
+          "nll": 0.660397316597143,
+          "jsd_bits": 0.003404049673527372,
+          "q_support_k10": 0.06896947108625771,
+          "q_null_analytic_k10": 0.003213367625968983,
+          "r_normalized_k10": 1.8381048636678161,
+          "c_empirical_retained_k10": 0.5315773637651777,
+          "min_cluster_size": 0,
+          "median_cluster_size": 13,
+          "max_cluster_size": 35,
+          "empty_cluster_count": 2,
+          "zero_distance_tie_frac_k10": 0.7285576614198522
+        },
+        {
+          "k_prototypes": 64,
+          "effective_bits": 6.0,
+          "nll": 0.6576738315301623,
+          "jsd_bits": 0.0025083089846697267,
+          "q_support_k10": 0.08000916364152383,
+          "q_null_analytic_k10": 0.0032133676259692152,
+          "r_normalized_k10": 2.146701503544558,
+          "c_empirical_retained_k10": 0.620823081751651,
+          "min_cluster_size": 0,
+          "median_cluster_size": 9,
+          "max_cluster_size": 28,
+          "empty_cluster_count": 3,
+          "zero_distance_tie_frac_k10": 0.5069065210407967
+        },
+        {
+          "k_prototypes": 128,
+          "effective_bits": 7.0,
+          "nll": 0.6538092490333135,
+          "jsd_bits": 0.0011457957427744817,
+          "q_support_k10": 0.10201501182298796,
+          "q_null_analytic_k10": 0.0032133676259691424,
+          "r_normalized_k10": 2.7618391781166634,
+          "c_empirical_retained_k10": 0.7987200395722126,
+          "min_cluster_size": 0,
+          "median_cluster_size": 5,
+          "max_cluster_size": 18,
+          "empty_cluster_count": 30,
+          "zero_distance_tie_frac_k10": 0.08416318663668487
+        }
+      ]
     }
   }
 }
