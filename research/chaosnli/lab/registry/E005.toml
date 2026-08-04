@@ -4,7 +4,7 @@ title = "Hierarchical Conditional Null Decomposition"
 status = "exploratory"
 claim_status = "none"
 multiplicity_family = "E005-E013_exploratory_portfolio"
-analysis_status = "preflight_complete"
+analysis_status = "pilot_audited"
 methodological_audit = "passed_clean"
 
 dataset_release = "chaosnli-canonical-2026-08-02"
@@ -22,8 +22,11 @@ null_hierarchy = [
   "N1_dataset_stratified",
   "N2_dataset_x_majority_label",
   "N3_dataset_x_majority_label_x_entropy_quintile",
-  "N4_dataset_x_top2_pair_x_margin_bin",
-  "N5_exact_100vote_profile"
+  "N4_N3_x_top2_pair_x_margin_bin",
+  "N5_N4_x_exact_100vote_profile"
 ]
 
+primary_contrast = "matched_family_large_minus_base_residual_fraction_N4"
+secondary_contrast = "top_tier_minus_compact_finite_panel"
+contrast_frozen_after = "E005_pilot_before_full_run"
 n_permutations = 10000

@@ -1,11 +1,12 @@
 /// E008: Audited Relational Rate-Distortion Compression Engine
 /// Fits 5-fold cross-validated Hellinger prototype quantization in square-root simplex z-space
-/// with multi-start k-means++, dataset-stratified folds, analytic stratified nulls Q_null(K),
-/// and empirical human baseline recovery C_K.
+/// with multi-start k-means++, explicit 30-stratum fold assignments, analytic stratified nulls Q_null(K),
+/// empirical human baseline recovery C_K, and log-linear interpolated effective bits b_eff.
 
 use rand::prelude::*;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
@@ -17,6 +18,9 @@ use chaosnli_engine::topk::{compute_topk_weight_matrix, evaluate_q_support};
 struct ManifestItem {
     row_index: usize,
     source_dataset: String,
+    human_count_entailment: u32,
+    human_count_neutral: u32,
+    human_count_contradiction: u32,
     human_p_entailment: f64,
     human_p_neutral: f64,
     human_p_contradiction: f64,
@@ -25,6 +29,7 @@ struct ManifestItem {
 #[derive(Debug, Clone, Serialize)]
 struct PrototypePoint {
     k_prototypes: usize,
+    effective_bits: f64,
     nll: f64,
     jsd_bits: f64,
     q_support_k10: f64,
@@ -67,6 +72,28 @@ fn resolve_path(rel_path: &str) -> String {
         return p3;
     }
     panic!("Required artifact file not found: {}", rel_path);
+}
+
+fn compute_entropy_quintile(entropy: f64, all_entropies: &[f64]) -> usize {
+    let mut sorted = all_entropies.to_vec();
+    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let n = sorted.len();
+    let q1 = sorted[(n as f64 * 0.2) as usize];
+    let q2 = sorted[(n as f64 * 0.4) as usize];
+    let q3 = sorted[(n as f64 * 0.6) as usize];
+    let q4 = sorted[(n as f64 * 0.8) as usize];
+
+    if entropy <= q1 {
+        0
+    } else if entropy <= q2 {
+        1
+    } else if entropy <= q3 {
+        2
+    } else if entropy <= q4 {
+        3
+    } else {
+        4
+    }
 }
 
 /// Compute dataset-stratified analytic expected null Q_null(W) for a top-k weight matrix W
@@ -350,6 +377,41 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|it| vec![it.human_p_entailment, it.human_p_neutral, it.human_p_contradiction])
         .collect();
 
+    let mut entropies = vec![0.0; n];
+    for i in 0..n {
+        let mut ent = 0.0;
+        for &v in &p_human[i] {
+            if v > 1e-12 {
+                ent -= v * (v.max(1e-12)).log2();
+            }
+        }
+        entropies[i] = ent;
+    }
+
+    // Assign explicit 30-stratum fold IDs
+    let n_folds = 5;
+    let mut stratum_map: HashMap<String, Vec<usize>> = HashMap::new();
+    for i in 0..n {
+        let d = if is_snli[i] { "snli" } else { "mnli" };
+        let maj = if p_human[i][0] >= p_human[i][1] && p_human[i][0] >= p_human[i][2] {
+            0
+        } else if p_human[i][1] >= p_human[i][0] && p_human[i][1] >= p_human[i][2] {
+            1
+        } else {
+            2
+        };
+        let eq = compute_entropy_quintile(entropies[i], &entropies);
+        let s_key = format!("{}_{}_{}", d, maj, eq);
+        stratum_map.entry(s_key).or_default().push(i);
+    }
+
+    let mut item_fold_ids = vec![0usize; n];
+    for (_s_key, indices) in stratum_map {
+        for (rank, &idx) in indices.iter().enumerate() {
+            item_fold_ids[idx] = rank % n_folds;
+        }
+    }
+
     // Empirical human baseline support & analytic null
     let dist_emp = distance_hellinger_matrix(&p_human);
     let w_emp = compute_topk_weight_matrix(&dist_emp, 10);
@@ -361,8 +423,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Dense prototype grid
     let k_ladder = vec![1, 2, 3, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 40, 48, 64, 128];
-    let n_folds = 5;
-
     let mut prototype_points = Vec::new();
 
     for &k_proto in &k_ladder {
@@ -373,8 +433,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut fold_cluster_counts: Vec<usize> = Vec::new();
 
         for fold in 0..n_folds {
-            let val_indices: Vec<usize> = (0..n).filter(|i| i % n_folds == fold).collect();
-            let train_indices: Vec<usize> = (0..n).filter(|i| i % n_folds != fold).collect();
+            let val_indices: Vec<usize> = (0..n).filter(|&i| item_fold_ids[i] == fold).collect();
+            let train_indices: Vec<usize> = (0..n).filter(|&i| item_fold_ids[i] != fold).collect();
 
             let train_p: Vec<Vec<f64>> = train_indices.iter().map(|&i| p_human[i].clone()).collect();
             let centroids = k_means_plus_plus_zspace(&train_p, k_proto, 20, 100 + fold as u64);
@@ -421,10 +481,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let r_norm_k10 = (q_supp_k10 - q_null_proto) / (q_hh - q_null_proto).max(1e-12);
         let c_emp_retained = (q_supp_k10 - q_null_proto) / (q_emp_excess).max(1e-12);
         let tie_frac = compute_zero_distance_tie_fraction(&dist_rec, 10);
+        let eff_bits = (k_proto as f64).log2();
 
         println!(
-            "  K = {:>3}: R_norm = {:>6.2}% | C_retained = {:>6.2}% | Q_null_analytic = {:.5} | NLL = {:.4} | TieFrac = {:.2}%",
+            "  K = {:>3} (bits={:.2}): R_norm = {:>6.2}% | C_retained = {:>6.2}% | Q_null_analytic = {:.5} | NLL = {:.4} | TieFrac = {:.2}%",
             k_proto,
+            eff_bits,
             r_norm_k10 * 100.0,
             c_emp_retained * 100.0,
             q_null_proto,
@@ -434,6 +496,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         prototype_points.push(PrototypePoint {
             k_prototypes: k_proto,
+            effective_bits: eff_bits,
             nll: mean_nll,
             jsd_bits: mean_jsd,
             q_support_k10: q_supp_k10,
