@@ -1,7 +1,7 @@
 {
-  "timestamp_utc": "2026-08-04T22:45:07.360226+00:00",
-  "phase": "E0.7",
-  "git_commit_sha": "5f87e4e77dded1e5667b53289fef9250217ef50d",
+  "timestamp_utc": "2026-08-04T22:52:35.930919+00:00",
+  "phase": "E0.7.1",
+  "git_commit_sha": "a48cf1a544bf82b008ff880f75fb86bf5c090ed8",
   "environment": {
     "python_version": "3.13.7",
     "numpy_version": "2.2.6",
@@ -11,6 +11,7 @@
   "gates": {
     "flat_world": true,
     "planted_curvature_4corner": true,
+    "monte_carlo_loop_holonomy": true,
     "theorem1_prop1b_invariance": true,
     "sheaf_cohomology_h0": true,
     "glue_ood_solver": true
@@ -29,23 +30,31 @@
       "sample_size": 50,
       "perturbation_radius": 0.02,
       "measurement_noise": 0.005,
-      "ols_matrix_bias_norm": 0.0982511528910058,
-      "tls_matrix_bias_norm": 0.02281338064462063,
-      "ols_holonomy_rmse": 0.06863435600581973,
-      "tls_holonomy_rmse": 0.05272870532638395,
-      "false_positive_rate": 0.06,
-      "detection_power": 1.0
+      "ols_matrix_bias_norm": 0.07266020285264525,
+      "tls_matrix_bias_norm": 0.023410884372661405,
+      "ols_edge_matrix_rmse": 0.05783897754858242,
+      "tls_edge_matrix_rmse": 0.051446000660062934,
+      "ols_loop_holonomy_rmse": 0.08466783646273289,
+      "tls_loop_holonomy_rmse": 0.1402409953676114,
+      "ols_false_positive_rate": 0.08,
+      "tls_false_positive_rate": 0.04,
+      "ols_detection_power": 0.58,
+      "tls_detection_power": 0.98
     },
     {
       "sample_size": 250,
       "perturbation_radius": 0.02,
       "measurement_noise": 0.005,
-      "ols_matrix_bias_norm": 0.08086970804305701,
-      "tls_matrix_bias_norm": 0.004859216585443944,
-      "ols_holonomy_rmse": 0.0456010416668856,
-      "tls_holonomy_rmse": 0.02248607819732379,
-      "false_positive_rate": 0.06,
-      "detection_power": 1.0
+      "ols_matrix_bias_norm": 0.08525994984231208,
+      "tls_matrix_bias_norm": 0.004625434045084818,
+      "ols_edge_matrix_rmse": 0.04747609508866534,
+      "tls_edge_matrix_rmse": 0.022633827495812303,
+      "ols_loop_holonomy_rmse": 0.060751831724144056,
+      "tls_loop_holonomy_rmse": 0.05023524091463206,
+      "ols_false_positive_rate": 0.12,
+      "tls_false_positive_rate": 0.0,
+      "ols_detection_power": 1.0,
+      "tls_detection_power": 1.0
     }
   ]
 }

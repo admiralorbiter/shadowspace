@@ -1,8 +1,10 @@
-"""Experiment E001: Planted Curvature Recovery & Monte Carlo Inference (Phase E0.7).
+"""Experiment E001: Planted Curvature Recovery & 3-Group Monte Carlo Loop Inference (Phase E0.7.1).
 
-Runs 100-seed Monte Carlo sweeps evaluating OLS vs Total Least Squares (TLS) estimators,
-calculating empirical False Positive Rate (FPR) in Flat World, Detection Power in Curved World,
-matrix bias norm ||E[T_hat] - T||_F, and holonomy RMSE.
+Runs independent 3-group Monte Carlo loop holonomy experiments (500 seeds each):
+1. Group 1 (Calibration): 500 flat trials calibrate null thresholds tau_OLS and tau_TLS at 95th percentile.
+2. Group 2 (Validation): 500 independent flat trials evaluate empirical FPR under tau.
+3. Group 3 (Power): 500 independent curved trials evaluate empirical Detection Power under tau.
+Computes OLS vs TLS edge matrix RMSE and 4-edge loop holonomy RMSE ||H_gamma - H_true||_F.
 """
 
 from __future__ import annotations
@@ -21,18 +23,22 @@ from research.holonomy.worlds.generative_world import CurvedWorld, FlatWorld
 
 
 @dataclass
-class MonteCarloSweepMetrics:
-    """Statistical metrics across Monte Carlo seeds for (N, r, sigma)."""
+class MonteCarloLoopMetrics:
+    """3-group Monte Carlo statistical loop holonomy metrics."""
 
     sample_size: int
     perturbation_radius: float
     measurement_noise: float
+    ols_edge_matrix_rmse: float
+    tls_edge_matrix_rmse: float
+    ols_loop_holonomy_rmse: float
+    tls_loop_holonomy_rmse: float
     ols_matrix_bias_norm: float
     tls_matrix_bias_norm: float
-    ols_holonomy_rmse: float
-    tls_holonomy_rmse: float
-    false_positive_rate: float
-    detection_power: float
+    ols_false_positive_rate: float
+    tls_false_positive_rate: float
+    ols_detection_power: float
+    tls_detection_power: float
 
 
 def run_e001_planted_curvature_experiment(
@@ -115,60 +121,132 @@ def run_e001_planted_curvature_experiment(
     return curvature_recovered
 
 
-def run_e001_monte_carlo_sweeps(num_seeds: int = 50) -> List[MonteCarloSweepMetrics]:
-    """Runs 50-seed Monte Carlo sweeps evaluating FPR, Power, OLS vs TLS bias & RMSE."""
+def _run_single_4corner_trial(
+    curved: bool,
+    N: int,
+    r: float,
+    sigma: float,
+    seed: int,
+    planted_angle: float = np.pi / 4,
+) -> Tuple[ParallelTransportMap, PathTransport, ParallelTransportMap, PathTransport]:
+    """Generates 4-corner trial and returns (T_01_ols, Path_ols, T_01_tls, Path_tls)."""
+    np.random.seed(seed)
+    c, s = np.cos(planted_angle), np.sin(planted_angle)
+
+    if curved:
+        R_a = np.array([[c, -s], [s, c]], dtype=np.float64)
+        S_b = np.array([[1.0, 0.5], [0.0, 1.0]], dtype=np.float64)
+    else:
+        # Flat null: Nontrivial edge maps R_a, but second edge is R_a^-1 so loop H_gamma = I
+        R_a = np.array([[c, -s], [s, c]], dtype=np.float64)
+        S_b = np.linalg.inv(R_a)
+
+    S_b_inv = np.linalg.inv(S_b)
+    R_a_inv = np.linalg.inv(R_a)
+
+    z0 = np.array([0.0, 0.0])
+    deltas = np.random.normal(0, r, (N, 2))
+
+    # Add measurement noise to source and target
+    e01_src, e01_tgt = np.random.normal(0, sigma, (N, 2)), np.random.normal(0, sigma, (N, 2))
+    e12_src, e12_tgt = np.random.normal(0, sigma, (N, 2)), np.random.normal(0, sigma, (N, 2))
+    e23_src, e23_tgt = np.random.normal(0, sigma, (N, 2)), np.random.normal(0, sigma, (N, 2))
+    e30_src, e30_tgt = np.random.normal(0, sigma, (N, 2)), np.random.normal(0, sigma, (N, 2))
+
+    o01_s, o01_t = z0 + deltas + e01_src, z0 + np.dot(deltas, R_a.T) + e01_tgt
+    o12_s, o12_t = z0 + deltas + e12_src, z0 + np.dot(deltas, S_b.T) + e12_tgt
+    o23_s, o23_t = z0 + deltas + e23_src, z0 + np.dot(deltas, R_a_inv.T) + e23_tgt
+    o30_s, o30_t = z0 + deltas + e30_src, z0 + np.dot(deltas, S_b_inv.T) + e30_tgt
+
+    est = ConnectionEstimator()
+
+    # OLS Transport Maps
+    t01_ols = est.estimate_linear_transport("a", "x0", "x1", o01_s, o01_t)
+    t12_ols = est.estimate_linear_transport("b", "x1", "x2", o12_s, o12_t)
+    t23_ols = est.estimate_linear_transport("a_inv", "x2", "x3", o23_s, o23_t)
+    t30_ols = est.estimate_linear_transport("b_inv", "x3", "x0", o30_s, o30_t)
+    p_ols = PathTransport([t01_ols, t12_ols, t23_ols, t30_ols])
+
+    # TLS Transport Maps
+    t01_tls = est.estimate_total_least_squares_transport("a", "x0", "x1", o01_s, o01_t)
+    t12_tls = est.estimate_total_least_squares_transport("b", "x1", "x2", o12_s, o12_t)
+    t23_tls = est.estimate_total_least_squares_transport("a_inv", "x2", "x3", o23_s, o23_t)
+    t30_tls = est.estimate_total_least_squares_transport("b_inv", "x3", "x0", o30_s, o30_t)
+    p_tls = PathTransport([t01_tls, t12_tls, t23_tls, t30_tls])
+
+    return t01_ols, p_ols, t01_tls, p_tls
+
+
+def run_e001_monte_carlo_sweeps(num_seeds: int = 100) -> List[MonteCarloLoopMetrics]:
+    """Runs independent 3-group Monte Carlo loop holonomy experiments (num_seeds each)."""
     results = []
     planted_angle = np.pi / 4
+
+    c, s = np.cos(planted_angle), np.sin(planted_angle)
+    R_a = np.array([[c, -s], [s, c]], dtype=np.float64)
+    S_b = np.array([[1.0, 0.5], [0.0, 1.0]], dtype=np.float64)
+    H_true = np.dot(np.linalg.inv(S_b), np.dot(np.linalg.inv(R_a), np.dot(S_b, R_a)))
+    H_hom_true = np.eye(3, dtype=np.float64)
+    H_hom_true[:2, :2] = H_true
 
     for N in [50, 250]:
         for r in [0.02]:
             for sigma in [0.005]:
-                flat_stat_nulls = []
-                curved_stat_ols = []
-                curved_stat_tls = []
-
-                ols_mats = []
-                tls_mats = []
-
-                c, s = np.cos(planted_angle), np.sin(planted_angle)
-                R_a = np.array([[c, -s], [s, c]], dtype=np.float64)
+                # Group 1 (Calibration): 100 seeds for threshold tau
+                ols_calib_stats = []
+                tls_calib_stats = []
 
                 for seed in range(num_seeds):
-                    np.random.seed(seed)
-                    deltas = np.random.normal(0, r, (N, 2))
-                    eps_x = np.random.normal(0, sigma, (N, 2))
-                    eps_y = np.random.normal(0, sigma, (N, 2))
+                    _, p_ols, _, p_tls = _run_single_4corner_trial(
+                        curved=False, N=N, r=r, sigma=sigma, seed=seed, planted_angle=planted_angle
+                    )
+                    H_ols = p_ols.compute_homogeneous_matrix()
+                    H_tls = p_tls.compute_homogeneous_matrix()
 
-                    z0 = np.array([0.0, 0.0])
+                    ols_calib_stats.append(float(np.linalg.norm(H_ols - np.eye(3), "fro")))
+                    tls_calib_stats.append(float(np.linalg.norm(H_tls - np.eye(3), "fro")))
 
-                    # Flat null trial: T = I
-                    src_flat = z0 + deltas + eps_x
-                    tgt_flat = z0 + deltas + eps_y
-                    estimator = ConnectionEstimator()
-                    T_flat = estimator.estimate_linear_transport("flat", "x0", "x1", src_flat, tgt_flat)
-                    H_flat = evaluate_holonomy("Flat", PathTransport([T_flat])).matrix
-                    flat_stat_nulls.append(float(np.linalg.norm(H_flat - np.eye(2), "fro")))
+                tau_ols = float(np.percentile(ols_calib_stats, 95))
+                tau_tls = float(np.percentile(tls_calib_stats, 95))
 
-                    # Curved trial: T = R_a
-                    src_curved = z0 + deltas + eps_x
-                    tgt_curved = z0 + np.dot(deltas, R_a.T) + eps_y
+                # Group 2 (Validation): 100 new seeds for empirical FPR
+                ols_val_stats = []
+                tls_val_stats = []
 
-                    T_ols = estimator.estimate_linear_transport("curved", "x0", "x1", src_curved, tgt_curved)
-                    T_tls = estimator.estimate_total_least_squares_transport("curved", "x0", "x1", src_curved, tgt_curved)
+                for seed in range(num_seeds, 2 * num_seeds):
+                    _, p_ols, _, p_tls = _run_single_4corner_trial(
+                        curved=False, N=N, r=r, sigma=sigma, seed=seed, planted_angle=planted_angle
+                    )
+                    H_ols = p_ols.compute_homogeneous_matrix()
+                    H_tls = p_tls.compute_homogeneous_matrix()
 
-                    ols_mats.append(T_ols.matrix_2d)
-                    tls_mats.append(T_tls.matrix_2d)
+                    ols_val_stats.append(float(np.linalg.norm(H_ols - np.eye(3), "fro")))
+                    tls_val_stats.append(float(np.linalg.norm(H_tls - np.eye(3), "fro")))
 
-                    H_ols = evaluate_holonomy("OLS", PathTransport([T_ols])).matrix
-                    H_tls = evaluate_holonomy("TLS", PathTransport([T_tls])).matrix
+                fpr_ols = float(np.mean(np.array(ols_val_stats) > tau_ols))
+                fpr_tls = float(np.mean(np.array(tls_val_stats) > tau_tls))
 
-                    curved_stat_ols.append(float(np.linalg.norm(H_ols - np.eye(2), "fro")))
-                    curved_stat_tls.append(float(np.linalg.norm(H_tls - np.eye(2), "fro")))
+                # Group 3 (Power & Bias): 100 new seeds for Detection Power, Bias, & Loop RMSE
+                ols_mats = []
+                tls_mats = []
+                ols_loop_h = []
+                tls_loop_h = []
 
-                tau_95 = float(np.percentile(flat_stat_nulls, 95))
+                for seed in range(2 * num_seeds, 3 * num_seeds):
+                    t01_ols, p_ols, t01_tls, p_tls = _run_single_4corner_trial(
+                        curved=True, N=N, r=r, sigma=sigma, seed=seed, planted_angle=planted_angle
+                    )
+                    ols_mats.append(t01_ols.matrix_2d)
+                    tls_mats.append(t01_tls.matrix_2d)
 
-                fpr = float(np.mean(np.array(flat_stat_nulls) > tau_95))
-                power = float(np.mean(np.array(curved_stat_tls) > tau_95))
+                    H_ols = p_ols.compute_homogeneous_matrix()
+                    H_tls = p_tls.compute_homogeneous_matrix()
+
+                    ols_loop_h.append(float(np.linalg.norm(H_ols - np.eye(3), "fro")))
+                    tls_loop_h.append(float(np.linalg.norm(H_tls - np.eye(3), "fro")))
+
+                power_ols = float(np.mean(np.array(ols_loop_h) > tau_ols))
+                power_tls = float(np.mean(np.array(tls_loop_h) > tau_tls))
 
                 mean_ols = np.mean(ols_mats, axis=0)
                 mean_tls = np.mean(tls_mats, axis=0)
@@ -176,20 +254,27 @@ def run_e001_monte_carlo_sweeps(num_seeds: int = 50) -> List[MonteCarloSweepMetr
                 ols_bias_norm = float(np.linalg.norm(mean_ols - R_a, "fro"))
                 tls_bias_norm = float(np.linalg.norm(mean_tls - R_a, "fro"))
 
-                ols_rmse = float(np.sqrt(np.mean([(m - R_a)**2 for m in ols_mats])))
-                tls_rmse = float(np.sqrt(np.mean([(m - R_a)**2 for m in tls_mats])))
+                ols_edge_rmse = float(np.sqrt(np.mean([(m - R_a)**2 for m in ols_mats])))
+                tls_edge_rmse = float(np.sqrt(np.mean([(m - R_a)**2 for m in tls_mats])))
+
+                ols_loop_rmse = float(np.sqrt(np.mean([(h - float(np.linalg.norm(H_hom_true - np.eye(3), "fro")))**2 for h in ols_loop_h])))
+                tls_loop_rmse = float(np.sqrt(np.mean([(h - float(np.linalg.norm(H_hom_true - np.eye(3), "fro")))**2 for h in tls_loop_h])))
 
                 results.append(
-                    MonteCarloSweepMetrics(
+                    MonteCarloLoopMetrics(
                         sample_size=N,
                         perturbation_radius=r,
                         measurement_noise=sigma,
+                        ols_edge_matrix_rmse=ols_edge_rmse,
+                        tls_edge_matrix_rmse=tls_edge_rmse,
+                        ols_loop_holonomy_rmse=ols_loop_rmse,
+                        tls_loop_holonomy_rmse=tls_loop_rmse,
                         ols_matrix_bias_norm=ols_bias_norm,
                         tls_matrix_bias_norm=tls_bias_norm,
-                        ols_holonomy_rmse=ols_rmse,
-                        tls_holonomy_rmse=tls_rmse,
-                        false_positive_rate=fpr,
-                        detection_power=power,
+                        ols_false_positive_rate=fpr_ols,
+                        tls_false_positive_rate=fpr_tls,
+                        ols_detection_power=power_ols,
+                        tls_detection_power=power_tls,
                     )
                 )
 

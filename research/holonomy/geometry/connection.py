@@ -95,7 +95,6 @@ class ConnectionEstimator:
         Z_tgt_c = Z_tgt - mean_tgt
 
         d_x = Z_src_c.shape[1]
-        d_y = Z_tgt_c.shape[1]
 
         # Stack augmented matrix [X_c | Y_c]
         Aug = np.column_stack([Z_src_c, Z_tgt_c])
@@ -108,10 +107,14 @@ class ConnectionEstimator:
         V12 = V[:d_x, d_x:]
         V22 = V[d_x:, d_x:]
 
-        # TLS estimate A^T = -V12 V22^(-1) => A = (-V12 V22^(-1))^T
-        T_mat_T = -np.dot(V12, np.linalg.inv(V22))
-        T_mat = T_mat_T.T
+        # TLS estimate A^T = -V12 V22^(-1) => A = (-V12 V22^(-1))^T with conditioning check
+        cond_v22 = float(np.linalg.cond(V22))
+        if cond_v22 > 1e10 or abs(float(np.linalg.det(V22))) < 1e-10:
+            T_mat_T = -np.dot(V12, np.linalg.pinv(V22))
+        else:
+            T_mat_T = -np.linalg.solve(V22.T, V12.T).T
 
+        T_mat = T_mat_T.T
         bias = mean_tgt - np.dot(T_mat, mean_src)
 
         return ParallelTransportMap(

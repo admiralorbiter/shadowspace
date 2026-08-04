@@ -4,7 +4,7 @@
 
 Standard evaluation of natural language processing and reasoning models treats dataset items as an unordered cloud of static points $(x_i, p_i^H, p_i^M)$, where $p_i^H \in \Delta^{C-1}$ is the human disagreement distribution and $p_i^M \in \Delta^{C-1}$ is the model predicted distribution. This static view evaluates performance purely pointwise (e.g., via cross-entropy, total variation distance, or KL divergence).
 
-This paper introduces a geometric framework based on **differential geometry, gauge connections, parallel transport, holonomy, and cellular sheaf theory**. We propose that human and model judgments define fields over a **semantic transformation complex**. When judgments are transported through closed compositions of semantic operations (e.g., negation duality, role swapping, entity renaming), they exhibit **discrete path dependence (curvature)**: the transport of a disagreement vector around a closed loop $\gamma$ yields a holonomy matrix $H_\gamma \neq I$.
+This paper introduces a geometric framework based on **differential geometry, gauge connections, parallel transport, holonomy, and cellular sheaf theory**. We propose that human and model judgments define fields over a **semantic transformation complex**. When judgments are transported through closed compositions of semantic operations (e.g., negation duality, role swapping, entity renaming), they exhibit **discrete path dependence (curvature)**: the transport of a disagreement vector around a closed loop $\gamma$ yields a holonomy matrix $\mathbf{H}_\gamma \neq I$.
 
 Our central theoretical result—the **Calibration-Holonomy Invariance Theorem**—proves that global, smooth, invertible recalibration of predictions acts on loop holonomy strictly by matrix conjugation ($H_\gamma^f = Df H_\gamma Df^{-1}$). Consequently, **no global invertible recalibrator can eliminate path-dependent semantic curvature**. Furthermore, we construct a **cellular sheaf of local calibrators** and show that the **sheaf Laplacian** $L_\mathcal{F} = \delta_0^* \delta_0$ and first cohomology group $H^1$ measure fundamental obstructions to globally gluing local contextual corrections. Finally, we formulate **GlueOOD**, a sheaf-theoretic metric that quantifies out-of-distribution failure as the inability of a novel semantic state to coherently glue into the existing transport sheaf.
 
@@ -14,7 +14,7 @@ Our central theoretical result—the **Calibration-Holonomy Invariance Theorem**
 
 Let $\mathcal{S}$ be a space of semantic situations or sentences (e.g., NLI premise-hypothesis pairs). Define a finite set of elementary semantic generators $\mathcal{G} = \{g_1, g_2, \dots, g_m\}$, where each $g: \mathcal{S} \to \mathcal{S}$ represents a semantics-preserving or semantics-transforming operation:
 - Entity renaming ($e_1 \leftrightarrow e_2$)
-- Argument / role permutation ($P \leftrightarrow H$)
+- Argument / role permutation ($P \leftrightarrow Q$)
 - Negation duality ($\neg \forall x P(x) \leftrightarrow \exists x \neg P(x)$)
 - Quantifier swapping
 - Controlled coreference shifting
@@ -27,7 +27,7 @@ The generators generate a transformation algebra $\mathcal{A}_{\mathcal{G}}$ wit
 We construct the **Semantic Transformation Complex** (or Cayley Complex) $X$:
 - **0-Cells (Vertices)**: Semantic situations $x \in \mathcal{S}$.
 - **1-Cells (Edges)**: Elementary transformations $x \xrightarrow{g} gx$.
-- **2-Cells (Faces)**: Closed 2-dimensional polygons representing declared algebraic equations between transformation paths. Boundary operators $\partial_2: C_2 \to C_1$ distinguish contractible local face curvature from noncontractible global monodromy.
+- **2-Cells (Faces)**: Planned 2-dimensional polygons representing declared algebraic equations between transformation paths, with boundary operators $\partial_2: C_2 \to C_1$ distinguishing contractible local face curvature from noncontractible global monodromy.
 
 ---
 
@@ -65,21 +65,35 @@ $$\mathbf{H}_\gamma = \mathbf{T}_{g_k, x_{k-1}} \cdots \mathbf{T}_{g_1, x_0} = \
 
 ---
 
-## 4. The Calibration-Holonomy Invariance Theorem
+## 4. Connection Estimation & Errors-in-Variables Total Least Squares (TLS)
 
-### Theorem 1A (Exact Connection Conjugacy)
-*Let $\pi: E \to X$ be an ILR simplex bundle over a semantic transformation complex $X$, and let $A_{g,x} \in \text{GL}(C-1)$ be the transport connection. Let $f: \mathbb{R}^{C-1} \to \mathbb{R}^{C-1}$ be any global, smooth, invertible recalibration map applied to predictions. Then:*
+When source and target ambiguity coordinates $X, Y \in \mathbb{R}^{N \times d}$ contain symmetric measurement noise $X_c = Z_x + \epsilon_x$ and $Y_c = Z_y + \epsilon_y$ with $\epsilon_x, \epsilon_y \sim \mathcal{N}(0, \sigma^2 I)$, standard OLS introduces attenuation bias:
+$$\hat{T}_{\text{OLS}} \longrightarrow \frac{r^2}{r^2 + \sigma^2} T$$
 
-1. *The recalibrated transport operator $A_{g,x}^f$ transforms under the local Jacobian pushforward:*
-   $$A_{g,x}^f = Df(gx) \, A_{g,x} \, Df(x)^{-1}$$
-2. *For any closed loop $\gamma$ starting and ending at base point $x_0$, the recalibrated loop holonomy $A_\gamma^f$ is conjugated by the Jacobian $Df(x_0)$:*
-   $$A_\gamma^f = Df(x_0) \, A_\gamma \, Df(x_0)^{-1}$$
-3. *The trace, determinant, spectrum, and $\text{rank}(A_\gamma - I)$ are invariant under global invertible recalibration:*
-   $$\text{tr}(A_\gamma^f) = \text{tr}(A_\gamma), \quad \det(A_\gamma^f) = \det(A_\gamma), \quad \text{spec}(A_\gamma^f) = \text{spec}(A_\gamma), \quad \text{rank}(A_\gamma^f - I) = \text{rank}(A_\gamma - I)$$
+We implement **Multivariate Total Least Squares (TLS)** by performing singular value decomposition (SVD) on the stacked centered matrix $[X_c \quad Y_c] = U \Sigma V^\top$:
+$$V = \begin{pmatrix} V_{11} & V_{12} \\ V_{21} & V_{22} \end{pmatrix} \in \mathbb{R}^{2d \times 2d}$$
+$$\hat{T}_{\text{TLS}} = (-V_{12} V_{22}^{-1})^\top$$
+which corrects errors-in-variables attenuation bias under symmetric measurement error.
+
+### 3-Group Monte Carlo Loop Holonomy Inference
+Statistical testing evaluates the 4-edge loop holonomy statistic $S_\gamma = \|\mathbf{H}_\gamma - I_3\|_F$:
+1. **Group 1 (Calibration)**: 500 flat trials establish null threshold $\tau_{0.95} = Q_{0.95}(S_{\gamma, \text{flat}})$.
+2. **Group 2 (Validation)**: 500 independent flat trials evaluate empirical $\text{FPR} = \Pr(S_{\gamma, \text{flat}} > \tau_{0.95})$.
+3. **Group 3 (Power)**: 500 independent curved trials evaluate empirical $\text{Power} = \Pr(S_{\gamma, \text{curved}} > \tau_{0.95})$.
 
 ---
 
-## 5. Cellular Sheaf Theory & Data-Dependent Sheaf Laplacian
+## 5. Bounded Model-Theoretic First-Order Logic Semantics ($k=3$)
+
+We evaluate First-Order Logic formulas over a domain size $k=3$ ($D=\{e_1, e_2, e_3\}$) and unary predicates $P, Q$.
+- Total First-Order Structures: $2^3 \times 2^3 = 64$ models.
+- Non-empty $P$ Structures: $(2^3 - 1) \times 2^3 = 56$ models.
+- **StrictFO**: Evaluates premise and hypothesis over all 64 models ($\models_{k=3, \{P,Q\}}$), returning Neutral for $\forall x(P(x) \to Q(x)) \models \exists x(P(x) \land Q(x))$ due to empty $P$ models.
+- **ExistentialImport**: Restricts to the 56 non-empty $P$ models, returning Entailment.
+
+---
+
+## 6. Cellular Sheaf Theory & Data-Dependent Sheaf Laplacian
 
 We evaluate local contextual calibrators $\{f_U\}_{U \in \mathcal{U}}$ defined over an open cover $\mathcal{U}$ of $X$.
 
@@ -91,14 +105,14 @@ mapping parameters directly to predicted item values.
 ### Cohomology and Obstructions
 - **Sheaf Laplacian**: $L_\mathcal{F} = \delta_0^* \delta_0$
 - **0-Cohomology ($H^0 = \ker \delta_0$)**: Dimension of globally coherent calibration parameter sections.
-- **1-Cohomology ($H^1 = \ker \delta_1 / \text{im} \delta_0$)**: First cohomology group measuring topological obstructions to gluing local calibrations into unified global sections across closed cycles or 2-cells.
+- **1-Cohomology ($H^1 = \ker \delta_1 / \text{im} \delta_0$)**: First cohomology group measuring topological obstructions to gluing local calibrations into unified global sections across closed cycles.
 
 ---
 
-## 6. Sheaf-Based Out-of-Distribution Metric (GlueOOD Solver)
+## 7. Sheaf-Based Out-of-Distribution Metric (GlueOOD Solver)
 
-Given $m$ neighboring contextual predictions $s_1, \dots, s_m \in \mathbb{R}^{C-1}$ and local restriction maps $\mathbf{T}_j = (A_j, b_j)$, **GlueOOD** solves the exact least-squares consensus optimization:
-$$v^* = \arg\min_{v \in \mathbb{R}^{C-1}} \sum_{j=1}^m \| A_j v + b_j - s_j \|^2 = \left( \sum_{j=1}^m A_j^\top A_j + \lambda I \right)^{-1} \sum_{j=1}^m A_j^\top (s_j - b_j)$$
+Given $m$ neighboring contextual predictions $s_1, \dots, s_m \in \mathbb{R}^{C-1}$ and local restriction maps $\mathbf{T}_j = (A_j, b_j)$, **GlueOOD** solves the **ridge-regularized least-squares consensus optimization**:
+$$v^* = \arg\min_{v \in \mathbb{R}^{C-1}} \sum_{j=1}^m \| A_j v + b_j - s_j \|^2 + \lambda \|v\|^2 = \left( \sum_{j=1}^m A_j^\top A_j + \lambda I \right)^{-1} \sum_{j=1}^m A_j^\top (s_j - b_j)$$
 
 The normalized residual energy measures contextual incompatibility:
 $$\text{GlueOOD}(x^*) = \frac{1}{m} \sum_{j=1}^m \| A_j v^* + b_j - s_j \|^2$$
