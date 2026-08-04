@@ -88,10 +88,39 @@ We estimate the conditional model mapping $\mu_m(p) = \mathbb{E}[q^{(m)} \mid p]
 
 ---
 
-## 6. Artifact Ledger
+## 6. E018 — Reachable-Set Ladder
+
+We evaluated how many post-hoc calibration degrees of freedom are required to rotate model ambiguity vectors toward human targets:
+
+- **Tier 1: Scalar Temperature (1 DoF)**: Positive Ray in CLR space ($q = \text{softmax}(z/T)$).
+  - Ambiguity Angle Reduction: **$0.0000^\circ$** (exact angle invariance confirmed).
+  - Mean Hellinger Error: $0.2923 \to 0.2136$ (ALBERT-xxLarge).
+- **Tier 2: Classwise Vector Scaling (3 DoF)**: Positive Cone in CLR space ($q = \text{softmax}(\mathbf{w} \odot z)$).
+  - Ambiguity Angle Reduction: **$0.25^\circ \text{--} 0.41^\circ$** (models remain geometrically trapped near the ray).
+  - Mean Hellinger Error: $0.2097$.
+- **Tier 3: Affine Matrix Scaling with Bias (12 DoF)**: Affine Subspace ($q = \text{softmax}(W z + \mathbf{b})$).
+  - Ambiguity Angle Reduction: **$3.11^\circ \text{--} 4.57^\circ$**.
+  - Mean Hellinger Error: $0.1917$.
+  - *Takeaway:* Even with 12 calibration parameters, **over $28.7^\circ$ of ambiguity angle error remains completely unreachable**.
+
+---
+
+## 7. Corrected Boundary Collapse & Separated Sharpening
+
+- **Interior Denominator Collapse**: Out of $N_{\text{interior}} = 1,022$ human 3-way interior ambiguity items ($\min p_i \ge 0.05$), models collapse **50.5% (BERT-Base)** to **75.5% (RoBERTa-Large)** ($772$ items) onto binary boundary edges ($q_c < 0.02$).
+- **Separated Sharpening vs Majority Alignment**:
+  - Center-Sharpening Drift: $+0.0792$ to $+0.1839$ toward boundaries.
+  - Majority-Corner Alignment $a_i = (q_i - p_i)^\top \frac{e_{y_i} - p_i}{\|e_{y_i} - p_i\|}$: Negative mean ($-0.036$ to $-0.149$), proving models sharpen toward nearest binary edges rather than sliding toward majority corners.
+
+---
+
+## 8. Artifact Ledger
 
 - [`calibration_ray_summary.json`](../../results/exploratory/calibration_ray_summary.json)
+- [`correction_patch_summary.json`](../../results/exploratory/correction_patch_summary.json)
+- [`reachable_set_ladder_summary.json`](../../results/exploratory/reachable_set_ladder_summary.json)
 - [`weighted_geometric_tears_summary.json`](../../results/exploratory/weighted_geometric_tears_summary.json)
 - [`semantic_torn_twins_summary.json`](../../results/exploratory/semantic_torn_twins_summary.json)
 - [`differential_belief_maps_summary.json`](../../results/exploratory/differential_belief_maps_summary.json)
 - [`geometry_lens.html`](../../docs/viz/chaosnli/geometry_lens.html)
+
