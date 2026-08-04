@@ -2,7 +2,7 @@
 
 Generates human and model probability distributions p(x) in Delta^2 over canonical formal states
 by transforming interpreter weights in ILR weight space: u(gx) = K_g u(x) + c_g.
-Uses an explicit full-rank observation matrix L_x in R^{3x3} so interpreter weight dynamics map cleanly to label distributions.
+Uses an identity observation matrix L_x = I_3 so ILR weight dynamics map directly to ILR observation space.
 """
 
 from __future__ import annotations
@@ -29,10 +29,8 @@ class GenerativeWorld:
         self.num_classes = num_classes
         self.epsilon = epsilon
         self.num_interpreters = len(self.interpreters)
-        # Explicit full-rank observation matrix L_x mapping weight vector w in Delta^2 to class probabilities p in Delta^2
-        self.observation_matrix_L = np.array(
-            [[0.8, 0.1, 0.1], [0.1, 0.8, 0.1], [0.1, 0.1, 0.8]], dtype=np.float64
-        )
+        # Identity observation matrix L_x mapping weight vector w in Delta^2 to class probabilities p in Delta^2
+        self.observation_matrix_L = np.eye(3, dtype=np.float64)
 
     def generate_distribution_from_weights(
         self, weights: NDArray[np.float64]
@@ -82,7 +80,7 @@ class CurvedWorld(GenerativeWorld):
         self.base_weights = np.array([0.5, 0.3, 0.2], dtype=np.float64)
 
     def transform_weights_along_edge(
-        self, generator_name: str, u_source: NDArray[np.float64]
+        self, generator_name: str, u_source: NDArray[np.float64], u_start: NDArray[np.float64] | None = None
     ) -> NDArray[np.float64]:
         """Transforms ILR weight coordinates u_source along generator edge g: u_target = K_g u_source + c_g."""
         if generator_name == "swap":
@@ -94,9 +92,12 @@ class CurvedWorld(GenerativeWorld):
         elif generator_name == "neg_inv":
             return np.dot(np.linalg.inv(self.S_b), u_source - self.c_b)
         elif generator_name == "flat_close":
-            # Nuisance-matched flat null closure map: (R_a^(-1) S_b^(-1) R_a)^(-1)
             K_close = np.dot(np.linalg.inv(self.K_a), np.dot(np.linalg.inv(self.S_b), self.K_a))
-            return np.dot(np.linalg.inv(K_close), u_source)
+            u_base = ilr_transform(self.base_weights) if u_start is None else u_start
+            u1 = np.dot(self.K_a, u_base) + self.c_a
+            u2 = np.dot(self.S_b, u1) + self.c_b
+            u3 = np.dot(np.linalg.inv(self.K_a), u2 - self.c_a)
+            return np.dot(K_close, u_source - u3) + u_base
         return u_source.copy()
 
     def get_weights(self, state: FormalState) -> NDArray[np.float64]:

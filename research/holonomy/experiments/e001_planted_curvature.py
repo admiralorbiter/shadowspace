@@ -1,7 +1,7 @@
 """Experiment E001: End-to-End Derived Curvature & 3-Group Monte Carlo Loop Inference (Phase E0.7.1).
 
-Derives target observations strictly by propagating ILR weights through CurvedWorld.transform_weights_along_edge():
-u_{j, tgt} = K_g u_{j, src} + c_g => p_{j, tgt} = L_{gx} ilr_inverse(u_{j, tgt}) => z_{j, tgt} = ilr(p_{j, tgt}) + eps_y.
+Derives target observations strictly by propagating ILR weights sequentially around the 4-corner loop:
+u_0 -> u_1 -> u_2 -> u_3 -> u_0 via CurvedWorld.transform_weights_along_edge().
 
 Evaluates independent 3-group Monte Carlo loop holonomy experiments (50 seeds per group):
 - Group 1 (Calibration): 50 flat trials calibrate null thresholds tau_OLS and tau_TLS at 95th percentile.
@@ -67,32 +67,35 @@ def run_e001_planted_curvature_experiment(
     x3 = g_neg(x0)
 
     np.random.seed(123)
-    u_base = ilr_transform(curved_world.base_weights)
+    u_x0 = ilr_transform(curved_world.base_weights)
 
     # Edge 01 (swap)
     deltas = np.random.normal(0, perturbation_radius, (sample_size, 2))
-    u_01_src = u_base + deltas
+    u_01_src = u_x0 + deltas
     u_01_tgt = np.array([curved_world.transform_weights_along_edge("swap", u) for u in u_01_src])
 
     z_01_src = np.array([ilr_transform(curved_world.generate_distribution_from_weights(ilr_transform.__globals__["ilr_inverse"](u))) for u in u_01_src]) + np.random.normal(0, measurement_noise, (sample_size, 2))
     z_01_tgt = np.array([ilr_transform(curved_world.generate_distribution_from_weights(ilr_transform.__globals__["ilr_inverse"](u))) for u in u_01_tgt]) + np.random.normal(0, measurement_noise, (sample_size, 2))
 
     # Edge 12 (neg)
-    u_12_src = u_base + deltas
+    u_x1 = curved_world.transform_weights_along_edge("swap", u_x0)
+    u_12_src = u_x1 + deltas
     u_12_tgt = np.array([curved_world.transform_weights_along_edge("neg", u) for u in u_12_src])
 
     z_12_src = np.array([ilr_transform(curved_world.generate_distribution_from_weights(ilr_transform.__globals__["ilr_inverse"](u))) for u in u_12_src]) + np.random.normal(0, measurement_noise, (sample_size, 2))
     z_12_tgt = np.array([ilr_transform(curved_world.generate_distribution_from_weights(ilr_transform.__globals__["ilr_inverse"](u))) for u in u_12_tgt]) + np.random.normal(0, measurement_noise, (sample_size, 2))
 
     # Edge 23 (swap_inv)
-    u_23_src = u_base + deltas
+    u_x2 = curved_world.transform_weights_along_edge("neg", u_x1)
+    u_23_src = u_x2 + deltas
     u_23_tgt = np.array([curved_world.transform_weights_along_edge("swap_inv", u) for u in u_23_src])
 
     z_23_src = np.array([ilr_transform(curved_world.generate_distribution_from_weights(ilr_transform.__globals__["ilr_inverse"](u))) for u in u_23_src]) + np.random.normal(0, measurement_noise, (sample_size, 2))
     z_23_tgt = np.array([ilr_transform(curved_world.generate_distribution_from_weights(ilr_transform.__globals__["ilr_inverse"](u))) for u in u_23_tgt]) + np.random.normal(0, measurement_noise, (sample_size, 2))
 
     # Edge 30 (neg_inv)
-    u_30_src = u_base + deltas
+    u_x3 = curved_world.transform_weights_along_edge("swap_inv", u_x2)
+    u_30_src = u_x3 + deltas
     u_30_tgt = np.array([curved_world.transform_weights_along_edge("neg_inv", u) for u in u_30_src])
 
     z_30_src = np.array([ilr_transform(curved_world.generate_distribution_from_weights(ilr_transform.__globals__["ilr_inverse"](u))) for u in u_30_src]) + np.random.normal(0, measurement_noise, (sample_size, 2))
@@ -121,7 +124,7 @@ def _run_single_derived_trial(
 ) -> Tuple[ParallelTransportMap, PathTransport, ParallelTransportMap, PathTransport]:
     """Generates 4-corner trial derived from CurvedWorld and returns (T_01_ols, Path_ols, T_01_tls, Path_tls)."""
     np.random.seed(seed)
-    u_base = ilr_transform(curved_world.base_weights)
+    u_curr = ilr_transform(curved_world.base_weights)
     deltas = np.random.normal(0, r, (N, 2))
 
     generators = ["swap", "neg", "swap_inv", "neg_inv" if curved else "flat_close"]
@@ -131,7 +134,7 @@ def _run_single_derived_trial(
     estimator = ConnectionEstimator()
 
     for g_name in generators:
-        u_src = u_base + deltas
+        u_src = u_curr + deltas
         u_tgt = np.array([curved_world.transform_weights_along_edge(g_name, u) for u in u_src])
 
         z_src = np.array([ilr_transform(curved_world.generate_distribution_from_weights(ilr_transform.__globals__["ilr_inverse"](u))) for u in u_src]) + np.random.normal(0, sigma, (N, 2))
@@ -142,6 +145,9 @@ def _run_single_derived_trial(
 
         ols_maps.append(t_ols)
         tls_maps.append(t_tls)
+
+        # Advance vertex weight coordinate to next corner
+        u_curr = curved_world.transform_weights_along_edge(g_name, u_curr)
 
     p_ols = PathTransport(ols_maps)
     p_tls = PathTransport(tls_maps)
@@ -154,9 +160,7 @@ def run_e001_monte_carlo_sweeps(num_seeds: int = 50) -> List[MonteCarloLoopMetri
     results = []
     curved_world = CurvedWorld(rotation_angle=np.pi / 4)
 
-    # Analytical true transport matrix K_a for Edge 01
     K_a = curved_world.K_a
-    # True analytical loop matrix H_true = K_close * K_a^-1 * S_b * K_a
     K_a_inv = np.linalg.inv(K_a)
     S_b_inv = np.linalg.inv(curved_world.S_b)
     H_true = np.dot(S_b_inv, np.dot(K_a_inv, np.dot(curved_world.S_b, K_a)))
@@ -174,11 +178,11 @@ def run_e001_monte_carlo_sweeps(num_seeds: int = 50) -> List[MonteCarloLoopMetri
                     _, p_ols, _, p_tls = _run_single_derived_trial(
                         curved=False, N=N, r=r, sigma=sigma, seed=seed, curved_world=curved_world
                     )
-                    H_ols = p_ols.compute_homogeneous_matrix()
-                    H_tls = p_tls.compute_homogeneous_matrix()
+                    A_ols = p_ols.compute_composite_matrix()
+                    A_tls = p_tls.compute_composite_matrix()
 
-                    ols_calib_stats.append(float(np.linalg.norm(H_ols - np.eye(3), "fro")))
-                    tls_calib_stats.append(float(np.linalg.norm(H_tls - np.eye(3), "fro")))
+                    ols_calib_stats.append(float(np.linalg.norm(A_ols - np.eye(2), "fro")))
+                    tls_calib_stats.append(float(np.linalg.norm(A_tls - np.eye(2), "fro")))
 
                 tau_ols = float(np.percentile(ols_calib_stats, 95))
                 tau_tls = float(np.percentile(tls_calib_stats, 95))
@@ -191,11 +195,11 @@ def run_e001_monte_carlo_sweeps(num_seeds: int = 50) -> List[MonteCarloLoopMetri
                     _, p_ols, _, p_tls = _run_single_derived_trial(
                         curved=False, N=N, r=r, sigma=sigma, seed=seed, curved_world=curved_world
                     )
-                    H_ols = p_ols.compute_homogeneous_matrix()
-                    H_tls = p_tls.compute_homogeneous_matrix()
+                    A_ols = p_ols.compute_composite_matrix()
+                    A_tls = p_tls.compute_composite_matrix()
 
-                    ols_val_stats.append(float(np.linalg.norm(H_ols - np.eye(3), "fro")))
-                    tls_val_stats.append(float(np.linalg.norm(H_tls - np.eye(3), "fro")))
+                    ols_val_stats.append(float(np.linalg.norm(A_ols - np.eye(2), "fro")))
+                    tls_val_stats.append(float(np.linalg.norm(A_tls - np.eye(2), "fro")))
 
                 fpr_ols = float(np.mean(np.array(ols_val_stats) > tau_ols))
                 fpr_tls = float(np.mean(np.array(tls_val_stats) > tau_tls))
@@ -223,8 +227,11 @@ def run_e001_monte_carlo_sweeps(num_seeds: int = 50) -> List[MonteCarloLoopMetri
                     ols_h_mats.append(H_ols)
                     tls_h_mats.append(H_tls)
 
-                    ols_loop_stat.append(float(np.linalg.norm(H_ols - np.eye(3), "fro")))
-                    tls_loop_stat.append(float(np.linalg.norm(H_tls - np.eye(3), "fro")))
+                    A_ols = p_ols.compute_composite_matrix()
+                    A_tls = p_tls.compute_composite_matrix()
+
+                    ols_loop_stat.append(float(np.linalg.norm(A_ols - np.eye(2), "fro")))
+                    tls_loop_stat.append(float(np.linalg.norm(A_tls - np.eye(2), "fro")))
 
                 power_ols = float(np.mean(np.array(ols_loop_stat) > tau_ols))
                 power_tls = float(np.mean(np.array(tls_loop_stat) > tau_tls))
@@ -243,7 +250,7 @@ def run_e001_monte_carlo_sweeps(num_seeds: int = 50) -> List[MonteCarloLoopMetri
                 tls_mat_h_rmse = float(np.sqrt(np.mean([np.linalg.norm(h - H_hom_true, "fro")**2 for h in tls_h_mats])))
 
                 # Scalar curvature statistic RMSE
-                true_stat = float(np.linalg.norm(H_hom_true - np.eye(3), "fro"))
+                true_stat = float(np.linalg.norm(H_true - np.eye(2), "fro"))
                 ols_stat_rmse = float(np.sqrt(np.mean([(s - true_stat)**2 for s in ols_loop_stat])))
                 tls_stat_rmse = float(np.sqrt(np.mean([(s - true_stat)**2 for s in tls_loop_stat])))
 
