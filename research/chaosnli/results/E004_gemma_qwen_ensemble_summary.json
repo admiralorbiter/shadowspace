@@ -1,0 +1,67 @@
+{
+  "title": "Gemma 3 & Qwen 2.5 Equal-Weight Ensemble Coalition & Edge Recovery",
+  "num_items": 600,
+  "human_relational_target": {
+    "q_hh_relational": 0.2633796506666667,
+    "tau_human_edge_threshold": 0.2619999945163727,
+    "total_human_supported_edges": 6577
+  },
+  "ensemble_raw_metrics": {
+    "nll_nats": 2.3799529547748914,
+    "brier": 0.22944763108860433,
+    "jsd_nats": 0.10677872723667108,
+    "jsd_bits": 0.15404914025678065,
+    "q_support": 0.04574266676271024,
+    "q_null": 0.016746303099322065,
+    "r_norm_pct": 11.756870654107535,
+    "r_norm_95ci": [
+      10.659239289526043,
+      12.915929242841061
+    ],
+    "effective_bits": 1.564775609857783,
+    "k_eff_prototypes": 2.9583148600445544
+  },
+  "ensemble_calibrated_metrics": {
+    "nll_nats": 0.8646623468096813,
+    "brier": 0.11730646327159201,
+    "jsd_nats": 0.058007294376649664,
+    "jsd_bits": 0.08368683593257872,
+    "q_support": 0.05168700005385715,
+    "q_null": 0.01676278406043095,
+    "r_norm_pct": 14.161325003446917,
+    "r_norm_95ci": [
+      12.799191894121863,
+      15.582814696834959
+    ],
+    "effective_bits": 1.7599127663765148,
+    "k_eff_prototypes": 3.3867764593133787
+  },
+  "ensemble_vs_single_model_contrasts": {
+    "ensemble_minus_qwen_raw_pct": -0.0975466733948096,
+    "ensemble_minus_qwen_raw_95ci": [
+      -1.5809641524299332,
+      1.4438910748250136
+    ],
+    "ensemble_minus_qwen_cal_pct": -0.701892811184349,
+    "ensemble_minus_qwen_cal_95ci": [
+      -2.080789553211052,
+      0.8049125417849318
+    ],
+    "ensemble_exceeds_qwen_raw": false,
+    "ensemble_exceeds_qwen_cal": false
+  },
+  "graph_edge_decomposition": {
+    "gemma_supported_edges": 280,
+    "qwen_supported_edges": 411,
+    "ensemble_supported_edges": 334,
+    "gemma_only_supported_edges": 245,
+    "qwen_only_supported_edges": 376,
+    "both_models_supported_edges": 35,
+    "ensemble_only_supported_edges": 120,
+    "gemma_false_bridges": 4903,
+    "qwen_false_bridges": 5133,
+    "ensemble_false_bridges": 4777,
+    "gemma_only_false_bridges": 4702,
+    "qwen_only_false_bridges": 4932
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "experiment_id": "E010_Sampler_Invariance_Gate",
+  "gemma3_12b": {
+    "model_tag": "gemma3:12b",
+    "num_items": 5,
+    "content_matches_native_default": 5,
+    "content_matches_matched_sampler": 5,
+    "content_matches_topk5": 5,
+    "gate_status": "PASSED"
+  },
+  "qwen2_5_14b": {
+    "model_tag": "qwen2.5:14b",
+    "num_items": 5,
+    "content_matches_native_default": 5,
+    "content_matches_matched_sampler": 5,
+    "content_matches_topk5": 5,
+    "gate_status": "PASSED"
+  },
+  "overall_gate_status": "PASSED"
+}

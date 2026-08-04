@@ -1,0 +1,39 @@
+{
+  "title": "Geometric Orbit & Disagreement Analysis: Why Calibration Helps Qwen but Not Gemma",
+  "gemma3_12b": {
+    "mean_optimal_temp": 10.358869214516822,
+    "raw_nll": 3.8277057488765522,
+    "cal_nll": 0.9308306995718575,
+    "nll_delta": -2.8968750493046946,
+    "raw_r_norm": 9.720955172576211,
+    "cal_r_norm": 9.756398660026038,
+    "r_norm_gain": 0.03544348744982706,
+    "clr_orbit_distance_mean": 8.514214180097895,
+    "clr_target_angle_cos_mean": 0.7029280260998915,
+    "graph_turnover_mean": 0.5660000000000001,
+    "human_edges_gained": 150,
+    "human_edges_lost": 146,
+    "net_human_edges_gained": 4,
+    "false_bridges_removed": 2797,
+    "false_bridges_added": 2769,
+    "net_false_bridges_added": -28
+  },
+  "qwen2.5_14b": {
+    "mean_optimal_temp": 17.191035773382183,
+    "raw_nll": 5.2986088909357845,
+    "cal_nll": 0.8836747624186672,
+    "nll_delta": -4.4149341285171175,
+    "raw_r_norm": 11.854417327502345,
+    "cal_r_norm": 14.863217814631266,
+    "r_norm_gain": 3.008800487128921,
+    "clr_orbit_distance_mean": 18.0363498693313,
+    "clr_target_angle_cos_mean": 0.7538687872630386,
+    "graph_turnover_mean": 0.6715183976154564,
+    "human_edges_gained": 210,
+    "human_edges_lost": 246,
+    "net_human_edges_gained": -36,
+    "false_bridges_removed": 3523,
+    "false_bridges_added": 2961,
+    "net_false_bridges_added": -562
+  }
+}
