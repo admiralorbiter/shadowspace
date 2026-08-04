@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Sequence
 import numpy as np
 from numpy.typing import NDArray
 
@@ -16,10 +17,18 @@ def sample_dirichlet_human_posterior(
 
     Standard distribution order: [Entailment, Neutral, Contradiction].
     """
-    if seed is not None:
-        np.random.seed(seed)
-
     counts_arr = np.array(counts, dtype=np.float64)
+
+    if counts_arr.shape != (3,):
+        raise ValueError(f"Human annotation counts must have shape (3,), got {counts_arr.shape}")
+    if np.any(counts_arr < 0):
+        raise ValueError(f"Human annotation counts must be non-negative, got {counts}")
+    if alpha <= 0:
+        raise ValueError(f"Alpha prior parameter must be positive, got {alpha}")
+    if num_samples < 1:
+        raise ValueError(f"num_samples must be at least 1, got {num_samples}")
+
+    rng = np.random.default_rng(seed)
     alpha_vec = counts_arr + alpha
-    samples = np.random.dirichlet(alpha_vec, size=num_samples)
+    samples = rng.dirichlet(alpha_vec, size=num_samples)
     return samples[0] if num_samples == 1 else samples

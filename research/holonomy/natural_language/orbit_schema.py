@@ -41,7 +41,7 @@ class SemanticOrbit:
     base_hypothesis: str
     vertices: Dict[str, SemanticVertex] = field(default_factory=dict)
     edges: List[SemanticEdge] = field(default_factory=list)
-    is_closed: bool = True
+    is_closed: bool = False
 
     def get_vertex(self, vertex_id: str) -> SemanticVertex:
         return self.vertices[vertex_id]
