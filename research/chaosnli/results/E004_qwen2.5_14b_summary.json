@@ -2,27 +2,37 @@
   "model_tag": "qwen2.5:14b",
   "n_items": 600,
   "metrics": {
-    "nll_raw_nats": 5.298608890936125,
-    "nll_calibrated_nats": 0.8731641213777895,
-    "jsd_raw_bits": 0.2374993019929623,
-    "brier_score": 0.3821249527795376,
+    "nll_raw_nats": 5.292757333825039,
+    "nll_calibrated_nats": 0.8920381181389484,
+    "jsd_raw_bits": 0.23749930199000724,
+    "jsd_calibrated_bits": 0.09070901778695155,
+    "brier_raw": 0.3821249527793468,
+    "brier_calibrated": 0.14100920003419073,
     "mean_candidate_mass": 1.0000000017316881,
-    "mean_label_permutation_variance": 0.01896003357805554,
-    "cross_fitted_optimal_temperature_t_star": 14.669204626155537,
-    "q_support_raw": 0.04772322406491463,
-    "q_support_calibrated": 0.05119008804835687,
-    "q_null_stratified_raw": 0.016705693384569544,
-    "q_hh_relational": 0.2633796506666667,
-    "r_norm_pct_raw": 12.574302947138168,
-    "r_norm_pct_calibrated": 13.969974981735733,
-    "r_norm_95ci_raw": [
-      8.902898691549291,
-      16.66667860581984
+    "imputed_minus40_records": 46,
+    "cross_fitted_optimal_temperatures": [
+      17.103856390817548,
+      15.839822262048287,
+      17.103856390817548,
+      17.103856390817548,
+      15.839822262048287
     ],
-    "prototype_equivalent_bits_raw": 1.6333058847403295,
-    "prototype_quantizers_k_eff_raw": 3.102230500332637,
-    "prototype_equivalent_bits_cal": 1.7446475534870247,
-    "prototype_quantizers_k_eff_cal": 3.3511297666873427
+    "mean_t_star": 16.598242739309846,
+    "q_support_raw": 0.04739093127143108,
+    "q_support_calibrated": 0.04980358342324616,
+    "q_null_stratified_raw": 0.0167053899931599,
+    "q_null_stratified_calibrated": 0.016734513499724695,
+    "q_hh_relational": 0.2633796506666667,
+    "r_norm_pct_raw": 12.439701326960078,
+    "r_norm_pct_calibrated": 13.407549933221926,
+    "r_norm_95ci_raw": [
+      8.974728864078651,
+      16.195976238623174
+    ],
+    "prototype_equivalent_bits_raw": 1.6225678541463735,
+    "prototype_quantizers_k_eff_raw": 3.0792262052777923,
+    "prototype_equivalent_bits_cal": 1.6997793166132202,
+    "prototype_quantizers_k_eff_cal": 3.2485126352151292
   },
   "provenance": {
     "responses_path": "research\\chaosnli\\artifacts\\E004\\raw_responses\\pilot600_qwen2.5-14b_v2_abc_t10_lpe.jsonl",

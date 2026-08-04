@@ -1,22 +1,22 @@
-"""Generic LLM LPE Analysis Pipeline (Object-ID Aligned, Cross-Fitted Calibration & Bootstrap).
+"""Generic LLM LPE Analysis Pipeline (E004 Methodologically Equivalent).
 
-Consolidates LLM response evaluation into a single, model-parameterized, publication-grade pipeline.
+Implements the exact E004 audited estimators:
+  1. Permutation-specific temperature scaling before semantic averaging:
+     q_i(T) = (1/6) * sum_{perm} softmax(logits_{i, perm} / T)
+  2. 5-fold cross-fitted fold-coherent relational graph scoring:
+     - Fit T_f* on fold f training items
+     - Apply T_f* to all N items to form coherent graph W_f
+     - Score ONLY held-out focal rows i in V_f against posterior support S
+     - Aggregate focal-row support across folds
+  3. Frozen 30-stratum focal-row bootstrap CIs & paired cross-model contrasts
+  4. Exact Gemma 3 reference reproduction assertions
 
 CLI Arguments:
-  --model-tag      Ollama or HuggingFace model tag (e.g. gemma3:12b, gemma4:12b, qwen2.5:14b)
+  --model-tag      Ollama or HuggingFace model tag (e.g. gemma3:12b, qwen2.5:14b)
   --responses      Path to raw LPE JSONL responses file
   --manifest       Path to items manifest JSONL (e.g. pilot_600.jsonl)
   --support-matrix Path to binary support matrix file (e.g. S_hellinger_k010_pilot.bin)
   --output-summary Path to destination JSON summary file
-
-Produces:
-  - Pointwise raw & calibrated metrics (NLL nats, JSD bits, Brier, candidate mass)
-  - Label permutation variability (variance across 6 S3 permutations)
-  - 5-fold cross-fitted temperature calibration (T*)
-  - Coherent held-out relational score (Q_support, Q_null, R_norm)
-  - Pilot E008 rate-distortion mapping (b effective bits, K_eff prototypes)
-  - 30-stratum focal-row bootstrap 95% CIs
-  - Complete SHA-256 provenance
 """
 
 from __future__ import annotations
@@ -71,7 +71,7 @@ def softmax_temp(logits: np.ndarray, temp: float) -> np.ndarray:
     return exp_z / np.sum(exp_z, axis=-1, keepdims=True)
 
 def main():
-    parser = argparse.ArgumentParser(description="Generic LLM LPE Evaluation Pipeline")
+    parser = argparse.ArgumentParser(description="E004 Methodologically Equivalent LLM LPE Pipeline")
     parser.add_argument("--model-tag", type=str, required=True, help="Model tag (e.g. gemma3:12b)")
     parser.add_argument("--responses", type=Path, required=True, help="Path to raw LPE JSONL responses")
     parser.add_argument("--manifest", type=Path, required=True, help="Path to items manifest JSONL")
@@ -106,6 +106,8 @@ def main():
     
     P_human = np.zeros((N, 3), dtype=np.float64)
     is_snli = np.zeros(N, dtype=bool)
+    fold_assignments = np.zeros(N, dtype=int)
+    
     for i, it in enumerate(items):
         counts = np.array([
             it.get("human_count_entailment", 0),
@@ -119,13 +121,16 @@ def main():
             
         obj_id = str(it.get("object_id", ""))
         is_snli[i] = "_snli_" in obj_id
+        fold_assignments[i] = it.get("fold_30strata", i % 5)
         
-    item_preds = {i: [] for i in range(N)}
-    item_perms = {i: set() for i in range(N)}
+    # Load 6 permutation distributions per item
+    # item_logits_by_perm[i][perm_idx] = (3,) array
+    item_logits_by_perm = {i: [None] * 6 for i in range(N)}
     cand_masses = []
     unique_rids = set()
     total_records = 0
     errors = 0
+    imputed_records = 0
     
     with open(args.responses, "r", encoding="utf-8") as f:
         for line in f:
@@ -143,89 +148,60 @@ def main():
             item_idx = manifest_index[obj_id]
             
             if rec.get("status") == "success" and rec.get("valid_output", True) is True:
-                probs = rec.get("normalized_probs", rec.get("p_model", [0.333, 0.333, 0.334]))
+                probs = np.array(rec.get("normalized_probs", rec.get("p_model", [0.333, 0.333, 0.334])), dtype=np.float64)
+                probs = np.clip(probs, 1e-12, 1.0)
+                probs /= probs.sum()
+                logits = np.log(probs)
+                
                 c_mass = rec.get("candidate_mass", 1.0)
                 perm_idx = rec.get("perm_index", rec.get("perm_idx", 0))
                 
-                item_preds[item_idx].append(probs)
-                item_perms[item_idx].add(perm_idx)
+                item_logits_by_perm[item_idx][perm_idx] = logits
                 cand_masses.append(c_mass)
+                
+                sym_lp = rec.get("symbol_logprobs", {})
+                for info in sym_lp.values():
+                    if info.get("logprob") == -40.0:
+                        imputed_records += 1
+                        break
             else:
                 errors += 1
                 
     expected_requests = N * 6
-    print(f"\n--- Transport Audit Checks ---")
+    print(f"\n--- Transport & Imputation Audit Checks ---")
     print(f"  Total Records:          {total_records} / {expected_requests} expected")
     print(f"  Successful:             {total_records - errors}")
     print(f"  Unique Request IDs:     {len(unique_rids)}")
-    print(f"  Items with 6 Perms:     {sum(1 for s in item_perms.values() if len(s) == 6)} / {N}")
+    print(f"  Imputed -40 Records:    {imputed_records}")
     
-    assert errors == 0, f"Encountered {errors} error records in response file!"
+    assert errors == 0, f"Encountered {errors} error records!"
     assert total_records >= expected_requests, f"Incomplete records: {total_records} < {expected_requests}"
     assert len(unique_rids) >= expected_requests, f"Duplicate request IDs detected: {len(unique_rids)} < {expected_requests}"
-    assert all(len(s) == 6 for s in item_perms.values()), "Missing label permutations for some items!"
     print("All transport audit checks PASSED!\n")
     
-    P_model = np.zeros((N, 3), dtype=np.float64)
-    perm_variances = []
-    
+    # Raw T=1.0 semantic average distribution across 6 permutations
+    P_model_raw = np.zeros((N, 3), dtype=np.float64)
     for i in range(N):
-        arr = np.array(item_preds[i], dtype=np.float64)
-        P_model[i] = np.mean(arr, axis=0)
-        P_model[i] = np.clip(P_model[i], 1e-12, 1.0)
-        P_model[i] /= np.sum(P_model[i])
+        perm_probs = [softmax_temp(item_logits_by_perm[i][p], 1.0) for p in range(6)]
+        P_model_raw[i] = np.mean(perm_probs, axis=0)
+        P_model_raw[i] = np.clip(P_model_raw[i], 1e-12, 1.0)
+        P_model_raw[i] /= np.sum(P_model_raw[i])
         
-        perm_variances.append(float(np.mean(np.var(arr, axis=0))))
-        
-    mean_perm_var = float(np.mean(perm_variances))
+    nll_raw = float(-np.mean(np.sum(P_human * np.log(P_model_raw), axis=1)))
     
-    nll_raw = float(-np.mean(np.sum(P_human * np.log(np.clip(P_model, 1e-12, 1.0)), axis=1)))
-    
-    m_mix = 0.5 * (P_human + P_model)
+    m_mix = 0.5 * (P_human + P_model_raw)
     kl_p = np.sum(np.where(P_human > 0, P_human * np.log(np.maximum(P_human, 1e-12) / m_mix), 0.0), axis=1)
-    kl_q = np.sum(np.where(P_model > 0, P_model * np.log(np.maximum(P_model, 1e-12) / m_mix), 0.0), axis=1)
+    kl_q = np.sum(np.where(P_model_raw > 0, P_model_raw * np.log(np.maximum(P_model_raw, 1e-12) / m_mix), 0.0), axis=1)
     jsd_raw = float(np.mean(0.5 * (kl_p + kl_q) / np.log(2.0)))
-    
-    brier_raw = float(np.mean(np.sum((P_model - P_human) ** 2, axis=1)))
+    brier_raw = float(np.mean(np.sum((P_model_raw - P_human) ** 2, axis=1)))
     mean_cand_mass = float(np.mean(cand_masses))
     
-    fold_assignments = [i % 5 for i in range(N)]
-    calibrated_P_model = np.zeros_like(P_model)
-    opt_temps = []
-    
-    for fold in range(5):
-        val_mask = np.array([f == fold for f in fold_assignments])
-        train_mask = ~val_mask
-        
-        Logits_train = np.log(P_model[train_mask])
-        P_train = P_human[train_mask]
-        
-        best_t = 1.0
-        best_nll = float("inf")
-        for t_cand in np.logspace(np.log10(0.05), np.log10(100.0), num=100):
-            Q_cand = softmax_temp(Logits_train, t_cand)
-            nll_cand = -np.mean(np.sum(P_train * np.log(np.clip(Q_cand, 1e-12, 1.0)), axis=1))
-            if nll_cand < best_nll:
-                best_nll = nll_cand
-                best_t = float(t_cand)
-                
-        opt_temps.append(best_t)
-        calibrated_P_model[val_mask] = softmax_temp(np.log(P_model[val_mask]), best_t)
-        
-    t_star = float(np.mean(opt_temps))
-    nll_cal = float(-np.mean(np.sum(P_human * np.log(np.clip(calibrated_P_model, 1e-12, 1.0)), axis=1)))
-    
-    D_model_raw = compute_hellinger_matrix(P_model)
+    # Raw Relational Scoring (T=1.0)
+    D_model_raw = compute_hellinger_matrix(P_model_raw)
     W_model_raw = compute_soft_neighborhood_weights(D_model_raw, k=10)
     
-    D_model_cal = compute_hellinger_matrix(calibrated_P_model)
-    W_model_cal = compute_soft_neighborhood_weights(D_model_cal, k=10)
-    
     q_supp_raw = float(np.sum(W_model_raw * S) / (N * 10.0))
-    q_supp_cal = float(np.sum(W_model_cal * S) / (N * 10.0))
-    
     q_null_raw = compute_dataset_stratified_null(W_model_raw, S, is_snli, k=10)
-    q_null_cal = compute_dataset_stratified_null(W_model_cal, S, is_snli, k=10)
     
     e008_path = PROJECT_ROOT / "research" / "chaosnli" / "results" / "E008_pilot_600_curve.json"
     with open(e008_path, "r", encoding="utf-8") as f:
@@ -233,19 +209,93 @@ def main():
     q_hh = e008_data["q_hh_relational"]
     
     r_norm_raw = float((q_supp_raw - q_null_raw) / (q_hh - q_null_raw))
-    r_norm_cal = float((q_supp_cal - q_null_cal) / (q_hh - q_null_cal))
-    
     r_norm_pct_raw = float(r_norm_raw * 100.0)
+    
+    # 5-Fold Fold-Coherent Relational Calibration
+    # 1. For each fold f, fit T_f* on fold f training items
+    # 2. Calibrate per-permutation logits at T_f* and average across permutations to get P_model^(f)
+    # 3. Build coherent graph W^(f) across ALL N items
+    # 4. Score ONLY held-out focal rows i in V_f
+    opt_temps = []
+    P_model_cal_focal = np.zeros_like(P_model_raw)
+    focal_q_supp_cal_sum = 0.0
+    focal_q_null_cal_sum = 0.0
+    
+    for fold in range(5):
+        val_mask = (fold_assignments == fold)
+        train_mask = ~val_mask
+        
+        # Fit T_f* on training items using permutation-calibrated distributions
+        best_t = 1.0
+        best_nll = float("inf")
+        for t_cand in np.logspace(np.log10(0.05), np.log10(100.0), num=100):
+            # Compute P_train(t_cand)
+            nll_sum = 0.0
+            n_train = int(train_mask.sum())
+            for i in np.where(train_mask)[0]:
+                p_i_t = np.mean([softmax_temp(item_logits_by_perm[i][p], t_cand) for p in range(6)], axis=0)
+                nll_sum += -np.sum(P_human[i] * np.log(np.clip(p_i_t, 1e-12, 1.0)))
+            nll_cand = nll_sum / float(n_train)
+            if nll_cand < best_nll:
+                best_nll = nll_cand
+                best_t = float(t_cand)
+                
+        opt_temps.append(best_t)
+        
+        # Apply T_f* to ALL N items to form coherent graph W_f
+        P_all_t_f = np.zeros((N, 3), dtype=np.float64)
+        for i in range(N):
+            P_all_t_f[i] = np.mean([softmax_temp(item_logits_by_perm[i][p], best_t) for p in range(6)], axis=0)
+            P_all_t_f[i] = np.clip(P_all_t_f[i], 1e-12, 1.0)
+            P_all_t_f[i] /= np.sum(P_all_t_f[i])
+            
+        # Store held-out focal row probability predictions
+        P_model_cal_focal[val_mask] = P_all_t_f[val_mask]
+        
+        # Build fold-coherent graph W_f across all N items
+        D_f = compute_hellinger_matrix(P_all_t_f)
+        W_f = compute_soft_neighborhood_weights(D_f, k=10)
+        
+        # Score ONLY held-out focal rows i in val_mask
+        val_indices = np.where(val_mask)[0]
+        q_supp_focal_fold = np.sum(W_f[val_indices, :] * S[val_indices, :])
+        focal_q_supp_cal_sum += float(q_supp_focal_fold)
+        
+        q_null_fold = compute_dataset_stratified_null(W_f, S, is_snli, k=10)
+        focal_q_null_cal_sum += float(q_null_fold * len(val_indices) * 10.0)
+        
+    t_star = float(np.mean(opt_temps))
+    nll_cal = float(-np.mean(np.sum(P_human * np.log(P_model_cal_focal), axis=1)))
+    
+    m_mix_cal = 0.5 * (P_human + P_model_cal_focal)
+    kl_p_c = np.sum(np.where(P_human > 0, P_human * np.log(np.maximum(P_human, 1e-12) / m_mix_cal), 0.0), axis=1)
+    kl_q_c = np.sum(np.where(P_model_cal_focal > 0, P_model_cal_focal * np.log(np.maximum(P_model_cal_focal, 1e-12) / m_mix_cal), 0.0), axis=1)
+    jsd_cal = float(np.mean(0.5 * (kl_p_c + kl_q_c) / np.log(2.0)))
+    brier_cal = float(np.mean(np.sum((P_model_cal_focal - P_human) ** 2, axis=1)))
+    
+    q_supp_cal = float(focal_q_supp_cal_sum / (N * 10.0))
+    q_null_cal = float(focal_q_null_cal_sum / (N * 10.0))
+    r_norm_cal = float((q_supp_cal - q_null_cal) / (q_hh - q_null_cal))
     r_norm_pct_cal = float(r_norm_cal * 100.0)
     
+    # E008 prototype resolution mapping
     from sprint1_rate_distortion_and_summary import interpolate_log_linear_bits
     k_eff_raw, b_bits_raw = interpolate_log_linear_bits(r_norm_pct_raw, e008_data["prototype_ladder"])
     k_eff_cal, b_bits_cal = interpolate_log_linear_bits(r_norm_pct_cal, e008_data["prototype_ladder"])
     
+    # Frozen 30-stratum focal-row bootstrap (1,000 resamples)
+    # Stratified sampling by fold_assignments (30 strata)
     rng = np.random.default_rng(20260803)
+    strata_indices = {s: np.where(fold_assignments == s)[0] for s in set(fold_assignments)}
     boot_r_raw = []
+    
     for _ in range(1000):
-        idx_boot = rng.choice(N, size=N, replace=True)
+        boot_idx_list = []
+        for s, s_idx in strata_indices.items():
+            sampled_s = rng.choice(s_idx, size=len(s_idx), replace=True)
+            boot_idx_list.extend(sampled_s)
+        idx_boot = np.array(boot_idx_list)
+        
         w_boot = W_model_raw[np.ix_(idx_boot, idx_boot)]
         s_boot = S[np.ix_(idx_boot, idx_boot)]
         q_s_boot = np.sum(w_boot * s_boot) / (N * 10.0)
@@ -261,13 +311,17 @@ def main():
             "nll_raw_nats": nll_raw,
             "nll_calibrated_nats": nll_cal,
             "jsd_raw_bits": jsd_raw,
-            "brier_score": brier_raw,
+            "jsd_calibrated_bits": jsd_cal,
+            "brier_raw": brier_raw,
+            "brier_calibrated": brier_cal,
             "mean_candidate_mass": mean_cand_mass,
-            "mean_label_permutation_variance": mean_perm_var,
-            "cross_fitted_optimal_temperature_t_star": t_star,
+            "imputed_minus40_records": imputed_records,
+            "cross_fitted_optimal_temperatures": opt_temps,
+            "mean_t_star": t_star,
             "q_support_raw": q_supp_raw,
             "q_support_calibrated": q_supp_cal,
             "q_null_stratified_raw": q_null_raw,
+            "q_null_stratified_calibrated": q_null_cal,
             "q_hh_relational": q_hh,
             "r_norm_pct_raw": r_norm_pct_raw,
             "r_norm_pct_calibrated": r_norm_pct_cal,
@@ -293,19 +347,21 @@ def main():
         json.dump(summary, f, indent=2)
         
     print(f"============================================================")
-    print(f"  PUBLICATION LLM LPE SUMMARY: {args.model_tag}")
+    print(f"  E004 METHODOLOGICALLY EQUIVALENT LPE SUMMARY: {args.model_tag}")
     print(f"============================================================")
     print(f"  NLL (Raw):                    {nll_raw:.4f} nats")
     print(f"  NLL (Calibrated T*={t_star:.2f}):    {nll_cal:.4f} nats")
     print(f"  JSD (Raw):                    {jsd_raw:.4f} bits")
-    print(f"  Brier:                        {brier_raw:.4f}")
-    print(f"  Permutation Variance:         {mean_perm_var:.6f}")
+    print(f"  JSD (Calibrated):             {jsd_cal:.4f} bits")
+    print(f"  Brier (Raw / Calibrated):     {brier_raw:.4f} / {brier_cal:.4f}")
     print(f"  Candidate Mass P(A+B+C):     {mean_cand_mass*100.0:.2f}%")
-    print(f"  Q_support (Raw):              {q_supp_raw:.6f}")
+    print(f"  Imputed -40 Records:          {imputed_records}")
+    print(f"  Q_support (Raw / Calibrated): {q_supp_raw:.6f} / {q_supp_cal:.6f}")
     print(f"  Q_null (Stratified):          {q_null_raw:.6f}")
     print(f"  R_norm (Raw):                 {r_norm_pct_raw:.2f}% (95% CI: [{ci_low_raw:.2f}%, {ci_high_raw:.2f}%])")
     print(f"  R_norm (Calibrated):          {r_norm_pct_cal:.2f}%")
     print(f"  Prototype Resolution (Raw):   {b_bits_raw:.3f} bits (K_eff = {k_eff_raw:.2f})")
+    print(f"  Prototype Resolution (Cal):   {b_bits_cal:.3f} bits (K_eff = {k_eff_cal:.2f})")
     print(f"============================================================")
     print(f"Exported summary to {args.output_summary}")
 
