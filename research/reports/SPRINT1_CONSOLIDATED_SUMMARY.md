@@ -12,10 +12,10 @@
 
 ### Key Sample-Matched Discoveries ($N=600$)
 
-1. **Gemma 3 12B Sample-Matched Prototype Resolution**:
-   - On the pilot-matched rate-distortion curve, **Gemma 3 12B Raw LPE** ($R=9.72\%$) resolves $K=2.59$ prototypes ($b = 1.370$ bits).
-   - **Calibrated LPE** ($R=9.76\%$) resolves $K=2.59$ prototypes ($b = 1.374$ bits).
-   - **MCE (30 samples)** ($R=6.64\%$) resolves $K=2.11$ prototypes ($b = 1.076$ bits).
+1. **Gemma 3 12B Prototype-Equivalent Resolution**:
+   - On the pilot-matched rate-distortion curve, **Gemma 3 12B Raw LPE** ($R=9.72\%$) exhibits prototype-equivalent resolution $b = 1.370$ bits ($K=2.59$).
+   - **Calibrated LPE** ($R=9.76\%$) exhibits prototype-equivalent resolution $b = 1.374$ bits ($K=2.59$).
+   - **MCE (30 samples)** ($R=6.64\%$) exhibits prototype-equivalent resolution $b = 1.076$ bits ($K=2.11$).
 
 2. **Geometrically Verified Calibration Paradox**:
    - Scalar temperature calibration reduces NLL from **3.8277 nats** to **0.9308 nats** (91.3% NLL gap closed), but its prototype-equivalent resolution remains static at **1.374 bits** ($K = 2.59$).

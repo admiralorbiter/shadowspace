@@ -1,12 +1,14 @@
-"""Audited E009: Temperature-Topology Phase Diagram Engine (Canonical Fuzzy Support).
+"""Audited E009: Temperature-Topology Phase Diagram Engine (Canonical Frozen Target).
 
-Uses the canonical tie-aware soft neighborhood engine (compute_soft_neighborhood_weights),
-loads the frozen 500-draw Dirichlet posterior support matrix S, and recomputes the exact
-dataset-stratified null Q_null(T) at every temperature T.
+Loads the frozen 500-draw Dirichlet posterior support matrix S directly from S_hellinger_k010.bin,
+asserts exact SHA-256 integrity, uses the canonical tie-aware soft neighborhood engine,
+and recomputes exact dataset-stratified block null Q_null(T) at every temperature T.
 
-Asserts exact reproduction of E001/E007 model scores at T=1.0.
+Asserts exact reproduction of T=1.0 model scores before running grid.
+Exports tracked results to research/chaosnli/results/E009_full_summary.json.
 """
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -17,6 +19,21 @@ from shadowspace.chaosnli.neighbors_soft import compute_soft_neighborhood_weight
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(PROJECT_ROOT / "research" / "chaosnli" / "lab"))
+
+EXPECTED_SUPPORT_SHA256 = "94e483e714d92f039f817389d948cbf41b7970077b56f852491832605dccc96f"
+
+# Model scores at T=1.0 (R_norm pct) for exact T=1 reproduction assertion
+EXPECTED_RAW_R_NORM = {
+    "bart-large": 0.38002,
+    "roberta-large": 0.32718,
+    "xlnet-large": 0.28314,
+    "albert-xxlarge": 0.23251,
+    "bert-large": 0.20461,
+    "roberta-base": 0.19889,
+    "xlnet-base": 0.17136,
+    "distilbert": 0.15185,
+    "bert-base": 0.12986,
+}
 
 def softmax_temp(logits: np.ndarray, temp: float) -> np.ndarray:
     z = logits / max(temp, 1e-5)
@@ -59,6 +76,17 @@ def compute_dataset_stratified_null(W_T: np.ndarray, S: np.ndarray, is_snli: np.
 def run_audited_e009():
     items_path = PROJECT_ROOT / "data" / "chaosnli" / "processed" / "canonical_items.parquet"
     models_path = PROJECT_ROOT / "data" / "chaosnli" / "processed" / "canonical_models.parquet"
+    support_path = PROJECT_ROOT / "research" / "chaosnli" / "artifacts" / "E001" / "S_hellinger_k010.bin"
+    if not support_path.exists():
+        support_path = PROJECT_ROOT / "research" / "chaosnli" / "artifacts" / "E004" / "pilot_support" / "S_hellinger_k010_full.bin"
+
+    with open(support_path, "rb") as f:
+        support_bytes = f.read()
+        sha256_support = hashlib.sha256(support_bytes).hexdigest()
+
+    print(f"Loading frozen support matrix from {support_path}...")
+    print(f"  SHA-256 Digest: {sha256_support}")
+    assert sha256_support == EXPECTED_SUPPORT_SHA256, f"Support matrix SHA256 mismatch: {sha256_support} != {EXPECTED_SUPPORT_SHA256}"
     
     df_items = pl.read_parquet(items_path).sort("object_id")
     df_models = pl.read_parquet(models_path).sort(["model_name", "object_id"])
@@ -67,35 +95,44 @@ def run_audited_e009():
     is_snli = df_items["object_id"].str.contains("snli").to_numpy()
     N = len(P_human)
     
+    assert len(support_bytes) == N * N * 4, f"Support matrix byte length mismatch: {len(support_bytes)} != {N*N*4}"
+    S = np.frombuffer(support_bytes, dtype=np.float32).reshape(N, N).astype(np.float64)
+
     e007_path = PROJECT_ROOT / "research" / "chaosnli" / "results" / "E007_full_census_summary.json"
     with open(e007_path, "r", encoding="utf-8") as f:
         e007_data = json.load(f)
     q_hh = e007_data["q_hh_relational"]
     
-    print(f"Loading/computing canonical Dirichlet posterior support matrix S across {N} items...")
-    counts = P_human * 100.0 + 0.5
-    rng = np.random.default_rng(20260803)
-    S = np.zeros((N, N), dtype=np.float64)
-    n_draws = 50
-    for _ in range(n_draws):
-        P_draw = np.zeros_like(P_human)
-        for i in range(N):
-            P_draw[i] = rng.dirichlet(counts[i])
-        D_draw = compute_hellinger_matrix(P_draw)
-        W_draw = compute_soft_neighborhood_weights(D_draw, k=10)
-        S += W_draw
-    S /= float(n_draws)
-    
     temps = np.logspace(np.log10(0.05), np.log10(100.0), num=50)
     model_names = sorted(df_models["model_name"].unique().to_list())
     
     results_by_model = {}
-    
+
+    # Exact T=1 reproduction assertions before running grid
+    print("\n--- Auditing T=1 Exact Reproduction Assertions ---")
     for mname in model_names:
         sub_m = df_models.filter(pl.col("model_name") == mname).sort("object_id")
         Logits = sub_m.select(["logit_entailment", "logit_neutral", "logit_contradiction"]).to_numpy()
         
-        # Raw T=1
+        Q_raw = softmax_temp(Logits, 1.0)
+        D_raw = compute_hellinger_matrix(Q_raw)
+        W_raw = compute_soft_neighborhood_weights(D_raw, k=10)
+        
+        q_supp_raw = float(np.sum(W_raw * S) / (N * 10.0))
+        q_null_raw = compute_dataset_stratified_null(W_raw, S, is_snli, k=10)
+        r_norm_raw = float((q_supp_raw - q_null_raw) / (q_hh - q_null_raw))
+        
+        expected_r = EXPECTED_RAW_R_NORM[mname]
+        diff_r = abs(r_norm_raw - expected_r)
+        print(f"Model {mname:15s} | Calc R: {r_norm_raw*100.0:6.3f}% | Expected R: {expected_r*100.0:6.3f}% | Diff: {diff_r:.6e}")
+        assert diff_r < 1e-3, f"Exact T=1 reproduction assertion failed for {mname}: calc={r_norm_raw}, expected={expected_r}"
+    print("All T=1 reproduction assertions PASSED!\n")
+
+    print("--- Running 50-Point Temperature Phase Sweep ---")
+    for mname in model_names:
+        sub_m = df_models.filter(pl.col("model_name") == mname).sort("object_id")
+        Logits = sub_m.select(["logit_entailment", "logit_neutral", "logit_contradiction"]).to_numpy()
+        
         Q_raw = softmax_temp(Logits, 1.0)
         D_raw = compute_hellinger_matrix(Q_raw)
         W_raw = compute_soft_neighborhood_weights(D_raw, k=10)
@@ -153,6 +190,7 @@ def run_audited_e009():
                 "graph_turnover_frac": turnover
             })
             
+        nll_opt_gain = best_nll_r_norm - r_norm_raw
         max_r_gain = best_q_r_norm - r_norm_raw
         
         results_by_model[mname] = {
@@ -162,12 +200,13 @@ def run_audited_e009():
             "opt_nll_temp": best_nll_temp,
             "opt_nll_val": best_nll,
             "opt_nll_r_norm": best_nll_r_norm,
+            "nll_opt_r_gain": nll_opt_gain,
             "opt_q_temp": best_q_temp,
             "opt_q_r_norm": best_q_r_norm,
             "max_r_gain": max_r_gain,
             "grid_points": grid_points
         }
-        print(f"Model {mname:15s} | Raw R: {r_norm_raw*100.0:5.2f}% | Opt NLL T: {best_nll_temp:5.2f} (R: {best_nll_r_norm*100.0:5.2f}%) | Max R Gain: {max_r_gain*100.0:+5.2f}%")
+        print(f"Model {mname:15s} | Raw R: {r_norm_raw*100.0:5.2f}% | Opt NLL T: {best_nll_temp:5.2f} (R: {best_nll_r_norm*100.0:5.2f}%, NLL-Gain: {nll_opt_gain*100.0:+5.2f}%) | Max R (T={best_q_temp:5.2f}): {best_q_r_norm*100.0:5.2f}% (Max-Gain: {max_r_gain*100.0:+5.2f}%)")
 
     summary = {
         "experiment_id": "E009",
@@ -175,21 +214,44 @@ def run_audited_e009():
         "subset": "full",
         "object_count": N,
         "q_hh_relational": q_hh,
+        "support_matrix_sha256": sha256_support,
         "temperature_grid": temps.tolist(),
         "models": results_by_model
     }
     
-    out_dir = PROJECT_ROOT / "research" / "chaosnli" / "artifacts" / "E009" / "summaries"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    
-    json_path = out_dir / "E009_summary.json"
-    with open(json_path, "w", encoding="utf-8") as f:
+    tracked_out_path = PROJECT_ROOT / "research" / "chaosnli" / "results" / "E009_full_summary.json"
+    tracked_out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(tracked_out_path, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)
         
+    provenance = {
+        "experiment_id": "E009",
+        "status": "complete",
+        "support_matrix_path": str(support_path),
+        "support_matrix_sha256": sha256_support,
+        "n_items": N,
+        "n_models": len(model_names),
+        "q_hh_relational": q_hh,
+        "t1_reproduction_assertions": "PASSED"
+    }
+    prov_path = PROJECT_ROOT / "research" / "chaosnli" / "results" / "E009_PROVENANCE.json"
+    with open(prov_path, "w", encoding="utf-8") as f:
+        json.dump(provenance, f, indent=2)
+
+    # Update E009 registry to complete
+    e009_toml_path = PROJECT_ROOT / "research" / "chaosnli" / "lab" / "registry" / "E009.toml"
+    if e009_toml_path.exists():
+        content = e009_toml_path.read_text(encoding="utf-8")
+        content = content.replace('status = "exploratory"', 'status = "complete"')
+        content = content.replace('analysis_status = "not_started"', 'analysis_status = "complete"')
+        e009_toml_path.write_text(content, encoding="utf-8")
+
     from e009_postprocess import generate_e009_markdown
     generate_e009_markdown()
     
-    print(f"\nAudited E009 full-data execution complete! Summary exported to {json_path}")
+    print(f"\nAudited E009 full-data execution complete!")
+    print(f"  Tracked JSON: {tracked_out_path}")
+    print(f"  Provenance:   {prov_path}")
 
 if __name__ == "__main__":
     run_audited_e009()

@@ -1,7 +1,8 @@
-"""Export JSON input artifacts for Rust binary from canonical Parquet data."""
+"""Export JSON input artifacts for Rust binary from canonical Parquet data with object-order SHA256 sidecar."""
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -15,7 +16,8 @@ def export_rust_inputs() -> None:
     if not items_parquet.exists():
         items_parquet = Path("data/chaosnli/processed/canonical_items.parquet")
 
-    df = pl.read_parquet(items_parquet)
+    df = pl.read_parquet(items_parquet).sort("object_id")
+    object_ids = df["object_id"].to_list()
     records = df.to_dicts()
 
     json_items_path = Path("data/chaosnli/processed/canonical_items_posterior.json")
@@ -37,7 +39,25 @@ def export_rust_inputs() -> None:
     with open(model_probs_path, "w", encoding="utf-8") as f:
         json.dump(model_probs, f, indent=2)
 
+    obj_ids_json = json.dumps(object_ids).encode("utf-8")
+    obj_ids_sha = hashlib.sha256(obj_ids_json).hexdigest()
+    model_probs_bytes = json.dumps(model_probs).encode("utf-8")
+    model_probs_sha = hashlib.sha256(model_probs_bytes).hexdigest()
+
+    manifest_info = {
+        "ordered_object_ids_sha256": obj_ids_sha,
+        "model_probs_sha256": model_probs_sha,
+        "label_order": ["entailment", "neutral", "contradiction"],
+        "n_items": len(object_ids),
+        "n_models": len(model_probs),
+        "models": list(model_probs.keys())
+    }
+    manifest_path = model_probs_path.with_suffix(".manifest.json")
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(manifest_info, f, indent=2)
+
     print(f"Exported {len(model_probs)} model probabilities to {model_probs_path}")
+    print(f"Sidecar manifest written to {manifest_path} (Object-Order SHA256: {obj_ids_sha[:12]}...)")
 
 
 if __name__ == "__main__":

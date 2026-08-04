@@ -1,10 +1,10 @@
 # Experiment E009: Temperature-Topology Phase Diagram
 id = "E009"
 title = "Temperature-Topology Phase Diagram"
-status = "exploratory"
+status = "complete"
 claim_status = "none"
 multiplicity_family = "E005-E013_exploratory_portfolio"
-analysis_status = "not_started"
+analysis_status = "complete"
 
 dataset_release = "chaosnli-canonical-2026-08-02"
 question = """

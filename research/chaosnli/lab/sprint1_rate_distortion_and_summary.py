@@ -1,4 +1,4 @@
-"""Sprint 1 Synthesis (Corrected): Sample-Matched E008 Pilot Rate-Distortion & Relational Resolution Summary."""
+"""Sprint 1 Synthesis (Audited): Sample-Matched E008 Pilot Rate-Distortion & Relational Resolution Summary."""
 
 import json
 from pathlib import Path
@@ -7,7 +7,7 @@ import numpy as np
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 def load_data():
-    e008_pilot_path = PROJECT_ROOT / "research" / "chaosnli" / "artifacts" / "E008" / "summaries" / "E008_summary.json"
+    e008_pilot_path = PROJECT_ROOT / "research" / "chaosnli" / "results" / "E008_pilot_600_curve.json"
     e004_path = PROJECT_ROOT / "research" / "chaosnli" / "artifacts" / "E004" / "summaries" / "E004_gemma3_12b_paper_ready_summary.json"
     
     with open(e008_pilot_path, "r", encoding="utf-8") as f:
@@ -23,15 +23,18 @@ def interpolate_log_linear_bits(r_norm_pct: float, prototype_ladder: list) -> tu
     """Interpolate log-linear bits b = log2(K) and define K_eff = 2^b for a given R_norm (in %)."""
     r_target = r_norm_pct / 100.0
     
-    r_points = [p["r_normalized_k10"] for p in prototype_ladder]
-    bits_points = [p["effective_bits"] for p in prototype_ladder]
+    r_points = np.array([p["r_normalized_k10"] for p in prototype_ladder])
+    bits_points = np.array([p["effective_bits"] for p in prototype_ladder])
     
-    if r_target <= r_points[0]:
-        b_interp = bits_points[0]
-    elif r_target >= r_points[-1]:
-        b_interp = bits_points[-1]
+    # Assert or enforce monotonic envelope for interpolation stability
+    r_points_monotone = np.maximum.accumulate(r_points)
+    
+    if r_target <= r_points_monotone[0]:
+        b_interp = float(bits_points[0])
+    elif r_target >= r_points_monotone[-1]:
+        b_interp = float(bits_points[-1])
     else:
-        b_interp = float(np.interp(r_target, r_points, bits_points))
+        b_interp = float(np.interp(r_target, r_points_monotone, bits_points))
         
     k_eff = float(2.0 ** b_interp)
     return k_eff, b_interp
@@ -100,10 +103,10 @@ def main():
     md_lines.extend([
         "\n---\n",
         "### Key Sample-Matched Discoveries ($N=600$)\n",
-        "1. **Gemma 3 12B Sample-Matched Prototype Resolution**:",
-        f"   - On the pilot-matched rate-distortion curve, **Gemma 3 12B Raw LPE** ($R={gemma_raw_r:.2f}\\%$) resolves $K={raw_k:.2f}$ prototypes ($b = {raw_b:.3f}$ bits).",
-        f"   - **Calibrated LPE** ($R={gemma_cal_r:.2f}\\%$) resolves $K={cal_k:.2f}$ prototypes ($b = {cal_b:.3f}$ bits).",
-        f"   - **MCE (30 samples)** ($R={gemma_mce_r:.2f}\\%$) resolves $K={mce_k:.2f}$ prototypes ($b = {mce_b:.3f}$ bits).",
+        "1. **Gemma 3 12B Prototype-Equivalent Resolution**:",
+        f"   - On the pilot-matched rate-distortion curve, **Gemma 3 12B Raw LPE** ($R={gemma_raw_r:.2f}\\%$) exhibits prototype-equivalent resolution $b = {raw_b:.3f}$ bits ($K={raw_k:.2f}$).",
+        f"   - **Calibrated LPE** ($R={gemma_cal_r:.2f}\\%$) exhibits prototype-equivalent resolution $b = {cal_b:.3f}$ bits ($K={cal_k:.2f}$).",
+        f"   - **MCE (30 samples)** ($R={gemma_mce_r:.2f}\\%$) exhibits prototype-equivalent resolution $b = {mce_b:.3f}$ bits ($K={mce_k:.2f}$).",
         "\n2. **Geometrically Verified Calibration Paradox**:",
         f"   - Scalar temperature calibration reduces NLL from **3.8277 nats** to **0.9308 nats** (91.3% NLL gap closed), but its prototype-equivalent resolution remains static at **{cal_b:.3f} bits** ($K = {cal_k:.2f}$).",
         "   - Log-linear interpolation $b = \\log_2 K \\implies K = 2^b$ strictly enforces mathematical pair consistency across resolution tiers."

@@ -1,0 +1,10 @@
+{
+  "experiment_id": "E009",
+  "status": "complete",
+  "support_matrix_path": "C:\\Users\\admir\\Github\\shadowspace\\research\\chaosnli\\artifacts\\E001\\S_hellinger_k010.bin",
+  "support_matrix_sha256": "94e483e714d92f039f817389d948cbf41b7970077b56f852491832605dccc96f",
+  "n_items": 3113,
+  "n_models": 9,
+  "q_hh_relational": 0.038987226212620456,
+  "t1_reproduction_assertions": "PASSED"
+}

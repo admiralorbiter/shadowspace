@@ -1,0 +1,22 @@
+{
+  "ordered_object_ids_sha256": "082709f6f02607ca9a1d1e8882c48778fcc6896442b47e867977eb63dc01ee5d",
+  "model_probs_sha256": "218cd1246cb3bf796726cd729605c8e303449379b70fc9afb6aea5357844893b",
+  "label_order": [
+    "entailment",
+    "neutral",
+    "contradiction"
+  ],
+  "n_items": 3113,
+  "n_models": 9,
+  "models": [
+    "bart-large",
+    "roberta-large",
+    "xlnet-large",
+    "albert-xxlarge",
+    "bert-large",
+    "roberta-base",
+    "xlnet-base",
+    "distilbert",
+    "bert-base"
+  ]
+}

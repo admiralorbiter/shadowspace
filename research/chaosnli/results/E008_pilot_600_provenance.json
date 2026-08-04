@@ -1,0 +1,42 @@
+{
+  "experiment_id": "E008",
+  "subset": "pilot_600",
+  "n_items": 600,
+  "q_hh_relational": 0.2633796506666667,
+  "manifest_sha256": "318c67354242771d2812b0d26dbd3d89e084ecc0afece250cae453d6531f4851",
+  "support_matrix_sha256": "29ff35cfddbd1a4c30858eb2feac58aeb0c087aff99850736007a2a49fb40245",
+  "ordered_object_ids_sha256": "",
+  "k_neighbors": 10,
+  "null_convention": "dataset_stratified_analytic",
+  "prototype_levels_k": [
+    1,
+    2,
+    3,
+    4,
+    6,
+    8,
+    10,
+    12,
+    14,
+    16,
+    18,
+    20,
+    22,
+    24,
+    26,
+    28,
+    30,
+    32,
+    34,
+    36,
+    40,
+    48,
+    64,
+    128
+  ],
+  "seeds": {
+    "kmeans_restarts": 20,
+    "chacha8_fold_seed": 20260803
+  },
+  "generating_binary": "e008_compression_curve"
+}
