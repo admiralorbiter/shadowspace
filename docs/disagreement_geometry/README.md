@@ -38,6 +38,12 @@ The documents distinguish three kinds of content:
 6. [06 — High-Attention Hooks and Demonstrations](06_high_attention_hooks.md)  
    Flashy-but-deep titles, visual demos, launch artifacts, and claim-safe ways to attract serious attention.
 
+7. [Research Synthesis and Open-Thread Memorandum](research_synthesis_2026-08-03.md)  
+   Close-of-night executive synthesis, evidentiary levels, and core research question breakdown.
+
+8. [Future Threads — Restart Handoff](future_threads_handoff_2026-08-03.md)  
+   Roadmap for confirmatory tasks, visual maps, methods moonshots, and candidate paper hooks.
+
 ## Current evidence snapshot
 
 The project’s current evidence supports a coherent chain:
