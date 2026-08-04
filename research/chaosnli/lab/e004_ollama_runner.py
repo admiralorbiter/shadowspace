@@ -866,9 +866,9 @@ def main():
     )
     parser.add_argument(
         "--mode",
-        choices=["validate_20", "lpe", "mce"],
+        choices=["validate_20", "validate_mce_20", "lpe", "mce"],
         required=True,
-        help="validate_20: 20-item LPE gate. lpe: full LPE run. mce: full MCE run.",
+        help="validate_20: 20-item LPE gate. validate_mce_20: 20-item MCE gate. lpe: full LPE run. mce: full MCE run.",
     )
     parser.add_argument(
         "--subset",
@@ -925,6 +925,21 @@ def main():
 
         out_path = RAW_RESPONSES_DIR / f"val20_{slug}_v2_{ss}_lpe.jsonl"
         run_lpe(items, out_path, args.workers, args.model, args.symbol_set, label="VAL-20 LPE")
+
+    elif args.mode == "validate_mce_20":
+        # 20-item MCE Validation — deterministic first 20 items from preflight
+        manifest_path = MANIFEST_DIR / "preflight_60.jsonl"
+        if not manifest_path.exists():
+            print(f"ERROR: Manifest not found: {manifest_path}", file=sys.stderr)
+            sys.exit(1)
+
+        all_items = load_manifest(manifest_path)
+        items = all_items[:20]  # Exactly 20 items — 20 x 6 x 5 = 600 MCE calls
+        print(f"  Loaded {len(all_items)} preflight items, using first 20.", flush=True)
+        print(f"  Expected: 20 x 6 x {MCE_REPLICATES_PER_MAPPING} = 600 unique MCE requests.", flush=True)
+
+        out_path = RAW_RESPONSES_DIR / f"val20_{slug}_v2_{ss}_mce.jsonl"
+        run_mce(items, out_path, args.workers, args.model, args.symbol_set)
 
     elif args.mode == "lpe":
         # Gate 2: Pilot LPE — 600 items

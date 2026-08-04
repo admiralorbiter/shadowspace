@@ -1,0 +1,15 @@
+{
+  "lpe_raw_600_sha256": "717e24bf2984d54861c9efc2085bfe28ca0b196e685692767c163d68bb9c70da",
+  "mce_raw_600_sha256": "96464beeb63c5c31e98b8893328cb81eebff69a2964363fe7d5aeeb38e972c2c",
+  "lpe_val_20_sha256": "3918ffb7e6ed04bfb5d45bd828c6bd0de52614e35834ae6748d911e77f1ee89c",
+  "mce_val_20_sha256": "0853f7d4a702bfaf5b6ce918538480b599a1d202aad3b6fb72cfbeed6ba8e9b4",
+  "manifest_pilot_600_sha256": "318c67354242771d2812b0d26dbd3d89e084ecc0afece250cae453d6531f4851",
+  "runner_file": "research/chaosnli/lab/e004_ollama_runner.py",
+  "lpe_audit_file": "research/chaosnli/lab/e004_extraction_audit.py",
+  "mce_audit_file": "research/chaosnli/lab/e004_mce_extraction_audit.py",
+  "prompt_version": "v2",
+  "symbol_set": "ABC",
+  "ollama_version": "0.32.5",
+  "model_tag": "gemma3:12b",
+  "timestamp_utc": "2026-08-03T23:57:00Z"
+}

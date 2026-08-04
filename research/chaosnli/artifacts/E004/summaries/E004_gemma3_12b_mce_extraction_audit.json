@@ -1,0 +1,59 @@
+{
+  "model_tag": "gemma3:12b",
+  "prompt_version": "v2",
+  "symbol_set": "ABC",
+  "num_items": 600,
+  "total_raw_records": 18000,
+  "successful_records": 18000,
+  "invalid_output_records": 1,
+  "valid_sample_rate": 0.9999444444444444,
+  "smoothing": "Jeffreys (n_c + 0.5) / (30 + 1.5)",
+  "metrics": {
+    "nll": 1.586394398688409,
+    "brier_score": 0.35584893382044175,
+    "gold_accuracy": 0.6533333333333333,
+    "q_support": 0.03312868958896124,
+    "q_null_stratified": 0.016857729670955144,
+    "q_hh": 0.2633796506666667,
+    "r_norm_stratified_pct": 6.600208148746796
+  },
+  "comparison_table": {
+    "raw_lpe": {
+      "nll": 3.8597449333382383,
+      "brier_score": 0.3907667000192995,
+      "gold_accuracy": 0.6483333333333333,
+      "q_support": 0.037746000059337044,
+      "q_null_unrestricted": 0.01669449081803005,
+      "q_null_stratified": 0.017084443389415744,
+      "q_hh": 0.2633796506666667,
+      "r_norm_unrestricted_pct": 8.533755842558172,
+      "r_norm_stratified_pct": 8.388939800465904
+    },
+    "calibrated_lpe": {
+      "nll": 0.9310313405692054,
+      "brier_score": 0.15507287409624818,
+      "gold_accuracy": 0.6466666666666666,
+      "fitted_temperatures_per_fold": [
+        10.631766490470644,
+        10.30948296294556,
+        10.557817715747992,
+        10.505594706945354,
+        10.392607109222386
+      ],
+      "mean_optimal_temperature": 10.479453797066387,
+      "q_support": 0.039631333442249644,
+      "q_null_stratified": 0.017101797569737672,
+      "q_hh": 0.2633796506666667,
+      "r_norm_stratified_pct": 9.148015377430179
+    },
+    "mce": {
+      "gold_accuracy": 0.6533333333333333,
+      "nll": 1.586394398688409,
+      "brier_score": 0.35584893382044175,
+      "q_support": 0.03312868958896124,
+      "q_null_stratified": 0.016857729670955144,
+      "r_norm_stratified_pct": 6.600208148746796
+    }
+  },
+  "timestamp_utc": "2026-08-03T23:57:00Z"
+}
