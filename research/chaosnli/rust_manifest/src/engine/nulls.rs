@@ -1,4 +1,5 @@
 /// Hierarchical Conditional Null Permutation Engine (E005)
+/// Optimized with O(N*k) sparse evaluation for fast execution on full N=3113 datasets.
 
 use rand::prelude::*;
 use rand_chacha::ChaCha8Rng;
@@ -23,6 +24,13 @@ pub struct NullResult {
     pub null_ci_95: (f64, f64),
     pub q_excess: f64,
     pub p_value_monte_carlo: f64,
+}
+
+#[derive(Debug, Clone)]
+struct SparseEntry {
+    row: usize,
+    col: usize,
+    weight: f64,
 }
 
 pub fn compute_conditional_null(
@@ -84,7 +92,20 @@ pub fn compute_conditional_null(
         };
     }
 
-    // Parallelized Monte Carlo permutation engine
+    // Extract non-zero entries of W_model for O(N*k) sparse evaluation
+    let mut sparse_entries: Vec<SparseEntry> = Vec::new();
+    for r in 0..n {
+        for c in 0..n {
+            let w = w_model[r][c];
+            if w > 1e-12 {
+                sparse_entries.push(SparseEntry { row: r, col: c, weight: w });
+            }
+        }
+    }
+
+    let norm_factor = (n as f64) * (k as f64);
+
+    // Parallelized Monte Carlo permutation engine (O(Nk) inner loop)
     let seeds: Vec<u64> = (0..n_permutations).map(|i| seed + i as u64).collect();
 
     let null_scores: Vec<f64> = seeds
@@ -101,17 +122,21 @@ pub fn compute_conditional_null(
                 }
             }
 
-            // Permute w_model rows/cols according to group permutation
-            let mut w_perm = vec![vec![0.0; n]; n];
+            // Compute inverse permutation tau where tau[perm_idx[i]] = i
+            let mut inv_perm = vec![0usize; n];
             for i in 0..n {
-                let pi = perm_idx[i];
-                for j in 0..n {
-                    let pj = perm_idx[j];
-                    w_perm[i][j] = w_model[pi][pj];
-                }
+                inv_perm[perm_idx[i]] = i;
             }
 
-            evaluate_q_support(&w_perm, s_target, k)
+            // Evaluate Q_support in O(N*k) without matrix allocation
+            let mut sum_score = 0.0;
+            for entry in &sparse_entries {
+                let r_inv = inv_perm[entry.row];
+                let c_inv = inv_perm[entry.col];
+                sum_score += entry.weight * s_target[r_inv][c_inv];
+            }
+
+            sum_score / norm_factor
         })
         .collect();
 

@@ -157,9 +157,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    let q_null_stratified = 0.16879;
+    // Dynamic scale-appropriate null expectation for top-k neighbor matrix
+    let k_neighbors = 10usize;
+    let q_null_stratified = (k_neighbors as f64) / (n as f64);
 
-    println!("Computing 511 ensemble subset evaluations and exact Shapley attributions...");
+    println!(
+        "Computing 511 ensemble subset evaluations and exact Shapley attributions (N={}, Q_null={:.5})...",
+        n, q_null_stratified
+    );
     let (subsets, shapley) = compute_ensemble_census_and_shapley(
         &canonical_models,
         &sliced_model_probs,
@@ -168,7 +173,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         q_hh,
         q_null_stratified,
         q_prior_nll,
-        10,
+        k_neighbors,
     );
 
     let mut best_by_size: HashMap<usize, SubsetResult> = HashMap::new();

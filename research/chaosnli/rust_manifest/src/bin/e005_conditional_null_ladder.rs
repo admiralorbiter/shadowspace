@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufRead, BufReader};
 use std::path::Path;
 
 use chaosnli_engine::distance::{distance_hellinger_matrix, jsd, soft_label_nll};
@@ -60,7 +60,7 @@ fn resolve_path(rel_path: &str) -> String {
     if Path::new(&p3).exists() {
         return p3;
     }
-    rel_path.to_string()
+    panic!("Required artifact file not found: {}", rel_path);
 }
 
 fn compute_entropy_quintile(entropy: f64, all_entropies: &[f64]) -> usize {
@@ -103,21 +103,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
     let subset = if args.len() > 1 { &args[1] } else { "preflight" };
 
-    let rel_manifest = if subset == "pilot" {
-        "research/chaosnli/artifacts/E004/manifests/pilot_600.jsonl"
-    } else {
-        "research/chaosnli/artifacts/E004/manifests/preflight_60.jsonl"
+    let (rel_manifest, rel_k10_bin, rel_k10_meta, expected_n) = match subset {
+        "preflight" => (
+            "research/chaosnli/artifacts/E004/manifests/preflight_60.jsonl",
+            "research/chaosnli/artifacts/E004/pilot_support/S_hellinger_k010_preflight.bin",
+            "research/chaosnli/artifacts/E004/pilot_support/S_hellinger_k010_preflight.manifest.json",
+            60,
+        ),
+        "pilot" => (
+            "research/chaosnli/artifacts/E004/manifests/pilot_600.jsonl",
+            "research/chaosnli/artifacts/E004/pilot_support/S_hellinger_k010_pilot.bin",
+            "research/chaosnli/artifacts/E004/pilot_support/S_hellinger_k010_pilot.manifest.json",
+            600,
+        ),
+        "full" => (
+            "research/chaosnli/artifacts/E004/manifests/full_3113.jsonl",
+            "research/chaosnli/artifacts/E004/pilot_support/S_hellinger_k010_full.bin",
+            "research/chaosnli/artifacts/E004/pilot_support/S_hellinger_k010_full.manifest.json",
+            3113,
+        ),
+        _ => panic!("Unknown subset: '{}'. Must be one of ['preflight', 'pilot', 'full'].", subset),
     };
+
     let manifest_path = resolve_path(rel_manifest);
-
-    let rel_k10_bin = format!("research/chaosnli/artifacts/E004/pilot_support/S_hellinger_k010_{}.bin", subset);
-    let k10_bin = resolve_path(&rel_k10_bin);
-
-    let rel_k10_meta = format!("research/chaosnli/artifacts/E004/pilot_support/S_hellinger_k010_{}.manifest.json", subset);
-    let k10_manifest = resolve_path(&rel_k10_meta);
-
-    let rel_probs_json = "research/chaosnli/rust_manifest/model_probs.json";
-    let probs_json_path = resolve_path(rel_probs_json);
+    let k10_bin = resolve_path(rel_k10_bin);
+    let k10_manifest = resolve_path(rel_k10_meta);
+    let probs_json_path = resolve_path("research/chaosnli/rust_manifest/model_probs.json");
 
     println!("=========================================================================");
     println!("   E005: STRICTLY NESTED CONDITIONAL NULL LADDER (Subset: {})", subset.to_uppercase());
@@ -125,20 +136,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let file = File::open(&manifest_path)?;
     let reader = BufReader::new(file);
-    let items: Vec<ManifestItem> = serde_json::Deserializer::from_reader(reader)
-        .into_iter::<ManifestItem>()
-        .filter_map(Result::ok)
-        .collect();
+    let mut items = Vec::new();
+    for line in reader.lines() {
+        let line_str = line?;
+        let item: ManifestItem = serde_json::from_str(&line_str)?;
+        items.push(item);
+    }
 
     let n = items.len();
+    assert_eq!(n, expected_n, "Manifest item count mismatch for subset {}", subset);
     let row_indices: Vec<usize> = items.iter().map(|it| it.row_index).collect();
     println!("Loaded {} items from {}", n, manifest_path);
 
     let meta_file = File::open(&k10_manifest)?;
     let meta_json: serde_json::Value = serde_json::from_reader(meta_file)?;
-    let q_hh = meta_json["q_hh_relational"].as_f64().unwrap_or(0.77494);
+    let q_hh = meta_json["q_hh_relational"].as_f64().expect("Missing q_hh_relational in meta");
 
     let bin_bytes = std::fs::read(&k10_bin)?;
+    assert_eq!(bin_bytes.len(), n * n * 4, "Binary matrix byte length mismatch");
     let f32_floats: Vec<f32> = bin_bytes
         .chunks_exact(4)
         .map(|chunk| f32::from_le_bytes(chunk.try_into().unwrap()))
@@ -200,7 +215,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         keys_n2[i] = format!("{}_{}", keys_n1[i], maj);
         keys_n3[i] = format!("{}_{}", keys_n2[i], eq);
         keys_n4[i] = format!("{}_{}_{}_{}", keys_n3[i], top1, top2, margin_bin);
-        keys_n5[i] = format!("{}_{}_{}", it.human_count_entailment, it.human_count_neutral, it.human_count_contradiction);
+        // N5 MUST strictly embed N4
+        keys_n5[i] = format!("{}|{}_{}_{}", keys_n4[i], it.human_count_entailment, it.human_count_neutral, it.human_count_contradiction);
+    }
+
+    // Programmatic hierarchy nesting validation assertion
+    let mut parent_map: HashMap<String, String> = HashMap::new();
+    for i in 0..n {
+        if let Some(parent) = parent_map.get(&keys_n5[i]) {
+            assert_eq!(parent, &keys_n4[i], "Strict nesting assertion failed at N5 -> N4");
+        } else {
+            parent_map.insert(keys_n5[i].clone(), keys_n4[i].clone());
+        }
     }
 
     let null_levels = vec![
@@ -209,7 +235,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ("N2", "N1 + Majority Label", keys_n2),
         ("N3", "N2 + Entropy Quintile", keys_n3),
         ("N4", "N3 + Top-2 Label Pair + Margin Bin", keys_n4),
-        ("N5", "Exact 100-Vote Profile", keys_n5),
+        ("N5", "N4 + Exact 100-Vote Profile", keys_n5),
     ];
 
     // Load available model probability matrices
@@ -238,17 +264,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for m_name in &canonical_models {
-        if let Some(full_p) = full_model_probs.get(*m_name) {
-            let mut sliced = Vec::with_capacity(n);
-            for &r_idx in &row_indices {
-                if r_idx < full_p.len() {
-                    sliced.push(full_p[r_idx].clone());
-                } else {
-                    sliced.push(vec![1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0]);
-                }
-            }
-            conditions.insert(format!("model_{}", m_name), sliced);
+        let full_p = full_model_probs.get(*m_name).unwrap_or_else(|| panic!("Missing model prediction key: {}", m_name));
+        let mut sliced = Vec::with_capacity(n);
+        for &r_idx in &row_indices {
+            assert!(r_idx < full_p.len(), "Row index {} out of range for model {}", r_idx, m_name);
+            sliced.push(full_p[r_idx].clone());
         }
+        conditions.insert(format!("model_{}", m_name), sliced);
     }
 
     // Add E003 equal 3-model ensemble (BART + RoBERTa + XLNet)
