@@ -203,7 +203,7 @@ def get_existing_request_ids(file_path: Path) -> set:
             try:
                 rec = json.loads(line)
                 rid = rec.get("request_id")
-                if rid and rec.get("status") == "success":
+                if rid and rec.get("status") == "success" and rec.get("valid_output", True) is True:
                     existing.add(rid)
             except json.JSONDecodeError:
                 pass
@@ -310,13 +310,15 @@ def process_lpe_task(task: Dict) -> Dict:
     symbol_set_name = task["symbol_set_name"]
     ollama_version = task["ollama_version"]
     model_digest = task["model_digest"]
+    temperature = task.get("temperature", 0.0)
 
     object_id = item["object_id"]
     row_index = item["row_index"]
 
+    mode_name = "lpe_t10" if temperature == 1.0 else "lpe"
     req_id = make_request_id(
         model_tag, object_id, PROMPT_VERSION, perm_idx,
-        "lpe", 0.0, 0, 0, symbol_set_name
+        mode_name, temperature, 0, 0, symbol_set_name
     )
 
     s1, s2, s3 = symbols[perm[0]], symbols[perm[1]], symbols[perm[2]]
@@ -332,7 +334,7 @@ def process_lpe_task(task: Dict) -> Dict:
     request_body = {
         "model": model_tag,
         "messages": messages,
-        "temperature": 0.0,
+        "temperature": temperature,
         "max_tokens": 1,
         "logprobs": True,
         "top_logprobs": 20,
@@ -352,8 +354,8 @@ def process_lpe_task(task: Dict) -> Dict:
         "perm_idx": perm_idx,
         "perm_tuple": list(perm),
         "symbol_mapping": {"E": s1, "N": s2, "C": s3},
-        "mode": "lpe",
-        "temperature": 0.0,
+        "mode": mode_name,
+        "temperature": temperature,
         "max_tokens": 1,
         "seed": None,
         "replicate": 0,
@@ -366,7 +368,7 @@ def process_lpe_task(task: Dict) -> Dict:
     }
 
     resp_json, error, latency = query_ollama_with_retry(
-        messages, model_tag, temperature=0.0, max_tokens=1,
+        messages, model_tag, temperature=temperature, max_tokens=1,
         logprobs=True, top_logprobs=20
     )
 
@@ -535,6 +537,7 @@ def run_lpe(
     model_tag: str,
     symbol_set_name: str,
     label: str = "LPE",
+    temperature: float = 0.0,
 ):
     """Execute LPE inference over items with full provenance and retry."""
     symbols = LABEL_SETS[symbol_set_name]
@@ -544,13 +547,14 @@ def run_lpe(
     ollama_version = get_ollama_version()
     m_digest = get_model_digest(model_tag)
 
+    mode_name = "lpe_t10" if temperature == 1.0 else "lpe"
     # Build task list
     task_list = []
     for item in items:
         for perm_idx, perm in enumerate(S3_PERMUTATIONS):
             req_id = make_request_id(
                 model_tag, item["object_id"], PROMPT_VERSION, perm_idx,
-                "lpe", 0.0, 0, 0, symbol_set_name
+                mode_name, temperature, 0, 0, symbol_set_name
             )
             if req_id in existing_ids:
                 continue
@@ -563,6 +567,7 @@ def run_lpe(
                 "symbol_set_name": symbol_set_name,
                 "ollama_version": ollama_version,
                 "model_digest": m_digest,
+                "temperature": temperature,
             })
 
     total_new = len(task_list)
@@ -866,9 +871,9 @@ def main():
     )
     parser.add_argument(
         "--mode",
-        choices=["validate_20", "validate_mce_20", "lpe", "mce"],
+        choices=["validate_20", "validate_mce_20", "lpe", "lpe_t10", "mce"],
         required=True,
-        help="validate_20: 20-item LPE gate. validate_mce_20: 20-item MCE gate. lpe: full LPE run. mce: full MCE run.",
+        help="validate_20: 20-item LPE gate. validate_mce_20: 20-item MCE gate. lpe: full LPE run (T=0.0). lpe_t10: full LPE run (T=1.0). mce: full MCE run.",
     )
     parser.add_argument(
         "--subset",
@@ -941,19 +946,21 @@ def main():
         out_path = RAW_RESPONSES_DIR / f"val20_{slug}_v2_{ss}_mce.jsonl"
         run_mce(items, out_path, args.workers, args.model, args.symbol_set)
 
-    elif args.mode == "lpe":
-        # Gate 2: Pilot LPE — 600 items
+    elif args.mode in ["lpe", "lpe_t10"]:
+        # Pilot LPE — 600 items
         manifest_path = MANIFEST_DIR / "pilot_600.jsonl"
         if not manifest_path.exists():
             print(f"ERROR: Manifest not found: {manifest_path}", file=sys.stderr)
             sys.exit(1)
 
         items = load_manifest(manifest_path)
+        temp = 1.0 if args.mode == "lpe_t10" else 0.0
+        t_slug = "t10_" if temp == 1.0 else ""
         print(f"  Loaded {len(items)} pilot items.", flush=True)
-        print(f"  Expected: {len(items)} × 6 = {len(items) * 6} unique LPE requests.", flush=True)
+        print(f"  Expected: {len(items)} × 6 = {len(items) * 6} unique LPE (T={temp}) requests.", flush=True)
 
-        out_path = RAW_RESPONSES_DIR / f"pilot600_{slug}_v2_{ss}_lpe.jsonl"
-        run_lpe(items, out_path, args.workers, args.model, args.symbol_set, label="PILOT-600 LPE")
+        out_path = RAW_RESPONSES_DIR / f"pilot600_{slug}_v2_{ss}_{t_slug}lpe.jsonl"
+        run_lpe(items, out_path, args.workers, args.model, args.symbol_set, label=f"PILOT-600 LPE (T={temp})", temperature=temp)
 
     elif args.mode == "mce":
         # Gate 3: Pilot MCE — 600 items × 6 × 5 = 18,000 requests

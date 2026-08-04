@@ -1,15 +1,21 @@
 {
-  "lpe_raw_600_sha256": "717e24bf2984d54861c9efc2085bfe28ca0b196e685692767c163d68bb9c70da",
-  "mce_raw_600_sha256": "96464beeb63c5c31e98b8893328cb81eebff69a2964363fe7d5aeeb38e972c2c",
-  "lpe_val_20_sha256": "3918ffb7e6ed04bfb5d45bd828c6bd0de52614e35834ae6748d911e77f1ee89c",
-  "mce_val_20_sha256": "0853f7d4a702bfaf5b6ce918538480b599a1d202aad3b6fb72cfbeed6ba8e9b4",
   "manifest_pilot_600_sha256": "318c67354242771d2812b0d26dbd3d89e084ecc0afece250cae453d6531f4851",
+  "lpe_raw_t0_600_sha256": "717e24bf2984d54861c9efc2085bfe28ca0b196e685692767c163d68bb9c70da",
+  "lpe_raw_t1_600_sha256": "d3e32b6cd3b8bb4824afc40eac7a89901ce9f3a2d8bb48b5c610f5a89a54ddcf",
+  "mce_repaired_600_sha256": "8381450f47404e73d4302a5567053d47bb9792fa6338ab537adcd899fba24dc3",
+  "temperature_diagnostic_summary_sha256": "ccf9f59851ce8ac8110de1799388437428914f75f0c0c584ce27cf49f68d18f1",
+  "paper_ready_summary_sha256": "d9ecdfbbb21a33a7eaf37acc967db4f9772e798c7e4b2dc6da5b9721c6faaed8",
+  "support_matrix_k10_sha256": "29ff35cfddbd1a4c30858eb2feac58aeb0c087aff99850736007a2a49fb40245",
   "runner_file": "research/chaosnli/lab/e004_ollama_runner.py",
-  "lpe_audit_file": "research/chaosnli/lab/e004_extraction_audit.py",
-  "mce_audit_file": "research/chaosnli/lab/e004_mce_extraction_audit.py",
+  "paper_analysis_file": "research/chaosnli/lab/e004_paper_ready_analysis.py",
+  "temp_diagnostic_file": "research/chaosnli/lab/run_temperature_logprobs_diagnostic.py",
   "prompt_version": "v2",
   "symbol_set": "ABC",
   "ollama_version": "0.32.5",
   "model_tag": "gemma3:12b",
-  "timestamp_utc": "2026-08-03T23:57:00Z"
+  "num_items": 600,
+  "mce_valid_records": 18000,
+  "lpe_t0_valid_records": 3600,
+  "lpe_t1_valid_records": 3600,
+  "timestamp_utc": "2026-08-04T11:35:00Z"
 }
