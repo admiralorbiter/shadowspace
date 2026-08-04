@@ -119,31 +119,54 @@ def main() -> None:
     print(f"    - Coherent extension GlueOOD score: {score_coherent:.6f}")
     print(f"    - Incoherent extension GlueOOD score: {score_incoherent:.6f} -> {'PASSED' if glue_pass else 'FAILED'}")
 
-    # 6. Phase E2-A1 Natural Language Model Audit Pilot
+    # 6. Phase E2-A1.1 Natural Language Model Audit Pilot
     audit_results = run_e002_classifier_holonomy_experiment()
     e2_res = audit_results[0]
-    e2_pass = bool(
+    smoke_test_pass = bool(
         e2_res.num_active_orbits > 0
         and e2_res.text_path_closure_rate == 1.0
         and e2_res.train_orbit_count >= 2
         and e2_res.test_orbit_count >= 1
     )
-    print(f"\n[6] Phase E2-A1 Natural Language Model Audit Pilot (Tier 1 Reversible Entity Renaming):")
+    identifiability_status = "PASSED" if e2_res.estimator_identifiable else "NOT_ESTIMABLE"
+    if e2_res.is_live_model:
+        model_audit_status = "PASSED" if (e2_res.estimator_identifiable and not e2_res.artificial_curvature_detected) else "FAILED"
+    else:
+        model_audit_status = "NOT_RUN"
+
+    print(f"\n[6] Phase E2-A1.1 Natural Language Model Audit Pilot (Tier 1 Reversible Entity Renaming):")
     print(f"    - Adapter Mode: {e2_res.adapter_mode}")
     print(f"    - Active Orbits: {e2_res.num_active_orbits}")
     print(f"    - Textual Path Closure Rate: {e2_res.text_path_closure_rate * 100:.1f}%")
     print(f"    - Train/Test Orbit Split: {e2_res.train_orbit_count} Train / {e2_res.test_orbit_count} Test")
-    print(f"    - Estimator Identifiable: {e2_res.estimator_identifiable} (Min Design Rank: {e2_res.min_edge_design_rank})")
-    print(f"    - Mean Held-Out Return Residual: {e2_res.mean_held_out_return_residual} -> {'PASSED' if e2_pass else 'FAILED'}")
+    print(f"    - Orbit Smoke Test: {'PASSED' if smoke_test_pass else 'FAILED'}")
+    print(f"    - Transport Identifiability: {identifiability_status}")
+    print(f"    - Model Audit Status: {model_audit_status}")
 
     all_passed = bool(
-        flat_pass and all(curvature_results) and mc_all_pass and thm1_pass and h0_pass and glue_pass and e2_pass
+        flat_pass and all(curvature_results) and mc_all_pass and thm1_pass and h0_pass and glue_pass and smoke_test_pass
     )
 
+    def sanitize_for_json(val: Any) -> Any:
+        if isinstance(val, float):
+            if np.isnan(val) or np.isinf(val):
+                return None
+            return val
+        if isinstance(val, (np.floating, np.integer)):
+            v = val.item()
+            if isinstance(v, float) and (np.isnan(v) or np.isinf(v)):
+                return None
+            return v
+        if isinstance(val, dict):
+            return {k: sanitize_for_json(v) for k, v in val.items()}
+        if isinstance(val, list):
+            return [sanitize_for_json(v) for v in val]
+        return val
+
     # Machine-readable manifest export
-    manifest = {
+    manifest_raw = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-        "phase": "E2-A1",
+        "phase": "E2-A1.1",
         "git_commit_sha": get_git_commit_sha(),
         "environment": {
             "python_version": sys.version.split()[0],
@@ -158,7 +181,9 @@ def main() -> None:
             "theorem1_prop1b_invariance": thm1_pass,
             "sheaf_cohomology_h0": h0_pass,
             "glue_ood_solver": glue_pass,
-            "natural_language_orbit_smoke_test": e2_pass,
+            "natural_language_orbit_smoke_test": smoke_test_pass,
+            "natural_language_transport_identifiability": identifiability_status,
+            "natural_language_model_audit": model_audit_status,
         },
         "cohomology": {
             "dim_H0": spec.dim_H0,
@@ -173,18 +198,20 @@ def main() -> None:
             "adapter_mode": e2_res.adapter_mode,
             "is_live_model": e2_res.is_live_model,
             "model_name": e2_res.model_name,
+            "audit_status": e2_res.audit_status,
             "num_active_orbits": e2_res.num_active_orbits,
             "text_path_closure_rate": e2_res.text_path_closure_rate,
             "train_orbit_count": e2_res.train_orbit_count,
             "test_orbit_count": e2_res.test_orbit_count,
             "estimator_identifiable": e2_res.estimator_identifiable,
             "min_edge_design_rank": e2_res.min_edge_design_rank,
-            "max_edge_condition_number": None if np.isinf(e2_res.max_edge_condition_number) else e2_res.max_edge_condition_number,
-            "mean_held_out_return_residual": None if np.isnan(e2_res.mean_held_out_return_residual) else e2_res.mean_held_out_return_residual,
+            "max_edge_condition_number": e2_res.max_edge_condition_number,
+            "max_transport_norm": e2_res.max_transport_norm,
+            "mean_held_out_return_residual": e2_res.mean_held_out_return_residual,
             "artificial_curvature_detected": e2_res.artificial_curvature_detected,
+            "edge_diagnostics": e2_res.edge_diagnostics,
             "provenance": e2_res.provenance,
         },
-
         "monte_carlo_sweeps": [
             {
                 "sample_size": sw.sample_size,
@@ -207,22 +234,25 @@ def main() -> None:
         ],
     }
 
+    manifest = sanitize_for_json(manifest_raw)
+
     manifest_dir = "results/holonomy"
     os.makedirs(manifest_dir, exist_ok=True)
     manifest_path = os.path.join(manifest_dir, "phase_e0_manifest.json")
     with open(manifest_path, "w", encoding="utf-8") as f:
-        json.dump(manifest, f, indent=2)
+        json.dump(manifest, f, indent=2, allow_nan=False)
 
     print(f"\n[7] Machine-Readable Manifest Exported to: {manifest_path}")
 
     print("\n================================================================================")
     if all_passed:
-        print("ALL PHASE E0.7.2 & E2-A1 MATHEMATICAL HARDENING GATES PASSED CLEANLY")
+        print("ALL PHASE E0.7.2 & E2-A1.1 MATHEMATICAL HARDENING GATES PASSED CLEANLY")
         print("================================================================================")
     else:
-        print("PHASE E0.7.2 & E2-A1 GATES FAILED — CHECK MANIFEST FOR DETAILS")
+        print("PHASE E0.7.2 & E2-A1.1 GATES FAILED — CHECK MANIFEST FOR DETAILS")
         print("================================================================================")
         sys.exit(1)
+
 
 
 if __name__ == "__main__":

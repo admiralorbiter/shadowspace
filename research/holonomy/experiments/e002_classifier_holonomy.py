@@ -6,22 +6,8 @@ Estimates cross-orbit edge transport maps from actual model prediction pairs (X_
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import List, Tuple
-import numpy as np
-
-from research.holonomy.geometry.connection import ConnectionEstimator, ParallelTransportMap
-from research.holonomy.geometry.holonomy import HolonomyResult, evaluate_holonomy
-from research.holonomy.geometry.parallel_transport import PathTransport
-from research.holonomy.geometry.simplex_bundle import ilr_transform
-from research.holonomy.natural_language.model_adapter import HuggingFaceNLIAdapter, NLIModelAdapter
-from research.holonomy.natural_language.orbit_builder import OrbitBuilder
-from research.holonomy.natural_language.orbit_schema import SemanticOrbit
-from research.holonomy.natural_language.transforms.entity_rename import ReversibleEntityRenameTransform
-
-
 from dataclasses import dataclass, field
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 
 from research.holonomy.geometry.connection import ConnectionEstimator, EstimatorIdentifiabilityError, ParallelTransportMap
@@ -47,14 +33,16 @@ class ModelAuditResult:
     test_orbit_count: int
     estimator_identifiable: bool
     min_edge_design_rank: int
-    max_edge_condition_number: float
-    max_transport_norm: float
-    linear_is_flat: bool
-    affine_is_flat: bool
-    curvature_magnitude: float
-    mean_held_out_return_residual: float
+    max_edge_condition_number: float | None
+    max_transport_norm: float | None
+    linear_is_flat: bool | None
+    affine_is_flat: bool | None
+    curvature_magnitude: float | None
+    mean_held_out_return_residual: float | None
     artificial_curvature_detected: bool
-    provenance: Dict[str, str | bool | None] = field(default_factory=dict)
+    audit_status: str  # "estimable", "not_estimable", "failed"
+    edge_diagnostics: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    provenance: Dict[str, Any] = field(default_factory=dict)
 
 
 def run_e002_classifier_holonomy_experiment(
@@ -154,6 +142,7 @@ def run_e002_classifier_holonomy_experiment(
         edge_pairs["rename_b_inv"][1].append(z0)
 
     # Estimate cross-orbit edge transport connections (Ta, Tb, Ta_inv, Tb_inv) with identifiability checks
+    edge_diagnostics: Dict[str, Dict[str, Any]] = {}
     try:
         t_a = estimator.estimate_total_least_squares_transport("rename_a", "x0", "x1", np.array(edge_pairs["rename_a"][0]), np.array(edge_pairs["rename_a"][1]))
         t_b = estimator.estimate_total_least_squares_transport("rename_b", "x1", "x2", np.array(edge_pairs["rename_b"][0]), np.array(edge_pairs["rename_b"][1]))
@@ -161,6 +150,9 @@ def run_e002_classifier_holonomy_experiment(
         t_b_inv = estimator.estimate_total_least_squares_transport("rename_b_inv", "x3", "x0", np.array(edge_pairs["rename_b_inv"][0]), np.array(edge_pairs["rename_b_inv"][1]))
 
         transports = [t_a, t_b, t_a_inv, t_b_inv]
+        for t in transports:
+            edge_diagnostics[t.generator_name] = t.metadata
+
         min_rank = min(t.metadata.get("design_rank", 2) for t in transports)
         max_cond = max(t.metadata.get("condition_number", 0.0) for t in transports)
         max_norm = max(t.metadata.get("matrix_norm", 0.0) for t in transports)
@@ -183,6 +175,7 @@ def run_e002_classifier_holonomy_experiment(
 
         mean_residual = float(np.mean(test_residuals)) if test_residuals else 0.0
         estimator_identifiable = True
+        audit_status = "estimable"
         linear_flat = hol_res.linear_is_flat
         affine_flat = hol_res.affine_is_flat
         curvature_mag = hol_res.curvature_magnitude
@@ -190,15 +183,18 @@ def run_e002_classifier_holonomy_experiment(
 
     except EstimatorIdentifiabilityError as err:
         estimator_identifiable = False
-        min_rank = 1
-        max_cond = float("inf")
-        max_norm = float("nan")
-        mean_residual = float("nan")
-        linear_flat = False
-        affine_flat = False
-        curvature_mag = float("nan")
+        audit_status = "not_estimable"
+        min_rank = err.design_rank if err.design_rank is not None else 1
+        max_cond = err.condition_number
+        max_norm = err.matrix_norm
+        mean_residual = None
+        linear_flat = None
+        affine_flat = None
+        curvature_mag = None
         artif_curv = False  # Rank deficiency is not evidence of artificial curvature
-        provenance["identifiability_error"] = str(err)
+        if err.generator_name:
+            edge_diagnostics[err.generator_name] = err.to_dict()
+        provenance["identifiability_error"] = err.to_dict()
 
     text_closure_rate = float(np.mean([o.is_closed for o in active_orbits]))
 
@@ -219,6 +215,8 @@ def run_e002_classifier_holonomy_experiment(
         curvature_magnitude=curvature_mag,
         mean_held_out_return_residual=mean_residual,
         artificial_curvature_detected=artif_curv,
+        audit_status=audit_status,
+        edge_diagnostics=edge_diagnostics,
         provenance=provenance,
     )
 
@@ -228,4 +226,5 @@ def run_e002_classifier_holonomy_experiment(
 if __name__ == "__main__":
     res_list = run_e002_classifier_holonomy_experiment()
     print(f"E2-A1 Model Audit Pilot Executed: {res_list[0]}")
+
 

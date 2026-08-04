@@ -7,19 +7,55 @@ Provides both OLS and Total Least Squares (TLS) estimators to correct errors-in-
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-import numpy as np
-from numpy.typing import NDArray
-
-
 from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 from numpy.typing import NDArray
 
 
 class EstimatorIdentifiabilityError(ValueError):
-    """Raised when edge transport design matrix is rank-deficient or ill-conditioned."""
-    pass
+    """Raised when edge transport design matrix is rank-deficient, ill-conditioned, or unidentifiable."""
+
+    def __init__(
+        self,
+        msg: str,
+        *,
+        generator_name: str | None = None,
+        reason: str | None = None,
+        design_rank: int | None = None,
+        required_rank: int | None = None,
+        condition_number: float | None = None,
+        condition_threshold: float | None = None,
+        v22_condition_number: float | None = None,
+        matrix_norm: float | None = None,
+        bias_norm: float | None = None,
+        singular_values: List[float] | None = None,
+    ) -> None:
+        super().__init__(msg)
+        self.generator_name = generator_name
+        self.reason = reason
+        self.design_rank = design_rank
+        self.required_rank = required_rank
+        self.condition_number = condition_number
+        self.condition_threshold = condition_threshold
+        self.v22_condition_number = v22_condition_number
+        self.matrix_norm = matrix_norm
+        self.bias_norm = bias_norm
+        self.singular_values = singular_values or []
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "generator_name": self.generator_name,
+            "reason": self.reason,
+            "design_rank": self.design_rank,
+            "required_rank": self.required_rank,
+            "condition_number": self.condition_number,
+            "condition_threshold": self.condition_threshold,
+            "v22_condition_number": self.v22_condition_number,
+            "matrix_norm": self.matrix_norm,
+            "bias_norm": self.bias_norm,
+            "singular_values": self.singular_values,
+        }
 
 
 @dataclass
@@ -31,7 +67,7 @@ class ParallelTransportMap:
     target_id: str
     matrix_2d: NDArray[np.float64]  # (2, 2) Linear matrix A
     bias_2d: NDArray[np.float64]    # (2,) Translation vector b
-    metadata: dict = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
     @property
     def homogeneous_matrix(self) -> NDArray[np.float64]:
@@ -54,21 +90,79 @@ class ConnectionEstimator:
         self.max_condition_number = max_condition_number
         self.max_transform_norm = max_transform_norm
 
-    def validate_design_matrix(self, generator_name: str, Z_src_c: NDArray[np.float64]) -> Tuple[int, float]:
+    def _validate_raw_inputs(
+        self, generator_name: str, source_coords: NDArray[np.float64], target_coords: NDArray[np.float64]
+    ) -> Tuple[NDArray[np.float64], NDArray[np.float64]]:
+        """Validates input coordinates for shape, finiteness, observation count, and variance."""
+        Z_src = np.atleast_2d(source_coords)
+        Z_tgt = np.atleast_2d(target_coords)
+
+        if Z_src.ndim != 2 or Z_tgt.ndim != 2:
+            raise EstimatorIdentifiabilityError(
+                f"Edge '{generator_name}' inputs must be 2D arrays (got src={Z_src.shape}, tgt={Z_tgt.shape})",
+                generator_name=generator_name,
+                reason="invalid_shape",
+            )
+
+        if Z_src.shape != Z_tgt.shape:
+            raise EstimatorIdentifiabilityError(
+                f"Edge '{generator_name}' observation shape mismatch: src={Z_src.shape} vs tgt={Z_tgt.shape}",
+                generator_name=generator_name,
+                reason="shape_mismatch",
+            )
+
+        if not (np.all(np.isfinite(Z_src)) and np.all(np.isfinite(Z_tgt))):
+            raise EstimatorIdentifiabilityError(
+                f"Edge '{generator_name}' input contains non-finite values (NaN or Inf)",
+                generator_name=generator_name,
+                reason="non_finite_values",
+            )
+
+        N, d = Z_src.shape
+        if N < d + 1:
+            raise EstimatorIdentifiabilityError(
+                f"Edge '{generator_name}' insufficient observations: N={N} < required={d+1}",
+                generator_name=generator_name,
+                reason="insufficient_observations",
+                required_rank=d + 1,
+            )
+
+        return Z_src, Z_tgt
+
+    def validate_design_matrix(self, generator_name: str, Z_src_c: NDArray[np.float64]) -> Tuple[int, float, List[float]]:
         """Validates that centered source observations span the full fiber dimension."""
         d_x = Z_src_c.shape[1]
-        rank = int(np.linalg.matrix_rank(Z_src_c))
+        _, s, _ = np.linalg.svd(Z_src_c, full_matrices=False)
+        s_list = [float(v) for v in s]
+        s_max = float(s[0]) if len(s) > 0 else 0.0
+
+        rel_tol = 1e-7
+        rank = int(np.sum(s > rel_tol * s_max)) if s_max > 0 else 0
+        cond = float(s_max / s[-1]) if (len(s) > 0 and s[-1] > 1e-15) else float("inf")
+
         if rank < d_x:
             raise EstimatorIdentifiabilityError(
-                f"Edge '{generator_name}' source design matrix is rank-deficient (rank={rank} < {d_x}). "
-                "Vector responses lie in a lower-dimensional subspace; full transport matrix is unidentifiable."
+                f"Edge '{generator_name}' source design matrix is rank-deficient (rank={rank} < {d_x}).",
+                generator_name=generator_name,
+                reason="rank_deficient",
+                design_rank=rank,
+                required_rank=d_x,
+                condition_number=cond,
+                condition_threshold=self.max_condition_number,
+                singular_values=s_list,
             )
-        cond = float(np.linalg.cond(Z_src_c))
         if cond > self.max_condition_number:
             raise EstimatorIdentifiabilityError(
-                f"Edge '{generator_name}' design matrix is ill-conditioned (cond={cond:.2e} > {self.max_condition_number:.2e})."
+                f"Edge '{generator_name}' design matrix is ill-conditioned (cond={cond:.2e} > {self.max_condition_number:.2e}).",
+                generator_name=generator_name,
+                reason="ill_conditioned_design",
+                design_rank=rank,
+                required_rank=d_x,
+                condition_number=cond,
+                condition_threshold=self.max_condition_number,
+                singular_values=s_list,
             )
-        return rank, cond
+        return rank, cond, s_list
 
     def estimate_linear_transport(
         self,
@@ -80,8 +174,7 @@ class ConnectionEstimator:
         strict_identifiability: bool = True,
     ) -> ParallelTransportMap:
         """Estimates affine map T_g via OLS: z_target approx A z_source + b."""
-        Z_src = np.atleast_2d(source_coords)
-        Z_tgt = np.atleast_2d(target_coords)
+        Z_src, Z_tgt = self._validate_raw_inputs(generator_name, source_coords, target_coords)
 
         mean_src = Z_src.mean(axis=0)
         mean_tgt = Z_tgt.mean(axis=0)
@@ -90,9 +183,9 @@ class ConnectionEstimator:
         Z_tgt_c = Z_tgt - mean_tgt
 
         d = Z_src_c.shape[1]
-        rank, cond = 0, 0.0
+        rank, cond, s_list = d, 1.0, []
         if strict_identifiability:
-            rank, cond = self.validate_design_matrix(generator_name, Z_src_c)
+            rank, cond, s_list = self.validate_design_matrix(generator_name, Z_src_c)
 
         cov = np.dot(Z_src_c.T, Z_src_c) + self.ridge_alpha * np.eye(d)
         cross = np.dot(Z_src_c.T, Z_tgt_c)
@@ -107,7 +200,15 @@ class ConnectionEstimator:
 
         if strict_identifiability and (matrix_norm > self.max_transform_norm or bias_norm > self.max_transform_norm):
             raise EstimatorIdentifiabilityError(
-                f"Edge '{generator_name}' transport estimate norm exploded (||A||_F={matrix_norm:.2e}, ||b||={bias_norm:.2e})."
+                f"Edge '{generator_name}' transport estimate norm exploded (||A||_F={matrix_norm:.2e}, ||b||={bias_norm:.2e}).",
+                generator_name=generator_name,
+                reason="exploding_norm",
+                design_rank=rank,
+                required_rank=d,
+                condition_number=cond,
+                matrix_norm=matrix_norm,
+                bias_norm=bias_norm,
+                singular_values=s_list,
             )
 
         return ParallelTransportMap(
@@ -121,6 +222,7 @@ class ConnectionEstimator:
                 "condition_number": cond,
                 "matrix_norm": matrix_norm,
                 "bias_norm": bias_norm,
+                "singular_values": s_list,
             },
         )
 
@@ -134,8 +236,7 @@ class ConnectionEstimator:
         strict_identifiability: bool = True,
     ) -> ParallelTransportMap:
         """Estimates affine map T_g via Total Least Squares (TLS) to correct errors-in-variables attenuation bias."""
-        Z_src = np.atleast_2d(source_coords)
-        Z_tgt = np.atleast_2d(target_coords)
+        Z_src, Z_tgt = self._validate_raw_inputs(generator_name, source_coords, target_coords)
 
         mean_src = Z_src.mean(axis=0)
         mean_tgt = Z_tgt.mean(axis=0)
@@ -144,9 +245,9 @@ class ConnectionEstimator:
         Z_tgt_c = Z_tgt - mean_tgt
 
         d_x = Z_src_c.shape[1]
-        rank, cond = 0, 0.0
+        rank, cond, s_list = d_x, 1.0, []
         if strict_identifiability:
-            rank, cond = self.validate_design_matrix(generator_name, Z_src_c)
+            rank, cond, s_list = self.validate_design_matrix(generator_name, Z_src_c)
 
         # Stack augmented matrix [X_c | Y_c]
         Aug = np.column_stack([Z_src_c, Z_tgt_c])
@@ -162,7 +263,15 @@ class ConnectionEstimator:
         cond_v22 = float(np.linalg.cond(V22))
         if strict_identifiability and (cond_v22 > self.max_condition_number or abs(float(np.linalg.det(V22))) < 1e-8):
             raise EstimatorIdentifiabilityError(
-                f"Edge '{generator_name}' TLS V22 submatrix is ill-conditioned (cond(V22)={cond_v22:.2e})."
+                f"Edge '{generator_name}' TLS V22 submatrix is ill-conditioned (cond(V22)={cond_v22:.2e}).",
+                generator_name=generator_name,
+                reason="ill_conditioned_v22",
+                design_rank=rank,
+                required_rank=d_x,
+                condition_number=cond,
+                v22_condition_number=cond_v22,
+                condition_threshold=self.max_condition_number,
+                singular_values=s_list,
             )
 
         if cond_v22 > 1e10 or abs(float(np.linalg.det(V22))) < 1e-10:
@@ -178,7 +287,16 @@ class ConnectionEstimator:
 
         if strict_identifiability and (matrix_norm > self.max_transform_norm or bias_norm > self.max_transform_norm):
             raise EstimatorIdentifiabilityError(
-                f"Edge '{generator_name}' TLS transport estimate norm exploded (||A||_F={matrix_norm:.2e}, ||b||={bias_norm:.2e})."
+                f"Edge '{generator_name}' TLS transport estimate norm exploded (||A||_F={matrix_norm:.2e}, ||b||={bias_norm:.2e}).",
+                generator_name=generator_name,
+                reason="exploding_norm",
+                design_rank=rank,
+                required_rank=d_x,
+                condition_number=cond,
+                v22_condition_number=cond_v22,
+                matrix_norm=matrix_norm,
+                bias_norm=bias_norm,
+                singular_values=s_list,
             )
 
         return ParallelTransportMap(
@@ -193,6 +311,8 @@ class ConnectionEstimator:
                 "v22_condition_number": cond_v22,
                 "matrix_norm": matrix_norm,
                 "bias_norm": bias_norm,
+                "singular_values": s_list,
             },
         )
+
 
