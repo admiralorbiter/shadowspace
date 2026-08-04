@@ -75,7 +75,8 @@ class CurvedWorld(GenerativeWorld):
 
     def get_weights(self, state: FormalState) -> NDArray[np.float64]:
         base_w = np.array([0.5, 0.3, 0.2], dtype=np.float64)
-        if "SWAP" in state.id:
+        p_id = state.premise.canonical_id()
+        if "Q(x)" in p_id and p_id.find("Q(x)") < p_id.find("P(x)"):
             w = np.dot(self.K_g1, base_w)
             w = np.abs(w)
             return w / w.sum()

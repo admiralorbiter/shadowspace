@@ -16,5 +16,13 @@ def test_similarity_invariants_taxonomy():
     inv = SimilarityInvariants.compute(H)
 
     assert inv.is_identity_flat is True
-    assert inv.rank_defect == 0
+    assert inv.rank_H_minus_I == 0
     assert inv.ker_dimension == 2
+
+    # Unipotent matrix H = [[1, 1], [0, 1]]
+    H_unipotent = np.array([[1.0, 1.0], [0.0, 1.0]])
+    inv_uni = SimilarityInvariants.compute(H_unipotent)
+    assert inv_uni.trace == 2.0
+    assert inv_uni.determinant == 1.0
+    assert inv_uni.rank_H_minus_I == 1
+    assert inv_uni.is_identity_flat is False

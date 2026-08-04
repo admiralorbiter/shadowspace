@@ -1,6 +1,12 @@
 {
-  "timestamp": "2026-08-04T17:24:50.600753",
-  "phase": "E0.5",
+  "timestamp_utc": "2026-08-04T22:37:54.768386+00:00",
+  "phase": "E0.6",
+  "git_commit_sha": "99c162d3fca39125b33f2d7f95d93c2536703c09",
+  "environment": {
+    "python_version": "3.13.7",
+    "numpy_version": "2.2.6",
+    "scipy_version": "1.16.2"
+  },
   "status": "PASSED",
   "gates": {
     "flat_world": true,

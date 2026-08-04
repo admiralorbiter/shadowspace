@@ -1,16 +1,14 @@
-"""Canonical First-Order Logic Formula AST for Phase E0.5.
+"""Canonical First-Order Logic Formula AST and Predicate Permutations for Phase E0.6.
 
-Implements canonical formula representation with exact simplification rules:
-- Not(Not(phi)) -> phi
-- Swap(Swap(phi)) -> phi
-State identity and equality are strictly based on canonical semantic structure.
+Implements full FOL AST (Atom, Not, And, Or, Implies, QuantifiedFormula) and recursive
+PredicatePermutation mapping P(x) <-> Q(x) commuting with all logical operators.
 """
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Mapping, Tuple
 
 
 class Formula(ABC):
@@ -23,7 +21,12 @@ class Formula(ABC):
 
     @abstractmethod
     def simplify(self) -> Formula:
-        """Applies canonical simplification rules (e.g. double negation elimination)."""
+        """Applies canonical simplification rules."""
+        pass
+
+    @abstractmethod
+    def permute_predicates(self, mapping: Mapping[str, str]) -> Formula:
+        """Recursively permutes predicate symbols according to mapping."""
         pass
 
     def __eq__(self, other: object) -> bool:
@@ -49,6 +52,10 @@ class Atom(Formula):
     def simplify(self) -> Formula:
         return self
 
+    def permute_predicates(self, mapping: Mapping[str, str]) -> Formula:
+        new_pred = mapping.get(self.predicate, self.predicate)
+        return Atom(predicate=new_pred, arguments=self.arguments)
+
 
 @dataclass(frozen=True)
 class Not(Formula):
@@ -62,28 +69,78 @@ class Not(Formula):
 
     def simplify(self) -> Formula:
         simp_op = self.operand.simplify()
-        # Rule: Not(Not(phi)) -> phi
         if isinstance(simp_op, Not):
             return simp_op.operand.simplify()
         return Not(simp_op)
 
+    def permute_predicates(self, mapping: Mapping[str, str]) -> Formula:
+        return Not(self.operand.permute_predicates(mapping)).simplify()
+
 
 @dataclass(frozen=True)
-class Swap(Formula):
-    """Predicate Swap operation (e.g., swap P and Q)."""
+class And(Formula):
+    """Conjunction phi ^ psi."""
 
-    operand: Formula
+    left: Formula
+    right: Formula
 
     def canonical_id(self) -> str:
-        simp = self.operand.simplify()
-        return f"SWAP({simp.canonical_id()})"
+        s_left = self.left.simplify().canonical_id()
+        s_right = self.right.simplify().canonical_id()
+        return f"({s_left} AND {s_right})"
 
     def simplify(self) -> Formula:
-        simp_op = self.operand.simplify()
-        # Rule: Swap(Swap(phi)) -> phi
-        if isinstance(simp_op, Swap):
-            return simp_op.operand.simplify()
-        return Swap(simp_op)
+        return And(self.left.simplify(), self.right.simplify())
+
+    def permute_predicates(self, mapping: Mapping[str, str]) -> Formula:
+        return And(
+            self.left.permute_predicates(mapping),
+            self.right.permute_predicates(mapping),
+        ).simplify()
+
+
+@dataclass(frozen=True)
+class Or(Formula):
+    """Disjunction phi v psi."""
+
+    left: Formula
+    right: Formula
+
+    def canonical_id(self) -> str:
+        s_left = self.left.simplify().canonical_id()
+        s_right = self.right.simplify().canonical_id()
+        return f"({s_left} OR {s_right})"
+
+    def simplify(self) -> Formula:
+        return Or(self.left.simplify(), self.right.simplify())
+
+    def permute_predicates(self, mapping: Mapping[str, str]) -> Formula:
+        return Or(
+            self.left.permute_predicates(mapping),
+            self.right.permute_predicates(mapping),
+        ).simplify()
+
+
+@dataclass(frozen=True)
+class Implies(Formula):
+    """Implication phi -> psi."""
+
+    left: Formula
+    right: Formula
+
+    def canonical_id(self) -> str:
+        s_left = self.left.simplify().canonical_id()
+        s_right = self.right.simplify().canonical_id()
+        return f"({s_left} IMPLIES {s_right})"
+
+    def simplify(self) -> Formula:
+        return Implies(self.left.simplify(), self.right.simplify())
+
+    def permute_predicates(self, mapping: Mapping[str, str]) -> Formula:
+        return Implies(
+            self.left.permute_predicates(mapping),
+            self.right.permute_predicates(mapping),
+        ).simplify()
 
 
 @dataclass(frozen=True)
@@ -101,6 +158,43 @@ class QuantifiedFormula(Formula):
     def simplify(self) -> Formula:
         return QuantifiedFormula(self.quantifier, self.variable, self.body.simplify())
 
+    def permute_predicates(self, mapping: Mapping[str, str]) -> Formula:
+        return QuantifiedFormula(
+            self.quantifier, self.variable, self.body.permute_predicates(mapping)
+        ).simplify()
+
+
+@dataclass(frozen=True)
+class Swap(Formula):
+    """Predicate Swap wrapper for P <-> Q."""
+
+    operand: Formula
+
+    def canonical_id(self) -> str:
+        simp = self.operand.simplify()
+        return f"SWAP({simp.canonical_id()})"
+
+    def simplify(self) -> Formula:
+        simp_op = self.operand.simplify()
+        if isinstance(simp_op, Swap):
+            return simp_op.operand.simplify()
+        # Evaluate recursive predicate permutation P <-> Q
+        mapping = {"P": "Q", "Q": "P"}
+        return simp_op.permute_predicates(mapping)
+
+    def permute_predicates(self, mapping: Mapping[str, str]) -> Formula:
+        return self.simplify().permute_predicates(mapping)
+
+
+@dataclass(frozen=True)
+class PredicatePermutation:
+    """Explicit recursive predicate permutation mapping."""
+
+    mapping: Mapping[str, str]
+
+    def apply(self, formula: Formula) -> Formula:
+        return formula.permute_predicates(self.mapping)
+
 
 @dataclass(frozen=True)
 class FormalState:
@@ -117,9 +211,11 @@ class FormalState:
         return f"[{p_id} |= {h_id}]"
 
     def swap_predicates(self) -> FormalState:
-        """Applies predicate swap transformation."""
-        new_p = Swap(self.premise).simplify()
-        new_h = Swap(self.hypothesis).simplify()
+        """Applies predicate swap transformation P <-> Q."""
+        mapping = {"P": "Q", "Q": "P"}
+        perm = PredicatePermutation(mapping)
+        new_p = perm.apply(self.premise)
+        new_h = perm.apply(self.hypothesis)
         return FormalState(premise=new_p, hypothesis=new_h, context_features=self.context_features)
 
     def negate_hypothesis(self) -> FormalState:
