@@ -1,0 +1,161 @@
+{
+  "experiment_id": "E007",
+  "subset": "full",
+  "object_count": 3113,
+  "q_hh_relational": 0.038987226212620456,
+  "best_subset_by_size": {
+    "4": {
+      "subset_mask": 15,
+      "subset_size": 4,
+      "model_names": [
+        "bart-large",
+        "roberta-large",
+        "xlnet-large",
+        "albert-xxlarge"
+      ],
+      "nll": 0.7081880321405772,
+      "jsd_bits": 0.022310618509606445,
+      "q_support": 0.028733344150750805,
+      "q_null_analytic": 0.0032133676259691745,
+      "q_excess": 0.02551997652478163,
+      "r_normalized": 0.7133694136730389
+    },
+    "6": {
+      "subset_mask": 63,
+      "subset_size": 6,
+      "model_names": [
+        "bart-large",
+        "roberta-large",
+        "xlnet-large",
+        "albert-xxlarge",
+        "bert-large",
+        "roberta-base"
+      ],
+      "nll": 0.7037747733702635,
+      "jsd_bits": 0.022471607581190784,
+      "q_support": 0.031006970866324503,
+      "q_null_analytic": 0.0032133676259691745,
+      "q_excess": 0.02779360324035533,
+      "r_normalized": 0.7769249485076871
+    },
+    "2": {
+      "subset_mask": 3,
+      "subset_size": 2,
+      "model_names": [
+        "bart-large",
+        "roberta-large"
+      ],
+      "nll": 0.7456315050172673,
+      "jsd_bits": 0.02770546210704305,
+      "q_support": 0.02246639905698625,
+      "q_null_analytic": 0.0032133676259691745,
+      "q_excess": 0.019253031431017077,
+      "r_normalized": 0.5381871621251721
+    },
+    "8": {
+      "subset_mask": 255,
+      "subset_size": 8,
+      "model_names": [
+        "bart-large",
+        "roberta-large",
+        "xlnet-large",
+        "albert-xxlarge",
+        "bert-large",
+        "roberta-base",
+        "xlnet-base",
+        "distilbert"
+      ],
+      "nll": 0.7042448887804029,
+      "jsd_bits": 0.023269646662967446,
+      "q_support": 0.032390170349437926,
+      "q_null_analytic": 0.0032133676259691745,
+      "q_excess": 0.029176802723468752,
+      "r_normalized": 0.8155900391006699
+    },
+    "1": {
+      "subset_mask": 1,
+      "subset_size": 1,
+      "model_names": [
+        "bart-large"
+      ],
+      "nll": 0.8626835800122775,
+      "jsd_bits": 0.04195432274062789,
+      "q_support": 0.016784150673842507,
+      "q_null_analytic": 0.0032133676259691736,
+      "q_excess": 0.013570783047873333,
+      "r_normalized": 0.379349155613232
+    },
+    "3": {
+      "subset_mask": 7,
+      "subset_size": 3,
+      "model_names": [
+        "bart-large",
+        "roberta-large",
+        "xlnet-large"
+      ],
+      "nll": 0.7170955512721745,
+      "jsd_bits": 0.02359897041056767,
+      "q_support": 0.026365146276776205,
+      "q_null_analytic": 0.0032133676259691745,
+      "q_excess": 0.02315177865080703,
+      "r_normalized": 0.6471702960061995
+    },
+    "9": {
+      "subset_mask": 511,
+      "subset_size": 9,
+      "model_names": [
+        "bart-large",
+        "roberta-large",
+        "xlnet-large",
+        "albert-xxlarge",
+        "bert-large",
+        "roberta-base",
+        "xlnet-base",
+        "distilbert",
+        "bert-base"
+      ],
+      "nll": 0.7057096802134459,
+      "jsd_bits": 0.024033818660404393,
+      "q_support": 0.03341930623467978,
+      "q_null_analytic": 0.0032133676259691745,
+      "q_excess": 0.030205938608710604,
+      "r_normalized": 0.8443578580025387
+    },
+    "5": {
+      "subset_mask": 31,
+      "subset_size": 5,
+      "model_names": [
+        "bart-large",
+        "roberta-large",
+        "xlnet-large",
+        "albert-xxlarge",
+        "bert-large"
+      ],
+      "nll": 0.7045665421571203,
+      "jsd_bits": 0.022092186613509302,
+      "q_support": 0.02944442668949591,
+      "q_null_analytic": 0.0032133676259691745,
+      "q_excess": 0.026231059063526737,
+      "r_normalized": 0.7332465688594922
+    },
+    "7": {
+      "subset_mask": 127,
+      "subset_size": 7,
+      "model_names": [
+        "bart-large",
+        "roberta-large",
+        "xlnet-large",
+        "albert-xxlarge",
+        "bert-large",
+        "roberta-base",
+        "xlnet-base"
+      ],
+      "nll": 0.7035288936038061,
+      "jsd_bits": 0.022763983496942624,
+      "q_support": 0.03190504347196778,
+      "q_null_analytic": 0.0032133676259691745,
+      "q_excess": 0.028691675845998604,
+      "r_normalized": 0.8020291067149425
+    }
+  }
+}

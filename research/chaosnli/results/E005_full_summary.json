@@ -1,0 +1,1401 @@
+{
+  "experiment_id": "E005",
+  "title": "Strictly Nested Conditional Null Ladder",
+  "subset": "full",
+  "object_count": 3113,
+  "q_hh_relational": 0.038987226212620456,
+  "conditions": {
+    "model_xlnet-base": {
+      "condition_name": "model_xlnet-base",
+      "nll": 1.1806189995641336,
+      "jsd_bits": 0.08908157223352432,
+      "q_observed": 0.009354840778917567,
+      "null_ladder": [
+        {
+          "level_id": "N0",
+          "level_name": "Global Identity Permutation",
+          "n_groups": 1,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 1,
+          "effective_movable_items": 3113,
+          "max_group_size": 3113,
+          "is_informative": true,
+          "q_observed": 0.009354840778917567,
+          "null_mean": 0.0032142640446733315,
+          "null_ci_95": [
+            0.002995389534874826,
+            0.0034386033728014097
+          ],
+          "q_excess": 0.006140576734244236,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N1",
+          "level_name": "Dataset Stratified (SNLI/MNLI)",
+          "n_groups": 2,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 2,
+          "effective_movable_items": 3113,
+          "max_group_size": 1599,
+          "is_informative": true,
+          "q_observed": 0.009354840778917567,
+          "null_mean": 0.0032579002476249455,
+          "null_ci_95": [
+            0.0030336157654592823,
+            0.003483680732022987
+          ],
+          "q_excess": 0.006096940531292621,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N2",
+          "level_name": "N1 + Majority Label",
+          "n_groups": 6,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 6,
+          "effective_movable_items": 3113,
+          "max_group_size": 811,
+          "is_informative": true,
+          "q_observed": 0.009354840778917567,
+          "null_mean": 0.006326826465393516,
+          "null_ci_95": [
+            0.006018227145456302,
+            0.006649333865709579
+          ],
+          "q_excess": 0.0030280143135240512,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N3",
+          "level_name": "N2 + Entropy Quintile",
+          "n_groups": 30,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 30,
+          "effective_movable_items": 3113,
+          "max_group_size": 244,
+          "is_informative": true,
+          "q_observed": 0.009354840778917567,
+          "null_mean": 0.007730318814609997,
+          "null_ci_95": [
+            0.007420883617891953,
+            0.00805969492994575
+          ],
+          "q_excess": 0.0016245219643075699,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N4",
+          "level_name": "N3 + Top-2 Label Pair + Margin Bin",
+          "n_groups": 160,
+          "n_singleton_groups": 13,
+          "n_non_singleton_groups": 147,
+          "effective_movable_items": 3100,
+          "max_group_size": 113,
+          "is_informative": true,
+          "q_observed": 0.009354840778917567,
+          "null_mean": 0.009082947149267594,
+          "null_ci_95": [
+            0.008824260866458117,
+            0.00935500441386042
+          ],
+          "q_excess": 0.00027189362964997327,
+          "p_value_monte_carlo": 0.025097490250974904
+        },
+        {
+          "level_id": "N5",
+          "level_name": "N4 + Exact 100-Vote Profile",
+          "n_groups": 1941,
+          "n_singleton_groups": 1300,
+          "n_non_singleton_groups": 641,
+          "effective_movable_items": 1813,
+          "max_group_size": 13,
+          "is_informative": true,
+          "q_observed": 0.009354840778917567,
+          "null_mean": 0.009353308604168746,
+          "null_ci_95": [
+            0.009308467028271011,
+            0.009399717453422787
+          ],
+          "q_excess": 1.5321747488215853e-6,
+          "p_value_monte_carlo": 0.4734526547345265
+        }
+      ]
+    },
+    "model_albert-xxlarge": {
+      "condition_name": "model_albert-xxlarge",
+      "nll": 0.9892491215019211,
+      "jsd_bits": 0.06360512108599486,
+      "q_observed": 0.011525835985992744,
+      "null_ladder": [
+        {
+          "level_id": "N0",
+          "level_name": "Global Identity Permutation",
+          "n_groups": 1,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 1,
+          "effective_movable_items": 3113,
+          "max_group_size": 3113,
+          "is_informative": true,
+          "q_observed": 0.011525835985992744,
+          "null_mean": 0.00321412802738923,
+          "null_ci_95": [
+            0.002994752223153445,
+            0.0034430657532185504
+          ],
+          "q_excess": 0.008311707958603514,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N1",
+          "level_name": "Dataset Stratified (SNLI/MNLI)",
+          "n_groups": 2,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 2,
+          "effective_movable_items": 3113,
+          "max_group_size": 1599,
+          "is_informative": true,
+          "q_observed": 0.011525835985992744,
+          "null_mean": 0.003265263727290173,
+          "null_ci_95": [
+            0.0030464328642196914,
+            0.003497567402958441
+          ],
+          "q_excess": 0.00826057225870257,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N2",
+          "level_name": "N1 + Majority Label",
+          "n_groups": 6,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 6,
+          "effective_movable_items": 3113,
+          "max_group_size": 811,
+          "is_informative": true,
+          "q_observed": 0.011525835985992744,
+          "null_mean": 0.007082578382093511,
+          "null_ci_95": [
+            0.0067465234077725,
+            0.0074223374437429645
+          ],
+          "q_excess": 0.004443257603899233,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N3",
+          "level_name": "N2 + Entropy Quintile",
+          "n_groups": 30,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 30,
+          "effective_movable_items": 3113,
+          "max_group_size": 244,
+          "is_informative": true,
+          "q_observed": 0.011525835985992744,
+          "null_mean": 0.009149899433629614,
+          "null_ci_95": [
+            0.008802660442010871,
+            0.009506585320996571
+          ],
+          "q_excess": 0.0023759365523631296,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N4",
+          "level_name": "N3 + Top-2 Label Pair + Margin Bin",
+          "n_groups": 160,
+          "n_singleton_groups": 13,
+          "n_non_singleton_groups": 147,
+          "effective_movable_items": 3100,
+          "max_group_size": 113,
+          "is_informative": true,
+          "q_observed": 0.011525835985992744,
+          "null_mean": 0.011106613704507393,
+          "null_ci_95": [
+            0.010811964540698521,
+            0.011412227369896562
+          ],
+          "q_excess": 0.000419222281485351,
+          "p_value_monte_carlo": 0.0046995300469953
+        },
+        {
+          "level_id": "N5",
+          "level_name": "N4 + Exact 100-Vote Profile",
+          "n_groups": 1941,
+          "n_singleton_groups": 1300,
+          "n_non_singleton_groups": 641,
+          "effective_movable_items": 1813,
+          "max_group_size": 13,
+          "is_informative": true,
+          "q_observed": 0.011525835985992744,
+          "null_mean": 0.011512903802016843,
+          "null_ci_95": [
+            0.01146439861762383,
+            0.011561332297957177
+          ],
+          "q_excess": 0.000012932183975900707,
+          "p_value_monte_carlo": 0.3006699330066993
+        }
+      ]
+    },
+    "model_bert-large": {
+      "condition_name": "model_bert-large",
+      "nll": 1.0658398619952452,
+      "jsd_bits": 0.07386442516274042,
+      "q_observed": 0.010535942906155957,
+      "null_ladder": [
+        {
+          "level_id": "N0",
+          "level_name": "Global Identity Permutation",
+          "n_groups": 1,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 1,
+          "effective_movable_items": 3113,
+          "max_group_size": 3113,
+          "is_informative": true,
+          "q_observed": 0.010535942906155957,
+          "null_mean": 0.003213362601671016,
+          "null_ci_95": [
+            0.00298925712927766,
+            0.0034433895086189857
+          ],
+          "q_excess": 0.007322580304484941,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N1",
+          "level_name": "Dataset Stratified (SNLI/MNLI)",
+          "n_groups": 2,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 2,
+          "effective_movable_items": 3113,
+          "max_group_size": 1599,
+          "is_informative": true,
+          "q_observed": 0.010535942906155957,
+          "null_mean": 0.0032782653835638905,
+          "null_ci_95": [
+            0.003053008107933189,
+            0.0035096244827486837
+          ],
+          "q_excess": 0.0072576775225920665,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N2",
+          "level_name": "N1 + Majority Label",
+          "n_groups": 6,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 6,
+          "effective_movable_items": 3113,
+          "max_group_size": 811,
+          "is_informative": true,
+          "q_observed": 0.010535942906155957,
+          "null_mean": 0.006854223213834135,
+          "null_ci_95": [
+            0.00652791610601202,
+            0.0071924471961660455
+          ],
+          "q_excess": 0.0036817196923218222,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N3",
+          "level_name": "N2 + Entropy Quintile",
+          "n_groups": 30,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 30,
+          "effective_movable_items": 3113,
+          "max_group_size": 244,
+          "is_informative": true,
+          "q_observed": 0.010535942906155957,
+          "null_mean": 0.00848673537020552,
+          "null_ci_95": [
+            0.0081566373310777,
+            0.008835180737778498
+          ],
+          "q_excess": 0.0020492075359504376,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N4",
+          "level_name": "N3 + Top-2 Label Pair + Margin Bin",
+          "n_groups": 160,
+          "n_singleton_groups": 13,
+          "n_non_singleton_groups": 147,
+          "effective_movable_items": 3100,
+          "max_group_size": 113,
+          "is_informative": true,
+          "q_observed": 0.010535942906155957,
+          "null_mean": 0.010159183804434167,
+          "null_ci_95": [
+            0.0098820068499814,
+            0.010446714543488209
+          ],
+          "q_excess": 0.0003767591017217898,
+          "p_value_monte_carlo": 0.004399560043995601
+        },
+        {
+          "level_id": "N5",
+          "level_name": "N4 + Exact 100-Vote Profile",
+          "n_groups": 1941,
+          "n_singleton_groups": 1300,
+          "n_non_singleton_groups": 641,
+          "effective_movable_items": 1813,
+          "max_group_size": 13,
+          "is_informative": true,
+          "q_observed": 0.010535942906155957,
+          "null_mean": 0.01051670315326272,
+          "null_ci_95": [
+            0.010471756931998819,
+            0.01056289393743128
+          ],
+          "q_excess": 0.00001923975289323636,
+          "p_value_monte_carlo": 0.2024797520247975
+        }
+      ]
+    },
+    "model_bart-large": {
+      "condition_name": "model_bart-large",
+      "nll": 0.8626835800122775,
+      "jsd_bits": 0.04195432274062789,
+      "q_observed": 0.016784150673842507,
+      "null_ladder": [
+        {
+          "level_id": "N0",
+          "level_name": "Global Identity Permutation",
+          "n_groups": 1,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 1,
+          "effective_movable_items": 3113,
+          "max_group_size": 3113,
+          "is_informative": true,
+          "q_observed": 0.016784150673842507,
+          "null_mean": 0.0032128037954390755,
+          "null_ci_95": [
+            0.0029927757812055478,
+            0.003443908520987689
+          ],
+          "q_excess": 0.013571346878403431,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N1",
+          "level_name": "Dataset Stratified (SNLI/MNLI)",
+          "n_groups": 2,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 2,
+          "effective_movable_items": 3113,
+          "max_group_size": 1599,
+          "is_informative": true,
+          "q_observed": 0.016784150673842507,
+          "null_mean": 0.003291371680665749,
+          "null_ci_95": [
+            0.00306324603234388,
+            0.0035318574717394416
+          ],
+          "q_excess": 0.013492778993176758,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N2",
+          "level_name": "N1 + Majority Label",
+          "n_groups": 6,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 6,
+          "effective_movable_items": 3113,
+          "max_group_size": 811,
+          "is_informative": true,
+          "q_observed": 0.016784150673842507,
+          "null_mean": 0.0076994710136876745,
+          "null_ci_95": [
+            0.007347001444819444,
+            0.00806017614053162
+          ],
+          "q_excess": 0.009084679660154832,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N3",
+          "level_name": "N2 + Entropy Quintile",
+          "n_groups": 30,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 30,
+          "effective_movable_items": 3113,
+          "max_group_size": 244,
+          "is_informative": true,
+          "q_observed": 0.016784150673842507,
+          "null_mean": 0.011073324693622636,
+          "null_ci_95": [
+            0.010685947469323354,
+            0.011472166542750325
+          ],
+          "q_excess": 0.0057108259802198715,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N4",
+          "level_name": "N3 + Top-2 Label Pair + Margin Bin",
+          "n_groups": 160,
+          "n_singleton_groups": 13,
+          "n_non_singleton_groups": 147,
+          "effective_movable_items": 3100,
+          "max_group_size": 113,
+          "is_informative": true,
+          "q_observed": 0.016784150673842507,
+          "null_mean": 0.0152260801028499,
+          "null_ci_95": [
+            0.014837636951747878,
+            0.01562762554997096
+          ],
+          "q_excess": 0.0015580705709926073,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N5",
+          "level_name": "N4 + Exact 100-Vote Profile",
+          "n_groups": 1941,
+          "n_singleton_groups": 1300,
+          "n_non_singleton_groups": 641,
+          "effective_movable_items": 1813,
+          "max_group_size": 13,
+          "is_informative": true,
+          "q_observed": 0.016784150673842507,
+          "null_mean": 0.016773958434598047,
+          "null_ci_95": [
+            0.016718359272606825,
+            0.016829467733118244
+          ],
+          "q_excess": 0.000010192239244460194,
+          "p_value_monte_carlo": 0.3545645435456454
+        }
+      ]
+    },
+    "model_roberta-base": {
+      "condition_name": "model_roberta-base",
+      "nll": 1.0938088930122236,
+      "jsd_bits": 0.08076721230720467,
+      "q_observed": 0.01032549205448132,
+      "null_ladder": [
+        {
+          "level_id": "N0",
+          "level_name": "Global Identity Permutation",
+          "n_groups": 1,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 1,
+          "effective_movable_items": 3113,
+          "max_group_size": 3113,
+          "is_informative": true,
+          "q_observed": 0.01032549205448132,
+          "null_mean": 0.003215302929015544,
+          "null_ci_95": [
+            0.0029929077221524437,
+            0.003441863921169387
+          ],
+          "q_excess": 0.007110189125465777,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N1",
+          "level_name": "Dataset Stratified (SNLI/MNLI)",
+          "n_groups": 2,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 2,
+          "effective_movable_items": 3113,
+          "max_group_size": 1599,
+          "is_informative": true,
+          "q_observed": 0.01032549205448132,
+          "null_mean": 0.003258271942322609,
+          "null_ci_95": [
+            0.0030352998291294586,
+            0.003493864918578826
+          ],
+          "q_excess": 0.007067220112158712,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N2",
+          "level_name": "N1 + Majority Label",
+          "n_groups": 6,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 6,
+          "effective_movable_items": 3113,
+          "max_group_size": 811,
+          "is_informative": true,
+          "q_observed": 0.01032549205448132,
+          "null_mean": 0.006685929844396729,
+          "null_ci_95": [
+            0.006357462715160833,
+            0.007021884639611674
+          ],
+          "q_excess": 0.003639562210084592,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N3",
+          "level_name": "N2 + Entropy Quintile",
+          "n_groups": 30,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 30,
+          "effective_movable_items": 3113,
+          "max_group_size": 244,
+          "is_informative": true,
+          "q_observed": 0.01032549205448132,
+          "null_mean": 0.008519366126168083,
+          "null_ci_95": [
+            0.008183457561248674,
+            0.008870053167425274
+          ],
+          "q_excess": 0.0018061259283132375,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N4",
+          "level_name": "N3 + Top-2 Label Pair + Margin Bin",
+          "n_groups": 160,
+          "n_singleton_groups": 13,
+          "n_non_singleton_groups": 147,
+          "effective_movable_items": 3100,
+          "max_group_size": 113,
+          "is_informative": true,
+          "q_observed": 0.01032549205448132,
+          "null_mean": 0.009940306122012741,
+          "null_ci_95": [
+            0.009651723239601914,
+            0.010245626514604868
+          ],
+          "q_excess": 0.0003851859324685795,
+          "p_value_monte_carlo": 0.006999300069993001
+        },
+        {
+          "level_id": "N5",
+          "level_name": "N4 + Exact 100-Vote Profile",
+          "n_groups": 1941,
+          "n_singleton_groups": 1300,
+          "n_non_singleton_groups": 641,
+          "effective_movable_items": 1813,
+          "max_group_size": 13,
+          "is_informative": true,
+          "q_observed": 0.01032549205448132,
+          "null_mean": 0.010358149951201821,
+          "null_ci_95": [
+            0.010311540165123445,
+            0.010404704900761102
+          ],
+          "q_excess": -0.00003265789672050011,
+          "p_value_monte_carlo": 0.9137086291370863
+        }
+      ]
+    },
+    "00_human_empirical": {
+      "condition_name": "00_human_empirical",
+      "nll": 0.6506173649452626,
+      "jsd_bits": 0.0,
+      "q_observed": 0.12691333670391558,
+      "null_ladder": [
+        {
+          "level_id": "N0",
+          "level_name": "Global Identity Permutation",
+          "n_groups": 1,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 1,
+          "effective_movable_items": 3113,
+          "max_group_size": 3113,
+          "is_informative": true,
+          "q_observed": 0.12691333670391558,
+          "null_mean": 0.0032121538302748867,
+          "null_ci_95": [
+            0.002993915062827876,
+            0.003445767513863007
+          ],
+          "q_excess": 0.1237011828736407,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N1",
+          "level_name": "Dataset Stratified (SNLI/MNLI)",
+          "n_groups": 2,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 2,
+          "effective_movable_items": 3113,
+          "max_group_size": 1599,
+          "is_informative": true,
+          "q_observed": 0.12691333670391558,
+          "null_mean": 0.003456505924589692,
+          "null_ci_95": [
+            0.0032295080708325393,
+            0.0036930889977038186
+          ],
+          "q_excess": 0.12345683077932589,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N2",
+          "level_name": "N1 + Majority Label",
+          "n_groups": 6,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 6,
+          "effective_movable_items": 3113,
+          "max_group_size": 811,
+          "is_informative": true,
+          "q_observed": 0.12691333670391558,
+          "null_mean": 0.009257512477832255,
+          "null_ci_95": [
+            0.0088652604552373,
+            0.009666454613038077
+          ],
+          "q_excess": 0.11765582422608332,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N3",
+          "level_name": "N2 + Entropy Quintile",
+          "n_groups": 30,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 30,
+          "effective_movable_items": 3113,
+          "max_group_size": 244,
+          "is_informative": true,
+          "q_observed": 0.12691333670391558,
+          "null_mean": 0.02628424843836015,
+          "null_ci_95": [
+            0.02569345754576408,
+            0.02691148212984608
+          ],
+          "q_excess": 0.10062908826555543,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N4",
+          "level_name": "N3 + Top-2 Label Pair + Margin Bin",
+          "n_groups": 160,
+          "n_singleton_groups": 13,
+          "n_non_singleton_groups": 147,
+          "effective_movable_items": 3100,
+          "max_group_size": 113,
+          "is_informative": true,
+          "q_observed": 0.12691333670391558,
+          "null_mean": 0.06685903956164689,
+          "null_ci_95": [
+            0.06597131983356044,
+            0.0678012381262924
+          ],
+          "q_excess": 0.06005429714226869,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N5",
+          "level_name": "N4 + Exact 100-Vote Profile",
+          "n_groups": 1941,
+          "n_singleton_groups": 1300,
+          "n_non_singleton_groups": 641,
+          "effective_movable_items": 1813,
+          "max_group_size": 13,
+          "is_informative": true,
+          "q_observed": 0.12691333670391558,
+          "null_mean": 0.12691333670388744,
+          "null_ci_95": [
+            0.12691333670391539,
+            0.1269133367039156
+          ],
+          "q_excess": 2.8144153674247718e-14,
+          "p_value_monte_carlo": 0.14628537146285372
+        }
+      ]
+    },
+    "ensemble_e003_anchor_3model": {
+      "condition_name": "ensemble_e003_anchor_3model",
+      "nll": 0.7170955512721745,
+      "jsd_bits": 0.02359897041056767,
+      "q_observed": 0.026365146276776205,
+      "null_ladder": [
+        {
+          "level_id": "N0",
+          "level_name": "Global Identity Permutation",
+          "n_groups": 1,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 1,
+          "effective_movable_items": 3113,
+          "max_group_size": 3113,
+          "is_informative": true,
+          "q_observed": 0.026365146276776205,
+          "null_mean": 0.0032141136354175343,
+          "null_ci_95": [
+            0.00299431418055693,
+            0.0034463218978504147
+          ],
+          "q_excess": 0.02315103264135867,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N1",
+          "level_name": "Dataset Stratified (SNLI/MNLI)",
+          "n_groups": 2,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 2,
+          "effective_movable_items": 3113,
+          "max_group_size": 1599,
+          "is_informative": true,
+          "q_observed": 0.026365146276776205,
+          "null_mean": 0.0033300744694884934,
+          "null_ci_95": [
+            0.0030980404894730184,
+            0.0035656280290404826
+          ],
+          "q_excess": 0.023035071807287713,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N2",
+          "level_name": "N1 + Majority Label",
+          "n_groups": 6,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 6,
+          "effective_movable_items": 3113,
+          "max_group_size": 811,
+          "is_informative": true,
+          "q_observed": 0.026365146276776205,
+          "null_mean": 0.008260056152149645,
+          "null_ci_95": [
+            0.007886572480243605,
+            0.00863980087449393
+          ],
+          "q_excess": 0.01810509012462656,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N3",
+          "level_name": "N2 + Entropy Quintile",
+          "n_groups": 30,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 30,
+          "effective_movable_items": 3113,
+          "max_group_size": 244,
+          "is_informative": true,
+          "q_observed": 0.026365146276776205,
+          "null_mean": 0.0141505053326324,
+          "null_ci_95": [
+            0.01369547066745464,
+            0.014626758812633221
+          ],
+          "q_excess": 0.012214640944143805,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N4",
+          "level_name": "N3 + Top-2 Label Pair + Margin Bin",
+          "n_groups": 160,
+          "n_singleton_groups": 13,
+          "n_non_singleton_groups": 147,
+          "effective_movable_items": 3100,
+          "max_group_size": 113,
+          "is_informative": true,
+          "q_observed": 0.026365146276776205,
+          "null_mean": 0.02255284611355646,
+          "null_ci_95": [
+            0.02204879545495231,
+            0.023088564159472913
+          ],
+          "q_excess": 0.0038123001632197444,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N5",
+          "level_name": "N4 + Exact 100-Vote Profile",
+          "n_groups": 1941,
+          "n_singleton_groups": 1300,
+          "n_non_singleton_groups": 641,
+          "effective_movable_items": 1813,
+          "max_group_size": 13,
+          "is_informative": true,
+          "q_observed": 0.026365146276776205,
+          "null_mean": 0.026396590609229043,
+          "null_ci_95": [
+            0.026329649965704527,
+            0.026465435381932377
+          ],
+          "q_excess": -0.00003144433245283809,
+          "p_value_monte_carlo": 0.8177182281771823
+        }
+      ]
+    },
+    "01_global_class_prior": {
+      "condition_name": "01_global_class_prior",
+      "nll": 1.0507614633536881,
+      "jsd_bits": 0.1584804586776984,
+      "q_observed": 0.0032133676259832613,
+      "null_ladder": [
+        {
+          "level_id": "N0",
+          "level_name": "Global Identity Permutation",
+          "n_groups": 1,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 1,
+          "effective_movable_items": 3113,
+          "max_group_size": 3113,
+          "is_informative": true,
+          "q_observed": 0.0032133676259832613,
+          "null_mean": 0.0032133676259825995,
+          "null_ci_95": [
+            0.0032133676259830084,
+            0.0032133676259833554
+          ],
+          "q_excess": 6.617970060851519e-16,
+          "p_value_monte_carlo": 0.19658034196580343
+        },
+        {
+          "level_id": "N1",
+          "level_name": "Dataset Stratified (SNLI/MNLI)",
+          "n_groups": 2,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 2,
+          "effective_movable_items": 3113,
+          "max_group_size": 1599,
+          "is_informative": true,
+          "q_observed": 0.0032133676259832613,
+          "null_mean": 0.0032133676259826663,
+          "null_ci_95": [
+            0.003213367625983245,
+            0.003213367625983525
+          ],
+          "q_excess": 5.950101522600448e-16,
+          "p_value_monte_carlo": 0.9586041395860414
+        },
+        {
+          "level_id": "N2",
+          "level_name": "N1 + Majority Label",
+          "n_groups": 6,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 6,
+          "effective_movable_items": 3113,
+          "max_group_size": 811,
+          "is_informative": true,
+          "q_observed": 0.0032133676259832613,
+          "null_mean": 0.0032133676259826485,
+          "null_ci_95": [
+            0.003213367625983218,
+            0.0032133676259834838
+          ],
+          "q_excess": 6.127910678888071e-16,
+          "p_value_monte_carlo": 0.9007099290070993
+        },
+        {
+          "level_id": "N3",
+          "level_name": "N2 + Entropy Quintile",
+          "n_groups": 30,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 30,
+          "effective_movable_items": 3113,
+          "max_group_size": 244,
+          "is_informative": true,
+          "q_observed": 0.0032133676259832613,
+          "null_mean": 0.003213367625982635,
+          "null_ci_95": [
+            0.0032133676259831706,
+            0.003213367625983413
+          ],
+          "q_excess": 6.262351748276274e-16,
+          "p_value_monte_carlo": 0.6915308469153084
+        },
+        {
+          "level_id": "N4",
+          "level_name": "N3 + Top-2 Label Pair + Margin Bin",
+          "n_groups": 160,
+          "n_singleton_groups": 13,
+          "n_non_singleton_groups": 147,
+          "effective_movable_items": 3100,
+          "max_group_size": 113,
+          "is_informative": true,
+          "q_observed": 0.0032133676259832613,
+          "null_mean": 0.003213367625982629,
+          "null_ci_95": [
+            0.003213367625983144,
+            0.00321336762598337
+          ],
+          "q_excess": 6.323067069935462e-16,
+          "p_value_monte_carlo": 0.4684531546845315
+        },
+        {
+          "level_id": "N5",
+          "level_name": "N4 + Exact 100-Vote Profile",
+          "n_groups": 1941,
+          "n_singleton_groups": 1300,
+          "n_non_singleton_groups": 641,
+          "effective_movable_items": 1813,
+          "max_group_size": 13,
+          "is_informative": true,
+          "q_observed": 0.0032133676259832613,
+          "null_mean": 0.003213367625982628,
+          "null_ci_95": [
+            0.0032133676259831928,
+            0.003213367625983321
+          ],
+          "q_excess": 6.331740687315346e-16,
+          "p_value_monte_carlo": 0.46035396460353967
+        }
+      ]
+    },
+    "model_roberta-large": {
+      "condition_name": "model_roberta-large",
+      "nll": 0.9081879797875668,
+      "jsd_bits": 0.048859579698866895,
+      "q_observed": 0.014945982899838327,
+      "null_ladder": [
+        {
+          "level_id": "N0",
+          "level_name": "Global Identity Permutation",
+          "n_groups": 1,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 1,
+          "effective_movable_items": 3113,
+          "max_group_size": 3113,
+          "is_informative": true,
+          "q_observed": 0.014945982899838327,
+          "null_mean": 0.0032145154944639145,
+          "null_ci_95": [
+            0.0029978896009903544,
+            0.0034441037736592196
+          ],
+          "q_excess": 0.011731467405374413,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N1",
+          "level_name": "Dataset Stratified (SNLI/MNLI)",
+          "n_groups": 2,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 2,
+          "effective_movable_items": 3113,
+          "max_group_size": 1599,
+          "is_informative": true,
+          "q_observed": 0.014945982899838327,
+          "null_mean": 0.0032912767994771803,
+          "null_ci_95": [
+            0.0030639079183651446,
+            0.0035297232988917853
+          ],
+          "q_excess": 0.011654706100361147,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N2",
+          "level_name": "N1 + Majority Label",
+          "n_groups": 6,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 6,
+          "effective_movable_items": 3113,
+          "max_group_size": 811,
+          "is_informative": true,
+          "q_observed": 0.014945982899838327,
+          "null_mean": 0.0075641562888141434,
+          "null_ci_95": [
+            0.00721930687749154,
+            0.007926749764570718
+          ],
+          "q_excess": 0.007381826611024184,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N3",
+          "level_name": "N2 + Entropy Quintile",
+          "n_groups": 30,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 30,
+          "effective_movable_items": 3113,
+          "max_group_size": 244,
+          "is_informative": true,
+          "q_observed": 0.014945982899838327,
+          "null_mean": 0.010756786558537358,
+          "null_ci_95": [
+            0.010375645759750534,
+            0.011161460925236266
+          ],
+          "q_excess": 0.004189196341300969,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N4",
+          "level_name": "N3 + Top-2 Label Pair + Margin Bin",
+          "n_groups": 160,
+          "n_singleton_groups": 13,
+          "n_non_singleton_groups": 147,
+          "effective_movable_items": 3100,
+          "max_group_size": 113,
+          "is_informative": true,
+          "q_observed": 0.014945982899838327,
+          "null_mean": 0.014027816470401883,
+          "null_ci_95": [
+            0.013687908884468166,
+            0.014384872239421417
+          ],
+          "q_excess": 0.0009181664294364445,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N5",
+          "level_name": "N4 + Exact 100-Vote Profile",
+          "n_groups": 1941,
+          "n_singleton_groups": 1300,
+          "n_non_singleton_groups": 641,
+          "effective_movable_items": 1813,
+          "max_group_size": 13,
+          "is_informative": true,
+          "q_observed": 0.014945982899838327,
+          "null_mean": 0.014934821983335,
+          "null_ci_95": [
+            0.014881453400255292,
+            0.014987905951314964
+          ],
+          "q_excess": 0.000011160916503327734,
+          "p_value_monte_carlo": 0.34396560343965604
+        }
+      ]
+    },
+    "model_distilbert": {
+      "condition_name": "model_distilbert",
+      "nll": 1.2114377674653793,
+      "jsd_bits": 0.09542630633117628,
+      "q_observed": 0.008649519086455166,
+      "null_ladder": [
+        {
+          "level_id": "N0",
+          "level_name": "Global Identity Permutation",
+          "n_groups": 1,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 1,
+          "effective_movable_items": 3113,
+          "max_group_size": 3113,
+          "is_informative": true,
+          "q_observed": 0.008649519086455166,
+          "null_mean": 0.003213976497675275,
+          "null_ci_95": [
+            0.002996903847904643,
+            0.003448338634603401
+          ],
+          "q_excess": 0.005435542588779891,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N1",
+          "level_name": "Dataset Stratified (SNLI/MNLI)",
+          "n_groups": 2,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 2,
+          "effective_movable_items": 3113,
+          "max_group_size": 1599,
+          "is_informative": true,
+          "q_observed": 0.008649519086455166,
+          "null_mean": 0.003250596327083341,
+          "null_ci_95": [
+            0.0030263665561008155,
+            0.00348488616192177
+          ],
+          "q_excess": 0.0053989227593718245,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N2",
+          "level_name": "N1 + Majority Label",
+          "n_groups": 6,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 6,
+          "effective_movable_items": 3113,
+          "max_group_size": 811,
+          "is_informative": true,
+          "q_observed": 0.008649519086455166,
+          "null_mean": 0.006264466637261041,
+          "null_ci_95": [
+            0.00596095167197061,
+            0.00658782590477125
+          ],
+          "q_excess": 0.002385052449194125,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N3",
+          "level_name": "N2 + Entropy Quintile",
+          "n_groups": 30,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 30,
+          "effective_movable_items": 3113,
+          "max_group_size": 244,
+          "is_informative": true,
+          "q_observed": 0.008649519086455166,
+          "null_mean": 0.007504863196567406,
+          "null_ci_95": [
+            0.00719690094626055,
+            0.00783164878972066
+          ],
+          "q_excess": 0.0011446558898877595,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N4",
+          "level_name": "N3 + Top-2 Label Pair + Margin Bin",
+          "n_groups": 160,
+          "n_singleton_groups": 13,
+          "n_non_singleton_groups": 147,
+          "effective_movable_items": 3100,
+          "max_group_size": 113,
+          "is_informative": true,
+          "q_observed": 0.008649519086455166,
+          "null_mean": 0.008688862321561713,
+          "null_ci_95": [
+            0.008430482069415263,
+            0.008957135913228446
+          ],
+          "q_excess": -0.00003934323510654779,
+          "p_value_monte_carlo": 0.6098390160983902
+        },
+        {
+          "level_id": "N5",
+          "level_name": "N4 + Exact 100-Vote Profile",
+          "n_groups": 1941,
+          "n_singleton_groups": 1300,
+          "n_non_singleton_groups": 641,
+          "effective_movable_items": 1813,
+          "max_group_size": 13,
+          "is_informative": true,
+          "q_observed": 0.008649519086455166,
+          "null_mean": 0.008638861587549956,
+          "null_ci_95": [
+            0.008596155275414524,
+            0.008681911488125561
+          ],
+          "q_excess": 0.000010657498905209534,
+          "p_value_monte_carlo": 0.3134686531346865
+        }
+      ]
+    },
+    "model_bert-base": {
+      "condition_name": "model_bert-base",
+      "nll": 1.2695963899798044,
+      "jsd_bits": 0.10618924332523047,
+      "q_observed": 0.007827547521857383,
+      "null_ladder": [
+        {
+          "level_id": "N0",
+          "level_name": "Global Identity Permutation",
+          "n_groups": 1,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 1,
+          "effective_movable_items": 3113,
+          "max_group_size": 3113,
+          "is_informative": true,
+          "q_observed": 0.007827547521857383,
+          "null_mean": 0.0032131658881225777,
+          "null_ci_95": [
+            0.0029935851025660975,
+            0.0034442277345502603
+          ],
+          "q_excess": 0.004614381633734805,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N1",
+          "level_name": "Dataset Stratified (SNLI/MNLI)",
+          "n_groups": 2,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 2,
+          "effective_movable_items": 3113,
+          "max_group_size": 1599,
+          "is_informative": true,
+          "q_observed": 0.007827547521857383,
+          "null_mean": 0.003244130266495265,
+          "null_ci_95": [
+            0.003026592983185259,
+            0.0034772634720064816
+          ],
+          "q_excess": 0.004583417255362118,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N2",
+          "level_name": "N1 + Majority Label",
+          "n_groups": 6,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 6,
+          "effective_movable_items": 3113,
+          "max_group_size": 811,
+          "is_informative": true,
+          "q_observed": 0.007827547521857383,
+          "null_mean": 0.0060120310968333635,
+          "null_ci_95": [
+            0.005711865325963934,
+            0.00632147470339285
+          ],
+          "q_excess": 0.0018155164250240191,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N3",
+          "level_name": "N2 + Entropy Quintile",
+          "n_groups": 30,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 30,
+          "effective_movable_items": 3113,
+          "max_group_size": 244,
+          "is_informative": true,
+          "q_observed": 0.007827547521857383,
+          "null_mean": 0.00690455109588759,
+          "null_ci_95": [
+            0.006614306430752185,
+            0.007208059277165007
+          ],
+          "q_excess": 0.000922996425969793,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N4",
+          "level_name": "N3 + Top-2 Label Pair + Margin Bin",
+          "n_groups": 160,
+          "n_singleton_groups": 13,
+          "n_non_singleton_groups": 147,
+          "effective_movable_items": 3100,
+          "max_group_size": 113,
+          "is_informative": true,
+          "q_observed": 0.007827547521857383,
+          "null_mean": 0.007703462293622927,
+          "null_ci_95": [
+            0.007474209156415363,
+            0.007939053897974028
+          ],
+          "q_excess": 0.00012408522823445598,
+          "p_value_monte_carlo": 0.14538546145385461
+        },
+        {
+          "level_id": "N5",
+          "level_name": "N4 + Exact 100-Vote Profile",
+          "n_groups": 1941,
+          "n_singleton_groups": 1300,
+          "n_non_singleton_groups": 641,
+          "effective_movable_items": 1813,
+          "max_group_size": 13,
+          "is_informative": true,
+          "q_observed": 0.007827547521857383,
+          "null_mean": 0.007846601785230825,
+          "null_ci_95": [
+            0.007804095446572859,
+            0.007888903377254335
+          ],
+          "q_excess": -0.0000190542633734421,
+          "p_value_monte_carlo": 0.8135186481351865
+        }
+      ]
+    },
+    "model_xlnet-large": {
+      "condition_name": "model_xlnet-large",
+      "nll": 0.947430885921659,
+      "jsd_bits": 0.05672654579932843,
+      "q_observed": 0.013319089112940555,
+      "null_ladder": [
+        {
+          "level_id": "N0",
+          "level_name": "Global Identity Permutation",
+          "n_groups": 1,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 1,
+          "effective_movable_items": 3113,
+          "max_group_size": 3113,
+          "is_informative": true,
+          "q_observed": 0.013319089112940555,
+          "null_mean": 0.003213892508003823,
+          "null_ci_95": [
+            0.0029940299390210138,
+            0.003443665390774995
+          ],
+          "q_excess": 0.010105196604936733,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N1",
+          "level_name": "Dataset Stratified (SNLI/MNLI)",
+          "n_groups": 2,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 2,
+          "effective_movable_items": 3113,
+          "max_group_size": 1599,
+          "is_informative": true,
+          "q_observed": 0.013319089112940555,
+          "null_mean": 0.0032672037835330433,
+          "null_ci_95": [
+            0.0030459257034588967,
+            0.0034979168653654896
+          ],
+          "q_excess": 0.010051885329407512,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N2",
+          "level_name": "N1 + Majority Label",
+          "n_groups": 6,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 6,
+          "effective_movable_items": 3113,
+          "max_group_size": 811,
+          "is_informative": true,
+          "q_observed": 0.013319089112940555,
+          "null_mean": 0.007331384263357456,
+          "null_ci_95": [
+            0.006983320227063341,
+            0.00769152530952569
+          ],
+          "q_excess": 0.005987704849583099,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N3",
+          "level_name": "N2 + Entropy Quintile",
+          "n_groups": 30,
+          "n_singleton_groups": 0,
+          "n_non_singleton_groups": 30,
+          "effective_movable_items": 3113,
+          "max_group_size": 244,
+          "is_informative": true,
+          "q_observed": 0.013319089112940555,
+          "null_mean": 0.009899193724801305,
+          "null_ci_95": [
+            0.009531107132543806,
+            0.010285955326428491
+          ],
+          "q_excess": 0.003419895388139251,
+          "p_value_monte_carlo": 0.00009999000099990002
+        },
+        {
+          "level_id": "N4",
+          "level_name": "N3 + Top-2 Label Pair + Margin Bin",
+          "n_groups": 160,
+          "n_singleton_groups": 13,
+          "n_non_singleton_groups": 147,
+          "effective_movable_items": 3100,
+          "max_group_size": 113,
+          "is_informative": true,
+          "q_observed": 0.013319089112940555,
+          "null_mean": 0.0127240339824315,
+          "null_ci_95": [
+            0.012392468591342807,
+            0.013064052077935562
+          ],
+          "q_excess": 0.0005950551305090555,
+          "p_value_monte_carlo": 0.0004999500049995
+        },
+        {
+          "level_id": "N5",
+          "level_name": "N4 + Exact 100-Vote Profile",
+          "n_groups": 1941,
+          "n_singleton_groups": 1300,
+          "n_non_singleton_groups": 641,
+          "effective_movable_items": 1813,
+          "max_group_size": 13,
+          "is_informative": true,
+          "q_observed": 0.013319089112940555,
+          "null_mean": 0.013341066826013059,
+          "null_ci_95": [
+            0.013288079364016677,
+            0.013393322282838037
+          ],
+          "q_excess": -0.000021977713072503235,
+          "p_value_monte_carlo": 0.7945205479452054
+        }
+      ]
+    }
+  }
+}

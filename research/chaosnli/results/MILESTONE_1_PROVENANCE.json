@@ -1,0 +1,33 @@
+{
+  "milestone": "Milestone 1 \u2014 Full-Data Confirmation",
+  "status": "full_data_runs_complete_audit_pending",
+  "dataset_release": "chaosnli-canonical-2026-08-02",
+  "object_count": 3113,
+  "object_id_sha256": "121c49cbd40b171d100ba88c1a23d809818c28bad9249bea99a52ec8f5af19d6",
+  "support_matrix_sha256": "94e483e714d92f039f817389d948cbf41b7970077b56f852491832605dccc96f",
+  "q_hh_relational": 0.038987226212620456,
+  "experiments": {
+    "E005": {
+      "d_size_matched_family_point": 0.0211,
+      "d_size_95_ci": [
+        0.0166,
+        0.0257
+      ],
+      "p_boot_gt_zero": 1.0,
+      "ladder_levels": 6
+    },
+    "E007": {
+      "subsets_evaluated": 511,
+      "best_single_model": "bart-large",
+      "best_single_r_norm": 0.3793,
+      "best_pair_r_norm": 0.5382,
+      "best_triplet_r_norm": 0.6472,
+      "grand_coalition_r_norm": 0.8444
+    },
+    "E008": {
+      "cross_validation": "5fold_dataset_label_entropy_stratified",
+      "n_restarts_per_fold": 20,
+      "k18_r_normalized": 1.0087
+    }
+  }
+}

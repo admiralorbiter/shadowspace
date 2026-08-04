@@ -1,0 +1,124 @@
+{
+  "n_folds": 5,
+  "coalition_selection_frequency": [
+    {
+      "size": 1,
+      "models": [
+        "bart-large"
+      ],
+      "r_normalized": 0.379349155613232,
+      "nll": 0.8626835800122775,
+      "selection_frequency_across_folds": 1.0
+    },
+    {
+      "size": 2,
+      "models": [
+        "bart-large",
+        "roberta-large"
+      ],
+      "r_normalized": 0.5381871621251721,
+      "nll": 0.7456315050172673,
+      "selection_frequency_across_folds": 1.0
+    },
+    {
+      "size": 3,
+      "models": [
+        "bart-large",
+        "roberta-large",
+        "xlnet-large"
+      ],
+      "r_normalized": 0.6471702960061995,
+      "nll": 0.7170955512721745,
+      "selection_frequency_across_folds": 1.0
+    },
+    {
+      "size": 4,
+      "models": [
+        "bart-large",
+        "roberta-large",
+        "xlnet-large",
+        "albert-xxlarge"
+      ],
+      "r_normalized": 0.7133694136730389,
+      "nll": 0.7081880321405772,
+      "selection_frequency_across_folds": 1.0
+    },
+    {
+      "size": 5,
+      "models": [
+        "bart-large",
+        "roberta-large",
+        "xlnet-large",
+        "albert-xxlarge",
+        "bert-large"
+      ],
+      "r_normalized": 0.7332465688594922,
+      "nll": 0.7045665421571203,
+      "selection_frequency_across_folds": 1.0
+    },
+    {
+      "size": 6,
+      "models": [
+        "bart-large",
+        "roberta-large",
+        "xlnet-large",
+        "albert-xxlarge",
+        "bert-large",
+        "roberta-base"
+      ],
+      "r_normalized": 0.7769249485076871,
+      "nll": 0.7037747733702635,
+      "selection_frequency_across_folds": 1.0
+    },
+    {
+      "size": 7,
+      "models": [
+        "bart-large",
+        "roberta-large",
+        "xlnet-large",
+        "albert-xxlarge",
+        "bert-large",
+        "roberta-base",
+        "xlnet-base"
+      ],
+      "r_normalized": 0.8020291067149425,
+      "nll": 0.7035288936038061,
+      "selection_frequency_across_folds": 1.0
+    },
+    {
+      "size": 8,
+      "models": [
+        "bart-large",
+        "roberta-large",
+        "xlnet-large",
+        "albert-xxlarge",
+        "bert-large",
+        "roberta-base",
+        "xlnet-base",
+        "distilbert"
+      ],
+      "r_normalized": 0.8155900391006699,
+      "nll": 0.7042448887804029,
+      "selection_frequency_across_folds": 1.0
+    },
+    {
+      "size": 9,
+      "models": [
+        "bart-large",
+        "roberta-large",
+        "xlnet-large",
+        "albert-xxlarge",
+        "bert-large",
+        "roberta-base",
+        "xlnet-base",
+        "distilbert",
+        "bert-base"
+      ],
+      "r_normalized": 0.8443578580025387,
+      "nll": 0.7057096802134459,
+      "selection_frequency_across_folds": 1.0
+    }
+  ],
+  "all_nine_coalition_r_normalized": 0.8444,
+  "e003_anchor_triplet_r_normalized": 0.6472
+}

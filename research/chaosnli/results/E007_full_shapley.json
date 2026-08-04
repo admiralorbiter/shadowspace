@@ -1,0 +1,69 @@
+{
+  "experiment_id": "E007",
+  "subset": "full",
+  "shapley_attributions": [
+    {
+      "model_name": "bart-large",
+      "shapley_r_normalized": 0.16279790788752116,
+      "shapley_nll_reduction": 0.0735126229840859,
+      "shapley_q_support": 0.006180950182300769,
+      "shapley_q_excess": 0.0058239093349708605
+    },
+    {
+      "model_name": "roberta-large",
+      "shapley_r_normalized": 0.14485832632301984,
+      "shapley_nll_reduction": 0.06454321842549143,
+      "shapley_q_support": 0.005539182128308607,
+      "shapley_q_excess": 0.005182141280978698
+    },
+    {
+      "model_name": "xlnet-large",
+      "shapley_r_normalized": 0.12216720880686412,
+      "shapley_nll_reduction": 0.05703296842972635,
+      "shapley_q_support": 0.00472743329911256,
+      "shapley_q_excess": 0.004370392451782651
+    },
+    {
+      "model_name": "albert-xxlarge",
+      "shapley_r_normalized": 0.1037320317400645,
+      "shapley_nll_reduction": 0.04987059718939184,
+      "shapley_q_support": 0.004067935881704998,
+      "shapley_q_excess": 0.003710895034375091
+    },
+    {
+      "model_name": "bert-large",
+      "shapley_r_normalized": 0.09269671491374044,
+      "shapley_nll_reduction": 0.03693697809972578,
+      "shapley_q_support": 0.0036731600181011867,
+      "shapley_q_excess": 0.00331611917077128
+    },
+    {
+      "model_name": "roberta-base",
+      "shapley_r_normalized": 0.0722447228053151,
+      "shapley_nll_reduction": 0.03076860367973011,
+      "shapley_q_support": 0.0029415133445990687,
+      "shapley_q_excess": 0.002584472497269161
+    },
+    {
+      "model_name": "xlnet-base",
+      "shapley_r_normalized": 0.0648747169488498,
+      "shapley_nll_reduction": 0.01794869350951383,
+      "shapley_q_support": 0.002677859797307087,
+      "shapley_q_excess": 0.002320818949977179
+    },
+    {
+      "model_name": "distilbert",
+      "shapley_r_normalized": 0.04871283762413785,
+      "shapley_nll_reduction": 0.01236932269801232,
+      "shapley_q_support": 0.002099687011850323,
+      "shapley_q_excess": 0.0017426461645204151
+    },
+    {
+      "model_name": "bert-base",
+      "shapley_r_normalized": 0.032273390953026004,
+      "shapley_nll_reduction": 0.002068778124564678,
+      "shapley_q_support": 0.0015115845713951715,
+      "shapley_q_excess": 0.0011545437240652633
+    }
+  ]
+}
