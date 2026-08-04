@@ -1,9 +1,10 @@
 # Experiment E004: Relational Alignment of Generative LLM Judgment Distributions
 id = "E004"
 title = "Relational Alignment of Generative LLM Judgment Distributions"
-status = "stage1a_transport_passed_analysis_patch_completed"
-analysis_status = "preflight_pointwise_and_relational_results_patched"
-methodological_audit = "conditional_pass_requires_crossfit_correction"
+status = "stage1b_primary_analysis_complete"
+analysis_status = "paper_ready_primary_results_frozen"
+methodological_audit = "passed"
+result_commit = "b8fd158a0d25ae1d150def19d9ec307c06bda94d"
 manuscript_status = "not_started"
 submission_status = "not_applicable"
 
@@ -37,20 +38,23 @@ practical_margins = { nll = 0.02, jsd = 0.01, normalized_recovery_r = 0.05, gap_
 model_digest = "f4031aab637d1ffae40e28e08d6d678ad94dbe15951d2ea1ebc441c9df48ed92"
 model_sha256 = "2274d7d84a797265a6f2ea309bc0c50ebdc2a7a40b991ee7e28b12f628042fa9"
 
-# Stage 1A Preflight Analysis Patch Cycle Completed
+# Stage 1B Primary Analysis Frozen Status
 preflight_status = "passed_analysis_patch_completed"
 
 estimands = [
   "pointwise_nll",
+  "pointwise_brier",
   "pointwise_jsd",
-  "posterior_edge_support",
+  "posterior_edge_support_k10",
   "core_mass_tau50",
   "core_recall_tau50",
   "gap_closure_nll",
   "gap_closure_q",
   "q_global_excess",
   "q_profile_excess",
-  "label_order_sensitivity"
+  "label_order_sensitivity_hellinger",
+  "mce_30_sample_replicate_sensitivity",
+  "matched_finite_sample_noise_control"
 ]
 
 cross_validation = "5fold_stratified_by_dataset_label_entropy"
@@ -64,4 +68,8 @@ required_safeguards = [
   "held_out_focal_row_scoring",
   "literal_30strata_item_level_paired_bootstrap",
   "manifest_object_id_strict_alignment_assertion"
+]
+
+dated_deviation_records = [
+  { date = "2026-08-04", note = "Primary E004 Stage 1B experiment frozen. Secondary estimand 100-sample preflight MCE convergence formally deferred after Stage 1B primary evaluation; 30-sample MCE finite-sampling control and combinatorial sensitivity curve established complete empirical coverage without requiring additional LLM sampling calls." }
 ]

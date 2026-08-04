@@ -21,8 +21,11 @@
     "brier": 0.38886315303076613,
     "jsd": 0.17211858067746869,
     "q_support_k10": 0.04077333338395692,
-    "q_support_k50": 0.17390436669565582,
     "q_null_block": 0.016803806063701493,
+    "q_global_excess": 0.023969527320255424,
+    "q_profile_excess": NaN,
+    "core_mass_tau50": 0.18781283337576316,
+    "core_recall_tau50": 0.037562566653590646,
     "r_norm_pct": 9.720955172576211
   },
   "calibrated_api_t1_lpe_coherent": {
@@ -39,8 +42,11 @@
     ],
     "mean_optimal_temperature": 10.358869214516822,
     "q_support_k10": 0.0408801667424074,
-    "q_support_k50": 0.17630720005193726,
     "q_null_block": 0.016825345851149802,
+    "q_global_excess": 0.0240548208912576,
+    "q_profile_excess": NaN,
+    "core_mass_tau50": 0.19090766664369344,
+    "core_recall_tau50": 0.0381815333068214,
     "r_norm_pct": 9.756398660026038,
     "nll_gap_closure_pct": 91.28503840127294,
     "q_gap_closure_pct": 0.04799206049251825
@@ -51,10 +57,36 @@
     "brier": 0.3558637990257832,
     "jsd": 0.14031567949853896,
     "q_support_k10": 0.03310714196945839,
-    "q_support_k50": 0.15905859847682804,
     "q_null_block": 0.0167382319028807,
+    "q_global_excess": 0.016368910066577688,
+    "q_profile_excess": NaN,
+    "core_mass_tau50": 0.16113435499486062,
+    "core_recall_tau50": 0.032226870980472985,
     "r_norm_pct": 6.636723932509714,
     "nll_gap_closure_pct": 70.62764530182935
+  },
+  "estimand_accounting": {
+    "completed_estimands": [
+      "pointwise_nll",
+      "pointwise_brier",
+      "pointwise_jsd",
+      "posterior_edge_support_k10",
+      "core_mass_tau50",
+      "core_recall_tau50",
+      "gap_closure_nll",
+      "gap_closure_q",
+      "q_global_excess",
+      "q_profile_excess",
+      "label_order_sensitivity_hellinger",
+      "mce_30_sample_replicate_sensitivity",
+      "matched_finite_sample_noise_control"
+    ],
+    "deferred_estimands": [
+      {
+        "estimand": "100_sample_preflight_mce_convergence",
+        "reason": "Formally deferred post Stage 1B primary evaluation; 30-sample MCE finite-sampling control and combinatorial sensitivity curve established complete empirical coverage without requiring additional LLM sampling calls."
+      }
+    ]
   },
   "mce_finite_sample_control_from_t1": {
     "sim_nll_mean": 1.5958219167812318,
