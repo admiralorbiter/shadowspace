@@ -8,7 +8,7 @@ from research.holonomy.experiments.e001_planted_curvature import (
     run_e001_monte_carlo_sweeps,
     run_e001_planted_curvature_experiment,
 )
-from research.holonomy.geometry.connection import ConnectionEstimator, ParallelTransportMap
+from research.holonomy.geometry.connection import ConnectionEstimator, EstimatorIdentifiabilityError, ParallelTransportMap
 from research.holonomy.geometry.holonomy import evaluate_holonomy
 from research.holonomy.geometry.parallel_transport import PathTransport
 
@@ -37,9 +37,13 @@ def test_tls_estimator_numerical_fallback():
     src = np.array([[1.0, 1.0], [2.0, 2.0], [3.0, 3.0]], dtype=np.float64)
     tgt = np.array([[2.0, 1.0], [4.0, 2.0], [6.0, 3.0]], dtype=np.float64)
 
-    t_map = estimator.estimate_total_least_squares_transport("singular", "s", "t", src, tgt)
+    with pytest.raises(EstimatorIdentifiabilityError):
+        estimator.estimate_total_least_squares_transport("singular", "s", "t", src, tgt, strict_identifiability=True)
+
+    t_map = estimator.estimate_total_least_squares_transport("singular", "s", "t", src, tgt, strict_identifiability=False)
     assert t_map.matrix_2d.shape == (2, 2)
     assert not np.isnan(t_map.matrix_2d).any()
+
 
 
 def test_3x3_homogeneous_affine_composition():

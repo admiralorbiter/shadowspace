@@ -83,6 +83,7 @@ class HuggingFaceNLIAdapter:
         self.model = None
         self.adapter = None
         self.is_loaded = False
+        self.load_error: str | None = None
 
     def load(self) -> bool:
         """Attempts to load tokenizer and sequence classification model from HuggingFace."""
@@ -100,13 +101,55 @@ class HuggingFaceNLIAdapter:
                 id2label = {int(k): str(v) for k, v in id2label.items()}
             self.adapter = NLIModelAdapter(id2label)
             self.is_loaded = True
+            self.load_error = None
             return True
         except Exception as err:
-            if not self.use_mock_fallback:
-                raise err
+            self.load_error = str(err)
             self.adapter = NLIModelAdapter()
             self.is_loaded = False
+            if not self.use_mock_fallback:
+                raise RuntimeError(
+                    f"Failed to load requested live model '{self.model_name}' and use_mock_fallback=False: {err}"
+                ) from err
             return False
+
+    def get_provenance_metadata(self) -> Dict[str, str | bool | None]:
+        """Returns runtime model environment and loading provenance."""
+        transformers_ver = None
+        torch_ver = None
+        try:
+            import transformers
+            transformers_ver = getattr(transformers, "__version__", None)
+        except ImportError:
+            pass
+        try:
+            import torch
+            torch_ver = getattr(torch, "__version__", None)
+        except ImportError:
+            pass
+
+        device_str = None
+        dtype_str = None
+        if self.is_loaded and self.model:
+            try:
+                param = next(self.model.parameters())
+                device_str = str(param.device)
+                dtype_str = str(param.dtype)
+            except Exception:
+                pass
+
+        return {
+            "model_requested": self.model_name,
+            "model_resolved": self.model_name if self.is_loaded else None,
+            "adapter_mode": "huggingface_live" if self.is_loaded else ("mock_fallback" if self.use_mock_fallback else "failed"),
+            "is_loaded": self.is_loaded,
+            "use_mock_fallback": self.use_mock_fallback,
+            "transformers_version": transformers_ver,
+            "torch_version": torch_ver,
+            "device": device_str,
+            "dtype": dtype_str,
+            "load_error": self.load_error,
+        }
 
     def predict(self, premise: str, hypothesis: str) -> NDArray[np.float64]:
         """Runs inference and returns aligned [E, N, C] probability vector."""
@@ -123,3 +166,4 @@ class HuggingFaceNLIAdapter:
             probs = torch.softmax(logits, dim=-1).cpu().numpy()[0]
 
         return self.adapter.align_probabilities(probs)
+

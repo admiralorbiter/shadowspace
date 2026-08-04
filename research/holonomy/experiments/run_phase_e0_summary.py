@@ -129,10 +129,12 @@ def main() -> None:
         and e2_res.test_orbit_count >= 1
     )
     print(f"\n[6] Phase E2-A1 Natural Language Model Audit Pilot (Tier 1 Reversible Entity Renaming):")
+    print(f"    - Adapter Mode: {e2_res.adapter_mode}")
     print(f"    - Active Orbits: {e2_res.num_active_orbits}")
     print(f"    - Textual Path Closure Rate: {e2_res.text_path_closure_rate * 100:.1f}%")
     print(f"    - Train/Test Orbit Split: {e2_res.train_orbit_count} Train / {e2_res.test_orbit_count} Test")
-    print(f"    - Mean Held-Out Return Residual: {e2_res.mean_held_out_return_residual:.6f} -> {'PASSED' if e2_pass else 'FAILED'}")
+    print(f"    - Estimator Identifiable: {e2_res.estimator_identifiable} (Min Design Rank: {e2_res.min_edge_design_rank})")
+    print(f"    - Mean Held-Out Return Residual: {e2_res.mean_held_out_return_residual} -> {'PASSED' if e2_pass else 'FAILED'}")
 
     all_passed = bool(
         flat_pass and all(curvature_results) and mc_all_pass and thm1_pass and h0_pass and glue_pass and e2_pass
@@ -168,15 +170,21 @@ def main() -> None:
             "incoherent_score": float(score_incoherent),
         },
         "natural_language_audit_summary": {
-            "adapter_mode": "deterministic_sha256_mock",
+            "adapter_mode": e2_res.adapter_mode,
+            "is_live_model": e2_res.is_live_model,
             "model_name": e2_res.model_name,
             "num_active_orbits": e2_res.num_active_orbits,
             "text_path_closure_rate": e2_res.text_path_closure_rate,
             "train_orbit_count": e2_res.train_orbit_count,
             "test_orbit_count": e2_res.test_orbit_count,
-            "mean_held_out_return_residual": e2_res.mean_held_out_return_residual,
+            "estimator_identifiable": e2_res.estimator_identifiable,
+            "min_edge_design_rank": e2_res.min_edge_design_rank,
+            "max_edge_condition_number": None if np.isinf(e2_res.max_edge_condition_number) else e2_res.max_edge_condition_number,
+            "mean_held_out_return_residual": None if np.isnan(e2_res.mean_held_out_return_residual) else e2_res.mean_held_out_return_residual,
             "artificial_curvature_detected": e2_res.artificial_curvature_detected,
+            "provenance": e2_res.provenance,
         },
+
         "monte_carlo_sweeps": [
             {
                 "sample_size": sw.sample_size,

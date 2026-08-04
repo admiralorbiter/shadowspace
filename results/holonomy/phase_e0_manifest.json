@@ -1,11 +1,11 @@
 {
-  "timestamp_utc": "2026-08-04T23:29:50.040908+00:00",
+  "timestamp_utc": "2026-08-04T23:49:13.914595+00:00",
   "phase": "E2-A1",
-  "git_commit_sha": "d4b95c3ce05ebc722c789fb200d320925abff1e4",
+  "git_commit_sha": "c99e1acf9b11f2b090cef05e49c444ad13d7c51f",
   "environment": {
-    "python_version": "3.13.7",
+    "python_version": "3.12.0",
     "numpy_version": "2.2.6",
-    "scipy_version": "1.16.2"
+    "scipy_version": "1.13.1"
   },
   "status": "PASSED",
   "gates": {
@@ -20,7 +20,7 @@
   "cohomology": {
     "dim_H0": 6,
     "dim_H1": 0,
-    "fiedler_value": 0.0005248330063550637
+    "fiedler_value": 0.000524833006354737
   },
   "glue_ood": {
     "coherent_score": 7.249992751495086e-14,
@@ -28,27 +28,39 @@
   },
   "natural_language_audit_summary": {
     "adapter_mode": "deterministic_sha256_mock",
+    "is_live_model": false,
     "model_name": "roberta-large-mnli",
     "num_active_orbits": 15,
     "text_path_closure_rate": 1.0,
     "train_orbit_count": 9,
     "test_orbit_count": 3,
-    "mean_held_out_return_residual": 6.084347686672467e+24,
-    "artificial_curvature_detected": true
+    "estimator_identifiable": false,
+    "min_edge_design_rank": 1,
+    "max_edge_condition_number": null,
+    "mean_held_out_return_residual": null,
+    "artificial_curvature_detected": false,
+    "provenance": {
+      "model_requested": "roberta-large-mnli",
+      "model_resolved": null,
+      "adapter_mode": "deterministic_sha256_mock",
+      "is_loaded": false,
+      "use_mock_fallback": true,
+      "identifiability_error": "Edge 'rename_a' design matrix is ill-conditioned (cond=5.23e+13 > 1.00e+06)."
+    }
   },
   "monte_carlo_sweeps": [
     {
       "sample_size": 50,
       "perturbation_radius": 0.02,
       "measurement_noise": 0.005,
-      "ols_matrix_bias_norm": 0.07266020285264557,
-      "tls_matrix_bias_norm": 0.02341088437266139,
-      "ols_edge_matrix_rmse": 0.05783897754858238,
-      "tls_edge_matrix_rmse": 0.05144600066006274,
-      "ols_matrix_holonomy_rmse": 0.41960945004182093,
+      "ols_matrix_bias_norm": 0.07266020285264553,
+      "tls_matrix_bias_norm": 0.02341088437266138,
+      "ols_edge_matrix_rmse": 0.05783897754858242,
+      "tls_edge_matrix_rmse": 0.051446000660062746,
+      "ols_matrix_holonomy_rmse": 0.419609450041821,
       "tls_matrix_holonomy_rmse": 0.2598609949644649,
-      "ols_curvature_stat_rmse": 0.08467187523457723,
-      "tls_curvature_stat_rmse": 0.14024076128977356,
+      "ols_curvature_stat_rmse": 0.08467187523457732,
+      "tls_curvature_stat_rmse": 0.1402407612897736,
       "ols_false_positive_rate": 0.12,
       "tls_false_positive_rate": 0.06,
       "ols_detection_power": 0.62,
@@ -58,14 +70,14 @@
       "sample_size": 250,
       "perturbation_radius": 0.02,
       "measurement_noise": 0.005,
-      "ols_matrix_bias_norm": 0.08525994984231225,
-      "tls_matrix_bias_norm": 0.004625434045085184,
-      "ols_edge_matrix_rmse": 0.04747609508866546,
-      "tls_edge_matrix_rmse": 0.022633827495812303,
-      "ols_matrix_holonomy_rmse": 0.37505328811254846,
-      "tls_matrix_holonomy_rmse": 0.09539501096581354,
-      "ols_curvature_stat_rmse": 0.06075313321607172,
-      "tls_curvature_stat_rmse": 0.050235390891248476,
+      "ols_matrix_bias_norm": 0.08525994984231229,
+      "tls_matrix_bias_norm": 0.004625434045085004,
+      "ols_edge_matrix_rmse": 0.04747609508866547,
+      "tls_edge_matrix_rmse": 0.022633827495812307,
+      "ols_matrix_holonomy_rmse": 0.3750532881125481,
+      "tls_matrix_holonomy_rmse": 0.09539501096581357,
+      "ols_curvature_stat_rmse": 0.060753133216071835,
+      "tls_curvature_stat_rmse": 0.05023539089124862,
       "ols_false_positive_rate": 0.14,
       "tls_false_positive_rate": 0.02,
       "ols_detection_power": 1.0,
