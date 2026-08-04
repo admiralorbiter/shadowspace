@@ -1,0 +1,1157 @@
+{
+  "n_items": 3113,
+  "models": {
+    "albert-xxlarge": {
+      "n_valid_cells": 15,
+      "area_compression_mean": 1.1286798180067437,
+      "anisotropic_flattening_mean": 0.3329295620191418,
+      "conditional_dispersion_trace_mean": 0.13421919019968206,
+      "grid_cells": [
+        {
+          "bin_center_x": 0.10753041362530413,
+          "bin_center_y": 0.01797371458462594,
+          "n_items": 411,
+          "area_compression": 1.6893271868299629,
+          "anisotropic_ratio": 0.32502749928739927,
+          "conditional_dispersion_trace": 0.10255846603117559
+        },
+        {
+          "bin_center_x": 0.2964904862579281,
+          "bin_center_y": 0.03394526635552535,
+          "n_items": 473,
+          "area_compression": 0.508056904982166,
+          "anisotropic_ratio": 0.18869016111329703,
+          "conditional_dispersion_trace": 0.13929753304567186
+        },
+        {
+          "bin_center_x": 0.31229729729729727,
+          "bin_center_y": 0.2492748797379533,
+          "n_items": 37,
+          "area_compression": 1.0646649721580848,
+          "anisotropic_ratio": 0.38851985999144695,
+          "conditional_dispersion_trace": 0.16496305684190027
+        },
+        {
+          "bin_center_x": 0.3227272727272727,
+          "bin_center_y": 0.41884137710301933,
+          "n_items": 22,
+          "area_compression": 1.514181050021053,
+          "anisotropic_ratio": 0.29283348831979494,
+          "conditional_dispersion_trace": 0.16157260889461605
+        },
+        {
+          "bin_center_x": 0.498355091383812,
+          "bin_center_y": 0.04110794214308379,
+          "n_items": 383,
+          "area_compression": 0.37250725535354157,
+          "anisotropic_ratio": 0.1573478678530678,
+          "conditional_dispersion_trace": 0.13396962889406297
+        },
+        {
+          "bin_center_x": 0.49589285714285714,
+          "bin_center_y": 0.25485890454227766,
+          "n_items": 56,
+          "area_compression": 1.425682307974323,
+          "anisotropic_ratio": 0.4847646248415711,
+          "conditional_dispersion_trace": 0.20819580698761525
+        },
+        {
+          "bin_center_x": 0.5226829268292684,
+          "bin_center_y": 0.4389270217229423,
+          "n_items": 41,
+          "area_compression": 3.918283128793718,
+          "anisotropic_ratio": 0.4958299482742398,
+          "conditional_dispersion_trace": 0.16482087914859014
+        },
+        {
+          "bin_center_x": 0.5238461538461539,
+          "bin_center_y": 0.6190083116896157,
+          "n_items": 65,
+          "area_compression": 0.04570345130442192,
+          "anisotropic_ratio": 0.16706944454361644,
+          "conditional_dispersion_trace": 0.09478689144066937
+        },
+        {
+          "bin_center_x": 0.5400349650349651,
+          "bin_center_y": 0.7677345485157573,
+          "n_items": 143,
+          "area_compression": 1.0486210947217423,
+          "anisotropic_ratio": 0.20753089280411083,
+          "conditional_dispersion_trace": 0.05611559130720029
+        },
+        {
+          "bin_center_x": 0.7008049535603715,
+          "bin_center_y": 0.04617014691383292,
+          "n_items": 323,
+          "area_compression": 0.6317975125743478,
+          "anisotropic_ratio": 0.6632377237947138,
+          "conditional_dispersion_trace": 0.10119875842423279
+        },
+        {
+          "bin_center_x": 0.7252290076335879,
+          "bin_center_y": 0.26053481803927275,
+          "n_items": 131,
+          "area_compression": 1.6380569369976972,
+          "anisotropic_ratio": 0.7687464180968703,
+          "conditional_dispersion_trace": 0.18929048621437305
+        },
+        {
+          "bin_center_x": 0.7092941176470587,
+          "bin_center_y": 0.4340994788695174,
+          "n_items": 255,
+          "area_compression": 1.2790045437957265,
+          "anisotropic_ratio": 0.2948322605906312,
+          "conditional_dispersion_trace": 0.14792464243726125
+        },
+        {
+          "bin_center_x": 0.6444117647058824,
+          "bin_center_y": 0.5918810595780537,
+          "n_items": 119,
+          "area_compression": 0.16329016079679604,
+          "anisotropic_ratio": 0.0439818859997074,
+          "conditional_dispersion_trace": 0.11279834786459259
+        },
+        {
+          "bin_center_x": 0.8972823779193206,
+          "bin_center_y": 0.054682793011781736,
+          "n_items": 471,
+          "area_compression": 0.8263504492455086,
+          "anisotropic_ratio": 0.3751766871041154,
+          "conditional_dispersion_trace": 0.06549309211399697
+        },
+        {
+          "bin_center_x": 0.8442901234567903,
+          "bin_center_y": 0.24211290455183473,
+          "n_items": 162,
+          "area_compression": 0.8046703145520632,
+          "anisotropic_ratio": 0.14035466767254529,
+          "conditional_dispersion_trace": 0.1703020633492723
+        }
+      ]
+    },
+    "bart-large": {
+      "n_valid_cells": 15,
+      "area_compression_mean": 0.8003153886585659,
+      "anisotropic_flattening_mean": 0.21670044171866723,
+      "conditional_dispersion_trace_mean": 0.12975520741556038,
+      "grid_cells": [
+        {
+          "bin_center_x": 0.10753041362530413,
+          "bin_center_y": 0.01797371458462594,
+          "n_items": 411,
+          "area_compression": 0.8049211711961282,
+          "anisotropic_ratio": 0.10917208380449167,
+          "conditional_dispersion_trace": 0.08621647166177997
+        },
+        {
+          "bin_center_x": 0.2964904862579281,
+          "bin_center_y": 0.03394526635552535,
+          "n_items": 473,
+          "area_compression": 0.8272666048367331,
+          "anisotropic_ratio": 0.32816938201693896,
+          "conditional_dispersion_trace": 0.1345367726049503
+        },
+        {
+          "bin_center_x": 0.31229729729729727,
+          "bin_center_y": 0.2492748797379533,
+          "n_items": 37,
+          "area_compression": 0.233389563788613,
+          "anisotropic_ratio": 0.12262831146887812,
+          "conditional_dispersion_trace": 0.19060718511772007
+        },
+        {
+          "bin_center_x": 0.3227272727272727,
+          "bin_center_y": 0.41884137710301933,
+          "n_items": 22,
+          "area_compression": 3.201113703722303,
+          "anisotropic_ratio": 0.1961101252072184,
+          "conditional_dispersion_trace": 0.20432133354080473
+        },
+        {
+          "bin_center_x": 0.498355091383812,
+          "bin_center_y": 0.04110794214308379,
+          "n_items": 383,
+          "area_compression": 0.06493682053301593,
+          "anisotropic_ratio": 0.03749141181727125,
+          "conditional_dispersion_trace": 0.12859387298503713
+        },
+        {
+          "bin_center_x": 0.49589285714285714,
+          "bin_center_y": 0.25485890454227766,
+          "n_items": 56,
+          "area_compression": 0.29881061307378576,
+          "anisotropic_ratio": 0.2868515384953131,
+          "conditional_dispersion_trace": 0.15983392204628338
+        },
+        {
+          "bin_center_x": 0.5226829268292684,
+          "bin_center_y": 0.4389270217229423,
+          "n_items": 41,
+          "area_compression": 2.18536607461434,
+          "anisotropic_ratio": 0.504975120518347,
+          "conditional_dispersion_trace": 0.17058870273317078
+        },
+        {
+          "bin_center_x": 0.5238461538461539,
+          "bin_center_y": 0.6190083116896157,
+          "n_items": 65,
+          "area_compression": 0.1336041120561573,
+          "anisotropic_ratio": 0.09992719075411552,
+          "conditional_dispersion_trace": 0.11255594995928425
+        },
+        {
+          "bin_center_x": 0.5400349650349651,
+          "bin_center_y": 0.7677345485157573,
+          "n_items": 143,
+          "area_compression": 0.4797558826571463,
+          "anisotropic_ratio": 0.17852849495026615,
+          "conditional_dispersion_trace": 0.030376197300108463
+        },
+        {
+          "bin_center_x": 0.7008049535603715,
+          "bin_center_y": 0.04617014691383292,
+          "n_items": 323,
+          "area_compression": 0.9416828606829786,
+          "anisotropic_ratio": 0.5940957743082321,
+          "conditional_dispersion_trace": 0.09884665036851939
+        },
+        {
+          "bin_center_x": 0.7252290076335879,
+          "bin_center_y": 0.26053481803927275,
+          "n_items": 131,
+          "area_compression": 0.4433950950340239,
+          "anisotropic_ratio": 0.28430297568479496,
+          "conditional_dispersion_trace": 0.17795356206664198
+        },
+        {
+          "bin_center_x": 0.7092941176470587,
+          "bin_center_y": 0.4340994788695174,
+          "n_items": 255,
+          "area_compression": 0.6979908355266392,
+          "anisotropic_ratio": 0.07820918373080192,
+          "conditional_dispersion_trace": 0.12943158602763627
+        },
+        {
+          "bin_center_x": 0.6444117647058824,
+          "bin_center_y": 0.5918810595780537,
+          "n_items": 119,
+          "area_compression": 0.09144576349370159,
+          "anisotropic_ratio": 0.0649263871827017,
+          "conditional_dispersion_trace": 0.0923461195664228
+        },
+        {
+          "bin_center_x": 0.8972823779193206,
+          "bin_center_y": 0.054682793011781736,
+          "n_items": 471,
+          "area_compression": 0.9916614060005334,
+          "anisotropic_ratio": 0.2530129517682978,
+          "conditional_dispersion_trace": 0.07425593423836001
+        },
+        {
+          "bin_center_x": 0.8442901234567903,
+          "bin_center_y": 0.24211290455183473,
+          "n_items": 162,
+          "area_compression": 0.6093903226623893,
+          "anisotropic_ratio": 0.11210569407233972,
+          "conditional_dispersion_trace": 0.15586385101668618
+        }
+      ]
+    },
+    "bert-base": {
+      "n_valid_cells": 15,
+      "area_compression_mean": 0.9663911344464082,
+      "anisotropic_flattening_mean": 0.2537062475101884,
+      "conditional_dispersion_trace_mean": 0.1336611544788459,
+      "grid_cells": [
+        {
+          "bin_center_x": 0.10753041362530413,
+          "bin_center_y": 0.01797371458462594,
+          "n_items": 411,
+          "area_compression": 1.936915479674931,
+          "anisotropic_ratio": 0.2954726345009662,
+          "conditional_dispersion_trace": 0.10083026860477765
+        },
+        {
+          "bin_center_x": 0.2964904862579281,
+          "bin_center_y": 0.03394526635552535,
+          "n_items": 473,
+          "area_compression": 0.47368884634749,
+          "anisotropic_ratio": 0.17778541369221415,
+          "conditional_dispersion_trace": 0.13365660743848073
+        },
+        {
+          "bin_center_x": 0.31229729729729727,
+          "bin_center_y": 0.2492748797379533,
+          "n_items": 37,
+          "area_compression": 2.297417296901214,
+          "anisotropic_ratio": 0.40487203744374095,
+          "conditional_dispersion_trace": 0.19315476906578555
+        },
+        {
+          "bin_center_x": 0.3227272727272727,
+          "bin_center_y": 0.41884137710301933,
+          "n_items": 22,
+          "area_compression": 0.9252174210618407,
+          "anisotropic_ratio": 0.13832201090681306,
+          "conditional_dispersion_trace": 0.171159816993886
+        },
+        {
+          "bin_center_x": 0.498355091383812,
+          "bin_center_y": 0.04110794214308379,
+          "n_items": 383,
+          "area_compression": 0.179731836608191,
+          "anisotropic_ratio": 0.0684004378676361,
+          "conditional_dispersion_trace": 0.1310570129148083
+        },
+        {
+          "bin_center_x": 0.49589285714285714,
+          "bin_center_y": 0.25485890454227766,
+          "n_items": 56,
+          "area_compression": 0.08533874782507063,
+          "anisotropic_ratio": 0.07661374285662396,
+          "conditional_dispersion_trace": 0.14961346333225584
+        },
+        {
+          "bin_center_x": 0.5226829268292684,
+          "bin_center_y": 0.4389270217229423,
+          "n_items": 41,
+          "area_compression": 1.0020155635791128,
+          "anisotropic_ratio": 0.26315771037823354,
+          "conditional_dispersion_trace": 0.1448306507368683
+        },
+        {
+          "bin_center_x": 0.5238461538461539,
+          "bin_center_y": 0.6190083116896157,
+          "n_items": 65,
+          "area_compression": 0.6157065267397259,
+          "anisotropic_ratio": 0.5686726360654792,
+          "conditional_dispersion_trace": 0.1652378370482278
+        },
+        {
+          "bin_center_x": 0.5400349650349651,
+          "bin_center_y": 0.7677345485157573,
+          "n_items": 143,
+          "area_compression": 2.0704690389017344,
+          "anisotropic_ratio": 0.17571180322974836,
+          "conditional_dispersion_trace": 0.06814060739744149
+        },
+        {
+          "bin_center_x": 0.7008049535603715,
+          "bin_center_y": 0.04617014691383292,
+          "n_items": 323,
+          "area_compression": 0.7930859831544643,
+          "anisotropic_ratio": 0.3295655451035052,
+          "conditional_dispersion_trace": 0.1102647860942112
+        },
+        {
+          "bin_center_x": 0.7252290076335879,
+          "bin_center_y": 0.26053481803927275,
+          "n_items": 131,
+          "area_compression": 0.13127009484186983,
+          "anisotropic_ratio": 0.07528618390809785,
+          "conditional_dispersion_trace": 0.15666750140161056
+        },
+        {
+          "bin_center_x": 0.7092941176470587,
+          "bin_center_y": 0.4340994788695174,
+          "n_items": 255,
+          "area_compression": 1.5741123522646727,
+          "anisotropic_ratio": 0.19100724005067143,
+          "conditional_dispersion_trace": 0.12560365107320154
+        },
+        {
+          "bin_center_x": 0.6444117647058824,
+          "bin_center_y": 0.5918810595780537,
+          "n_items": 119,
+          "area_compression": 0.1426787428975476,
+          "anisotropic_ratio": 0.0117662350033446,
+          "conditional_dispersion_trace": 0.13341718771409344
+        },
+        {
+          "bin_center_x": 0.8972823779193206,
+          "bin_center_y": 0.054682793011781736,
+          "n_items": 471,
+          "area_compression": 0.999135170428359,
+          "anisotropic_ratio": 0.23099357974247273,
+          "conditional_dispersion_trace": 0.0865692629526012
+        },
+        {
+          "bin_center_x": 0.8442901234567903,
+          "bin_center_y": 0.24211290455183473,
+          "n_items": 162,
+          "area_compression": 1.2690839154699014,
+          "anisotropic_ratio": 0.7979665019032783,
+          "conditional_dispersion_trace": 0.1347138944144391
+        }
+      ]
+    },
+    "bert-large": {
+      "n_valid_cells": 15,
+      "area_compression_mean": 1.1806706411008816,
+      "anisotropic_flattening_mean": 0.2675766079815365,
+      "conditional_dispersion_trace_mean": 0.1370944699880658,
+      "grid_cells": [
+        {
+          "bin_center_x": 0.10753041362530413,
+          "bin_center_y": 0.01797371458462594,
+          "n_items": 411,
+          "area_compression": 1.925807118849903,
+          "anisotropic_ratio": 0.40751888713677586,
+          "conditional_dispersion_trace": 0.10074876820480563
+        },
+        {
+          "bin_center_x": 0.2964904862579281,
+          "bin_center_y": 0.03394526635552535,
+          "n_items": 473,
+          "area_compression": 0.84910125923721,
+          "anisotropic_ratio": 0.28540148093986245,
+          "conditional_dispersion_trace": 0.13734440998445863
+        },
+        {
+          "bin_center_x": 0.31229729729729727,
+          "bin_center_y": 0.2492748797379533,
+          "n_items": 37,
+          "area_compression": 1.5295274730591013,
+          "anisotropic_ratio": 0.4577735937518229,
+          "conditional_dispersion_trace": 0.1883633075153876
+        },
+        {
+          "bin_center_x": 0.3227272727272727,
+          "bin_center_y": 0.41884137710301933,
+          "n_items": 22,
+          "area_compression": 3.7081238552713005,
+          "anisotropic_ratio": 0.3846684191651158,
+          "conditional_dispersion_trace": 0.15960874229368777
+        },
+        {
+          "bin_center_x": 0.498355091383812,
+          "bin_center_y": 0.04110794214308379,
+          "n_items": 383,
+          "area_compression": 0.23185340314443542,
+          "anisotropic_ratio": 0.1064565718769747,
+          "conditional_dispersion_trace": 0.13293477831396464
+        },
+        {
+          "bin_center_x": 0.49589285714285714,
+          "bin_center_y": 0.25485890454227766,
+          "n_items": 56,
+          "area_compression": 0.28591583750176425,
+          "anisotropic_ratio": 0.25958931360476545,
+          "conditional_dispersion_trace": 0.16012330684773468
+        },
+        {
+          "bin_center_x": 0.5226829268292684,
+          "bin_center_y": 0.4389270217229423,
+          "n_items": 41,
+          "area_compression": 1.8638591897772634,
+          "anisotropic_ratio": 0.3774987942715998,
+          "conditional_dispersion_trace": 0.19196940227238463
+        },
+        {
+          "bin_center_x": 0.5238461538461539,
+          "bin_center_y": 0.6190083116896157,
+          "n_items": 65,
+          "area_compression": 0.24914662026869808,
+          "anisotropic_ratio": 0.17149736553395112,
+          "conditional_dispersion_trace": 0.14172133931016612
+        },
+        {
+          "bin_center_x": 0.5400349650349651,
+          "bin_center_y": 0.7677345485157573,
+          "n_items": 143,
+          "area_compression": 1.8113663837853067,
+          "anisotropic_ratio": 0.13980889139175728,
+          "conditional_dispersion_trace": 0.06388162288392606
+        },
+        {
+          "bin_center_x": 0.7008049535603715,
+          "bin_center_y": 0.04617014691383292,
+          "n_items": 323,
+          "area_compression": 0.7398691683761126,
+          "anisotropic_ratio": 0.2763685169361454,
+          "conditional_dispersion_trace": 0.10952946491573223
+        },
+        {
+          "bin_center_x": 0.7252290076335879,
+          "bin_center_y": 0.26053481803927275,
+          "n_items": 131,
+          "area_compression": 0.7420958017499558,
+          "anisotropic_ratio": 0.3876910747447867,
+          "conditional_dispersion_trace": 0.17300409839104658
+        },
+        {
+          "bin_center_x": 0.7092941176470587,
+          "bin_center_y": 0.4340994788695174,
+          "n_items": 255,
+          "area_compression": 1.4798774386682936,
+          "anisotropic_ratio": 0.21585009225656052,
+          "conditional_dispersion_trace": 0.12939016817559781
+        },
+        {
+          "bin_center_x": 0.6444117647058824,
+          "bin_center_y": 0.5918810595780537,
+          "n_items": 119,
+          "area_compression": 0.2951790353069725,
+          "anisotropic_ratio": 0.0405716280208188,
+          "conditional_dispersion_trace": 0.13100933535304415
+        },
+        {
+          "bin_center_x": 0.8972823779193206,
+          "bin_center_y": 0.054682793011781736,
+          "n_items": 471,
+          "area_compression": 1.004427616621335,
+          "anisotropic_ratio": 0.28279067126798796,
+          "conditional_dispersion_trace": 0.08147579141515204
+        },
+        {
+          "bin_center_x": 0.8442901234567903,
+          "bin_center_y": 0.24211290455183473,
+          "n_items": 162,
+          "area_compression": 0.9939094148955732,
+          "anisotropic_ratio": 0.22016381882412248,
+          "conditional_dispersion_trace": 0.15531251394389856
+        }
+      ]
+    },
+    "distilbert": {
+      "n_valid_cells": 15,
+      "area_compression_mean": 0.7503965086462744,
+      "anisotropic_flattening_mean": 0.19540732000342148,
+      "conditional_dispersion_trace_mean": 0.12742631615257086,
+      "grid_cells": [
+        {
+          "bin_center_x": 0.10753041362530413,
+          "bin_center_y": 0.01797371458462594,
+          "n_items": 411,
+          "area_compression": 1.8132493473372802,
+          "anisotropic_ratio": 0.3345515391347129,
+          "conditional_dispersion_trace": 0.09901173118933677
+        },
+        {
+          "bin_center_x": 0.2964904862579281,
+          "bin_center_y": 0.03394526635552535,
+          "n_items": 473,
+          "area_compression": 0.06352228840208356,
+          "anisotropic_ratio": 0.024966785776960092,
+          "conditional_dispersion_trace": 0.12398905690011505
+        },
+        {
+          "bin_center_x": 0.31229729729729727,
+          "bin_center_y": 0.2492748797379533,
+          "n_items": 37,
+          "area_compression": 0.04874131808012421,
+          "anisotropic_ratio": 0.014236117209793942,
+          "conditional_dispersion_trace": 0.1297725348295201
+        },
+        {
+          "bin_center_x": 0.3227272727272727,
+          "bin_center_y": 0.41884137710301933,
+          "n_items": 22,
+          "area_compression": 0.6961660634684175,
+          "anisotropic_ratio": 0.4034910404953097,
+          "conditional_dispersion_trace": 0.12948649996309292
+        },
+        {
+          "bin_center_x": 0.498355091383812,
+          "bin_center_y": 0.04110794214308379,
+          "n_items": 383,
+          "area_compression": 0.037704016528103686,
+          "anisotropic_ratio": 0.014049144593255335,
+          "conditional_dispersion_trace": 0.12749365417106295
+        },
+        {
+          "bin_center_x": 0.49589285714285714,
+          "bin_center_y": 0.25485890454227766,
+          "n_items": 56,
+          "area_compression": 0.35877936324239024,
+          "anisotropic_ratio": 0.49506542247311136,
+          "conditional_dispersion_trace": 0.14988561605478182
+        },
+        {
+          "bin_center_x": 0.5226829268292684,
+          "bin_center_y": 0.4389270217229423,
+          "n_items": 41,
+          "area_compression": 1.299454173571011,
+          "anisotropic_ratio": 0.3096153553508416,
+          "conditional_dispersion_trace": 0.13160132272626845
+        },
+        {
+          "bin_center_x": 0.5238461538461539,
+          "bin_center_y": 0.6190083116896157,
+          "n_items": 65,
+          "area_compression": 0.3627806421448512,
+          "anisotropic_ratio": 0.1631442447280436,
+          "conditional_dispersion_trace": 0.1666619439057528
+        },
+        {
+          "bin_center_x": 0.5400349650349651,
+          "bin_center_y": 0.7677345485157573,
+          "n_items": 143,
+          "area_compression": 2.6219485097248096,
+          "anisotropic_ratio": 0.11789134290594758,
+          "conditional_dispersion_trace": 0.10202146927532427
+        },
+        {
+          "bin_center_x": 0.7008049535603715,
+          "bin_center_y": 0.04617014691383292,
+          "n_items": 323,
+          "area_compression": 0.5746824939569061,
+          "anisotropic_ratio": 0.24069746725833072,
+          "conditional_dispersion_trace": 0.11117513197725297
+        },
+        {
+          "bin_center_x": 0.7252290076335879,
+          "bin_center_y": 0.26053481803927275,
+          "n_items": 131,
+          "area_compression": 0.26391880787830274,
+          "anisotropic_ratio": 0.17006056003817893,
+          "conditional_dispersion_trace": 0.15496121807817095
+        },
+        {
+          "bin_center_x": 0.7092941176470587,
+          "bin_center_y": 0.4340994788695174,
+          "n_items": 255,
+          "area_compression": 1.285588900172426,
+          "anisotropic_ratio": 0.19610462291359582,
+          "conditional_dispersion_trace": 0.12712779586413267
+        },
+        {
+          "bin_center_x": 0.6444117647058824,
+          "bin_center_y": 0.5918810595780537,
+          "n_items": 119,
+          "area_compression": 0.2693985040364602,
+          "anisotropic_ratio": 0.017182540324022322,
+          "conditional_dispersion_trace": 0.132433125816374
+        },
+        {
+          "bin_center_x": 0.8972823779193206,
+          "bin_center_y": 0.054682793011781736,
+          "n_items": 471,
+          "area_compression": 1.1531882084441052,
+          "anisotropic_ratio": 0.3425513400038474,
+          "conditional_dispersion_trace": 0.09229866255525916
+        },
+        {
+          "bin_center_x": 0.8442901234567903,
+          "bin_center_y": 0.24211290455183473,
+          "n_items": 162,
+          "area_compression": 0.4068249927068471,
+          "anisotropic_ratio": 0.08750227684537032,
+          "conditional_dispersion_trace": 0.13347497898211794
+        }
+      ]
+    },
+    "roberta-base": {
+      "n_valid_cells": 15,
+      "area_compression_mean": 1.2018873729961637,
+      "anisotropic_flattening_mean": 0.3567645636736906,
+      "conditional_dispersion_trace_mean": 0.1346040036201503,
+      "grid_cells": [
+        {
+          "bin_center_x": 0.10753041362530413,
+          "bin_center_y": 0.01797371458462594,
+          "n_items": 411,
+          "area_compression": 2.0750170403679036,
+          "anisotropic_ratio": 0.6355809110905289,
+          "conditional_dispersion_trace": 0.09225051492636832
+        },
+        {
+          "bin_center_x": 0.2964904862579281,
+          "bin_center_y": 0.03394526635552535,
+          "n_items": 473,
+          "area_compression": 0.6931559047876107,
+          "anisotropic_ratio": 0.29128910015515086,
+          "conditional_dispersion_trace": 0.1366659425900452
+        },
+        {
+          "bin_center_x": 0.31229729729729727,
+          "bin_center_y": 0.2492748797379533,
+          "n_items": 37,
+          "area_compression": 1.566679054699439,
+          "anisotropic_ratio": 0.4630789018869732,
+          "conditional_dispersion_trace": 0.18043278114290728
+        },
+        {
+          "bin_center_x": 0.3227272727272727,
+          "bin_center_y": 0.41884137710301933,
+          "n_items": 22,
+          "area_compression": 4.4660864517181595,
+          "anisotropic_ratio": 0.402667332529302,
+          "conditional_dispersion_trace": 0.19944968414654024
+        },
+        {
+          "bin_center_x": 0.498355091383812,
+          "bin_center_y": 0.04110794214308379,
+          "n_items": 383,
+          "area_compression": 0.2432320210856668,
+          "anisotropic_ratio": 0.07785994825623122,
+          "conditional_dispersion_trace": 0.13699387859769876
+        },
+        {
+          "bin_center_x": 0.49589285714285714,
+          "bin_center_y": 0.25485890454227766,
+          "n_items": 56,
+          "area_compression": 0.39252509930447077,
+          "anisotropic_ratio": 0.7506162778192429,
+          "conditional_dispersion_trace": 0.1719286033174033
+        },
+        {
+          "bin_center_x": 0.5226829268292684,
+          "bin_center_y": 0.4389270217229423,
+          "n_items": 41,
+          "area_compression": 2.244513872751777,
+          "anisotropic_ratio": 0.4806963138302003,
+          "conditional_dispersion_trace": 0.16409546759182397
+        },
+        {
+          "bin_center_x": 0.5238461538461539,
+          "bin_center_y": 0.6190083116896157,
+          "n_items": 65,
+          "area_compression": 0.17278819972195886,
+          "anisotropic_ratio": 0.32088039807811686,
+          "conditional_dispersion_trace": 0.13928105652355532
+        },
+        {
+          "bin_center_x": 0.5400349650349651,
+          "bin_center_y": 0.7677345485157573,
+          "n_items": 143,
+          "area_compression": 1.3860492082459568,
+          "anisotropic_ratio": 0.14896067958201928,
+          "conditional_dispersion_trace": 0.07435938373775941
+        },
+        {
+          "bin_center_x": 0.7008049535603715,
+          "bin_center_y": 0.04617014691383292,
+          "n_items": 323,
+          "area_compression": 0.44300184964307104,
+          "anisotropic_ratio": 0.38491051564378653,
+          "conditional_dispersion_trace": 0.10203334819483102
+        },
+        {
+          "bin_center_x": 0.7252290076335879,
+          "bin_center_y": 0.26053481803927275,
+          "n_items": 131,
+          "area_compression": 0.36916883284707397,
+          "anisotropic_ratio": 0.24624193963839935,
+          "conditional_dispersion_trace": 0.15876834248279503
+        },
+        {
+          "bin_center_x": 0.7092941176470587,
+          "bin_center_y": 0.4340994788695174,
+          "n_items": 255,
+          "area_compression": 1.5862015089393184,
+          "anisotropic_ratio": 0.28886855721341936,
+          "conditional_dispersion_trace": 0.12940691505897695
+        },
+        {
+          "bin_center_x": 0.6444117647058824,
+          "bin_center_y": 0.5918810595780537,
+          "n_items": 119,
+          "area_compression": 0.02020478548239779,
+          "anisotropic_ratio": 0.004716494161536382,
+          "conditional_dispersion_trace": 0.114977888865152
+        },
+        {
+          "bin_center_x": 0.8972823779193206,
+          "bin_center_y": 0.054682793011781736,
+          "n_items": 471,
+          "area_compression": 1.1064997715949267,
+          "anisotropic_ratio": 0.2656025069583601,
+          "conditional_dispersion_trace": 0.0808674902908367
+        },
+        {
+          "bin_center_x": 0.8442901234567903,
+          "bin_center_y": 0.24211290455183473,
+          "n_items": 162,
+          "area_compression": 1.263186993752721,
+          "anisotropic_ratio": 0.589498578262091,
+          "conditional_dispersion_trace": 0.13754875683556103
+        }
+      ]
+    },
+    "roberta-large": {
+      "n_valid_cells": 15,
+      "area_compression_mean": 0.8726938316318874,
+      "anisotropic_flattening_mean": 0.2836386973897809,
+      "conditional_dispersion_trace_mean": 0.12878995528497147,
+      "grid_cells": [
+        {
+          "bin_center_x": 0.10753041362530413,
+          "bin_center_y": 0.01797371458462594,
+          "n_items": 411,
+          "area_compression": 0.6856584795192306,
+          "anisotropic_ratio": 0.13219625827483839,
+          "conditional_dispersion_trace": 0.0730919838908812
+        },
+        {
+          "bin_center_x": 0.2964904862579281,
+          "bin_center_y": 0.03394526635552535,
+          "n_items": 473,
+          "area_compression": 0.455470680444522,
+          "anisotropic_ratio": 0.15399000833748025,
+          "conditional_dispersion_trace": 0.13210216005349662
+        },
+        {
+          "bin_center_x": 0.31229729729729727,
+          "bin_center_y": 0.2492748797379533,
+          "n_items": 37,
+          "area_compression": 0.18482320445080852,
+          "anisotropic_ratio": 0.06533086174755245,
+          "conditional_dispersion_trace": 0.19100700387526676
+        },
+        {
+          "bin_center_x": 0.3227272727272727,
+          "bin_center_y": 0.41884137710301933,
+          "n_items": 22,
+          "area_compression": 2.007014000583492,
+          "anisotropic_ratio": 0.11992500799173662,
+          "conditional_dispersion_trace": 0.20182238690403975
+        },
+        {
+          "bin_center_x": 0.498355091383812,
+          "bin_center_y": 0.04110794214308379,
+          "n_items": 383,
+          "area_compression": 0.038919576385398204,
+          "anisotropic_ratio": 0.02618295214608117,
+          "conditional_dispersion_trace": 0.13147664827666852
+        },
+        {
+          "bin_center_x": 0.49589285714285714,
+          "bin_center_y": 0.25485890454227766,
+          "n_items": 56,
+          "area_compression": 0.7533537912891927,
+          "anisotropic_ratio": 0.3454387842522943,
+          "conditional_dispersion_trace": 0.1733061262582622
+        },
+        {
+          "bin_center_x": 0.5226829268292684,
+          "bin_center_y": 0.4389270217229423,
+          "n_items": 41,
+          "area_compression": 2.6622211260215742,
+          "anisotropic_ratio": 0.331704288264067,
+          "conditional_dispersion_trace": 0.15372200062558972
+        },
+        {
+          "bin_center_x": 0.5238461538461539,
+          "bin_center_y": 0.6190083116896157,
+          "n_items": 65,
+          "area_compression": 0.14103209090590796,
+          "anisotropic_ratio": 0.3145970197891437,
+          "conditional_dispersion_trace": 0.09398126974691705
+        },
+        {
+          "bin_center_x": 0.5400349650349651,
+          "bin_center_y": 0.7677345485157573,
+          "n_items": 143,
+          "area_compression": 0.9512770896181766,
+          "anisotropic_ratio": 0.1903137000860713,
+          "conditional_dispersion_trace": 0.03337357136919304
+        },
+        {
+          "bin_center_x": 0.7008049535603715,
+          "bin_center_y": 0.04617014691383292,
+          "n_items": 323,
+          "area_compression": 0.3008467767377856,
+          "anisotropic_ratio": 0.5143796930265266,
+          "conditional_dispersion_trace": 0.0885288744581619
+        },
+        {
+          "bin_center_x": 0.7252290076335879,
+          "bin_center_y": 0.26053481803927275,
+          "n_items": 131,
+          "area_compression": 1.0823384883673337,
+          "anisotropic_ratio": 0.875330830352663,
+          "conditional_dispersion_trace": 0.1864702168164109
+        },
+        {
+          "bin_center_x": 0.7092941176470587,
+          "bin_center_y": 0.4340994788695174,
+          "n_items": 255,
+          "area_compression": 1.7978895388429095,
+          "anisotropic_ratio": 0.23751719513376582,
+          "conditional_dispersion_trace": 0.13414159651806057
+        },
+        {
+          "bin_center_x": 0.6444117647058824,
+          "bin_center_y": 0.5918810595780537,
+          "n_items": 119,
+          "area_compression": 0.32565282608865603,
+          "anisotropic_ratio": 0.180954574138129,
+          "conditional_dispersion_trace": 0.09861686157571928
+        },
+        {
+          "bin_center_x": 0.8972823779193206,
+          "bin_center_y": 0.054682793011781736,
+          "n_items": 471,
+          "area_compression": 0.9333903639546198,
+          "anisotropic_ratio": 0.31812973680718665,
+          "conditional_dispersion_trace": 0.06732291189888209
+        },
+        {
+          "bin_center_x": 0.8442901234567903,
+          "bin_center_y": 0.24211290455183473,
+          "n_items": 162,
+          "area_compression": 0.7705194412687011,
+          "anisotropic_ratio": 0.44858955049917704,
+          "conditional_dispersion_trace": 0.17288571700702293
+        }
+      ]
+    },
+    "xlnet-base": {
+      "n_valid_cells": 15,
+      "area_compression_mean": 0.8828240921999679,
+      "anisotropic_flattening_mean": 0.25337948137945826,
+      "conditional_dispersion_trace_mean": 0.1352975744948826,
+      "grid_cells": [
+        {
+          "bin_center_x": 0.10753041362530413,
+          "bin_center_y": 0.01797371458462594,
+          "n_items": 411,
+          "area_compression": 1.7652082078472153,
+          "anisotropic_ratio": 0.4152304173417402,
+          "conditional_dispersion_trace": 0.09382610416833363
+        },
+        {
+          "bin_center_x": 0.2964904862579281,
+          "bin_center_y": 0.03394526635552535,
+          "n_items": 473,
+          "area_compression": 0.3733540057633889,
+          "anisotropic_ratio": 0.1418535815285937,
+          "conditional_dispersion_trace": 0.13544742851847671
+        },
+        {
+          "bin_center_x": 0.31229729729729727,
+          "bin_center_y": 0.2492748797379533,
+          "n_items": 37,
+          "area_compression": 1.4117805288303882,
+          "anisotropic_ratio": 0.38210718132077903,
+          "conditional_dispersion_trace": 0.19016945602794116
+        },
+        {
+          "bin_center_x": 0.3227272727272727,
+          "bin_center_y": 0.41884137710301933,
+          "n_items": 22,
+          "area_compression": 1.1436336591721712,
+          "anisotropic_ratio": 0.2305422716224217,
+          "conditional_dispersion_trace": 0.1533243192473185
+        },
+        {
+          "bin_center_x": 0.498355091383812,
+          "bin_center_y": 0.04110794214308379,
+          "n_items": 383,
+          "area_compression": 0.23632494258406125,
+          "anisotropic_ratio": 0.10920388600532299,
+          "conditional_dispersion_trace": 0.14010052684058738
+        },
+        {
+          "bin_center_x": 0.49589285714285714,
+          "bin_center_y": 0.25485890454227766,
+          "n_items": 56,
+          "area_compression": 0.10127221873965957,
+          "anisotropic_ratio": 0.06933737573700745,
+          "conditional_dispersion_trace": 0.16557775675813508
+        },
+        {
+          "bin_center_x": 0.5226829268292684,
+          "bin_center_y": 0.4389270217229423,
+          "n_items": 41,
+          "area_compression": 2.4131770093378835,
+          "anisotropic_ratio": 0.4659183639366704,
+          "conditional_dispersion_trace": 0.17647367737619846
+        },
+        {
+          "bin_center_x": 0.5238461538461539,
+          "bin_center_y": 0.6190083116896157,
+          "n_items": 65,
+          "area_compression": 0.24266165757706246,
+          "anisotropic_ratio": 0.22956396649902683,
+          "conditional_dispersion_trace": 0.15704079496323498
+        },
+        {
+          "bin_center_x": 0.5400349650349651,
+          "bin_center_y": 0.7677345485157573,
+          "n_items": 143,
+          "area_compression": 0.8447594968672294,
+          "anisotropic_ratio": 0.16650777920448315,
+          "conditional_dispersion_trace": 0.06435105374146279
+        },
+        {
+          "bin_center_x": 0.7008049535603715,
+          "bin_center_y": 0.04617014691383292,
+          "n_items": 323,
+          "area_compression": 0.7676230536620574,
+          "anisotropic_ratio": 0.41190726640731545,
+          "conditional_dispersion_trace": 0.10874617131766481
+        },
+        {
+          "bin_center_x": 0.7252290076335879,
+          "bin_center_y": 0.26053481803927275,
+          "n_items": 131,
+          "area_compression": 0.18265648183858613,
+          "anisotropic_ratio": 0.10665019969075869,
+          "conditional_dispersion_trace": 0.17182490948169965
+        },
+        {
+          "bin_center_x": 0.7092941176470587,
+          "bin_center_y": 0.4340994788695174,
+          "n_items": 255,
+          "area_compression": 1.632710256851491,
+          "anisotropic_ratio": 0.3713566283952766,
+          "conditional_dispersion_trace": 0.13378487549524998
+        },
+        {
+          "bin_center_x": 0.6444117647058824,
+          "bin_center_y": 0.5918810595780537,
+          "n_items": 119,
+          "area_compression": 0.2308074151573294,
+          "anisotropic_ratio": 0.03960276042588464,
+          "conditional_dispersion_trace": 0.11373761312515823
+        },
+        {
+          "bin_center_x": 0.8972823779193206,
+          "bin_center_y": 0.054682793011781736,
+          "n_items": 471,
+          "area_compression": 0.8486513140765947,
+          "anisotropic_ratio": 0.3078501568014601,
+          "conditional_dispersion_trace": 0.07845945855086003
+        },
+        {
+          "bin_center_x": 0.8442901234567903,
+          "bin_center_y": 0.24211290455183473,
+          "n_items": 162,
+          "area_compression": 1.0477411346944012,
+          "anisotropic_ratio": 0.353060385775133,
+          "conditional_dispersion_trace": 0.14659947181091773
+        }
+      ]
+    },
+    "xlnet-large": {
+      "n_valid_cells": 15,
+      "area_compression_mean": 0.7476260648934709,
+      "anisotropic_flattening_mean": 0.2831675676504964,
+      "conditional_dispersion_trace_mean": 0.13099711967855363,
+      "grid_cells": [
+        {
+          "bin_center_x": 0.10753041362530413,
+          "bin_center_y": 0.01797371458462594,
+          "n_items": 411,
+          "area_compression": 1.0144361664744161,
+          "anisotropic_ratio": 0.24541295119655104,
+          "conditional_dispersion_trace": 0.07917510186478646
+        },
+        {
+          "bin_center_x": 0.2964904862579281,
+          "bin_center_y": 0.03394526635552535,
+          "n_items": 473,
+          "area_compression": 0.5186509236708907,
+          "anisotropic_ratio": 0.19615781216916076,
+          "conditional_dispersion_trace": 0.13304662811188284
+        },
+        {
+          "bin_center_x": 0.31229729729729727,
+          "bin_center_y": 0.2492748797379533,
+          "n_items": 37,
+          "area_compression": 0.8710690046289978,
+          "anisotropic_ratio": 0.23491601489699088,
+          "conditional_dispersion_trace": 0.18170076916824385
+        },
+        {
+          "bin_center_x": 0.3227272727272727,
+          "bin_center_y": 0.41884137710301933,
+          "n_items": 22,
+          "area_compression": 1.3184244034763852,
+          "anisotropic_ratio": 0.05619672699929845,
+          "conditional_dispersion_trace": 0.18745220114433522
+        },
+        {
+          "bin_center_x": 0.498355091383812,
+          "bin_center_y": 0.04110794214308379,
+          "n_items": 383,
+          "area_compression": 0.2503736132580275,
+          "anisotropic_ratio": 0.11697227773542772,
+          "conditional_dispersion_trace": 0.1390894711695371
+        },
+        {
+          "bin_center_x": 0.49589285714285714,
+          "bin_center_y": 0.25485890454227766,
+          "n_items": 56,
+          "area_compression": 0.5439418718908559,
+          "anisotropic_ratio": 0.6249056965000133,
+          "conditional_dispersion_trace": 0.16584503562855363
+        },
+        {
+          "bin_center_x": 0.5226829268292684,
+          "bin_center_y": 0.4389270217229423,
+          "n_items": 41,
+          "area_compression": 1.7790475191355992,
+          "anisotropic_ratio": 0.2630252475684048,
+          "conditional_dispersion_trace": 0.19321771160556228
+        },
+        {
+          "bin_center_x": 0.5238461538461539,
+          "bin_center_y": 0.6190083116896157,
+          "n_items": 65,
+          "area_compression": 0.10104003538306269,
+          "anisotropic_ratio": 0.20445076332804984,
+          "conditional_dispersion_trace": 0.09748094598203697
+        },
+        {
+          "bin_center_x": 0.5400349650349651,
+          "bin_center_y": 0.7677345485157573,
+          "n_items": 143,
+          "area_compression": 0.6574904166301864,
+          "anisotropic_ratio": 0.26117239748583465,
+          "conditional_dispersion_trace": 0.03893816344521684
+        },
+        {
+          "bin_center_x": 0.7008049535603715,
+          "bin_center_y": 0.04617014691383292,
+          "n_items": 323,
+          "area_compression": 0.8173609647346713,
+          "anisotropic_ratio": 0.9187768291272453,
+          "conditional_dispersion_trace": 0.09421108214357549
+        },
+        {
+          "bin_center_x": 0.7252290076335879,
+          "bin_center_y": 0.26053481803927275,
+          "n_items": 131,
+          "area_compression": 0.9975289844999102,
+          "anisotropic_ratio": 0.4720244161158641,
+          "conditional_dispersion_trace": 0.18648918068425913
+        },
+        {
+          "bin_center_x": 0.7092941176470587,
+          "bin_center_y": 0.4340994788695174,
+          "n_items": 255,
+          "area_compression": 0.8235399582089306,
+          "anisotropic_ratio": 0.19052334718445538,
+          "conditional_dispersion_trace": 0.12705309233592404
+        },
+        {
+          "bin_center_x": 0.6444117647058824,
+          "bin_center_y": 0.5918810595780537,
+          "n_items": 119,
+          "area_compression": 0.22838965238958617,
+          "anisotropic_ratio": 0.08263246194456525,
+          "conditional_dispersion_trace": 0.11270920109483215
+        },
+        {
+          "bin_center_x": 0.8972823779193206,
+          "bin_center_y": 0.054682793011781736,
+          "n_items": 471,
+          "area_compression": 1.006514209869412,
+          "anisotropic_ratio": 0.31961395284681166,
+          "conditional_dispersion_trace": 0.07171435515859038
+        },
+        {
+          "bin_center_x": 0.8442901234567903,
+          "bin_center_y": 0.24211290455183473,
+          "n_items": 162,
+          "area_compression": 0.2865832491511328,
+          "anisotropic_ratio": 0.06073261965877321,
+          "conditional_dispersion_trace": 0.15683385564096808
+        }
+      ]
+    }
+  }
+}

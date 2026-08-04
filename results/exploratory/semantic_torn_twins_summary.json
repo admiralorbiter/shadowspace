@@ -1,0 +1,754 @@
+{
+  "n_items": 3113,
+  "total_distribution_twins_pairs": 73586,
+  "total_semantic_twins_pairs": 34,
+  "models": {
+    "albert-xxlarge": {
+      "distribution_twins_torn_count": 32115,
+      "distribution_twins_torn_pct": 43.64281249150654,
+      "semantic_twins_torn_count": 15,
+      "semantic_twins_torn_pct": 44.11764705882353,
+      "examples": [
+        {
+          "item_i": {
+            "id": "chaosnli_snli_5071819265.jpg#0r1n",
+            "prem": "A Person in a dark shirt and shorts and a white helmet is jumping a bicycle over a mound of dirt.",
+            "hyp": "A kid jumps a bike over a dirt ramp."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_7724666074.jpg#3r1n",
+            "prem": "A person is riding a colorful dirt bike on dirt hills.",
+            "hyp": "A boy races his dirt bike outside."
+          },
+          "human_distance": 0.017750894310201142,
+          "model_distance": 0.5815844795684924,
+          "text_similarity": 0.483654459474044
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_2021602343.jpg#2r1e",
+            "prem": "A boy with a basketballs glowers at the camera.",
+            "hyp": "The boy scowls"
+          },
+          "item_j": {
+            "id": "chaosnli_snli_3260088697.jpg#4r1e",
+            "prem": "A boy plays in the surf.",
+            "hyp": "A boy is playing on the beach."
+          },
+          "human_distance": 0.026436841658929434,
+          "model_distance": 0.5942751171351619,
+          "text_similarity": 0.5050906619675328
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_578644583.jpg#4r1e",
+            "prem": "The boy jumps into the blue pool.",
+            "hyp": "There is a boy outside."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_684255145.jpg#4r1n",
+            "prem": "A child does a handstand in a pool.",
+            "hyp": "A small boy is in a pool."
+          },
+          "human_distance": 0.015465463532895912,
+          "model_distance": 0.7877978090729282,
+          "text_similarity": 0.5211688511021507
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_2303609756.jpg#0r1n",
+            "prem": "A male gymnast from Romania, wearing all red, holding himself vertically while upside-down on rings suspended in the air.",
+            "hyp": "The gymnast is a professional."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_4716768732.jpg#4r1n",
+            "prem": "Gymnast photographed in mid flip.",
+            "hyp": "gymnast does a back flip."
+          },
+          "human_distance": 0.0,
+          "model_distance": 0.577127371766742,
+          "text_similarity": 0.40672591943107195
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_7172108149.jpg#3r1e",
+            "prem": "Two men and one woman are performing music on a stage.",
+            "hyp": "Musicians are spreading their passion on stage"
+          },
+          "item_j": {
+            "id": "chaosnli_snli_7172108149.jpg#3r1n",
+            "prem": "Two men and one woman are performing music on a stage.",
+            "hyp": "Three musicians are performing at a concert"
+          },
+          "human_distance": 0.02970078774914409,
+          "model_distance": 0.6165251093937225,
+          "text_similarity": 0.7422716903612766
+        }
+      ]
+    },
+    "bart-large": {
+      "distribution_twins_torn_count": 30729,
+      "distribution_twins_torn_pct": 41.759302041149134,
+      "semantic_twins_torn_count": 15,
+      "semantic_twins_torn_pct": 44.11764705882353,
+      "examples": [
+        {
+          "item_i": {
+            "id": "chaosnli_snli_2021602343.jpg#2r1e",
+            "prem": "A boy with a basketballs glowers at the camera.",
+            "hyp": "The boy scowls"
+          },
+          "item_j": {
+            "id": "chaosnli_snli_3260088697.jpg#4r1e",
+            "prem": "A boy plays in the surf.",
+            "hyp": "A boy is playing on the beach."
+          },
+          "human_distance": 0.026436841658929434,
+          "model_distance": 0.3662735787787444,
+          "text_similarity": 0.5050906619675328
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_189521182.jpg#4r1e",
+            "prem": "girl sitting in fire for a show",
+            "hyp": "The girl is a performer for the show."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_3373615534.jpg#2r1e",
+            "prem": "A young girl washes an automobile.",
+            "hyp": "The girl is outside."
+          },
+          "human_distance": 0.049202433549092456,
+          "model_distance": 0.4326673982298039,
+          "text_similarity": 0.48869676185740357
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_578644583.jpg#4r1e",
+            "prem": "The boy jumps into the blue pool.",
+            "hyp": "There is a boy outside."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_684255145.jpg#4r1n",
+            "prem": "A child does a handstand in a pool.",
+            "hyp": "A small boy is in a pool."
+          },
+          "human_distance": 0.015465463532895912,
+          "model_distance": 0.6650384599961034,
+          "text_similarity": 0.5211688511021507
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_5238554919.jpg#1r1c",
+            "prem": "A man in a blue shirt and a man helps the cyclist while the man in the gray jacket watches.",
+            "hyp": "A man is wearing a black shirt"
+          },
+          "item_j": {
+            "id": "chaosnli_snli_46601243.jpg#1r1c",
+            "prem": "While drinking a coupe of Red Stripe beers, a man with a gray t-shirt speaks to another man wearing a blue button up shirt.",
+            "hyp": "While drinking beer a man is dancing with another man"
+          },
+          "human_distance": 0.007769283698342809,
+          "model_distance": 0.3840630845356185,
+          "text_similarity": 0.4241819359335566
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_4756060669.jpg#3r1e",
+            "prem": "People are walking into a store.",
+            "hyp": "People are going shopping."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_1980882959.jpg#4r1e",
+            "prem": "Four people with shopping carts full of bags.",
+            "hyp": "Four people are together"
+          },
+          "human_distance": 0.014214128049918895,
+          "model_distance": 0.4132756534509655,
+          "text_similarity": 0.5531825563770543
+        }
+      ]
+    },
+    "bert-base": {
+      "distribution_twins_torn_count": 34809,
+      "distribution_twins_torn_pct": 47.30383496860816,
+      "semantic_twins_torn_count": 19,
+      "semantic_twins_torn_pct": 55.88235294117647,
+      "examples": [
+        {
+          "item_i": {
+            "id": "chaosnli_snli_3347666612.jpg#1r1n",
+            "prem": "Two children standing in the grass being sprayed by a hose.",
+            "hyp": "Two children are playing with water in the yard"
+          },
+          "item_j": {
+            "id": "chaosnli_snli_415657941.jpg#3r1e",
+            "prem": "Children playing on a playground.",
+            "hyp": "There are children playing outside."
+          },
+          "human_distance": 0.03434235301781434,
+          "model_distance": 0.5818615085546793,
+          "text_similarity": 0.4452862691263714
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_6233103167.jpg#3r1n",
+            "prem": "A surfer is surfing catches a wave.",
+            "hyp": "A surfer is riding a tsunami wave."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_6319053071.jpg#0r1n",
+            "prem": "A surfer wearing a red shirt takes on a huge blue wave.",
+            "hyp": "Surfer wipes out on large wave."
+          },
+          "human_distance": 0.0,
+          "model_distance": 0.49893082004382283,
+          "text_similarity": 0.7339171640475217
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_6956105362.jpg#3r1e",
+            "prem": "A young man is riding a dirt bike while standing up.",
+            "hyp": "The young man stands on the pedals of his dirt bike."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_4771381994.jpg#2r1e",
+            "prem": "A man on a bike under a large red umbrella gestures at a group of people.",
+            "hyp": "A guy is riding a bike."
+          },
+          "human_distance": 0.0406530488285487,
+          "model_distance": 0.7779286494368919,
+          "text_similarity": 0.441180733672536
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_189521182.jpg#4r1e",
+            "prem": "girl sitting in fire for a show",
+            "hyp": "The girl is a performer for the show."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_3373615534.jpg#2r1e",
+            "prem": "A young girl washes an automobile.",
+            "hyp": "The girl is outside."
+          },
+          "human_distance": 0.049202433549092456,
+          "model_distance": 0.4685331691424528,
+          "text_similarity": 0.48869676185740357
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_578644583.jpg#4r1e",
+            "prem": "The boy jumps into the blue pool.",
+            "hyp": "There is a boy outside."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_684255145.jpg#4r1n",
+            "prem": "A child does a handstand in a pool.",
+            "hyp": "A small boy is in a pool."
+          },
+          "human_distance": 0.015465463532895912,
+          "model_distance": 0.8028731938538463,
+          "text_similarity": 0.5211688511021507
+        }
+      ]
+    },
+    "bert-large": {
+      "distribution_twins_torn_count": 34100,
+      "distribution_twins_torn_pct": 46.340336477047266,
+      "semantic_twins_torn_count": 15,
+      "semantic_twins_torn_pct": 44.11764705882353,
+      "examples": [
+        {
+          "item_i": {
+            "id": "chaosnli_snli_2021602343.jpg#2r1e",
+            "prem": "A boy with a basketballs glowers at the camera.",
+            "hyp": "The boy scowls"
+          },
+          "item_j": {
+            "id": "chaosnli_snli_3260088697.jpg#4r1e",
+            "prem": "A boy plays in the surf.",
+            "hyp": "A boy is playing on the beach."
+          },
+          "human_distance": 0.026436841658929434,
+          "model_distance": 0.5600593993302806,
+          "text_similarity": 0.5050906619675328
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_189521182.jpg#4r1e",
+            "prem": "girl sitting in fire for a show",
+            "hyp": "The girl is a performer for the show."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_3373615534.jpg#2r1e",
+            "prem": "A young girl washes an automobile.",
+            "hyp": "The girl is outside."
+          },
+          "human_distance": 0.049202433549092456,
+          "model_distance": 0.4715506481551117,
+          "text_similarity": 0.48869676185740357
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_578644583.jpg#4r1e",
+            "prem": "The boy jumps into the blue pool.",
+            "hyp": "There is a boy outside."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_684255145.jpg#4r1n",
+            "prem": "A child does a handstand in a pool.",
+            "hyp": "A small boy is in a pool."
+          },
+          "human_distance": 0.015465463532895912,
+          "model_distance": 0.7643709170010772,
+          "text_similarity": 0.5211688511021507
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_4756060669.jpg#3r1e",
+            "prem": "People are walking into a store.",
+            "hyp": "People are going shopping."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_1980882959.jpg#4r1e",
+            "prem": "Four people with shopping carts full of bags.",
+            "hyp": "Four people are together"
+          },
+          "human_distance": 0.014214128049918895,
+          "model_distance": 0.7162110904829088,
+          "text_similarity": 0.5531825563770543
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_4922677937.jpg#3r1e",
+            "prem": "A group of 9 men and women walking upstairs.",
+            "hyp": "The group is in a building."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_3730260112.jpg#4r1e",
+            "prem": "3 people walking through a small field.",
+            "hyp": "A group of friends walking outside."
+          },
+          "human_distance": 0.023806629719885612,
+          "model_distance": 0.5776274251212588,
+          "text_similarity": 0.42169815139650846
+        }
+      ]
+    },
+    "distilbert": {
+      "distribution_twins_torn_count": 36633,
+      "distribution_twins_torn_pct": 49.78256733617808,
+      "semantic_twins_torn_count": 19,
+      "semantic_twins_torn_pct": 55.88235294117647,
+      "examples": [
+        {
+          "item_i": {
+            "id": "chaosnli_snli_3347666612.jpg#1r1n",
+            "prem": "Two children standing in the grass being sprayed by a hose.",
+            "hyp": "Two children are playing with water in the yard"
+          },
+          "item_j": {
+            "id": "chaosnli_snli_415657941.jpg#3r1e",
+            "prem": "Children playing on a playground.",
+            "hyp": "There are children playing outside."
+          },
+          "human_distance": 0.03434235301781434,
+          "model_distance": 0.42471726509809266,
+          "text_similarity": 0.4452862691263714
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_6233103167.jpg#3r1n",
+            "prem": "A surfer is surfing catches a wave.",
+            "hyp": "A surfer is riding a tsunami wave."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_6319053071.jpg#0r1n",
+            "prem": "A surfer wearing a red shirt takes on a huge blue wave.",
+            "hyp": "Surfer wipes out on large wave."
+          },
+          "human_distance": 0.0,
+          "model_distance": 0.5368224136505345,
+          "text_similarity": 0.7339171640475217
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_6956105362.jpg#3r1e",
+            "prem": "A young man is riding a dirt bike while standing up.",
+            "hyp": "The young man stands on the pedals of his dirt bike."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_4771381994.jpg#2r1e",
+            "prem": "A man on a bike under a large red umbrella gestures at a group of people.",
+            "hyp": "A guy is riding a bike."
+          },
+          "human_distance": 0.0406530488285487,
+          "model_distance": 0.6696365095868122,
+          "text_similarity": 0.441180733672536
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_2021602343.jpg#2r1e",
+            "prem": "A boy with a basketballs glowers at the camera.",
+            "hyp": "The boy scowls"
+          },
+          "item_j": {
+            "id": "chaosnli_snli_3260088697.jpg#4r1e",
+            "prem": "A boy plays in the surf.",
+            "hyp": "A boy is playing on the beach."
+          },
+          "human_distance": 0.026436841658929434,
+          "model_distance": 0.6598857843489317,
+          "text_similarity": 0.5050906619675328
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_189521182.jpg#4r1e",
+            "prem": "girl sitting in fire for a show",
+            "hyp": "The girl is a performer for the show."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_3373615534.jpg#2r1e",
+            "prem": "A young girl washes an automobile.",
+            "hyp": "The girl is outside."
+          },
+          "human_distance": 0.049202433549092456,
+          "model_distance": 0.5558808376467703,
+          "text_similarity": 0.48869676185740357
+        }
+      ]
+    },
+    "roberta-base": {
+      "distribution_twins_torn_count": 33010,
+      "distribution_twins_torn_pct": 44.85907645476041,
+      "semantic_twins_torn_count": 18,
+      "semantic_twins_torn_pct": 52.94117647058824,
+      "examples": [
+        {
+          "item_i": {
+            "id": "chaosnli_snli_3347666612.jpg#1r1n",
+            "prem": "Two children standing in the grass being sprayed by a hose.",
+            "hyp": "Two children are playing with water in the yard"
+          },
+          "item_j": {
+            "id": "chaosnli_snli_415657941.jpg#3r1e",
+            "prem": "Children playing on a playground.",
+            "hyp": "There are children playing outside."
+          },
+          "human_distance": 0.03434235301781434,
+          "model_distance": 0.3856637426836742,
+          "text_similarity": 0.4452862691263714
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_6956105362.jpg#3r1e",
+            "prem": "A young man is riding a dirt bike while standing up.",
+            "hyp": "The young man stands on the pedals of his dirt bike."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_4771381994.jpg#2r1e",
+            "prem": "A man on a bike under a large red umbrella gestures at a group of people.",
+            "hyp": "A guy is riding a bike."
+          },
+          "human_distance": 0.0406530488285487,
+          "model_distance": 0.4029394160076594,
+          "text_similarity": 0.441180733672536
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_2021602343.jpg#2r1e",
+            "prem": "A boy with a basketballs glowers at the camera.",
+            "hyp": "The boy scowls"
+          },
+          "item_j": {
+            "id": "chaosnli_snli_3260088697.jpg#4r1e",
+            "prem": "A boy plays in the surf.",
+            "hyp": "A boy is playing on the beach."
+          },
+          "human_distance": 0.026436841658929434,
+          "model_distance": 0.8693421710012835,
+          "text_similarity": 0.5050906619675328
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_578644583.jpg#4r1e",
+            "prem": "The boy jumps into the blue pool.",
+            "hyp": "There is a boy outside."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_684255145.jpg#4r1n",
+            "prem": "A child does a handstand in a pool.",
+            "hyp": "A small boy is in a pool."
+          },
+          "human_distance": 0.015465463532895912,
+          "model_distance": 0.7258766232641379,
+          "text_similarity": 0.5211688511021507
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_4701971823.jpg#0r1c",
+            "prem": "A group of teenagers enjoying cooling off in a fountain of water.",
+            "hyp": "The teenagers are skateboard surfing with a van."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_6029710737.jpg#0r1c",
+            "prem": "A group of teenagers are standing in front of some tents, most of them are holding skateboards.",
+            "hyp": "A group of teenagers are jumping"
+          },
+          "human_distance": 0.02359689722563316,
+          "model_distance": 0.36507404295259593,
+          "text_similarity": 0.5527828917314332
+        }
+      ]
+    },
+    "roberta-large": {
+      "distribution_twins_torn_count": 29809,
+      "distribution_twins_torn_pct": 40.50906422417307,
+      "semantic_twins_torn_count": 12,
+      "semantic_twins_torn_pct": 35.294117647058826,
+      "examples": [
+        {
+          "item_i": {
+            "id": "chaosnli_snli_3347666612.jpg#1r1n",
+            "prem": "Two children standing in the grass being sprayed by a hose.",
+            "hyp": "Two children are playing with water in the yard"
+          },
+          "item_j": {
+            "id": "chaosnli_snli_415657941.jpg#3r1e",
+            "prem": "Children playing on a playground.",
+            "hyp": "There are children playing outside."
+          },
+          "human_distance": 0.03434235301781434,
+          "model_distance": 0.5610405912968228,
+          "text_similarity": 0.4452862691263714
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_2021602343.jpg#2r1e",
+            "prem": "A boy with a basketballs glowers at the camera.",
+            "hyp": "The boy scowls"
+          },
+          "item_j": {
+            "id": "chaosnli_snli_3260088697.jpg#4r1e",
+            "prem": "A boy plays in the surf.",
+            "hyp": "A boy is playing on the beach."
+          },
+          "human_distance": 0.026436841658929434,
+          "model_distance": 0.512799778491046,
+          "text_similarity": 0.5050906619675328
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_578644583.jpg#4r1e",
+            "prem": "The boy jumps into the blue pool.",
+            "hyp": "There is a boy outside."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_684255145.jpg#4r1n",
+            "prem": "A child does a handstand in a pool.",
+            "hyp": "A small boy is in a pool."
+          },
+          "human_distance": 0.015465463532895912,
+          "model_distance": 0.6644168117838687,
+          "text_similarity": 0.5211688511021507
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_4922677937.jpg#3r1e",
+            "prem": "A group of 9 men and women walking upstairs.",
+            "hyp": "The group is in a building."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_3730260112.jpg#4r1e",
+            "prem": "3 people walking through a small field.",
+            "hyp": "A group of friends walking outside."
+          },
+          "human_distance": 0.023806629719885612,
+          "model_distance": 0.5555946945245165,
+          "text_similarity": 0.42169815139650846
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_7172108149.jpg#3r1e",
+            "prem": "Two men and one woman are performing music on a stage.",
+            "hyp": "Musicians are spreading their passion on stage"
+          },
+          "item_j": {
+            "id": "chaosnli_snli_7172108149.jpg#3r1n",
+            "prem": "Two men and one woman are performing music on a stage.",
+            "hyp": "Three musicians are performing at a concert"
+          },
+          "human_distance": 0.02970078774914409,
+          "model_distance": 0.4227055622216125,
+          "text_similarity": 0.7422716903612766
+        }
+      ]
+    },
+    "xlnet-base": {
+      "distribution_twins_torn_count": 35041,
+      "distribution_twins_torn_pct": 47.61911233114995,
+      "semantic_twins_torn_count": 16,
+      "semantic_twins_torn_pct": 47.05882352941176,
+      "examples": [
+        {
+          "item_i": {
+            "id": "chaosnli_snli_3347666612.jpg#1r1n",
+            "prem": "Two children standing in the grass being sprayed by a hose.",
+            "hyp": "Two children are playing with water in the yard"
+          },
+          "item_j": {
+            "id": "chaosnli_snli_415657941.jpg#3r1e",
+            "prem": "Children playing on a playground.",
+            "hyp": "There are children playing outside."
+          },
+          "human_distance": 0.03434235301781434,
+          "model_distance": 0.4233005237157186,
+          "text_similarity": 0.4452862691263714
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_2021602343.jpg#2r1e",
+            "prem": "A boy with a basketballs glowers at the camera.",
+            "hyp": "The boy scowls"
+          },
+          "item_j": {
+            "id": "chaosnli_snli_3260088697.jpg#4r1e",
+            "prem": "A boy plays in the surf.",
+            "hyp": "A boy is playing on the beach."
+          },
+          "human_distance": 0.026436841658929434,
+          "model_distance": 0.9124494491232726,
+          "text_similarity": 0.5050906619675328
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_189521182.jpg#4r1e",
+            "prem": "girl sitting in fire for a show",
+            "hyp": "The girl is a performer for the show."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_3373615534.jpg#2r1e",
+            "prem": "A young girl washes an automobile.",
+            "hyp": "The girl is outside."
+          },
+          "human_distance": 0.049202433549092456,
+          "model_distance": 0.41980895675264224,
+          "text_similarity": 0.48869676185740357
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_578644583.jpg#4r1e",
+            "prem": "The boy jumps into the blue pool.",
+            "hyp": "There is a boy outside."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_684255145.jpg#4r1n",
+            "prem": "A child does a handstand in a pool.",
+            "hyp": "A small boy is in a pool."
+          },
+          "human_distance": 0.015465463532895912,
+          "model_distance": 0.8198712180809041,
+          "text_similarity": 0.5211688511021507
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_4756060669.jpg#3r1e",
+            "prem": "People are walking into a store.",
+            "hyp": "People are going shopping."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_1980882959.jpg#4r1e",
+            "prem": "Four people with shopping carts full of bags.",
+            "hyp": "Four people are together"
+          },
+          "human_distance": 0.014214128049918895,
+          "model_distance": 0.391401795473915,
+          "text_similarity": 0.5531825563770543
+        }
+      ]
+    },
+    "xlnet-large": {
+      "distribution_twins_torn_count": 30878,
+      "distribution_twins_torn_pct": 41.9617862093333,
+      "semantic_twins_torn_count": 16,
+      "semantic_twins_torn_pct": 47.05882352941176,
+      "examples": [
+        {
+          "item_i": {
+            "id": "chaosnli_snli_2021602343.jpg#2r1e",
+            "prem": "A boy with a basketballs glowers at the camera.",
+            "hyp": "The boy scowls"
+          },
+          "item_j": {
+            "id": "chaosnli_snli_3260088697.jpg#4r1e",
+            "prem": "A boy plays in the surf.",
+            "hyp": "A boy is playing on the beach."
+          },
+          "human_distance": 0.026436841658929434,
+          "model_distance": 0.41773976132663265,
+          "text_similarity": 0.5050906619675328
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_578644583.jpg#4r1e",
+            "prem": "The boy jumps into the blue pool.",
+            "hyp": "There is a boy outside."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_684255145.jpg#4r1n",
+            "prem": "A child does a handstand in a pool.",
+            "hyp": "A small boy is in a pool."
+          },
+          "human_distance": 0.015465463532895912,
+          "model_distance": 0.7512766089903922,
+          "text_similarity": 0.5211688511021507
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_4756060669.jpg#3r1e",
+            "prem": "People are walking into a store.",
+            "hyp": "People are going shopping."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_1980882959.jpg#4r1e",
+            "prem": "Four people with shopping carts full of bags.",
+            "hyp": "Four people are together"
+          },
+          "human_distance": 0.014214128049918895,
+          "model_distance": 0.35834329467649395,
+          "text_similarity": 0.5531825563770543
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_4922677937.jpg#3r1e",
+            "prem": "A group of 9 men and women walking upstairs.",
+            "hyp": "The group is in a building."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_3730260112.jpg#4r1e",
+            "prem": "3 people walking through a small field.",
+            "hyp": "A group of friends walking outside."
+          },
+          "human_distance": 0.023806629719885612,
+          "model_distance": 0.5403278442679695,
+          "text_similarity": 0.42169815139650846
+        },
+        {
+          "item_i": {
+            "id": "chaosnli_snli_2303609756.jpg#0r1n",
+            "prem": "A male gymnast from Romania, wearing all red, holding himself vertically while upside-down on rings suspended in the air.",
+            "hyp": "The gymnast is a professional."
+          },
+          "item_j": {
+            "id": "chaosnli_snli_4716768732.jpg#4r1n",
+            "prem": "Gymnast photographed in mid flip.",
+            "hyp": "gymnast does a back flip."
+          },
+          "human_distance": 0.0,
+          "model_distance": 0.35698434665675266,
+          "text_similarity": 0.40672591943107195
+        }
+      ]
+    }
+  }
+}

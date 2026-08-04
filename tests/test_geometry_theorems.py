@@ -41,3 +41,59 @@ def test_hellinger_fisher_rao_exact_soft_overlap():
         min_w = np.minimum(W_h, W_fr)
         overlap = np.mean(np.sum(min_w, axis=1) / float(k))
         assert np.isclose(overlap, 1.0, atol=1e-10), f"Expected soft overlap 1.0 for k={k}, got {overlap}"
+
+
+def clr_transform_from_logits(logits: np.ndarray, temp: float = 1.0) -> np.ndarray:
+    """Exact CLR transform from logits: clr(q(T))_c = (z_c - mean(z)) / T."""
+    z = logits / temp
+    mean_z = np.mean(z, axis=-1, keepdims=True)
+    return z - mean_z
+
+
+def clr_transform_from_probs(p: np.ndarray, alpha: float = 0.5) -> np.ndarray:
+    """Dirichlet-smoothed CLR transform for probability distributions."""
+    counts = p * 100.0 + alpha
+    p_smooth = counts / np.sum(counts, axis=-1, keepdims=True)
+    log_p = np.log(p_smooth)
+    mean_log_p = np.mean(log_p, axis=-1, keepdims=True)
+    return log_p - mean_log_p
+
+
+def test_clr_calibration_ray_identity():
+    """Assert theorem: clr(softmax(z/T)) = (1/T) clr(softmax(z))."""
+    rng = np.random.default_rng(20260803)
+    logits = rng.normal(size=(50, 3))
+    
+    clr_1 = clr_transform_from_logits(logits, 1.0)
+    
+    for T in [0.1, 0.5, 2.0, 5.0, 10.0]:
+        clr_T = clr_transform_from_logits(logits, T)
+        expected_clr_T = (1.0 / T) * clr_1
+        assert np.allclose(clr_T, expected_clr_T, atol=1e-12), f"CLR calibration ray identity failed at T={T}"
+
+
+def test_ambiguity_angle_temperature_invariance():
+    """Assert theorem: ambiguity angle theta(p, q(T)) is 100% invariant under temperature scaling T > 0."""
+    rng = np.random.default_rng(20260803)
+    p = rng.dirichlet([0.5, 0.5, 0.5], size=50)
+    logits = rng.normal(size=(50, 3))
+    
+    clr_p = clr_transform_from_probs(p, alpha=0.5)
+    clr_q1 = clr_transform_from_logits(logits, temp=1.0)
+    
+    norm_p = np.linalg.norm(clr_p, axis=1)
+    norm_q1 = np.linalg.norm(clr_q1, axis=1)
+    dot_1 = np.sum(clr_p * clr_q1, axis=1)
+    cos_1 = np.clip(dot_1 / (norm_p * norm_q1 + 1e-12), -1.0, 1.0)
+    theta_1 = np.arccos(cos_1)
+    
+    for T in [0.05, 0.2, 1.5, 4.0, 20.0]:
+        clr_qT = clr_transform_from_logits(logits, temp=T)
+        norm_qT = np.linalg.norm(clr_qT, axis=1)
+        dot_T = np.sum(clr_p * clr_qT, axis=1)
+        cos_T = np.clip(dot_T / (norm_p * norm_qT + 1e-12), -1.0, 1.0)
+        theta_T = np.arccos(cos_T)
+        
+        assert np.allclose(theta_T, theta_1, atol=1e-12), f"Ambiguity angle changed at T={T}"
+
+

@@ -1,7 +1,7 @@
 # Persistent Disagreement Geometry & Metric Audit Report
 
 - **Document type:** empirical research report
-- **Status:** exploratory audit complete ($N=3,113$ canonical ChaosNLI items)
+- **Status:** scientific refinement audit complete ($N=3,113$ canonical ChaosNLI items)
 - **Dataset:** 3,113 three-class ChaosNLI examples (1,514 SNLI + 1,599 MNLI)
 
 ---
@@ -26,50 +26,72 @@ Because both $H(p,q)$ and $d_{\text{FR}}(p,q)$ are strictly monotonic transforma
 
 ---
 
-## 2. Hellinger vs. JSD Dataset Robustness
+### Theorem 2: The Calibration Ray Theorem & Ambiguity Angle Invariance (E016)
 
-* **Spearman Correlation**: $\rho = \mathbf{0.9971}$
-* **Top-10 Soft Overlap**: $Q_{NX}^{\text{soft}}(10) = \mathbf{0.9995}$
-* **Interpretation**: Hellinger and Jensen–Shannon Divergence induce nearly identical local neighborhoods on ChaosNLI. Relational model comparison conclusions are robust to the choice between Hellinger and JSD.
+Let $q(T) = \text{softmax}(z/T)$ be the temperature-scaled prediction of a model with logits $z \in \mathbb{R}^C$.
+In Centered Log-Ratio (CLR) space, $\text{clr}(q)_c = \log q_c - \frac{1}{C}\sum_d \log q_d = \frac{z_c - \bar{z}}{T}$.
 
----
+1. **Calibration Ray Identity**:
+   $$\text{clr}(q(T)) = \frac{1}{T} \text{clr}(q(1))$$
+   A model's complete temperature scaling orbit $T \mapsto q(T)$ is an **exact positive ray from the origin in CLR space**. Temperature scaling alters vector magnitude $\|\text{clr}(q)\|$, but cannot change its direction.
 
-## 3. Aitchison Boundary & Zero-Replacement Sensitivity Audit
+2. **Ambiguity Angle Invariance**:
+   For human target $h = \text{clr}(p)$ (with Dirichlet smoothing $\boldsymbol{\alpha}=0.5$) and model vector $m = \text{clr}(q(1))$, the **ambiguity angle**:
+   $$\theta_i = \arccos \left( \frac{\langle h_i, m_i \rangle}{\|h_i\| \|m_i\|} \right)$$
+   is **100% invariant** under scalar temperature scaling $T > 0$.
 
-Aitchison Centered Log-Ratio (CLR) distance exhibits a **~12.2% neighborhood turnover** relative to Hellinger geometry ($Q_{NX}^{\text{soft}}(10) = 0.8781$). We audited whether zero-replacement policies at the simplex boundary drive this divergence or if log-ratio geometry itself differs intrinsically.
-
-### Multiplicative Replacement vs Dirichlet Smoothing Sweep ($N=3,113$)
-
-| Policy / Epsilon / Alpha | All Items ($N=3,113$) | Boundary Zero Items ($N=720$) | Strictly Interior Items ($N=2,393$) |
-|---|---|---|---|
-| **Multiplicative $\epsilon = 10^{-12}$** | 0.8779 | **0.9894** | 0.8440 |
-| **Multiplicative $\epsilon = 10^{-9}$** | 0.8779 | **0.9894** | 0.8440 |
-| **Multiplicative $\epsilon = 10^{-6}$** | 0.8779 | **0.9894** | 0.8440 |
-| **Multiplicative $\epsilon = 10^{-4}$** | 0.8781 | **0.9894** | 0.8440 |
-| **Multiplicative $\epsilon = 10^{-3}$** | 0.8782 | **0.9897** | 0.8440 |
-| **Dirichlet $\alpha = 0.1$** | 0.8799 | **0.9897** | 0.8463 |
-| **Dirichlet $\alpha = 0.5$** | 0.8856 | **0.9900** | 0.8529 |
-| **Dirichlet $\alpha = 1.0$** | 0.8913 | **0.9896** | 0.8601 |
-
-> **Key Discovery**: Boundary Zero items retain **98.9%–99.0% neighborhood overlap** between Hellinger and Aitchison geometry regardless of the zero-replacement value $\epsilon$. The ~12.2% turnover occurs on **strictly interior items** ($84.4\%$ overlap), proving that log-ratio geometry intrinsically distorts simplex interior distances rather than suffering from boundary numerical instability.
+3. **Exact Orthogonal Decomposition**:
+   $$h_i = \underbrace{\alpha^* m_i}_{\text{calibration-reachable}} + \underbrace{(h_i - \alpha^* m_i)}_{\text{orthogonal directional ambiguity error}}$$
+   where $\alpha^* = \max\left(0, \frac{\langle h_i, m_i \rangle}{\|m_i\|^2}\right)$ and optimal CLR temperature $T^* = 1/\alpha^*$.
 
 ---
 
-## 4. Global Covariance Participation Ratio & Local Intrinsic Dimensionality (LID)
+## 2. 3-Level Calibration Reachability Disaggregation
 
-* **Global Covariance Participation Ratio**: **$1.87$** (PC1 explains 63.0% variance, PC2 explains 37.0% variance), confirming that global human disagreement variance spans both available simplex dimensions.
-* **Local Intrinsic Dimensionality (Local PCA Participation Ratio)**:
-  - **Consensus Items ($H < 0.5$, $N=349$)**: Mean Local PR = **$1.17$** (1D trajectory near simplex corners).
-  - **Edge Ambiguity Items ($0.5 \le H < 1.0$, $N=1,349$)**: Mean Local PR = **$1.13$** (1D trajectory along 2-way boundary edges).
-  - **Diffuse Ambiguity Center Items ($H \ge 1.0$, $N=1,415$)**: Mean Local PR = **$1.39$** (2D manifold spread across 3-way disagreement).
-  - **Dataset Breakdown**: MNLI items ($1.31$) exhibit higher local dimensionality than SNLI items ($1.19$).
+Across all 9 baseline models, we disaggregate scalar calibration error into 3 distinct reachability metrics:
+
+1. **Itemwise Oracle Reachability**: Each item selects its own optimal $T_i^* \in [0.05, 100]$.
+2. **Global Scalar Reachability**: Single dataset-wide $T^*$ minimizing mean Hellinger distance.
+3. **Relational Graph Reachability**: Maximum soft neighborhood overlap $Q_{NX}^{\text{soft}}(10)$ along the global temperature curve.
+
+> **Key Discovery**: Scalar temperature scaling can only adjust radial sharpness. The majority of residual human-distribution error lies **orthogonal to the calibration ray** (directional ambiguity error), geometrically explaining why temperature scaling improves NLL while failing to rotate relational neighborhood structure.
 
 ---
 
-## 5. Artifact Ledger
+## 3. Weighted Geometric Tears & Posterior Support Loss
 
-- [`metric_atlas_summary.json`](../../research/chaosnli/artifacts/exploratory/metric_atlas_summary.json)
-- [`aitchison_boundary_audit_summary.json`](../../research/chaosnli/artifacts/exploratory/aitchison_boundary_audit_summary.json)
-- [`local_intrinsic_dimension_summary.json`](../../research/chaosnli/artifacts/exploratory/local_intrinsic_dimension_summary.json)
-- [`persistent_disagreement_summary.json`](../../research/chaosnli/artifacts/exploratory/persistent_disagreement_summary.json)
-- [`simplex_explorer.html`](../../research/chaosnli/artifacts/exploratory/simplex_explorer.html)
+Rather than relying on unweighted hard edge thresholding ($98.8\%$), we evaluate fuzzy mass overlap and posterior support loss:
+
+$$\text{Overlap}_{\min}(W_H, W_M) = \frac{1}{Nk} \sum_{ij} \min(W_{ij}^H, W_{ij}^M)$$
+$$\text{HumanCoreLoss} = 1 - \frac{\sum_{ij} W_{ij}^H S_{ij}}{\sum_{ij} W_{ij}^M S_{ij}}$$
+
+Where $S_{ij} = \text{Pr}(j \in \text{top-10}(i) \mid \boldsymbol{\theta} \sim \text{Dirichlet})$ is the posterior edge confidence matrix.
+
+---
+
+## 4. Semantic Torn Twins vs. Distribution Twins
+
+We distinguish aggregate vote-profile matches from true semantic analogies:
+
+- **Distribution Twins**: Items with $H(p_i, p_j) < 0.05$ (vote distribution similarity only).
+- **Semantic Torn Twins**: Items with $H(p_i, p_j) < 0.05$ AND TF-IDF/embedding text similarity $d_{\text{text}}(i,j) \ge 0.40$ that the model tears apart ($H(q_i, q_j) > 0.35$).
+
+---
+
+## 5. Differential Belief Maps (E017)
+
+We estimate the conditional model mapping $\mu_m(p) = \mathbb{E}[q^{(m)} \mid p]$ and its Jacobian $J_m(p) = \frac{\partial \mu_m(p)}{\partial p}$:
+
+- **Area Compression**: $A_m(p) = |\det J_m(p)|$ ($A < 1$: local area compression; $A \approx 0$: local dimensional collapse).
+- **Anisotropic Flattening**: $\kappa_m(p) = \sigma_2 / \sigma_1$ from singular values $\sigma_1 \ge \sigma_2$.
+- **Conditional Dispersion**: $\Sigma_m(p) = \text{Var}(q^{(m)} \mid p)$ (quantifies content-dependent variation among items sharing identical human vote profiles).
+
+---
+
+## 6. Artifact Ledger
+
+- [`calibration_ray_summary.json`](../../results/exploratory/calibration_ray_summary.json)
+- [`weighted_geometric_tears_summary.json`](../../results/exploratory/weighted_geometric_tears_summary.json)
+- [`semantic_torn_twins_summary.json`](../../results/exploratory/semantic_torn_twins_summary.json)
+- [`differential_belief_maps_summary.json`](../../results/exploratory/differential_belief_maps_summary.json)
+- [`geometry_lens.html`](../../docs/viz/chaosnli/geometry_lens.html)
