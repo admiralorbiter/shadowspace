@@ -3,7 +3,7 @@
 Executes all Phase E0.7.1 synthetic benchmarks:
 - Flat World Zero Holonomy
 - 4-Corner Planted Curvature Recovery
-- 3-Group Monte Carlo Loop Holonomy Inference (Group 1 Calibration, Group 2 Validation, Group 3 Power)
+- 3-Group Monte Carlo Loop Holonomy Inference (Group 1 Calibration, Group 2 Validation FPR, Group 3 Power)
 - Total Least Squares (TLS) Errors-In-Variables Attenuation Bias Correction
 - Theorem 1A & Proposition 1B Invariance
 - Data-Dependent Sheaf Laplacian Cohomology H0/H1
@@ -68,7 +68,7 @@ def main() -> None:
         power_valid = sw.tls_detection_power >= 0.80
 
         if sw.sample_size >= 250:
-            loop_improved = sw.tls_loop_holonomy_rmse < sw.ols_loop_holonomy_rmse
+            loop_improved = sw.tls_matrix_holonomy_rmse < sw.ols_matrix_holonomy_rmse
         else:
             loop_improved = True  # At small N=50, variance compounding in 4-edge product is expected
 
@@ -79,7 +79,7 @@ def main() -> None:
             f"      [N={sw.sample_size}, r={sw.perturbation_radius}, sigma={sw.measurement_noise}] "
             f"TLS FPR: {sw.tls_false_positive_rate:.2f}, Power: {sw.tls_detection_power:.2f} | "
             f"Bias OLS: {sw.ols_matrix_bias_norm:.4f} -> TLS: {sw.tls_matrix_bias_norm:.4f} | "
-            f"Loop RMSE OLS: {sw.ols_loop_holonomy_rmse:.4f} -> TLS: {sw.tls_loop_holonomy_rmse:.4f} "
+            f"Matrix Holonomy RMSE OLS: {sw.ols_matrix_holonomy_rmse:.4f} -> TLS: {sw.tls_matrix_holonomy_rmse:.4f} "
             f"({'PASSED' if gate_ok else 'FAILED'})"
         )
 
@@ -158,8 +158,10 @@ def main() -> None:
                 "tls_matrix_bias_norm": sw.tls_matrix_bias_norm,
                 "ols_edge_matrix_rmse": sw.ols_edge_matrix_rmse,
                 "tls_edge_matrix_rmse": sw.tls_edge_matrix_rmse,
-                "ols_loop_holonomy_rmse": sw.ols_loop_holonomy_rmse,
-                "tls_loop_holonomy_rmse": sw.tls_loop_holonomy_rmse,
+                "ols_matrix_holonomy_rmse": sw.ols_matrix_holonomy_rmse,
+                "tls_matrix_holonomy_rmse": sw.tls_matrix_holonomy_rmse,
+                "ols_curvature_stat_rmse": sw.ols_curvature_stat_rmse,
+                "tls_curvature_stat_rmse": sw.tls_curvature_stat_rmse,
                 "ols_false_positive_rate": sw.ols_false_positive_rate,
                 "tls_false_positive_rate": sw.tls_false_positive_rate,
                 "ols_detection_power": sw.ols_detection_power,
