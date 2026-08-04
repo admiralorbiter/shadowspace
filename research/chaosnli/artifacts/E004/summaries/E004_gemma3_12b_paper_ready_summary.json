@@ -1,0 +1,107 @@
+{
+  "status": "stage_1b_scientifically_complete",
+  "model_tag": "gemma3:12b",
+  "prompt_version": "v2",
+  "symbol_set": "ABC",
+  "num_items": 600,
+  "human_irreducible_entropy": 0.6542667055904634,
+  "raw_lpe": {
+    "accuracy": 0.6483333333333333,
+    "nll": 3.8597449333382383,
+    "brier": 0.3907667000192995,
+    "q_support": 0.037746000059337044,
+    "q_null_block": 0.016826340191749334,
+    "r_norm_pct": 8.484842416957097
+  },
+  "calibrated_lpe_coherent": {
+    "accuracy": 0.6466666666666666,
+    "nll": 0.9312522085416924,
+    "brier": 0.15519087122252984,
+    "fitted_temperatures_per_fold": [
+      10.643482037573134,
+      10.178010649316786,
+      10.438038864635065,
+      10.48824777204019,
+      10.65982491805716
+    ],
+    "mean_optimal_temperature": 10.481520848324466,
+    "q_support": 0.03918900014017709,
+    "q_null_block": 0.016834348900471675,
+    "r_norm_pct": 9.067157670238176,
+    "nll_gap_closure_pct": 91.35899596654433
+  },
+  "mce_30_samples": {
+    "accuracy": 0.6533333333333333,
+    "nll": 1.586380477514687,
+    "brier": 0.3558637990257832,
+    "q_support": 0.03310714196945839,
+    "q_null_block": 0.0167382319028807,
+    "r_norm_pct": 6.636723932509714,
+    "nll_gap_closure_pct": 70.9212259233112
+  },
+  "mce_finite_sample_control": {
+    "sim_nll_mean": 1.6045739117105209,
+    "sim_r_norm_mean": 6.336636969893047,
+    "sim_r_norm_95_ci": [
+      6.090308132753692,
+      6.565831651836015
+    ]
+  },
+  "mce_convergence_ladder": [
+    {
+      "samples_per_item": 6,
+      "replicates": 1,
+      "accuracy": 0.645,
+      "nll": 1.163485061775025,
+      "q_support": 0.032547156404761295,
+      "r_norm_pct": 6.413295154999258
+    },
+    {
+      "samples_per_item": 12,
+      "replicates": 2,
+      "accuracy": 0.65,
+      "nll": 1.325551361632893,
+      "q_support": 0.032159022503095,
+      "r_norm_pct": 6.255022812973508
+    },
+    {
+      "samples_per_item": 18,
+      "replicates": 3,
+      "accuracy": 0.6533333333333333,
+      "nll": 1.435366299015751,
+      "q_support": 0.03318886211837706,
+      "r_norm_pct": 6.66926907358934
+    },
+    {
+      "samples_per_item": 24,
+      "replicates": 4,
+      "accuracy": 0.6516666666666666,
+      "nll": 1.5171121719189764,
+      "q_support": 0.033174405777762636,
+      "r_norm_pct": 6.66221437752237
+    },
+    {
+      "samples_per_item": 30,
+      "replicates": 5,
+      "accuracy": 0.6533333333333333,
+      "nll": 1.586380477514687,
+      "q_support": 0.03310714196945839,
+      "r_norm_pct": 6.636723932509714
+    }
+  ],
+  "bootstrap_contrasts_95_ci": {
+    "delta_nll_cal_vs_raw": [
+      -3.093616864114785,
+      -2.7768033620838843
+    ],
+    "delta_nll_mce_vs_cal": [
+      0.610903651306798,
+      0.7042757867799385
+    ],
+    "delta_acc_mce_vs_raw": [
+      -1.0000000000000009,
+      2.0000000000000018
+    ]
+  },
+  "timestamp_utc": "2026-08-04T07:35:00Z"
+}

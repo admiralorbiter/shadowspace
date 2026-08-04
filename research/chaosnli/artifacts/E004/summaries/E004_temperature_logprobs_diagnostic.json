@@ -1,0 +1,12 @@
+{
+  "num_items": 20,
+  "num_permutations": 6,
+  "temperatures_tested": [
+    0.0,
+    0.5,
+    1.0
+  ],
+  "max_abs_diff_t00_vs_t05": 8.481371879577637,
+  "max_abs_diff_t00_vs_t10": 4.696770787239075,
+  "identical_logprobs": false
+}
