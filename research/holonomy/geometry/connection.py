@@ -186,7 +186,6 @@ class ConnectionEstimator:
             Z_src_c = Z_src - mean_src
             Z_tgt_c = Z_tgt - mean_tgt
             d_x = Z_src_c.shape[1]
-
             rank, cond, s_list = self.validate_design_matrix(generator_name, Z_src_c)
 
             Aug = np.column_stack([Z_src_c, Z_tgt_c])
@@ -194,6 +193,24 @@ class ConnectionEstimator:
             V = Vt.T
             V22 = V[d_x:, d_x:]
             cond_v22 = float(np.linalg.cond(V22))
+            det_v22 = float(np.linalg.det(V22))
+
+
+
+            if cond_v22 > self.max_condition_number or abs(det_v22) < 1e-8:
+                return {
+                    "generator_name": generator_name,
+                    "status": "not_estimable",
+                    "reason": "ill_conditioned_v22",
+                    "design_rank": rank,
+                    "required_rank": d_x,
+                    "condition_number": cond,
+                    "v22_condition_number": cond_v22,
+                    "condition_threshold": self.max_condition_number,
+                    "singular_values": s_list,
+                    "relative_rank_tolerance": self.relative_rank_tolerance,
+                    "absolute_singular_value_floor": self.absolute_singular_value_floor,
+                }
 
             return {
                 "generator_name": generator_name,
@@ -203,6 +220,7 @@ class ConnectionEstimator:
                 "condition_number": cond,
                 "v22_condition_number": cond_v22,
                 "singular_values": s_list,
+
                 "relative_rank_tolerance": self.relative_rank_tolerance,
                 "absolute_singular_value_floor": self.absolute_singular_value_floor,
             }

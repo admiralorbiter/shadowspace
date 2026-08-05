@@ -121,6 +121,17 @@ def test_huggingface_adapter_mocked_fast_failure(monkeypatch):
     assert "Failed to load requested live model" in str(exc_info.value)
 
 
+def test_diagnose_transport_design_v22_ill_conditioned():
+    """Verifies diagnose_transport_design returns status='not_estimable' when edge is rank-deficient or V22 is singular."""
+    estimator = ConnectionEstimator()
+    src = np.array([[1.0, 1.0], [2.0, 2.0], [3.0, 3.0]], dtype=np.float64)
+    tgt = np.array([[2.0, 1.0], [4.0, 2.0], [6.0, 3.0]], dtype=np.float64)
+
+    diag = estimator.diagnose_transport_design("v22_test", src, tgt)
+    assert diag["status"] == "not_estimable"
+    assert diag["reason"] in ("rank_deficient", "ill_conditioned_v22")
+
+
 def test_e002_experiment_mock_mode_identifiability():
     """Verifies that E002 in mock mode identifies rank deficiency, sets audit_status='not_estimable', and uses None for non-estimable fields."""
     results = run_e002_classifier_holonomy_experiment(use_live_model=False)
@@ -137,5 +148,6 @@ def test_e002_experiment_mock_mode_identifiability():
     assert res.curvature_magnitude is None
     assert res.mean_held_out_return_residual is None
     assert set(res.edge_diagnostics.keys()) == {"rename_a", "rename_b", "rename_a_inv", "rename_b_inv"}
+
 
 
