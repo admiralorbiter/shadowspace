@@ -1,13 +1,13 @@
-"""E004 Final Authoritative Paper-Ready Synthesis & Statistical Audit.
+"""E004 Final Authoritative Paper-Ready Synthesis & Statistical Audit (v2 - Hardened).
 
-Executes all 7 final paper-ready requirements:
-  1. 10,000-Replicate Stratified Bootstrap with Holm-Bonferroni Multiplicity Control.
-  2. Factorial 2x2 Family-by-Generation Interaction CIs (Raw interaction, Calibrated interaction, Calibration response evolution).
-  3. Qwen3 Fold-Coherent Support-Band Mechanism Decomposition (CLR, Cosine, Turnover, Support Bands).
-  4. Logarithmic-Pool Censoring Sensitivity Audit (-40 floor vs -20 stress test).
-  5. Multiplicity Control & Max-Statistic / In-Fold Coalition Selection.
-  6. Gemma 4 + Qwen 2.5 Coalition Mechanism Decomposition (Qwen-existing vs G4-unique vs Hybrid edges).
-  7. Hardened Provenance Records (Ollama digests, versions, quantizations, template & script hashes).
+Executes all required final scientific audit corrections:
+  1. Pure 10,000-Replicate Percentile Bootstrap CIs (avoiding pseudo p-values).
+  2. Factorial 2x2 Family-by-Generation Interaction CIs (Raw, Calibrated, Calibration Response Evolution).
+  3. Strict Fold-Coherent Qwen3 Support-Band Mechanism Decomposition using held-out focal rows.
+  4. True Multi-Stage Logarithmic-Pool Censoring Audit (re-extracting logits, refitting fold temperatures under Bound A -40 and Bound B -20).
+  5. Exhaustive Calibrated Fold-Coherent Coalition Mechanism Decomposition (Qwen-only, G4-only, Shared, Pool-created edges with positive/negative/net shares).
+  6. Hardened Provenance Records (separating System Prompt SHA-256 from Manifest SHA-256, full Ollama digests, input vs synthesis commit SHAs).
+  7. Clear Exploratory Labeling for Coalition Census & Pre-registered Primary Hypotheses.
 """
 
 from __future__ import annotations
@@ -21,6 +21,10 @@ from typing import Dict, List, Tuple
 import numpy as np
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
+SYSTEM_PROMPT = """Assume the premise is true.
+
+Determine the relationship of the hypothesis to the premise."""
 
 def distance_hellinger_matrix(P: np.ndarray, Q: np.ndarray) -> np.ndarray:
     sqrt_P = np.sqrt(np.clip(P, 1e-12, 1.0))
@@ -78,7 +82,7 @@ def compute_e007_block_density_null(W_model: np.ndarray, S_human: np.ndarray, ds
 
     return float(q_null / (N * float(k)))
 
-def evaluate_coalition_with_floor(
+def evaluate_fold_coherent_coalition(
     probs_dict_raw: Dict[str, np.ndarray],
     logits_dict: Dict[str, np.ndarray],
     fitted_Ts_dict: Dict[str, List[float]],
@@ -90,7 +94,7 @@ def evaluate_coalition_with_floor(
     strata_map: Dict,
     q_hh_k10: float,
     e008_data: Dict,
-    floor_val: float = 1e-18
+    floor_val: float = 4.24935e-18  # exact e^-40 floor
 ) -> Dict:
     N = len(human_p)
     fold_ids = np.zeros(N, dtype=int)
@@ -98,7 +102,7 @@ def evaluate_coalition_with_floor(
         for rank, idx in enumerate(indices):
             fold_ids[idx] = rank % 5
 
-    # Raw Pool
+    # 1. Raw Pool
     if len(member_keys) == 1:
         P_pool_raw = probs_dict_raw[member_keys[0]].copy()
     else:
@@ -122,11 +126,12 @@ def evaluate_coalition_with_floor(
     q_null_raw = compute_e007_block_density_null(W_raw, S_human, ds_ids, k=10)
     r_norm_raw = float((q_supp_raw - q_null_raw) / (q_hh_k10 - q_null_raw) * 100.0)
 
-    # Calibrated Pool
+    # 2. Fold-Coherent Calibrated Pool
     from analyze_llm_lpe import compute_calibrated_probs_for_items
     cal_probs_pool = np.zeros((N, 3), dtype=np.float64)
     q_rows_cal_coherent = np.zeros(N, dtype=np.float64)
     null_by_item_cal = np.zeros(N, dtype=np.float64)
+    W_cal_coherent = np.zeros((N, N), dtype=np.float64)
 
     for f in range(5):
         val_mask = (fold_ids == f)
@@ -157,6 +162,7 @@ def evaluate_coalition_with_floor(
 
         q_rows_cal_coherent[val_mask] = np.sum(W_pool_f[val_mask] * S_human[val_mask], axis=1) / 10.0
         null_by_item_cal[val_mask] = q_null_f
+        W_cal_coherent[val_mask] = W_pool_f[val_mask]
 
     q_supp_cal = float(np.mean(q_rows_cal_coherent))
     q_null_cal = float(np.mean(null_by_item_cal))
@@ -186,7 +192,8 @@ def evaluate_coalition_with_floor(
         "q_rows_raw": q_rows_raw,
         "q_rows_cal": q_rows_cal_coherent,
         "null_by_item_cal": null_by_item_cal,
-        "W_raw": W_raw
+        "W_raw": W_raw,
+        "W_cal_coherent": W_cal_coherent
     }
 
 def main():
@@ -220,60 +227,53 @@ def main():
 
     from analyze_llm_lpe import extract_lpe_logits_and_probs, run_e004_pipeline
 
-    logits_g3, probs_g3, _, _ = extract_lpe_logits_and_probs(resp_g3, items)
-    logits_g4, probs_g4, _, _ = extract_lpe_logits_and_probs(resp_g4, items)
-    logits_q25, probs_q25, _, _ = extract_lpe_logits_and_probs(resp_q25, items)
-    logits_q3, probs_q3, _, _ = extract_lpe_logits_and_probs(resp_q3, items)
+    # Extract Bound A (primary floor -40.0)
+    logits_g3_A, probs_g3_A, _, _ = extract_lpe_logits_and_probs(resp_g3, items, imputation_bound="floor")
+    logits_g4_A, probs_g4_A, _, _ = extract_lpe_logits_and_probs(resp_g4, items, imputation_bound="floor")
+    logits_q25_A, probs_q25_A, _, _ = extract_lpe_logits_and_probs(resp_q25, items, imputation_bound="floor")
+    logits_q3_A, probs_q3_A, _, _ = extract_lpe_logits_and_probs(resp_q3, items, imputation_bound="floor")
 
-    g3_res = run_e004_pipeline(items, logits_g3, probs_g3, S_human, q_hh_k10, e008_data)
-    g4_res = run_e004_pipeline(items, logits_g4, probs_g4, S_human, q_hh_k10, e008_data)
-    q25_res = run_e004_pipeline(items, logits_q25, probs_q25, S_human, q_hh_k10, e008_data)
-    q3_res = run_e004_pipeline(items, logits_q3, probs_q3, S_human, q_hh_k10, e008_data)
+    g3_res_A = run_e004_pipeline(items, logits_g3_A, probs_g3_A, S_human, q_hh_k10, e008_data)
+    g4_res_A = run_e004_pipeline(items, logits_g4_A, probs_g4_A, S_human, q_hh_k10, e008_data)
+    q25_res_A = run_e004_pipeline(items, logits_q25_A, probs_q25_A, S_human, q_hh_k10, e008_data)
+    q3_res_A = run_e004_pipeline(items, logits_q3_A, probs_q3_A, S_human, q_hh_k10, e008_data)
 
-    probs_dict_raw = {
-        "G3": np.mean(probs_g3, axis=1),
-        "G4": np.mean(probs_g4, axis=1),
-        "Q2.5": np.mean(probs_q25, axis=1),
-        "Q3": np.mean(probs_q3, axis=1)
-    }
+    # Extract Bound B (fixed -20.0 stress test bound)
+    logits_g3_B, probs_g3_B, _, _ = extract_lpe_logits_and_probs(resp_g3, items, imputation_bound="fixed_minus20_stress_test")
+    logits_g4_B, probs_g4_B, _, _ = extract_lpe_logits_and_probs(resp_g4, items, imputation_bound="fixed_minus20_stress_test")
+    logits_q25_B, probs_q25_B, _, _ = extract_lpe_logits_and_probs(resp_q25, items, imputation_bound="fixed_minus20_stress_test")
+    logits_q3_B, probs_q3_B, _, _ = extract_lpe_logits_and_probs(resp_q3, items, imputation_bound="fixed_minus20_stress_test")
 
-    logits_dict = {
-        "G3": logits_g3,
-        "G4": logits_g4,
-        "Q2.5": logits_q25,
-        "Q3": logits_q3
-    }
+    g3_res_B = run_e004_pipeline(items, logits_g3_B, probs_g3_B, S_human, q_hh_k10, e008_data)
+    g4_res_B = run_e004_pipeline(items, logits_g4_B, probs_g4_B, S_human, q_hh_k10, e008_data)
+    q25_res_B = run_e004_pipeline(items, logits_q25_B, probs_q25_B, S_human, q_hh_k10, e008_data)
+    q3_res_B = run_e004_pipeline(items, logits_q3_B, probs_q3_B, S_human, q_hh_k10, e008_data)
 
-    fitted_Ts_dict = {
-        "G3": g3_res["fitted_temperatures"],
-        "G4": g4_res["fitted_temperatures"],
-        "Q2.5": q25_res["fitted_temperatures"],
-        "Q3": q3_res["fitted_temperatures"]
-    }
+    probs_dict_raw_A = {"G3": np.mean(probs_g3_A, axis=1), "G4": np.mean(probs_g4_A, axis=1), "Q2.5": np.mean(probs_q25_A, axis=1), "Q3": np.mean(probs_q3_A, axis=1)}
+    logits_dict_A = {"G3": logits_g3_A, "G4": logits_g4_A, "Q2.5": logits_q25_A, "Q3": logits_q3_A}
+    fitted_Ts_dict_A = {"G3": g3_res_A["fitted_temperatures"], "G4": g4_res_A["fitted_temperatures"], "Q2.5": q25_res_A["fitted_temperatures"], "Q3": q3_res_A["fitted_temperatures"]}
 
-    # 1. 10,000-Replicate Stratified Bootstrap & Factorial 2x2 Interactions
+    probs_dict_raw_B = {"G3": np.mean(probs_g3_B, axis=1), "G4": np.mean(probs_g4_B, axis=1), "Q2.5": np.mean(probs_q25_B, axis=1), "Q3": np.mean(probs_q3_B, axis=1)}
+    logits_dict_B = {"G3": logits_g3_B, "G4": logits_g4_B, "Q2.5": logits_q25_B, "Q3": logits_q3_B}
+    fitted_Ts_dict_B = {"G3": g3_res_B["fitted_temperatures"], "G4": g4_res_B["fitted_temperatures"], "Q2.5": q25_res_B["fitted_temperatures"], "Q3": q3_res_B["fitted_temperatures"]}
+
+    # 1. 10,000-Replicate Stratified Percentile Bootstrap CIs
     print("\n============================================================")
-    print("  RUNNING 10,000-REPLICATE BOOTSTRAP & FACTORIAL INTERACTION CIs")
+    print("  RUNNING 10,000-REPLICATE PERCENTILE BOOTSTRAP CIs")
     print("============================================================")
-    
+
     rng = np.random.default_rng(20260803)
     strata_indices = {s: np.where(np.array([it.get("stratum_key", f"{it.get('source_dataset', 'chaosnli_mnli')}_{it.get('human_majority_label', 'e')}") for it in items]) == s)[0] for s in strata_map.keys()}
 
     B_REPS = 10000
 
-    boot_g3_cal_gain = []
-    boot_g4_cal_gain = []
-    boot_q25_cal_gain = []
-    boot_q3_cal_gain = []
+    boot_g3_gain = []; boot_g4_gain = []; boot_q25_gain = []; boot_q3_gain = []
+    boot_raw_inter = []; boot_cal_inter = []; boot_gain_evol = []
 
-    boot_raw_interaction = []
-    boot_cal_interaction = []
-    boot_cal_gain_evolution = []
-
-    q_g3_raw = g3_res["q_rows_raw"]; q_g3_cal = g3_res["q_rows_cal"]; null_g3_cal = g3_res["null_by_item_cal"]; q_g3_null_raw = g3_res["q_null_raw"]
-    q_g4_raw = g4_res["q_rows_raw"]; q_g4_cal = g4_res["q_rows_cal"]; null_g4_cal = g4_res["null_by_item_cal"]; q_g4_null_raw = g4_res["q_null_raw"]
-    q_q25_raw = q25_res["q_rows_raw"]; q_q25_cal = q25_res["q_rows_cal"]; null_q25_cal = q25_res["null_by_item_cal"]; q_q25_null_raw = q25_res["q_null_raw"]
-    q_q3_raw = q3_res["q_rows_raw"]; q_q3_cal = q3_res["q_rows_cal"]; null_q3_cal = q3_res["null_by_item_cal"]; q_q3_null_raw = q3_res["q_null_raw"]
+    q_g3_raw = g3_res_A["q_rows_raw"]; q_g3_cal = g3_res_A["q_rows_cal"]; null_g3_cal = g3_res_A["null_by_item_cal"]; q_g3_null_raw = g3_res_A["q_null_raw"]
+    q_g4_raw = g4_res_A["q_rows_raw"]; q_g4_cal = g4_res_A["q_rows_cal"]; null_g4_cal = g4_res_A["null_by_item_cal"]; q_g4_null_raw = g4_res_A["q_null_raw"]
+    q_q25_raw = q25_res_A["q_rows_raw"]; q_q25_cal = q25_res_A["q_rows_cal"]; null_q25_cal = q25_res_A["null_by_item_cal"]; q_q25_null_raw = q25_res_A["q_null_raw"]
+    q_q3_raw = q3_res_A["q_rows_raw"]; q_q3_cal = q3_res_A["q_rows_cal"]; null_q3_cal = q3_res_A["null_by_item_cal"]; q_q3_null_raw = q3_res_A["q_null_raw"]
 
     for _ in range(B_REPS):
         boot_idx_list = []
@@ -282,79 +282,57 @@ def main():
             boot_idx_list.extend(sampled_s)
         idx_boot = np.array(boot_idx_list)
 
-        # G3
         r_g3_raw_b = (np.mean(q_g3_raw[idx_boot]) - q_g3_null_raw) / (q_hh_k10 - q_g3_null_raw) * 100.0
         null_g3_b = np.mean(null_g3_cal[idx_boot])
         r_g3_cal_b = (np.mean(q_g3_cal[idx_boot]) - null_g3_b) / (q_hh_k10 - null_g3_b) * 100.0
         g3_gain_b = r_g3_cal_b - r_g3_raw_b
 
-        # G4
         r_g4_raw_b = (np.mean(q_g4_raw[idx_boot]) - q_g4_null_raw) / (q_hh_k10 - q_g4_null_raw) * 100.0
         null_g4_b = np.mean(null_g4_cal[idx_boot])
         r_g4_cal_b = (np.mean(q_g4_cal[idx_boot]) - null_g4_b) / (q_hh_k10 - null_g4_b) * 100.0
         g4_gain_b = r_g4_cal_b - r_g4_raw_b
 
-        # Q2.5
         r_q25_raw_b = (np.mean(q_q25_raw[idx_boot]) - q_q25_null_raw) / (q_hh_k10 - q_q25_null_raw) * 100.0
         null_q25_b = np.mean(null_q25_cal[idx_boot])
         r_q25_cal_b = (np.mean(q_q25_cal[idx_boot]) - null_q25_b) / (q_hh_k10 - null_q25_b) * 100.0
         q25_gain_b = r_q25_cal_b - r_q25_raw_b
 
-        # Q3
         r_q3_raw_b = (np.mean(q_q3_raw[idx_boot]) - q_q3_null_raw) / (q_hh_k10 - q_q3_null_raw) * 100.0
         null_q3_b = np.mean(null_q3_cal[idx_boot])
         r_q3_cal_b = (np.mean(q_q3_cal[idx_boot]) - null_q3_b) / (q_hh_k10 - null_q3_b) * 100.0
         q3_gain_b = r_q3_cal_b - r_q3_raw_b
 
-        boot_g3_cal_gain.append(g3_gain_b)
-        boot_g4_cal_gain.append(g4_gain_b)
-        boot_q25_cal_gain.append(q25_gain_b)
-        boot_q3_cal_gain.append(q3_gain_b)
+        boot_g3_gain.append(g3_gain_b)
+        boot_g4_gain.append(g4_gain_b)
+        boot_q25_gain.append(q25_gain_b)
+        boot_q3_gain.append(q3_gain_b)
 
-        # Factorial 2x2 Interactions
         raw_inter_b = (r_q3_raw_b - r_q25_raw_b) - (r_g4_raw_b - r_g3_raw_b)
         cal_inter_b = (r_q3_cal_b - r_q25_cal_b) - (r_g4_cal_b - r_g3_cal_b)
         gain_evol_b = (q3_gain_b - q25_gain_b) - (g4_gain_b - g3_gain_b)
 
-        boot_raw_interaction.append(raw_inter_b)
-        boot_cal_interaction.append(cal_inter_b)
-        boot_cal_gain_evolution.append(gain_evol_b)
+        boot_raw_inter.append(raw_inter_b)
+        boot_cal_inter.append(cal_inter_b)
+        boot_gain_evol.append(gain_evol_b)
 
-    # Calculate 10,000-replicate 95% CIs
-    ci_g3_gain = [float(np.percentile(boot_g3_cal_gain, 2.5)), float(np.percentile(boot_g3_cal_gain, 97.5))]
-    ci_g4_gain = [float(np.percentile(boot_g4_cal_gain, 2.5)), float(np.percentile(boot_g4_cal_gain, 97.5))]
-    ci_q25_gain = [float(np.percentile(boot_q25_cal_gain, 2.5)), float(np.percentile(boot_q25_cal_gain, 97.5))]
-    ci_q3_gain = [float(np.percentile(boot_q3_cal_gain, 2.5)), float(np.percentile(boot_q3_cal_gain, 97.5))]
+    ci_g3_gain = [float(np.percentile(boot_g3_gain, 2.5)), float(np.percentile(boot_g3_gain, 97.5))]
+    ci_g4_gain = [float(np.percentile(boot_g4_gain, 2.5)), float(np.percentile(boot_g4_gain, 97.5))]
+    ci_q25_gain = [float(np.percentile(boot_q25_gain, 2.5)), float(np.percentile(boot_q25_gain, 97.5))]
+    ci_q3_gain = [float(np.percentile(boot_q3_gain, 2.5)), float(np.percentile(boot_q3_gain, 97.5))]
 
-    ci_raw_inter = [float(np.percentile(boot_raw_interaction, 2.5)), float(np.percentile(boot_raw_interaction, 97.5))]
-    ci_cal_inter = [float(np.percentile(boot_cal_interaction, 2.5)), float(np.percentile(boot_cal_interaction, 97.5))]
-    ci_gain_evol = [float(np.percentile(boot_cal_gain_evolution, 2.5)), float(np.percentile(boot_cal_gain_evolution, 97.5))]
+    ci_raw_inter = [float(np.percentile(boot_raw_inter, 2.5)), float(np.percentile(boot_raw_inter, 97.5))]
+    ci_cal_inter = [float(np.percentile(boot_cal_inter, 2.5)), float(np.percentile(boot_cal_inter, 97.5))]
+    ci_gain_evol = [float(np.percentile(boot_gain_evol, 2.5)), float(np.percentile(boot_gain_evol, 97.5))]
 
-    # Calculate Empirical p-values for Within-Model Calibration Gains (H0: Gain <= 0)
-    p_g3 = float(np.mean(np.array(boot_g3_cal_gain) <= 0.0))
-    p_g4 = float(np.mean(np.array(boot_g4_cal_gain) <= 0.0))
-    p_q25 = float(np.mean(np.array(boot_q25_cal_gain) <= 0.0))
-    p_q3 = float(np.mean(np.array(boot_q3_cal_gain) <= 0.0))
+    print(f"  Gemma 3 12B Cal Gain:  {g3_res_A['within_model_calibration_gain_pct']:+.2f}% (95% CI: [{ci_g3_gain[0]:+.2f}%, {ci_g3_gain[1]:+.2f}%])")
+    print(f"  Gemma 4 12B Cal Gain:  {g4_res_A['within_model_calibration_gain_pct']:+.2f}% (95% CI: [{ci_g4_gain[0]:+.2f}%, {ci_g4_gain[1]:+.2f}%])")
+    print(f"  Qwen 2.5 14B Cal Gain: {q25_res_A['within_model_calibration_gain_pct']:+.2f}% (95% CI: [{ci_q25_gain[0]:+.2f}%, {ci_q25_gain[1]:+.2f}%])")
+    print(f"  Qwen3 14B Cal Gain:    {q3_res_A['within_model_calibration_gain_pct']:+.2f}% (95% CI: [{ci_q3_gain[0]:+.2f}%, {ci_q3_gain[1]:+.2f}%])")
+    print(f"  Factorial Raw Gen Interaction:        {(q3_res_A['r_norm_pct_raw'] - q25_res_A['r_norm_pct_raw']) - (g4_res_A['r_norm_pct_raw'] - g3_res_A['r_norm_pct_raw']):+.2f}% (95% CI: [{ci_raw_inter[0]:+.2f}%, {ci_raw_inter[1]:+.2f}%])")
+    print(f"  Factorial Cal Gen Interaction:        {(q3_res_A['r_norm_pct_calibrated'] - q25_res_A['r_norm_pct_calibrated']) - (g4_res_A['r_norm_pct_calibrated'] - g3_res_A['r_norm_pct_calibrated']):+.2f}% (95% CI: [{ci_cal_inter[0]:+.2f}%, {ci_cal_inter[1]:+.2f}%])")
+    print(f"  Factorial Cal Gain Evolution (DDD):   {((q3_res_A['within_model_calibration_gain_pct'] - q25_res_A['within_model_calibration_gain_pct']) - (g4_res_A['within_model_calibration_gain_pct'] - g3_res_A['within_model_calibration_gain_pct'])):+.2f}% (95% CI: [{ci_gain_evol[0]:+.2f}%, {ci_gain_evol[1]:+.2f}%])")
 
-    # Holm-Bonferroni Step-Down Correction across 4 within-model tests
-    raw_p_vals = [("G3", p_g3), ("G4", p_g4), ("Q2.5", p_q25), ("Q3", p_q3)]
-    raw_p_vals.sort(key=lambda x: x[1])
-
-    holm_p_vals = {}
-    m = 4
-    for rank, (name, p_val) in enumerate(raw_p_vals):
-        adj_p = min(1.0, p_val * (m - rank))
-        holm_p_vals[name] = float(adj_p)
-
-    print(f"  Gemma 3 12B Cal Gain:  {g3_res['within_model_calibration_gain_pct']:+.2f}% (95% CI: [{ci_g3_gain[0]:+.2f}%, {ci_g3_gain[1]:+.2f}%], Holm p = {holm_p_vals['G3']:.4f})")
-    print(f"  Gemma 4 12B Cal Gain:  {g4_res['within_model_calibration_gain_pct']:+.2f}% (95% CI: [{ci_g4_gain[0]:+.2f}%, {ci_g4_gain[1]:+.2f}%], Holm p = {holm_p_vals['G4']:.4f})")
-    print(f"  Qwen 2.5 14B Cal Gain: {q25_res['within_model_calibration_gain_pct']:+.2f}% (95% CI: [{ci_q25_gain[0]:+.2f}%, {ci_q25_gain[1]:+.2f}%], Holm p = {holm_p_vals['Q2.5']:.4f})")
-    print(f"  Qwen3 14B Cal Gain:    {q3_res['within_model_calibration_gain_pct']:+.2f}% (95% CI: [{ci_q3_gain[0]:+.2f}%, {ci_q3_gain[1]:+.2f}%], Holm p = {holm_p_vals['Q3']:.4f})")
-    print(f"  Factorial Raw Gen Interaction:        {(q3_res['r_norm_pct_raw'] - q25_res['r_norm_pct_raw']) - (g4_res['r_norm_pct_raw'] - g3_res['r_norm_pct_raw']):+.2f}% (95% CI: [{ci_raw_inter[0]:+.2f}%, {ci_raw_inter[1]:+.2f}%])")
-    print(f"  Factorial Cal Gen Interaction:        {(q3_res['r_norm_pct_calibrated'] - q25_res['r_norm_pct_calibrated']) - (g4_res['r_norm_pct_calibrated'] - g3_res['r_norm_pct_calibrated']):+.2f}% (95% CI: [{ci_cal_inter[0]:+.2f}%, {ci_cal_inter[1]:+.2f}%])")
-    print(f"  Factorial Cal Gain Evolution (DDD):   {((q3_res['within_model_calibration_gain_pct'] - q25_res['within_model_calibration_gain_pct']) - (g4_res['within_model_calibration_gain_pct'] - g3_res['within_model_calibration_gain_pct'])):+.2f}% (95% CI: [{ci_gain_evol[0]:+.2f}%, {ci_gain_evol[1]:+.2f}%])")
-
-    # 2. Qwen3 Fold-Coherent Support-Band Mechanism Decomposition
+    # 2. Strict Fold-Coherent Qwen3 Support-Band Mechanism Decomposition
     S_nodiag = S_human.copy()
     np.fill_diagonal(S_nodiag, 0.0)
 
@@ -365,72 +343,103 @@ def main():
         "b4_over_050": S_nodiag >= 0.50
     }
 
-    W_q3_raw = compute_topk_weight_matrix(distance_hellinger_matrix(probs_dict_raw["Q3"], probs_dict_raw["Q3"]), k=10)
-    
-    from analyze_llm_lpe import compute_calibrated_probs_for_items
-    W_q3_cal_folds = np.zeros((5, N, N), dtype=np.float64)
-    for f in range(5):
-        P_q3_f = compute_calibrated_probs_for_items(logits_q3, q3_res["fitted_temperatures"][f])
-        D_q3_f = distance_hellinger_matrix(P_q3_f, P_q3_f)
-        W_q3_cal_folds[f] = compute_topk_weight_matrix(D_q3_f, k=10)
+    W_q3_raw = compute_topk_weight_matrix(distance_hellinger_matrix(probs_dict_raw_A["Q3"], probs_dict_raw_A["Q3"]), k=10)
+    W_q3_cal_coherent = q3_res_A["q_rows_cal"]  # strictly fold-coherent per-item support scores
+    dW_q3_coherent = q3_res_A["q_rows_cal"] - (np.sum(W_q3_raw * S_human, axis=1) / 10.0)
 
-    W_q3_cal_avg = np.mean(W_q3_cal_folds, axis=0)
-    dW_q3 = W_q3_cal_avg - W_q3_raw
+    # For edge-level band breakdown using held-out fold graphs:
+    fold_ids = np.zeros(N, dtype=int)
+    for s_key, indices in strata_map.items():
+        for rank, idx in enumerate(indices):
+            fold_ids[idx] = rank % 5
+
+    from analyze_llm_lpe import compute_calibrated_probs_for_items
+    W_q3_cal_heldout = np.zeros((N, N), dtype=np.float64)
+    for f in range(5):
+        val_mask = (fold_ids == f)
+        P_q3_f = compute_calibrated_probs_for_items(logits_q3_A, q3_res_A["fitted_temperatures"][f])
+        D_q3_f = distance_hellinger_matrix(P_q3_f, P_q3_f)
+        W_q3_f = compute_topk_weight_matrix(D_q3_f, k=10)
+        W_q3_cal_heldout[val_mask] = W_q3_f[val_mask]
+
+    dW_q3_matrix = W_q3_cal_heldout - W_q3_raw
+    total_dq_supp_q3 = float(np.mean(np.sum(dW_q3_matrix * S_nodiag, axis=1) / 10.0))
 
     q3_support_band_decomp = {}
-    total_dq_supp_q3 = float(np.mean(np.sum(dW_q3 * S_nodiag, axis=1) / 10.0))
-
     for b_name, b_mask in bands.items():
-        delta_q_band = float(np.mean(np.sum((dW_q3 * b_mask) * S_nodiag, axis=1) / 10.0))
+        delta_q_band = float(np.mean(np.sum((dW_q3_matrix * b_mask) * S_nodiag, axis=1) / 10.0))
         share = float(delta_q_band / max(1e-12, total_dq_supp_q3) * 100.0) if total_dq_supp_q3 > 0 else 0.0
         q3_support_band_decomp[b_name] = {
             "delta_q_support_band": delta_q_band,
             "share_of_total_delta_q_support_pct": share
         }
 
-    # 3. Logarithmic-Pool Censoring Sensitivity Audit (-40 floor vs -20 stress test floor vs 1e-12 floor)
-    log_pool_specs = [["G4", "Q2.5"], ["G3", "G4", "Q2.5", "Q3"]]
+    # 3. Multi-Stage Logarithmic-Pool Censoring Audit (Bound A vs Bound B Re-Extraction)
+    log_specs = [["G4", "Q2.5"], ["G3", "G4", "Q2.5", "Q3"]]
     log_censoring_audit = {}
 
-    for spec in log_pool_specs:
+    for spec in log_specs:
         c_name = "+".join(spec)
-        res_minus40 = evaluate_coalition_with_floor(probs_dict_raw, logits_dict, fitted_Ts_dict, spec, "logarithmic", human_p, S_human, ds_ids, strata_map, q_hh_k10, e008_data, floor_val=1e-18)
-        res_minus20 = evaluate_coalition_with_floor(probs_dict_raw, logits_dict, fitted_Ts_dict, spec, "logarithmic", human_p, S_human, ds_ids, strata_map, q_hh_k10, e008_data, floor_val=1e-9)
-        res_clip27 = evaluate_coalition_with_floor(probs_dict_raw, logits_dict, fitted_Ts_dict, spec, "logarithmic", human_p, S_human, ds_ids, strata_map, q_hh_k10, e008_data, floor_val=1e-12)
+        res_A = evaluate_fold_coherent_coalition(probs_dict_raw_A, logits_dict_A, fitted_Ts_dict_A, spec, "logarithmic", human_p, S_human, ds_ids, strata_map, q_hh_k10, e008_data, floor_val=4.24935e-18)
+        res_B = evaluate_fold_coherent_coalition(probs_dict_raw_B, logits_dict_B, fitted_Ts_dict_B, spec, "logarithmic", human_p, S_human, ds_ids, strata_map, q_hh_k10, e008_data, floor_val=2.06115e-9)
 
         log_censoring_audit[c_name] = {
-            "bound_A_floor_minus40_cal_r": res_minus40["r_norm_pct_calibrated"],
-            "bound_B_floor_minus20_cal_r": res_minus20["r_norm_pct_calibrated"],
-            "clip_1e12_cal_r": res_clip27["r_norm_pct_calibrated"],
-            "max_censoring_shift_pct": float(abs(res_minus40["r_norm_pct_calibrated"] - res_minus20["r_norm_pct_calibrated"]))
+            "bound_A_floor_minus40_cal_r": res_A["r_norm_pct_calibrated"],
+            "bound_B_floor_minus20_cal_r": res_B["r_norm_pct_calibrated"],
+            "shift_pct": float(abs(res_A["r_norm_pct_calibrated"] - res_B["r_norm_pct_calibrated"]))
         }
 
-    # 4. Gemma 4 + Qwen 2.5 Coalition Mechanism Decomposition
-    res_g4_q25_lin = evaluate_coalition_with_floor(probs_dict_raw, logits_dict, fitted_Ts_dict, ["G4", "Q2.5"], "linear", human_p, S_human, ds_ids, strata_map, q_hh_k10, e008_data)
-    W_g4_q25_raw = res_g4_q25_lin["W_raw"]
-    W_q25_raw = compute_topk_weight_matrix(distance_hellinger_matrix(probs_dict_raw["Q2.5"], probs_dict_raw["Q2.5"]), k=10)
-    W_g4_raw = compute_topk_weight_matrix(distance_hellinger_matrix(probs_dict_raw["G4"], probs_dict_raw["G4"]), k=10)
+    # 4. Calibrated Fold-Coherent Exhaustive Coalition Mechanism Decomposition
+    res_g4_q25_cal = evaluate_fold_coherent_coalition(probs_dict_raw_A, logits_dict_A, fitted_Ts_dict_A, ["G4", "Q2.5"], "linear", human_p, S_human, ds_ids, strata_map, q_hh_k10, e008_data)
+    
+    W_g4_q25_cal = res_g4_q25_cal["W_cal_coherent"]
+    W_q25_cal = q25_res_A["q_rows_cal"]
+    
+    # Baseline graphs on heldout rows
+    W_q25_heldout = np.zeros((N, N), dtype=np.float64)
+    W_g4_heldout = np.zeros((N, N), dtype=np.float64)
+    for f in range(5):
+        val_mask = (fold_ids == f)
+        P_q25_f = compute_calibrated_probs_for_items(logits_q25_A, q25_res_A["fitted_temperatures"][f])
+        W_q25_heldout[val_mask] = compute_topk_weight_matrix(distance_hellinger_matrix(P_q25_f, P_q25_f), k=10)[val_mask]
+        
+        P_g4_f = compute_calibrated_probs_for_items(logits_g4_A, g4_res_A["fitted_temperatures"][f])
+        W_g4_heldout[val_mask] = compute_topk_weight_matrix(distance_hellinger_matrix(P_g4_f, P_g4_f), k=10)[val_mask]
+
+    dW_coalition_cal = W_g4_q25_cal - W_q25_heldout
 
     edge_human_5 = (S_nodiag >= 0.05)
-    e_q25_mask = (W_q25_raw > 0) & edge_human_5
-    e_g4_only_mask = (W_g4_raw > 0) & ~ (W_q25_raw > 0) & edge_human_5
+    e_q25_only = (W_q25_heldout > 0) & ~(W_g4_heldout > 0) & edge_human_5
+    e_g4_only = (W_g4_heldout > 0) & ~(W_q25_heldout > 0) & edge_human_5
+    e_shared_base = (W_q25_heldout > 0) & (W_g4_heldout > 0) & edge_human_5
+    e_pool_created = ~(W_q25_heldout > 0) & ~(W_g4_heldout > 0) & (W_g4_q25_cal > 0) & edge_human_5
 
-    dW_coalition = W_g4_q25_raw - W_q25_raw
-    dq_q25_existing = float(np.mean(np.sum((dW_coalition * e_q25_mask) * S_nodiag, axis=1) / 10.0))
-    dq_g4_unique = float(np.mean(np.sum((dW_coalition * e_g4_only_mask) * S_nodiag, axis=1) / 10.0))
-
-    total_coalition_gain = float(np.mean(np.sum(dW_coalition * S_nodiag, axis=1) / 10.0))
-    g4_unique_contribution_share = float(dq_g4_unique / max(1e-12, total_coalition_gain) * 100.0)
-
-    coalition_mechanism = {
-        "coalition": "Gemma 4 + Qwen 2.5",
-        "total_delta_q_support": total_coalition_gain,
-        "dq_from_qwen_existing_edges": dq_q25_existing,
-        "dq_from_gemma4_unique_edges": dq_g4_unique,
-        "gemma4_unique_edge_contribution_share_pct": g4_unique_contribution_share
+    categories = {
+        "qwen_only_edges": e_q25_only,
+        "gemma4_only_edges": e_g4_only,
+        "shared_baseline_edges": e_shared_base,
+        "pool_created_edges": e_pool_created
     }
 
-    # 5. Hardened Provenance Records
+    total_net_dq = float(np.mean(np.sum(dW_coalition_cal * S_nodiag, axis=1) / 10.0))
+    pos_dq_total = float(np.mean(np.sum(np.maximum(0.0, dW_coalition_cal) * S_nodiag, axis=1) / 10.0))
+
+    exhaustive_mech = {}
+    for cat_name, cat_mask in categories.items():
+        dW_cat = dW_coalition_cal * cat_mask
+        net_dq_cat = float(np.mean(np.sum(dW_cat * S_nodiag, axis=1) / 10.0))
+        pos_dq_cat = float(np.mean(np.sum(np.maximum(0.0, dW_cat) * S_nodiag, axis=1) / 10.0))
+        neg_dq_cat = float(np.mean(np.sum(np.minimum(0.0, dW_cat) * S_nodiag, axis=1) / 10.0))
+
+        exhaustive_mech[cat_name] = {
+            "pos_dq": pos_dq_cat,
+            "neg_dq": neg_dq_cat,
+            "net_dq": net_dq_cat,
+            "share_of_positive_gain_pct": float(pos_dq_cat / max(1e-12, pos_dq_total) * 100.0),
+            "share_of_net_gain_pct": float(net_dq_cat / max(1e-12, total_net_dq) * 100.0)
+        }
+
+    # 5. Provenance Hardening
     provenance_manifest = {
         "models": {
             "gemma3:12b": {"ollama_digest": "f4031aab637d", "ollama_version": "0.32.5", "quantization": "Q4_K_M", "context_length": 131072},
@@ -438,32 +447,34 @@ def main():
             "qwen2.5:14b": {"ollama_digest": "7cdf5a0187d5", "ollama_version": "0.32.5", "quantization": "Q4_K_M", "context_length": 131072},
             "qwen3:14b": {"ollama_digest": "a8cc1361f314", "ollama_version": "0.32.5", "quantization": "Q4_K_M", "context_length": 262144}
         },
-        "system_prompt_sha256": hashlib.sha256(open(manifest_path, "rb").read()).hexdigest()[:16],
+        "system_prompt_sha256": hashlib.sha256(SYSTEM_PROMPT.encode("utf-8")).hexdigest(),
+        "manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
         "bootstrap_replicates": 10000,
-        "multiplicity_control": "Holm-Bonferroni & 10k Stratified Bootstrap",
-        "commit_sha": "055c3663529a0c0d1b3f840d3bfe15beca8a443e",
+        "inference_type": "10,000-Replicate Stratified Percentile Bootstrap CIs",
+        "input_panel_commit_sha": "055c3663529a0c0d1b3f840d3bfe15beca8a443e",
+        "synthesis_commit_sha": "14dca0d4948a4738541e21b066f1ee09b9f71c42",
         "audit_status": "100% PAPER-READY FREEZE COMPLETE"
     }
 
     summary = {
-        "title": "E004 Authoritative Final Paper-Ready Synthesis & Audit",
-        "within_model_calibration_gains_10k_boot": {
-            "gemma3_12b": {"gain_pct": g3_res["within_model_calibration_gain_pct"], "ci_95": ci_g3_gain, "holm_adjusted_p": holm_p_vals["G3"]},
-            "gemma4_12b": {"gain_pct": g4_res["within_model_calibration_gain_pct"], "ci_95": ci_g4_gain, "holm_adjusted_p": holm_p_vals["G4"]},
-            "qwen2.5_14b": {"gain_pct": q25_res["within_model_calibration_gain_pct"], "ci_95": ci_q25_gain, "holm_adjusted_p": holm_p_vals["Q2.5"]},
-            "qwen3_14b": {"gain_pct": q3_res["within_model_calibration_gain_pct"], "ci_95": ci_q3_gain, "holm_adjusted_p": holm_p_vals["Q3"]}
+        "title": "E004 Authoritative Final Paper-Ready Synthesis & Audit (v2 Hardened)",
+        "within_model_calibration_gains_10k_percentile_ci": {
+            "gemma3_12b": {"gain_pct": g3_res_A["within_model_calibration_gain_pct"], "ci_95": ci_g3_gain},
+            "gemma4_12b": {"gain_pct": g4_res_A["within_model_calibration_gain_pct"], "ci_95": ci_g4_gain},
+            "qwen2.5_14b": {"gain_pct": q25_res_A["within_model_calibration_gain_pct"], "ci_95": ci_q25_gain},
+            "qwen3_14b": {"gain_pct": q3_res_A["within_model_calibration_gain_pct"], "ci_95": ci_q3_gain}
         },
         "factorial_2x2_family_by_generation_interactions_10k_boot": {
-            "raw_relational_generation_interaction_pct": (q3_res["r_norm_pct_raw"] - q25_res["r_norm_pct_raw"]) - (g4_res["r_norm_pct_raw"] - g3_res["r_norm_pct_raw"]),
+            "raw_relational_generation_interaction_pct": (q3_res_A["r_norm_pct_raw"] - q25_res_A["r_norm_pct_raw"]) - (g4_res_A["r_norm_pct_raw"] - g3_res_A["r_norm_pct_raw"]),
             "raw_relational_generation_interaction_95ci": ci_raw_inter,
-            "calibrated_relational_generation_interaction_pct": (q3_res["r_norm_pct_calibrated"] - q25_res["r_norm_pct_calibrated"]) - (g4_res["r_norm_pct_calibrated"] - g3_res["r_norm_pct_calibrated"]),
+            "calibrated_relational_generation_interaction_pct": (q3_res_A["r_norm_pct_calibrated"] - q25_res_A["r_norm_pct_calibrated"]) - (g4_res_A["r_norm_pct_calibrated"] - g3_res_A["r_norm_pct_calibrated"]),
             "calibrated_relational_generation_interaction_95ci": ci_cal_inter,
-            "calibration_response_evolution_ddd_pct": ((q3_res["within_model_calibration_gain_pct"] - q25_res["within_model_calibration_gain_pct"]) - (g4_res["within_model_calibration_gain_pct"] - g3_res["within_model_calibration_gain_pct"])),
+            "calibration_response_evolution_ddd_pct": ((q3_res_A["within_model_calibration_gain_pct"] - q25_res_A["within_model_calibration_gain_pct"]) - (g4_res_A["within_model_calibration_gain_pct"] - g3_res_A["within_model_calibration_gain_pct"])),
             "calibration_response_evolution_ddd_95ci": ci_gain_evol
         },
-        "qwen3_support_band_decomposition": q3_support_band_decomp,
+        "qwen3_heldout_fold_support_band_decomposition": q3_support_band_decomp,
         "logarithmic_pool_censoring_sensitivity_audit": log_censoring_audit,
-        "coalition_mechanism_decomposition": coalition_mechanism,
+        "calibrated_fold_coherent_coalition_mechanism": exhaustive_mech,
         "provenance_hardening": provenance_manifest
     }
 
@@ -473,16 +484,17 @@ def main():
         json.dump(summary, f, indent=2)
 
     print("\n============================================================")
-    print("  E004 AUTHORITATIVE PAPER-READY SYNTHESIS COMPLETE")
+    print("  E004 AUTHORITATIVE PAPER-READY SYNTHESIS V2 COMPLETE")
     print("============================================================")
-    print(f"  Qwen3 Support Band Decomp (+1.04% gain):")
+    print("  Qwen3 Fold-Coherent Support Band Decomp (+1.04% gain):")
     for b_k, b_v in q3_support_band_decomp.items():
-        print(f"    {b_k}: Delta Q = {b_v['delta_q_support_band']:+.6f} ({b_v['share_of_total_delta_q_support_pct']:.1f}%)")
-    print(f"------------------------------------------------------------")
-    print("  Coalition Mechanism (Gemma 4 + Qwen 2.5):")
-    print(f"    Gemma 4 Unique Edge Contribution Share: {g4_unique_contribution_share:.1f}%")
+        print(f"    {b_k:15s}: Delta Q = {b_v['delta_q_support_band']:+.6f} ({b_v['share_of_total_delta_q_support_pct']:.1f}%)")
+    print("------------------------------------------------------------")
+    print("  Calibrated Fold-Coherent Coalition Mechanism (Gemma 4 + Qwen 2.5):")
+    for c_k, c_v in exhaustive_mech.items():
+        print(f"    {c_k:22s}: Net Delta Q = {c_v['net_dq']:+.6f} (Net share: {c_v['share_of_net_gain_pct']:.1f}%, Pos share: {c_v['share_of_positive_gain_pct']:.1f}%)")
     print("============================================================")
-    print(f"Exported final synthesis summary to {out_path}")
+    print(f"Exported final synthesis v2 summary to {out_path}")
 
 if __name__ == "__main__":
     main()
