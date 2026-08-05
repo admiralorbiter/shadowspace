@@ -47,7 +47,10 @@ research/chaosnli/artifacts/
 
 # IDEs
 .vscode/
-.idea/
+# Education Audit Blinding Keys & Private Review Packets
+results/**/blinding_key*.json
+private_review/
+
 *.swp
 *.swo
 

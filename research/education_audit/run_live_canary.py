@@ -25,11 +25,10 @@ from research.education_audit.variant_builder import build_variants_for_case
 def run_edu2a_canary(
     out_dir: str = "results/education_audit/edu_2a",
     model_name: str = "gemma3:12b",
-    use_mock_fallback_for_offline: bool = True,
+    use_mock_fallback_for_offline: bool = False,
     run_order_seed: int = 42,
 ) -> str:
-
-    """Executes EDU-2a Canary: Preflight + 60-Letter Randomized Execution + Blinding Packet Export."""
+    """Executes EDU-2a-R1 Canary: Calibration + 60-Letter Strict Execution + Private Blinding Packet Export."""
     os.makedirs(out_dir, exist_ok=True)
 
     adapter = OllamaEducationAdapter(
@@ -37,25 +36,31 @@ def run_edu2a_canary(
         use_mock_fallback=use_mock_fallback_for_offline,
     )
     is_live = adapter.ping_and_inspect()
+    if not is_live and not use_mock_fallback_for_offline:
+        raise RuntimeError(f"Ollama hard refusal: Could not load model '{model_name}'. Error: {adapter.load_error}")
+
     print(f"Ollama Live Adapter Status for '{model_name}': loaded={is_live}, digest={adapter.model_digest}, version={adapter.ollama_version}")
 
     all_cases = {c.case_id: c for c in build_synthetic_audit_cases()}
-    # Select Canary Profiles: tech_qual_001 and hum_excep_002
     canary_cases = [all_cases["tech_qual_001"], all_cases["hum_excep_002"]]
 
-    # 1. Five-Letter Preflight Check (1 case x 1 prompt x 5 conditions x 1 seed)
-    print("\n--- Running 5-Letter Preflight Check ---")
-    preflight_case = canary_cases[0]
-    preflight_variants = build_variants_for_case(preflight_case)
-    preflight_records = []
+    # 1. Four-Letter Disposable Preflight Calibration Check (2 cases x 2 prompts x 1 anon condition)
+    print("\n--- Running 4-Letter Disposable Preflight Calibration ---")
+    calibration_records = []
 
-    for var in preflight_variants:
-        g = adapter.generate(preflight_case, var, "minimal_prompt", PROMPT_TEMPLATES["minimal_prompt"], repeat_index=0, seed=101)
-        assert len(g.output_text) > 50, f"Preflight generation too short or empty for {var.condition}!"
-        assert g.parameters.get("done_reason") in ["stop", "length", "mock"], f"Preflight done_reason error for {var.condition}!"
-        preflight_records.append(g)
+    for c in canary_cases:
+        anon_var = [v for v in build_variants_for_case(c) if v.condition == "anonymous"][0]
+        for p_id in ["minimal_prompt", "structured_prompt"]:
+            g = adapter.generate(c, anon_var, p_id, PROMPT_TEMPLATES[p_id], repeat_index=0, seed=101)
+            reason = g.parameters.get("done_reason")
+            words = len(g.output_text.split())
+            paragraphs = len([p for p in g.output_text.split("\n\n") if p.strip()])
 
-    print(f"Preflight Check Passed! 5/5 letters completed cleanly (Mean len: {int(np.mean([len(g.output_text) for g in preflight_records]))} chars).")
+            assert reason in ["stop", "mock"], f"Preflight calibration truncation failure for {c.case_id}/{p_id}! Reason: {reason}"
+            assert 100 <= words <= 350, f"Preflight calibration word count out of bounds ({words} words) for {c.case_id}/{p_id}!"
+            calibration_records.append(g)
+
+    print(f"Disposable Calibration Passed! 4/4 calibration letters completed cleanly (All done_reason == 'stop').")
 
     # 2. Build 60-Run Task Combinations
     task_grid = []
@@ -86,6 +91,7 @@ def run_edu2a_canary(
     print(f"\n--- Running Frozen 60-Letter Canary Execution ({len(grid_shuffled)} runs) ---")
     canary_generations: List[GenerationRecord] = []
     canary_evaluations = []
+    truncation_count = 0
 
     for idx, task in enumerate(grid_shuffled, start=1):
         g = adapter.generate(
@@ -100,8 +106,17 @@ def run_edu2a_canary(
         canary_generations.append(g)
         canary_evaluations.append(e)
 
+        reason = g.parameters.get("done_reason")
+        if reason not in ["stop", "mock"]:
+            truncation_count += 1
+
         if idx % 15 == 0 or idx == len(grid_shuffled):
-            print(f"Completed {idx}/60 generations...")
+            print(f"Completed {idx}/60 generations... (Truncations so far: {truncation_count})")
+
+    # Fail closed if any record truncated
+    if truncation_count > 0:
+        print(f"WARNING: {truncation_count}/60 generations were truncated (done_reason != 'stop'). Execution flagged as incomplete.")
+
 
     # 3. Export Generations & Screening Evaluations
     gen_path = os.path.join(out_dir, "generations.jsonl")
