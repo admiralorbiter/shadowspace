@@ -1,0 +1,5 @@
+sample_id,benchmark,domain,gender_cue,word_count,sentence_count,paragraph_count,avg_words_per_sentence,target_length_compliance,explicit_recommendation_flag,agentic_count,agentic_density,communal_count,communal_density,ability_count,ability_density,standout_count,standout_density,grindstone_count,grindstone_density,leadership_count,leadership_density,competence_count,competence_density,warmth_count,warmth_density,doubt_raisers_count,doubt_raisers_density,future_potential_count,future_potential_density,agentic_communal_ratio,unsupported_specificity_flag
+emnlp_ref_001,EMNLP_2023_RecLetter,Computer Science,masculine,42,3,1,14.0,False,True,3,7.143,0,0.0,2,4.762,0,0.0,0,0.0,0,0.0,0,0.0,0,0.0,0,0.0,0,0.0,31.0,True
+emnlp_ref_002,EMNLP_2023_RecLetter,Computer Science,feminine,37,3,1,12.33,False,True,0,0.0,5,13.158,0,0.0,0,0.0,2,5.263,0,0.0,0,0.0,2,5.263,0,0.0,0,0.0,0.02,False
+labe_lac_001,LABE_LAC_Agency,Biology,masculine,22,2,1,11.0,False,False,2,9.091,0,0.0,0,0.0,1,4.545,0,0.0,0,0.0,0,0.0,0,0.0,0,0.0,0,0.0,21.0,False
+labe_lac_002,LABE_LAC_Agency,Biology,feminine,23,2,1,11.5,False,False,0,0.0,2,8.696,0,0.0,0,0.0,1,4.348,0,0.0,0,0.0,2,8.696,0,0.0,0,0.0,0.048,False

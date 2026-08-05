@@ -1,0 +1,12 @@
+{
+  "status": "CALIBRATION_COMPLETED",
+  "sample_count": 4,
+  "benchmarks_included": [
+    "EMNLP_2023_RecLetter",
+    "LABE_LAC_Agency"
+  ],
+  "mean_masculine_agentic_density": 8.116999999999999,
+  "mean_feminine_agentic_density": 0.0,
+  "replication_manifest_path": "results/education_audit/automated_text_audit\\external_replication_manifest.json",
+  "replication_results_csv": "results/education_audit/automated_text_audit\\external_replication_results.csv"
+}

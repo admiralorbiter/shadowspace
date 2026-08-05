@@ -1,0 +1,8 @@
+{
+  "status": "COMPLETED",
+  "generations_count": 60,
+  "counterfactual_pairs_count": 72,
+  "calibration_status": "CALIBRATION_COMPLETED",
+  "atlas_generated": true,
+  "private_analysis_protected": true
+}
