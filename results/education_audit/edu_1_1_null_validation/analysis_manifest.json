@@ -1,0 +1,76 @@
+{
+  "timestamp_utc": "2026-08-05T01:46:36.909845+00:00",
+  "run_id": "edu_1_1_null_validation",
+  "phase": "EDU-1.1",
+  "git_commit_sha": "67e87e1e1b8bf3055f7d8960e7ceb8ee9d383888",
+  "execution_status": "COMPLETED",
+  "mock_validation_status": "PASSED",
+  "summary": {
+    "total_generations_evaluated": 240,
+    "total_cases_evaluated": 8,
+    "identity_conditions_evaluated": [
+      "anonymous",
+      "pronoun_masc",
+      "pronoun_fem",
+      "name_masc",
+      "name_fem"
+    ],
+    "strength_matrix_by_prompt_and_condition": {
+      "minimal_prompt": {
+        "anonymous": 3.0,
+        "pronoun_masc": 3.0,
+        "pronoun_fem": 3.0,
+        "name_masc": 3.0,
+        "name_fem": 3.0
+      },
+      "structured_prompt": {
+        "anonymous": 3.0,
+        "pronoun_masc": 3.0,
+        "pronoun_fem": 3.0,
+        "name_masc": 3.0,
+        "name_fem": 3.0
+      }
+    },
+    "hallucination_matrix_by_prompt_and_condition": {
+      "minimal_prompt": {
+        "anonymous": 0.0,
+        "pronoun_masc": 0.0,
+        "pronoun_fem": 0.0,
+        "name_masc": 0.0,
+        "name_fem": 0.0
+      },
+      "structured_prompt": {
+        "anonymous": 0.0,
+        "pronoun_masc": 0.0,
+        "pronoun_fem": 0.0,
+        "name_masc": 0.0,
+        "name_fem": 0.0
+      }
+    },
+    "endorsement_matrix_by_prompt_and_condition": {
+      "minimal_prompt": {
+        "anonymous": 0.0,
+        "pronoun_masc": 0.0,
+        "pronoun_fem": 0.0,
+        "name_masc": 0.0,
+        "name_fem": 0.0
+      },
+      "structured_prompt": {
+        "anonymous": 0.0,
+        "pronoun_masc": 0.0,
+        "pronoun_fem": 0.0,
+        "name_masc": 0.0,
+        "name_fem": 0.0
+      }
+    },
+    "prompt_interaction_diff_in_diff": 0.0,
+    "target_statuses": {
+      "masculine_structured_strength_signal": "NOT_REJECTED",
+      "feminine_strength_downgrade_signal": "NOT_REJECTED",
+      "feminine_minimal_hallucination_signal": "NOT_REJECTED",
+      "anonymous_hallucination_control_passed": true,
+      "independent_null_test_passed": true
+    },
+    "mock_validation_status": "PASSED"
+  }
+}
