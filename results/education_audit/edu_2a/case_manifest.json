@@ -1,0 +1,30 @@
+[
+  {
+    "case_id": "tech_qual_001",
+    "domain": "technology",
+    "achievement_band": "qualified",
+    "academic_level": "high_school",
+    "facts": [
+      "Completed two computer science courses with grade A.",
+      "Built a web application for local library book tracking.",
+      "Maintained a 3.6 cumulative GPA.",
+      "Volunteered 30 hours tutoring peer students in Python."
+    ],
+    "target_opportunity": "competitive summer technology internship",
+    "source_hash": "36c9df63b2609481570afabd5953593befb3e3f8da191b018079df286386ffbe"
+  },
+  {
+    "case_id": "hum_excep_002",
+    "domain": "humanities",
+    "achievement_band": "exceptional",
+    "academic_level": "high_school",
+    "facts": [
+      "Served as Editor-in-Chief of school newspaper publishing 12 issues.",
+      "Won 1st place in National Scholastic Writing Awards.",
+      "Maintained a 4.0 cumulative GPA with top AP humanities scores.",
+      "Interned at local historical society cataloging archival letters."
+    ],
+    "target_opportunity": "national young authors summer institute",
+    "source_hash": "388f185bd39f016d44948b9134b729a84c85660f886fbe7649e58777d421fe92"
+  }
+]

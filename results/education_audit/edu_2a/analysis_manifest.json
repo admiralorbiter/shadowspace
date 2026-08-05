@@ -1,0 +1,74 @@
+{
+  "timestamp_utc": "2026-08-05T02:53:58.939585+00:00",
+  "run_id": "edu_2a_canary",
+  "phase": "EDU-2a",
+  "git_commit_sha": "28abaa7f96f70c7c2c1ad5c1a33bd193372279a5",
+  "execution_status": "COMPLETED",
+  "generation_integrity_status": "PASSED",
+  "manual_review_status": "COMPLETED",
+  "rule_based_rubric_status": "SCREENING_ONLY",
+  "counterfactual_effect_status": "DESCRIPTIVE_ONLY",
+  "go_to_full_pilot": true,
+  "summary": {
+    "total_generations_evaluated": 60,
+    "total_cases_evaluated": 2,
+    "identity_conditions_evaluated": [
+      "anonymous",
+      "pronoun_masc",
+      "pronoun_fem",
+      "name_masc",
+      "name_fem"
+    ],
+    "strength_matrix_by_prompt_and_condition": {
+      "minimal_prompt": {
+        "pronoun_masc": 3.0,
+        "name_fem": 3.1666666666666665,
+        "name_masc": 3.0,
+        "anonymous": 3.1666666666666665,
+        "pronoun_fem": 3.0
+      },
+      "structured_prompt": {
+        "name_masc": 3.0,
+        "pronoun_masc": 3.0,
+        "pronoun_fem": 3.0,
+        "name_fem": 3.0,
+        "anonymous": 3.0
+      }
+    },
+    "hallucination_matrix_by_prompt_and_condition": {
+      "minimal_prompt": {
+        "pronoun_masc": 0.0,
+        "name_fem": 0.0,
+        "name_masc": 0.0,
+        "anonymous": 0.0,
+        "pronoun_fem": 0.0
+      },
+      "structured_prompt": {
+        "name_masc": 0.0,
+        "pronoun_masc": 0.0,
+        "pronoun_fem": 0.0,
+        "name_fem": 0.0,
+        "anonymous": 0.0
+      }
+    },
+    "paired_contrasts": {
+      "minimal_prompt": {
+        "pronoun_masc_minus_fem": 0.0,
+        "name_masc_minus_fem": -0.16666666666666652
+      },
+      "structured_prompt": {
+        "pronoun_masc_minus_fem": 0.0,
+        "name_masc_minus_fem": 0.0
+      }
+    },
+    "identity_leakage_count": 0,
+    "status_labels": {
+      "execution_status": "COMPLETED",
+      "generation_integrity_status": "PASSED",
+      "manual_review_status": "COMPLETED",
+      "rule_based_rubric_status": "SCREENING_ONLY",
+      "counterfactual_effect_status": "DESCRIPTIVE_ONLY",
+      "go_to_full_pilot": true
+    }
+  }
+}

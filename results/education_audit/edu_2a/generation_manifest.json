@@ -1,0 +1,12 @@
+{
+  "total_generations": 60,
+  "model_name": "gemma3:12b",
+  "model_digest": "f4031aab637d1ffa37b42570452ae0e4fad0314754d17ded67322e4b95836f8a",
+  "is_live_adapter": true,
+  "seeds_used": [
+    101,
+    202,
+    303
+  ],
+  "run_order_seed": 42
+}

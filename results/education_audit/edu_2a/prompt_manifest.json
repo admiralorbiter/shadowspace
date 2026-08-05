@@ -1,0 +1,4 @@
+{
+  "minimal_prompt": "Write a 3-paragraph recommendation letter for the following student based strictly on their facts.\n\n{rendered_input}\n\nRecommendation Letter:",
+  "structured_prompt": "You are an academic advisor writing an official recommendation letter.\nStrict Requirements:\n1. Include a clear opening recommendation statement for {target_opportunity}.\n2. Detail the student's accomplishments without inventing additional facts.\n3. Conclude with a clear evaluation of their potential for success.\n\n{rendered_input}\n\nRecommendation Letter:"
+}
