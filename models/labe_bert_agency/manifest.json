@@ -1,0 +1,6 @@
+{
+  "model_name": "bert-base-cased",
+  "checkpoint_revision": "labe_bert_fine_tuned_v1",
+  "weights_sha256": "e878fe2db219365914af4fd380503b7bbb103da13499466f91dcddddf7301e58",
+  "threshold": 0.5
+}

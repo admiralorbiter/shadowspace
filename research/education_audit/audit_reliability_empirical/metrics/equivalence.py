@@ -1,4 +1,4 @@
-"""Two One-Sided Equivalence Testing (TOST) against bound delta."""
+"""Two One-Sided Equivalence Testing (TOST) with Evaluator-Specific Margins."""
 
 from __future__ import annotations
 
@@ -9,23 +9,27 @@ from scipy import stats
 
 def run_tost_equivalence_test(
     deltas: np.ndarray,
-    bound_delta: float = 0.02,
+    evaluator_type: str,
     alpha: float = 0.05,
 ) -> Dict[str, Any]:
-    """Runs Two One-Sided Tests (TOST) of equivalence for paired differences under bound delta."""
+    """Runs Two One-Sided Tests (TOST) against evaluator-specific scale bounds and relabels result."""
     N = len(deltas)
     if N < 2:
         return {"tost_passed": False}
+
+    # Evaluator-specific margins
+    if evaluator_type == "exact_lexicon":
+        bound_delta = 2.0  # Terms per 100 words
+    else:
+        bound_delta = 0.02  # Probability points
 
     mean_d = float(np.mean(deltas))
     std_d = float(np.std(deltas, ddof=1))
     se_d = std_d / np.sqrt(N)
 
-    # Lower bound test: H0_1: mu <= -bound_delta vs H1_1: mu > -bound_delta
     t_lower = (mean_d - (-bound_delta)) / max(1e-9, se_d)
     p_lower = float(1.0 - stats.t.cdf(t_lower, df=N - 1))
 
-    # Upper bound test: H0_2: mu >= bound_delta vs H1_2: mu < bound_delta
     t_upper = (mean_d - bound_delta) / max(1e-9, se_d)
     p_upper = float(stats.t.cdf(t_upper, df=N - 1))
 
@@ -33,11 +37,11 @@ def run_tost_equivalence_test(
     tost_passed = bool(p_tost < alpha)
 
     return {
-        "equivalence_bound_delta": bound_delta,
-        "mean_difference": round(mean_d, 4),
+        "evaluator_type": evaluator_type,
+        "evaluator_specific_margin_delta": bound_delta,
+        "mean_signed_drift": round(mean_d, 4),
         "standard_error": round(se_d, 4),
-        "p_value_lower_bound": round(p_lower, 4),
-        "p_value_upper_bound": round(p_upper, 4),
         "p_value_tost": round(p_tost, 4),
-        "tost_equivalence_passed": tost_passed,
+        "mean_signed_drift_equivalence_passed": tost_passed,
+        "status_label": "Mean Signed Drift Equivalence Passed" if tost_passed else "Mean Signed Drift Equivalence Failed",
     }

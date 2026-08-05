@@ -1,30 +1,58 @@
-"""LABE-Trained Sparse N-Gram Ensemble Evaluator (Logistic + Gradient Boosting)."""
+"""LABE-Trained Sparse N-Gram Ensemble Evaluator (Loaded from Frozen Joblib Artifacts)."""
 
 from __future__ import annotations
 
+import hashlib
+import json
+import os
 import re
 from typing import Any, Dict, List
+import joblib
 import numpy as np
 
-from research.education_audit.agency_classifier_validation.labe_classifier_trainer import train_and_evaluate_labe_classifier
 from research.education_audit.audit_reliability_empirical.provenance import EvaluatorProvenance
 
 
-class SparseNgramEnsembleEvaluator:
-    """LABE-Trained Sparse N-Gram Ensemble Evaluator."""
+def compute_file_sha256(filepath: str) -> str:
+    """Computes exact 64-character SHA-256 hash of a file."""
+    h = hashlib.sha256()
+    with open(filepath, "rb") as f:
+        while chunk := f.read(8192):
+            h.update(chunk)
+    return h.hexdigest()
 
-    def __init__(self, model_artifacts: Dict[str, Any]):
-        self.vectorizer = model_artifacts["vectorizer"]
-        self.clf_lr = model_artifacts["clf_lr"]
-        self.clf_gb = model_artifacts["clf_gb"]
-        self.threshold = model_artifacts["best_threshold"]
+
+class SparseNgramEnsembleEvaluator:
+    """LABE-Trained Sparse N-Gram Ensemble Evaluator (Loaded from Frozen Joblib Artifacts)."""
+
+    def __init__(self, model_dir: str = "models/labe_sparse_ngram"):
+        model_dir = os.path.abspath(model_dir)
+        vec_path = os.path.join(model_dir, "vectorizer.joblib")
+        lr_path = os.path.join(model_dir, "clf_lr.joblib")
+        gb_path = os.path.join(model_dir, "clf_gb.joblib")
+        manifest_path = os.path.join(model_dir, "manifest.json")
+
+        if not os.path.exists(vec_path) or not os.path.exists(lr_path) or not os.path.exists(gb_path):
+            raise FileNotFoundError(f"Required frozen n-gram joblib artifacts missing in {model_dir}")
+
+        self.vectorizer = joblib.load(vec_path)
+        self.clf_lr = joblib.load(lr_path)
+        self.clf_gb = joblib.load(gb_path)
+
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            manifest = json.load(f)
+        self.threshold = float(manifest.get("best_threshold", 0.49))
+
+        combined_hash = hashlib.sha256(
+            (manifest["vectorizer_sha256"] + manifest["clf_lr_sha256"] + manifest["clf_gb_sha256"]).encode("utf-8")
+        ).hexdigest()
 
         self.provenance = EvaluatorProvenance(
             evaluator_id="eval_sparse_ngram_ensemble",
             evaluator_name="Sparse N-Gram Baseline Ensemble",
             model_family="sklearn_tfidf_lr_gb_ensemble",
             checkpoint_revision="labe_train_split_v1",
-            checkpoint_sha256="labe_ngram_ensemble_hash_v1",
+            checkpoint_sha256=combined_hash,
             training_data_revision="abcc3ec6032e3b265cbf15c6d8a3da668a2a030675b00f0425b96698c8cd5b56",
             score_scale=[0.0, 1.0],
             threshold=self.threshold,

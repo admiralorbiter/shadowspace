@@ -1,4 +1,4 @@
-"""AR-1: Evaluator Panel Initialization & Provenance Validation."""
+"""AR-1: Evaluator Panel Initialization & Provenance Validation (Loaded from Frozen Checkpoints)."""
 
 from __future__ import annotations
 
@@ -6,7 +6,6 @@ import json
 import os
 from typing import Any, Dict
 
-from research.education_audit.agency_classifier_validation.labe_classifier_trainer import train_and_evaluate_labe_classifier
 from research.education_audit.audit_reliability_empirical.provenance import validate_evaluator_dependency_graph
 from research.education_audit.audit_reliability_empirical.evaluators.exact_lexicon import ExactLexiconEvaluator
 from research.education_audit.audit_reliability_empirical.evaluators.sparse_ngram import SparseNgramEnsembleEvaluator
@@ -16,13 +15,11 @@ from research.education_audit.audit_reliability_empirical.evaluators.labe_transf
 def initialize_empirical_evaluator_panel(
     out_dir: str = "results/education_audit/audit_reliability_empirical",
 ) -> Dict[str, Any]:
-    """Initializes the 3 independent evaluators and validates the provenance dependency graph."""
+    """Initializes the 3 independent evaluators from frozen checkpoints and validates the provenance dependency graph."""
     os.makedirs(out_dir, exist_ok=True)
 
-    _, artifacts = train_and_evaluate_labe_classifier()
-
     lexicon_eval = ExactLexiconEvaluator()
-    ngram_eval = SparseNgramEnsembleEvaluator(artifacts)
+    ngram_eval = SparseNgramEnsembleEvaluator()
     transformer_eval = LABETransformerAgencyEvaluator()
 
     panel = {

@@ -24,7 +24,7 @@
       "evaluator_name": "Sparse N-Gram Baseline Ensemble",
       "model_family": "sklearn_tfidf_lr_gb_ensemble",
       "checkpoint_revision": "labe_train_split_v1",
-      "checkpoint_sha256": "labe_ngram_ensemble_hash_v1",
+      "checkpoint_sha256": "1a66d07ae845340606862793491655b4fa72d8723100875e13b58e88cdbcf1bd",
       "training_data_revision": "abcc3ec6032e3b265cbf15c6d8a3da668a2a030675b00f0425b96698c8cd5b56",
       "score_scale": [
         0.0,
@@ -37,10 +37,10 @@
     },
     "labe_bert_transformer": {
       "evaluator_id": "eval_labe_bert_transformer",
-      "evaluator_name": "LABE Independent BERT Transformer Classifier",
+      "evaluator_name": "LABE Fine-Tuned BERT Transformer Classifier",
       "model_family": "bert_sequence_classification",
-      "checkpoint_revision": "bert-base-cased_labe_v1",
-      "checkpoint_sha256": "bert_base_cased_labe_agency_sha256_v1",
+      "checkpoint_revision": "labe_bert_fine_tuned_v1",
+      "checkpoint_sha256": "e878fe2db219365914af4fd380503b7bbb103da13499466f91dcddddf7301e58",
       "training_data_revision": "abcc3ec6032e3b265cbf15c6d8a3da668a2a030675b00f0425b96698c8cd5b56",
       "score_scale": [
         0.0,
