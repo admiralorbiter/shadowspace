@@ -11,8 +11,8 @@ OUTPUT_PATH = "results/ambiguity_atlas/posterior_stability.parquet"
 
 
 def run_posterior_audit():
-    """Execute Dirichlet posterior uncertainty audit."""
-    print("=== Running Dirichlet Posterior Stability Audit ===")
+    """Execute Dirichlet posterior uncertainty audit using fixed original majority estimand."""
+    print("=== Running Dirichlet Posterior Stability Audit (Joint Estimand) ===")
     
     df_canon = pl.read_parquet(CANONICAL_PATH)
     df_strict = pl.read_parquet(STRICT_PAIRS_PATH)
@@ -24,9 +24,9 @@ def run_posterior_audit():
     canon_dict = {row["object_id"]: row for row in df_canon.to_dicts()}
     
     records = []
-    print(f"Auditing posterior stability across {df_strict.height} strict pairs...")
+    print(f"Auditing joint posterior stability across {df_strict.height} strict pairs...")
     
-    for idx, pair in enumerate(df_strict.to_dicts()):
+    for pair in df_strict.to_dicts():
         obj_a = canon_dict[pair["object_id_a"]]
         obj_b = canon_dict[pair["object_id_b"]]
         
@@ -42,11 +42,15 @@ def run_posterior_audit():
             obj_b["human_count_contradiction"]
         ], dtype=np.int64)
         
+        maj_lbl = pair["majority_label"]
+        maj_idx = 0 if maj_lbl == "entailment" else (1 if maj_lbl == "neutral" else 2)
+        
         res = audit_pair_posterior_stability(
             counts_a, counts_b,
+            majority_idx=maj_idx,
+            pair_id=pair["pair_id"],
             n_draws=2000,
             alpha=0.5,
-            seed=20260804 + idx
         )
         
         record = dict(pair)
@@ -57,7 +61,6 @@ def run_posterior_audit():
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
     df_res.write_parquet(OUTPUT_PATH)
     
-    # Print breakdown
     cats = df_res["stability_category"].value_counts().to_dicts()
     print("Posterior Stability Classification Breakdown:")
     for c in cats:
