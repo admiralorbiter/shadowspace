@@ -38,9 +38,17 @@
   - `paired_contrasts`: `pronoun_masc_minus_fem` = `0.000`, `name_masc_minus_fem` = `-0.167` (minimal prompt) / `0.000` (structured prompt).
   - `go_to_full_pilot`: `true`
 
----
+### Decision 004: Phase EDU-2a-R1.1 Artifact Validation & Provenance Repair
+* **Date**: 2026-08-05
+* **Context**: Phase EDU-2a-R1 achieved 100% complete generation integrity (`truncation_count: 0`), but required provenance SHA separation, procedural blind labels, packet-derived leakage count, prompt compliance metrics, and report alignment.
+* **Decisions**:
+  1. **Provenance SHA Separation**: `source_code_commit_sha` is read from `generation_manifest.json` (`6468917...`), isolating code SHA from metadata/results SHAs.
+  2. **Procedural Blind Label**: `blind_integrity_status: "PROCEDURAL_BLIND_AVAILABLE"`.
+  3. **Evidence-Derived Finding**: `finding: "AWAITING_MANUAL_REVIEW"`.
+  4. **Packet Summary**: Derived directly from `blinded_rating_packet.csv` (`identity_leakage_count: 0`, 65 entries including 5 intra-rater duplicates).
+  5. **Prompt Compliance Metrics**: Exported word limit (0/60 strictly 180-220, ~250-320 observed), 3-paragraph (59/60), final sentence (60/60), and bracket placeholder counts (`prompt_compliance_status: "PARTIAL"`).
+  6. **Report Alignment**: `report.md` rendered exclusively from status labels.
 
-## Current Status & Next Steps for Tomorrow
 
 1. **Human Manual Review**: The blinded rating packet is exported at [`results/education_audit/edu_2a/blinded_rating_packet.csv`](file:///C:/Users/admir/Github/shadowspace-ambiguity-holonomy/results/education_audit/edu_2a/blinded_rating_packet.csv) and [`blinded_rating_packet.jsonl`](file:///C:/Users/admir/Github/shadowspace-ambiguity-holonomy/results/education_audit/edu_2a/blinded_rating_packet.jsonl) (secret key in [`blinding_key.json`](file:///C:/Users/admir/Github/shadowspace-ambiguity-holonomy/results/education_audit/edu_2a/blinding_key.json)).
 2. **Phase EDU-2 Pilot Expansion**: Once human ratings confirm rater reliability, expand from 2 profiles (60 letters) to all 8 profiles (240 letters).
