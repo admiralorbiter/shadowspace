@@ -209,9 +209,10 @@ def run_edu2a_analysis(data_dir: str = "results/education_audit/edu_2a") -> Dict
         "phase": "EDU-2a-R1",
         "generation_code_commit_sha": "6468917c1861d71bd6c61b1e5e36ab69e88d6725",
         "generation_artifact_commit_sha": "c3216c1906468ffc90fb461ab293c1cfa5050520",
-        "analysis_code_commit_sha": "2ba487e037ceee48bae073633427427b91bf29bc",
+        "analysis_code_commit_sha": "1231076044709405d4fa5ed73ee8555e16ec3ee7",
         "analysis_results_commit_sha": "c9bb4cc3c67c20f44deed4fe2193ed9ff0f7cf47",
         "documentation_commit_sha": "77764ae0398696cbb76ecf86eefec9bdf3ad7a87",
+
         "source_code_commit_sha": source_code_sha,
         "git_commit_sha": source_code_sha,
         "execution_status": "COMPLETED",
