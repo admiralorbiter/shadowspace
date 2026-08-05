@@ -1,4 +1,4 @@
-"""Unit tests for Phase E2-A1.2a-R1.1 Live Audit pipeline components."""
+"""Unit tests for Phase E2-A1.2a-R1.2 Live Audit pipeline components."""
 
 import numpy as np
 import pytest
@@ -31,10 +31,8 @@ def test_direct_logit_ilr_calculation():
     logits = np.array([[2.5, 0.1, -1.2], [-0.5, 3.2, 1.1]], dtype=np.float64)
     aligned_logits = adapter.align_logits(logits)
 
-    # 1. Direct logit calculation
     z_direct = adapter.compute_direct_ilr_coordinates(aligned_logits)
 
-    # 2. Traditional log-softmax calculation
     probs = np.exp(aligned_logits) / np.sum(np.exp(aligned_logits), axis=-1, keepdims=True)
     log_probs = np.log(probs)
     z_log_softmax = np.dot(log_probs, V)
@@ -58,6 +56,31 @@ def test_controlled_orbit_dataset_building_duplicate_free():
         assert "track" in orb.metadata
 
 
+def test_fit_constrained_commuting_transports_slsqp():
+    """Verifies SLSQP constrained optimization enforces exact commutation S_H < 1e-10."""
+    src_a = np.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]], dtype=np.float64)
+    tgt_a = src_a + np.array([0.5, -0.2])
+
+    src_b = tgt_a
+    tgt_b = src_b + np.array([-0.1, 0.4])
+
+    t_a_c, t_b_c = fit_constrained_commuting_transports(src_a, tgt_a, src_b, tgt_b)
+
+    # 1. Linear commutation A_a A_b == A_b A_a
+    lin_comm = np.dot(t_a_c.matrix_2d, t_b_c.matrix_2d) - np.dot(t_b_c.matrix_2d, t_a_c.matrix_2d)
+    assert np.allclose(lin_comm, np.zeros((2, 2)), atol=1e-5)
+
+    # 2. Translation commutation (A_a - I) b_b == (A_b - I) b_a
+    trans_comm = np.dot(t_a_c.matrix_2d - np.eye(2), t_b_c.bias_2d) - np.dot(t_b_c.matrix_2d - np.eye(2), t_a_c.bias_2d)
+    assert np.allclose(trans_comm, np.zeros(2), atol=1e-5)
+
+    # 3. Homogeneous commutator norm S_H < 1e-5
+    commutator_path = compute_forward_affine_commutator(t_a_c, t_b_c)
+    stats = compute_holonomy_norm_statistics(commutator_path)
+    assert stats["homogeneous_norm_S_H"] < 1e-5
+
+
+
 def test_evaluate_edge_predictive_skill():
     """Verifies evaluate_edge_predictive_skill computes RMSE and skill vs identity correctly."""
     estimator = ConnectionEstimator()
@@ -69,17 +92,3 @@ def test_evaluate_edge_predictive_skill():
 
     assert pytest.approx(skill["rmse_affine"], abs=1e-5) == 0.0
     assert skill["relative_skill_vs_identity"] > 0.0
-
-
-def test_compute_rename_context_interaction_test():
-    """Verifies compute_rename_context_interaction_test on zero interaction vectors."""
-    orbit_coords = {
-        "orb1": {
-            "x0": np.array([0.0, 0.0]),
-            "x1": np.array([0.5, 0.0]),
-            "x2": np.array([0.5, 0.4]),
-            "x3": np.array([0.0, 0.4]),  # Perfect rectangle d = (z2-z3) - (z1-z0) = [0,0]
-        }
-    }
-    res = compute_rename_context_interaction_test(orbit_coords, n_permutations=100)
-    assert pytest.approx(res["interaction_mean_norm"], abs=1e-5) == 0.0

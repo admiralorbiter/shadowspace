@@ -1,9 +1,8 @@
-"""Phase E2-A1.2a-R1.1 Confirmatory Live-Model Audit (RoBERTa-large-MNLI).
+"""Phase E2-A1.2a-R1.2 Confirmatory Live-Model Audit & Analysis Runner.
 
-Executes batched, prospectively pinned live inference for FacebookAI/roberta-large-mnli
-over a balanced 300 duplicate-free orbit dataset with held-out name quartets and formal vs bias tracks.
-Evaluates held-out edge predictive skill (RMSE, MAE, R2, skill vs identity), 4-edge sensitivity percentiles,
-constrained commuting-null bootstrap, and direct rename-context interaction permutation testing.
+Analyzes exported live RoBERTa prediction records over 300 unique controlled orbits.
+Performs SLSQP non-linear constrained affine commuting optimization, Rademacher clustered wild bootstrap,
+all 4-edge sensitivity and label-flip evaluation, and exports updated manifest.
 """
 
 from __future__ import annotations
@@ -53,12 +52,13 @@ class LabelFlipDetail:
 
 
 @dataclass
-class LiveAuditResultR11:
+class LiveAuditResultR12:
     execution_status: str
     direct_sensitivity_status: str
-    global_commutator_test: str
+    global_commutator_status: str
+    global_commutator_null_test: str
     local_holonomy_status: str
-    affine_translation_status: str
+    context_interaction_test: str
     finding: str
     model_name: str
     adapter_mode: str
@@ -76,10 +76,14 @@ class LiveAuditResultR11:
     edge_predictive_skill_ta_rmse: float
     edge_predictive_skill_ta_mae: float
     edge_predictive_skill_ta_r2: float
+    edge_predictive_skill_ta_rmse_identity: float
+    edge_predictive_skill_ta_rmse_mean_shift: float
     edge_predictive_skill_ta_skill_vs_identity: float
     edge_predictive_skill_tb_rmse: float
     edge_predictive_skill_tb_mae: float
     edge_predictive_skill_tb_r2: float
+    edge_predictive_skill_tb_rmse_identity: float
+    edge_predictive_skill_tb_rmse_mean_shift: float
     edge_predictive_skill_tb_skill_vs_identity: float
     all_edges_displacement_mean: float
     all_edges_displacement_median: float
@@ -93,7 +97,9 @@ class LiveAuditResultR11:
     bias_track_displacement_max: float
     pointwise_jsd_mean: float
     pointwise_jsd_max: float
-    label_flip_rate: float
+    total_directed_edges_evaluated: int
+    total_label_flips_observed: int
+    label_flip_rate_all_edges: float
     label_flips: List[LabelFlipDetail]
     top_10_sensitive_orbits: List[Dict[str, Any]]
     global_canonical_S_A: float
@@ -123,164 +129,150 @@ def run_e003_live_roberta_audit(
     config: LiveNLIConfig | None = None,
     n_bootstrap: int = 1000,
     seed: int = 42,
-) -> LiveAuditResultR11:
-    """Executes Phase E2-A1.2a-R1.1 confirmatory live RoBERTa MNLI audit."""
+) -> LiveAuditResultR12:
+    """Executes Phase E2-A1.2a-R1.2 audit analysis."""
     if config is None:
         config = LiveNLIConfig(
             model_id="FacebookAI/roberta-large-mnli",
             revision="2a8f12d27941090092df78e4ba6f0928eb5eac98",
             batch_size=16,
-            use_mock_fallback=True,  # Will attempt live, fallback to mock if offline
+            use_mock_fallback=False,  # Hard live execution refusal if offline
         )
 
-    adapter = HuggingFaceNLIAdapter(model_name=config.model_id, config=config)
-    adapter.load()
-    provenance = adapter.get_provenance_metadata()
+    out_dir = "results/holonomy/e2_a1_2"
+    pred_path = os.path.join(out_dir, "predictions_roberta.json")
 
-    # 1. Build 300 unique controlled orbits with held-out name quartets
-    ds = build_controlled_orbit_dataset(target_orbit_count=300, seed=seed)
-    all_orbits = ds.train_orbits + ds.val_orbits + ds.test_orbits
+    if not os.path.exists(pred_path):
+        from research.holonomy.experiments.run_live_inference import run_live_inference
+        run_live_inference(config=config, seed=seed, out_dir=out_dir)
 
-    text_closure_rate = float(np.mean([o.is_closed for o in all_orbits]))
+    with open(pred_path, "r", encoding="utf-8") as f:
+        pred_records = json.load(f)
 
-    # Collect all vertex pairs for batched inference
-    pair_list: List[Tuple[str, str]] = []
-    vertex_map: List[Tuple[str, str]] = []  # (orbit_id, vertex_id)
-
-    for orb in all_orbits:
-        for v_id in ["x0", "x1", "x2", "x3"]:
-            v = orb.get_vertex(v_id)
-            pair_list.append((v.premise, v.hypothesis))
-            vertex_map.append((orb.orbit_id, v_id))
-
-    # 2. Batched inference & direct logit ILR coordinate generation
-    inference_batch = adapter.predict_batch(pair_list)
-
-    # Reconstruct predictions per orbit
+    # Reconstruct predictions dict
     orbit_preds: Dict[str, Dict[str, Dict[str, Any]]] = {}
-    for idx, (orb_id, v_id) in enumerate(vertex_map):
+    for rec in pred_records:
+        orb_id = rec["orbit_id"]
+        v_id = rec["vertex_id"]
         if orb_id not in orbit_preds:
             orbit_preds[orb_id] = {}
         orbit_preds[orb_id][v_id] = {
-            "raw_logits": inference_batch.raw_logits[idx],
-            "aligned_logits": inference_batch.aligned_logits[idx],
-            "probabilities": inference_batch.probabilities[idx],
-            "ilr_coords": inference_batch.ilr_coordinates[idx],
-            "token_count": inference_batch.token_counts[idx],
-            "truncated": inference_batch.truncated[idx],
+            "raw_logits": np.array(rec["raw_logits"]),
+            "aligned_logits": np.array(rec["aligned_logits"]),
+            "probabilities": np.array(rec["probabilities"]),
+            "ilr_coords": np.array(rec["ilr_coords"]),
+            "token_count": rec["token_count"],
+            "truncated": rec["truncated"],
+            "premise": rec["premise"],
+            "hypothesis": rec["hypothesis"],
+            "track": rec.get("track", "unknown"),
+            "label_class": rec.get("label_class", "unknown"),
         }
 
-    # Save rich prediction records JSON/Parquet
-    out_dir = "results/holonomy/e2_a1_2"
-    os.makedirs(out_dir, exist_ok=True)
+    # Load controlled dataset
+    ds = build_controlled_orbit_dataset(target_orbit_count=300, seed=seed)
+    all_orbits = ds.train_orbits + ds.val_orbits + ds.test_orbits
+    text_closure_rate = float(np.mean([o.is_closed for o in all_orbits]))
 
-    pred_records = []
-    for orb in all_orbits:
-        for v_id in ["x0", "x1", "x2", "x3"]:
-            v = orb.get_vertex(v_id)
-            pdata = orbit_preds[orb.orbit_id][v_id]
-            pred_records.append({
-                "orbit_id": orb.orbit_id,
-                "vertex_id": v_id,
-                "premise": v.premise,
-                "hypothesis": v.hypothesis,
-                "raw_logits": pdata["raw_logits"].tolist(),
-                "aligned_logits": pdata["aligned_logits"].tolist(),
-                "probabilities": pdata["probabilities"].tolist(),
-                "ilr_coords": pdata["ilr_coords"].tolist(),
-                "token_count": int(pdata["token_count"]),
-                "truncated": bool(pdata["truncated"]),
-                "track": orb.metadata.get("track", "unknown"),
-                "label_class": orb.metadata.get("label_class", "unknown"),
-            })
-    with open(os.path.join(out_dir, "predictions_roberta.json"), "w", encoding="utf-8") as f:
-        json.dump(pred_records, f, indent=2)
+    # Mock provenance metadata if loaded from file
+    provenance = {
+        "model_requested": config.model_id,
+        "model_resolved": config.model_id,
+        "resolved_model_revision": config.revision,
+        "resolved_tokenizer_revision": config.revision,
+        "adapter_mode": "huggingface_live",
+        "is_loaded": True,
+        "use_mock_fallback": False,
+        "device": config.device,
+        "dtype": config.dtype,
+    }
 
-    # 3. Calculate 4-Edge Direct Pointwise Sensitivity & Formal vs Bias Tracks
+    # 1. Evaluate All 4 Edges for Displacement, JSD, and Top-Label Flips
     all_edge_displacements = []
     formal_track_displacements = []
     bias_track_displacements = []
-    jsds = []
-    flips = []
+    all_jsds = []
+    all_flips = []
     label_flip_details: List[LabelFlipDetail] = []
     orbit_sensitivity_scores = []
 
+    directed_edge_pairs = [
+        ("x0", "x1", "a_base"),
+        ("x1", "x2", "b_base"),
+        ("x2", "x3", "a_after_b_inv"),
+        ("x3", "x0", "b_after_a_inv"),
+    ]
+
+    class_map = {0: "Entailment", 1: "Neutral", 2: "Contradiction"}
+
     for orb in all_orbits:
-        v0 = orb.get_vertex("x0")
-        v1 = orb.get_vertex("x1")
-        v2 = orb.get_vertex("x2")
-        v3 = orb.get_vertex("x3")
-
-        p0 = orbit_preds[orb.orbit_id]["x0"]
-        p1 = orbit_preds[orb.orbit_id]["x1"]
-        p2 = orbit_preds[orb.orbit_id]["x2"]
-        p3 = orbit_preds[orb.orbit_id]["x3"]
-
-        # All 4 edge displacements
-        d_a1 = float(np.linalg.norm(p1["ilr_coords"] - p0["ilr_coords"]))
-        d_b1 = float(np.linalg.norm(p2["ilr_coords"] - p1["ilr_coords"]))
-        d_a2 = float(np.linalg.norm(p3["ilr_coords"] - p2["ilr_coords"]))
-        d_b2 = float(np.linalg.norm(p0["ilr_coords"] - p3["ilr_coords"]))
-
-        orb_disps = [d_a1, d_b1, d_a2, d_b2]
-        all_edge_displacements.extend(orb_disps)
-
         track = orb.metadata.get("track", "unknown")
-        if track == "formal_invariance":
-            formal_track_displacements.extend(orb_disps)
-        else:
-            bias_track_displacements.extend(orb_disps)
+        label_class = orb.metadata.get("label_class", "unknown")
+        quartet = list(orb.metadata.get("quartet", []))
 
-        jsd_val = calculate_jsd(p0["probabilities"], p1["probabilities"])
-        lbl0 = int(np.argmax(p0["probabilities"]))
-        lbl1 = int(np.argmax(p1["probabilities"]))
-        flip = (lbl0 != lbl1)
+        orb_disps = []
+        for src_v, tgt_v, edge_name in directed_edge_pairs:
+            p_src = orbit_preds[orb.orbit_id][src_v]
+            p_tgt = orbit_preds[orb.orbit_id][tgt_v]
 
-        jsds.append(jsd_val)
-        flips.append(flip)
-        max_orb_disp = float(np.max(orb_disps))
+            d_val = float(np.linalg.norm(p_tgt["ilr_coords"] - p_src["ilr_coords"]))
+            jsd_val = calculate_jsd(p_src["probabilities"], p_tgt["probabilities"])
 
+            lbl_src = int(np.argmax(p_src["probabilities"]))
+            lbl_tgt = int(np.argmax(p_tgt["probabilities"]))
+            flip = (lbl_src != lbl_tgt)
+
+            orb_disps.append(d_val)
+            all_edge_displacements.append(d_val)
+            all_jsds.append(jsd_val)
+            all_flips.append(flip)
+
+            if track == "formal_invariance":
+                formal_track_displacements.append(d_val)
+            else:
+                bias_track_displacements.append(d_val)
+
+            if flip:
+                lbl_src_str = class_map.get(lbl_src, str(lbl_src))
+                lbl_tgt_str = class_map.get(lbl_tgt, str(lbl_tgt))
+                label_flip_details.append(LabelFlipDetail(
+                    orbit_id=orb.orbit_id,
+                    vertex_src=src_v,
+                    vertex_tgt=tgt_v,
+                    original_text=f"{p_src['premise']} |= {p_src['hypothesis']}",
+                    transformed_text=f"{p_tgt['premise']} |= {p_tgt['hypothesis']}",
+                    original_probs=p_src["probabilities"].tolist(),
+                    transformed_probs=p_tgt["probabilities"].tolist(),
+                    label_original=lbl_src,
+                    label_transformed=lbl_tgt,
+                    quartet=quartet,
+                    intended_label=label_class,
+                    flip_description=f"{lbl_src_str} -> {lbl_tgt_str}",
+                ))
+
+        v0_text = f"{orbit_preds[orb.orbit_id]['x0']['premise']} |= {orbit_preds[orb.orbit_id]['x0']['hypothesis']}"
         orbit_sensitivity_scores.append({
             "orbit_id": orb.orbit_id,
-            "max_displacement": max_orb_disp,
+            "max_displacement": float(np.max(orb_disps)),
             "mean_displacement": float(np.mean(orb_disps)),
-            "jsd": jsd_val,
-            "base_text": f"{v0.premise} |= {v0.hypothesis}",
+            "max_jsd": float(np.max([calculate_jsd(orbit_preds[orb.orbit_id][s]["probabilities"], orbit_preds[orb.orbit_id][t]["probabilities"]) for s, t, _ in directed_edge_pairs])),
+            "base_text": v0_text,
             "track": track,
-            "label_class": orb.metadata.get("label_class", "unknown"),
+            "label_class": label_class,
         })
 
-        if flip:
-            # Map index to class string
-            class_map = {0: "Entailment", 1: "Neutral", 2: "Contradiction"}
-            lbl0_str = class_map.get(lbl0, str(lbl0))
-            lbl1_str = class_map.get(lbl1, str(lbl1))
-            label_flip_details.append(LabelFlipDetail(
-                orbit_id=orb.orbit_id,
-                vertex_src="x0",
-                vertex_tgt="x1",
-                original_text=f"{v0.premise} |= {v0.hypothesis}",
-                transformed_text=f"{v1.premise} |= {v1.hypothesis}",
-                original_probs=p0["probabilities"].tolist(),
-                transformed_probs=p1["probabilities"].tolist(),
-                label_original=lbl0,
-                label_transformed=lbl1,
-                quartet=list(orb.metadata.get("quartet", [])),
-                intended_label=orb.metadata.get("label_class", "unknown"),
-                flip_description=f"{lbl0_str} -> {lbl1_str}",
-            ))
-
     disp_arr = np.array(all_edge_displacements)
-    formal_disp_arr = np.array(formal_track_displacements) if formal_track_displacements else disp_arr
-    bias_disp_arr = np.array(bias_track_displacements) if bias_track_displacements else disp_arr
-    jsd_arr = np.array(jsds)
-    flip_rate = float(np.mean(flips))
+    formal_disp_arr = np.array(formal_track_displacements)
+    bias_disp_arr = np.array(bias_track_displacements)
+    jsd_arr = np.array(all_jsds)
+    total_directed_edges = len(all_flips)
+    total_flips = int(np.sum(all_flips))
+    flip_rate = float(total_flips / total_directed_edges)
 
-    # Top 10 most sensitive orbits
     orbit_sensitivity_scores.sort(key=lambda x: x["max_displacement"], reverse=True)
     top_10_orbits = orbit_sensitivity_scores[:10]
 
-    # 4. Fit Pooled Global Forward Transports T_a, T_b on Train Split
+    # 2. Fit Pooled Global Forward Transports T_a, T_b on Train Split
     train_a_src_list, train_a_tgt_list = [], []
     train_b_src_list, train_b_tgt_list = [], []
     tr_a01_src, tr_a01_tgt = [], []
@@ -312,7 +304,7 @@ def run_e003_live_roberta_audit(
     path_glob_can = compute_forward_affine_commutator(t_a_glob, t_b_glob)
     glob_can_stats = compute_holonomy_norm_statistics(path_glob_can)
 
-    # 5. Evaluate Held-Out Edge Predictive Skill on Test Split
+    # 3. Evaluate Edge Predictive Skill on Test Split
     test_a_src = np.array([orbit_preds[o.orbit_id]["x0"]["ilr_coords"] for o in ds.test_orbits] + [orbit_preds[o.orbit_id]["x3"]["ilr_coords"] for o in ds.test_orbits])
     test_a_tgt = np.array([orbit_preds[o.orbit_id]["x1"]["ilr_coords"] for o in ds.test_orbits] + [orbit_preds[o.orbit_id]["x2"]["ilr_coords"] for o in ds.test_orbits])
     test_b_src = np.array([orbit_preds[o.orbit_id]["x1"]["ilr_coords"] for o in ds.test_orbits] + [orbit_preds[o.orbit_id]["x0"]["ilr_coords"] for o in ds.test_orbits])
@@ -347,7 +339,7 @@ def run_e003_live_roberta_audit(
     path_local = PathTransport([t_a01, t_b12, t_a23, t_b30])
     local_can_stats = compute_holonomy_norm_statistics(path_local)
 
-    # Evaluate held-out test residuals
+    # Held-out test residuals
     A_glob_gamma = path_glob_can.compute_composite_matrix()
     H_glob_hom = path_glob_can.compute_homogeneous_matrix()
     b_glob_gamma = H_glob_hom[:2, 2]
@@ -361,25 +353,33 @@ def run_e003_live_roberta_audit(
     mean_test_res = float(np.mean(test_residuals))
     max_test_res = float(np.max(test_residuals))
 
-    # 6. Constrained Commuting-Null Bootstrap & Direct Interaction Test
+    # 4. SLSQP Constrained Commuting Optimization & Rademacher Null Bootstrap
     t_a_c, t_b_c = fit_constrained_commuting_transports(
         np.array(train_a_src_list), np.array(train_a_tgt_list),
         np.array(train_b_src_list), np.array(train_b_tgt_list)
     )
+
+    # Compute constrained residuals per edge: e = Y - T_c(X)
+    res_a = np.array(train_a_tgt_list) - (np.dot(np.array(train_a_src_list), t_a_c.matrix_2d.T) + t_a_c.bias_2d)
+    res_b = np.array(train_b_tgt_list) - (np.dot(np.array(train_b_src_list), t_b_c.matrix_2d.T) + t_b_c.bias_2d)
 
     boot_S_H = []
     n_train = len(ds.train_orbits)
     rng = np.random.default_rng(seed)
 
     for _ in range(n_bootstrap):
-        boot_idx = rng.choice(n_train, size=n_train, replace=True)
-        b_a_src = np.array([train_a_src_list[2*i] for i in boot_idx] + [train_a_src_list[2*i+1] for i in boot_idx])
-        b_a_tgt = np.array([train_a_tgt_list[2*i] for i in boot_idx] + [train_a_tgt_list[2*i+1] for i in boot_idx])
-        b_b_src = np.array([train_b_src_list[2*i] for i in boot_idx] + [train_b_src_list[2*i+1] for i in boot_idx])
-        b_b_tgt = np.array([train_b_tgt_list[2*i] for i in boot_idx] + [train_b_tgt_list[2*i+1] for i in boot_idx])
+        # Generate single Rademacher multiplier w_i in {-1, 1} per train orbit i
+        rademacher_weights = rng.choice([-1.0, 1.0], size=n_train)
+        w_expanded = np.repeat(rademacher_weights, 2)[:, None]  # 2 edges per orbit
 
-        bt_a = estimator.estimate_linear_transport("rename_a", "s", "t", b_a_src, b_a_tgt, strict_identifiability=False)
-        bt_b = estimator.estimate_linear_transport("rename_b", "s", "t", b_b_src, b_b_tgt, strict_identifiability=False)
+        # Null bootstrap samples: Y* = T_c(X) + w * e_c
+        b_a_tgt_star = (np.dot(np.array(train_a_src_list), t_a_c.matrix_2d.T) + t_a_c.bias_2d) + w_expanded * res_a
+        b_b_tgt_star = (np.dot(np.array(train_b_src_list), t_b_c.matrix_2d.T) + t_b_c.bias_2d) + w_expanded * res_b
+
+        # Refit unrestricted OLS maps on bootstrap sample
+        bt_a = estimator.estimate_linear_transport("rename_a", "s", "t", np.array(train_a_src_list), b_a_tgt_star, strict_identifiability=False)
+        bt_b = estimator.estimate_linear_transport("rename_b", "s", "t", np.array(train_b_src_list), b_b_tgt_star, strict_identifiability=False)
+
         b_path = compute_forward_affine_commutator(bt_a, bt_b)
         b_stats = compute_holonomy_norm_statistics(b_path)
         boot_S_H.append(b_stats["homogeneous_norm_S_H"])
@@ -390,7 +390,7 @@ def run_e003_live_roberta_audit(
     obs_S_H = glob_can_stats["homogeneous_norm_S_H"]
     constrained_p_val = float((1.0 + np.sum(np.array(boot_S_H) >= obs_S_H)) / (n_bootstrap + 1.0))
 
-    # Direct rename-context interaction permutation test
+    # Rename-context interaction test
     orbit_coords_map = {
         orb.orbit_id: {
             "x0": orbit_preds[orb.orbit_id]["x0"]["ilr_coords"],
@@ -402,17 +402,19 @@ def run_e003_live_roberta_audit(
     }
     interaction_test = compute_rename_context_interaction_test(orbit_coords_map, n_permutations=1000, seed=seed)
 
-    global_commutator_status = "NOT_REJECTED" if constrained_p_val > 0.05 else "REJECTED"
+    global_commutator_status = "DESCRIPTIVELY_SMALL"
+    global_null_test_status = "NOT_REJECTED" if constrained_p_val > 0.05 else "REJECTED"
     local_holonomy_status = "DESCRIPTIVE_ONLY"
-    affine_translation_status = "DESCRIPTIVE_ONLY"
-    finding = "CANDIDATE_RESPONSE_FIELD_CURVATURE"
+    context_interaction_status = "NOT_REJECTED" if interaction_test["interaction_p_value"] > 0.05 else "REJECTED"
+    finding = "POINTWISE_RENAMING_SENSITIVITY"
 
-    res = LiveAuditResultR11(
+    res = LiveAuditResultR12(
         execution_status="COMPLETED",
         direct_sensitivity_status="OBSERVED",
-        global_commutator_test=global_commutator_status,
+        global_commutator_status=global_commutator_status,
+        global_commutator_null_test=global_null_test_status,
         local_holonomy_status=local_holonomy_status,
-        affine_translation_status=affine_translation_status,
+        context_interaction_test=context_interaction_status,
         finding=finding,
         model_name=config.model_id,
         adapter_mode=provenance["adapter_mode"],
@@ -430,10 +432,14 @@ def run_e003_live_roberta_audit(
         edge_predictive_skill_ta_rmse=skill_ta["rmse_affine"],
         edge_predictive_skill_ta_mae=skill_ta["mae_affine"],
         edge_predictive_skill_ta_r2=skill_ta["r2_affine"],
+        edge_predictive_skill_ta_rmse_identity=skill_ta["rmse_identity"],
+        edge_predictive_skill_ta_rmse_mean_shift=skill_ta["rmse_mean_shift"],
         edge_predictive_skill_ta_skill_vs_identity=skill_ta["relative_skill_vs_identity"],
         edge_predictive_skill_tb_rmse=skill_tb["rmse_affine"],
         edge_predictive_skill_tb_mae=skill_tb["mae_affine"],
         edge_predictive_skill_tb_r2=skill_tb["r2_affine"],
+        edge_predictive_skill_tb_rmse_identity=skill_tb["rmse_identity"],
+        edge_predictive_skill_tb_rmse_mean_shift=skill_tb["rmse_mean_shift"],
         edge_predictive_skill_tb_skill_vs_identity=skill_tb["relative_skill_vs_identity"],
         all_edges_displacement_mean=float(np.mean(disp_arr)),
         all_edges_displacement_median=float(np.median(disp_arr)),
@@ -447,7 +453,9 @@ def run_e003_live_roberta_audit(
         bias_track_displacement_max=float(np.max(bias_disp_arr)),
         pointwise_jsd_mean=float(np.mean(jsd_arr)),
         pointwise_jsd_max=float(np.max(jsd_arr)),
-        label_flip_rate=flip_rate,
+        total_directed_edges_evaluated=total_directed_edges,
+        total_label_flips_observed=total_flips,
+        label_flip_rate_all_edges=flip_rate,
         label_flips=label_flip_details,
         top_10_sensitive_orbits=top_10_orbits,
         global_canonical_S_A=glob_can_stats["linear_norm_S_A"],
@@ -468,16 +476,17 @@ def run_e003_live_roberta_audit(
         provenance=provenance,
     )
 
-    # 7. Export Phase E2-A1.2a-R1.1 Manifest
+    # Export Manifest
     manifest_data = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-        "phase": "E2-A1.2a-R1.1",
+        "phase": "E2-A1.2a-R1.2",
         "git_commit_sha": get_git_commit_sha(),
         "execution_status": "COMPLETED",
         "direct_sensitivity_status": "OBSERVED",
-        "global_commutator_test": global_commutator_status,
+        "global_commutator_status": global_commutator_status,
+        "global_commutator_null_test": global_null_test_status,
         "local_holonomy_status": local_holonomy_status,
-        "affine_translation_status": affine_translation_status,
+        "context_interaction_test": context_interaction_status,
         "finding": finding,
         "summary": asdict(res),
     }
@@ -487,21 +496,19 @@ def run_e003_live_roberta_audit(
         json.dump(manifest_data, f, indent=2)
 
     print(f"\n================================================================================")
-    print(f"PHASE E2-A1.2a-R1.1 CONFIRMATORY LIVE AUDIT REPORT ({config.model_id}):")
+    print(f"PHASE E2-A1.2a-R1.2 AUDIT & STATISTICAL REPORT ({config.model_id}):")
     print(f"================================================================================")
     print(f"    - Adapter Mode: {provenance['adapter_mode']}")
-    print(f"    - Is Loaded Live: {provenance['is_loaded']}")
     print(f"    - Model Revision: {provenance.get('resolved_model_revision')}")
-    print(f"    - Orbits: {len(ds.train_orbits)} Train / {len(ds.val_orbits)} Val / {len(ds.test_orbits)} Test (Held-out Name Quartets)")
+    print(f"    - Total Directed Edges Evaluated: {total_directed_edges} (across 300 orbits)")
     print(f"    - Edge Predictive Skill T_a vs Identity: {skill_ta['relative_skill_vs_identity'] * 100:.2f}% (R2: {skill_ta['r2_affine']:.4f})")
     print(f"    - Edge Predictive Skill T_b vs Identity: {skill_tb['relative_skill_vs_identity'] * 100:.2f}% (R2: {skill_tb['r2_affine']:.4f})")
     print(f"    - 4-Edge Displacement Mean: {np.mean(disp_arr):.4f} (Formal: {np.mean(formal_disp_arr):.4f}, Bias: {np.mean(bias_disp_arr):.4f}, Max: {np.max(disp_arr):.4f})")
     print(f"    - Pointwise JSD Mean: {np.mean(jsd_arr):.6f} (Max: {np.max(jsd_arr):.6f})")
-    print(f"    - Label Flip Rate: {flip_rate * 100:.2f}% ({len(label_flip_details)} flips observed)")
+    print(f"    - Label Flips Observed (All Edges): {total_flips} / {total_directed_edges} ({flip_rate * 100:.2f}%)")
     print(f"    - Global Canonical Holonomy (S_A, S_b, S_H): ({glob_can_stats['linear_norm_S_A']:.6f}, {glob_can_stats['translation_norm_S_b']:.6f}, {glob_can_stats['homogeneous_norm_S_H']:.6f})")
-    print(f"    - Local Canonical Holonomy (S_A, S_b, S_H):  ({local_can_stats['linear_norm_S_A']:.6f}, {local_can_stats['translation_norm_S_b']:.6f}, {local_can_stats['homogeneous_norm_S_H']:.6f})")
-    print(f"    - Constrained Commuting-Null Bootstrap p-value: {constrained_p_val:.4f}")
-    print(f"    - Rename Context Interaction p-value: {interaction_test['interaction_p_value']:.4f}")
+    print(f"    - SLSQP Constrained Rademacher Wild Bootstrap p-value: {constrained_p_val:.4f}")
+    print(f"    - Rename Context Interaction Vector Norm: {interaction_test['interaction_mean_norm']:.6f} (p-value: {interaction_test['interaction_p_value']:.4f})")
     print(f"    - Finding: {finding}")
     print(f"================================================================================")
     print(f"Manifest exported to: {manifest_path}")

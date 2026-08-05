@@ -211,23 +211,78 @@ def fit_constrained_commuting_transports(
     b_src: NDArray[np.float64],
     b_tgt: NDArray[np.float64],
 ) -> Tuple[ParallelTransportMap, ParallelTransportMap]:
-    """Fits affine maps T_a^c, T_b^c subject to exact commutation constraint A_a A_b = A_b A_a."""
+    """Fits affine maps T_a^c, T_b^c subject to exact commutation constraints:
+
+    1. Linear commutation: A_a A_b - A_b A_a = 0 (4 constraints)
+    2. Translation commutation: (A_a - I) b_b - (A_b - I) b_a = 0 (2 constraints)
+
+    Uses scipy.optimize.minimize with SLSQP.
+    """
+    import scipy.optimize
+
+    # Initial guess from unrestricted OLS
     estimator = ConnectionEstimator()
-    t_a_raw = estimator.estimate_linear_transport("rename_a_comm", "src", "tgt", a_src, a_tgt)
-    t_b_raw = estimator.estimate_linear_transport("rename_b_comm", "src", "tgt", b_src, b_tgt)
+    t_a_raw = estimator.estimate_linear_transport("rename_a_init", "src", "tgt", a_src, a_tgt)
+    t_b_raw = estimator.estimate_linear_transport("rename_b_init", "src", "tgt", b_src, b_tgt)
 
-    # Project linear matrices onto commuting subspace via simultaneous SVD/eigendecomposition
-    A_a = t_a_raw.matrix_2d
-    A_b = t_b_raw.matrix_2d
-    A_sym = 0.5 * (np.dot(A_a, A_b) + np.dot(A_b, A_a))
+    x0 = np.concatenate([
+        t_a_raw.matrix_2d.ravel(),
+        t_a_raw.bias_2d,
+        t_b_raw.matrix_2d.ravel(),
+        t_b_raw.bias_2d,
+    ])  # 12 parameters
 
-    # Average translation vectors to enforce (A_a - I) b_b = (A_b - I) b_a
-    b_a = t_a_raw.bias_2d
-    b_b = t_b_raw.bias_2d
+    def objective(x: np.ndarray) -> float:
+        A_a = x[:4].reshape(2, 2)
+        b_a = x[4:6]
+        A_b = x[6:10].reshape(2, 2)
+        b_b = x[10:12]
 
-    t_a_c = ParallelTransportMap("rename_a_c", "src", "tgt", A_a, b_a, metadata={"is_constrained_null": True})
-    t_b_c = ParallelTransportMap("rename_b_c", "src", "tgt", A_b, b_b, metadata={"is_constrained_null": True})
+        pred_a = np.dot(a_src, A_a.T) + b_a
+        pred_b = np.dot(b_src, A_b.T) + b_b
+
+        sse_a = np.sum((pred_a - a_tgt) ** 2)
+        sse_b = np.sum((pred_b - b_tgt) ** 2)
+        return float(sse_a + sse_b)
+
+    def constraint_eq(x: np.ndarray) -> np.ndarray:
+        A_a = x[:4].reshape(2, 2)
+        b_a = x[4:6]
+        A_b = x[6:10].reshape(2, 2)
+        b_b = x[10:12]
+
+        # 1. Linear commutation: A_a A_b - A_b A_a = 0 (4 elements)
+        lin_comm = np.dot(A_a, A_b) - np.dot(A_b, A_a)
+
+        # 2. Translation commutation: (A_a - I) b_b - (A_b - I) b_a = 0 (2 elements)
+        trans_comm = np.dot(A_a - np.eye(2), b_b) - np.dot(A_b - np.eye(2), b_a)
+
+        return np.concatenate([lin_comm.ravel(), trans_comm])
+
+    constraints = {"type": "eq", "fun": constraint_eq}
+    res = scipy.optimize.minimize(objective, x0, method="SLSQP", constraints=constraints, tol=1e-12, options={"maxiter": 2000, "ftol": 1e-15})
+
+    x_opt = res.x
+    A_a_opt = x_opt[:4].reshape(2, 2)
+    b_a_opt = x_opt[4:6]
+    A_b_opt = x_opt[6:10].reshape(2, 2)
+    b_b_opt = x_opt[10:12]
+
+
+    # Verify constraint satisfaction
+    c_err = constraint_eq(x_opt)
+    max_c_err = float(np.max(np.abs(c_err)))
+
+    t_a_c = ParallelTransportMap(
+        "rename_a_c", "src", "tgt", A_a_opt, b_a_opt,
+        metadata={"is_constrained_null": True, "optimizer_success": bool(res.success), "max_constraint_error": max_c_err}
+    )
+    t_b_c = ParallelTransportMap(
+        "rename_b_c", "src", "tgt", A_b_opt, b_b_opt,
+        metadata={"is_constrained_null": True, "optimizer_success": bool(res.success), "max_constraint_error": max_c_err}
+    )
     return t_a_c, t_b_c
+
 
 
 def compute_rename_context_interaction_test(
