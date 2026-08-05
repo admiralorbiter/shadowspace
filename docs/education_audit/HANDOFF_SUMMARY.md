@@ -1,57 +1,76 @@
-# Handoff Summary — Educational Counterfactual AI Audit
+# Project Handoff & Continuity Guide — Educational Counterfactual AI Audit
 
-**Date**: 2026-08-04  
-**Git Branch**: `research/education-counterfactual-audit`  
-**Latest Code Commit**: [`28abaa7`](file:///C:/Users/admir/Github/shadowspace-ambiguity-holonomy) (`perf(education-audit): tune canary num_predict to 250 for 16s per-letter GPU throughput`)  
-**Latest Results Commit**: [`186a4d2`](file:///C:/Users/admir/Github/shadowspace-ambiguity-holonomy) (`results(education-audit): export EDU-2a live recommendation-letter canary for code commit 28abaa7`)  
-**Remote Sync**: Synchronized with `origin/research/education-counterfactual-audit`  
+**Date**: 2026-08-05  
+**Current Phase**: Phase EDU-2a-R1.2c (Engineering Frozen, Human Review Active)  
+**Branch**: `research/education-counterfactual-audit`  
+**Branch Head Commit**: [`3064ab0`](file:///C:/Users/admir/Github/shadowspace-ambiguity-holonomy)  
+**Code Commit SHA**: [`be34446`](file:///C:/Users/admir/Github/shadowspace-ambiguity-holonomy)  
+**Execution Status**: `COMPLETED` | `completion_integrity_status: PASSED` | `finding: AWAITING_MANUAL_REVIEW`  
 
 ---
 
-## 1. Quick Start Commands (To Resume Tomorrow)
+## 1. Executive Summary & Project State
 
+The live model generation pipeline (`gemma3:12b` via Ollama) has successfully generated all **60 complete counterfactual recommendation letters** with **100% complete generation integrity** (zero truncations, `done_reason: "stop"`, `num_predict: 650`). All prompt templates use native neutral placeholder framing (`[CANDIDATE]`, `they/them/their`), completely eliminating ungrammatical post-hoc prose redactions.
+
+Engineering on the generation pipeline, blinding engine, rating packet generator, validator, and submission compiler is **100% complete and frozen**. The project is currently awaiting manual human ratings.
+
+---
+
+## 2. Key File Directory & Artifact Sitemap
+
+| Resource / Artifact | Path | Description |
+| :--- | :--- | :--- |
+| **Human Review Rubric** | [`docs/education_audit/HUMAN_REVIEW_RUBRIC.md`](file:///C:/Users/admir/Github/shadowspace-ambiguity-holonomy/docs/education_audit/HUMAN_REVIEW_RUBRIC.md) | Official 1-5 scale anchors & claim adjudication definitions. |
+| **Decision Log** | [`docs/education_audit/DECISION_LOG.md`](file:///C:/Users/admir/Github/shadowspace-ambiguity-holonomy/docs/education_audit/DECISION_LOG.md) | Chronological scientific decision log. |
+| **Live Generations** | [`results/education_audit/edu_2a/generations.jsonl`](file:///C:/Users/admir/Github/shadowspace-ambiguity-holonomy/results/education_audit/edu_2a/generations.jsonl) | 60 frozen live outputs from `gemma3:12b` (digest `f4031aab`). |
+| **Analysis Manifest** | [`results/education_audit/edu_2a/analysis_manifest.json`](file:///C:/Users/admir/Github/shadowspace-ambiguity-holonomy/results/education_audit/edu_2a/analysis_manifest.json) | Complete provenance & artifact-derived status manifest. |
+| **Public Review Summary** | [`results/education_audit/edu_2a/review_design_summary.json`](file:///C:/Users/admir/Github/shadowspace-ambiguity-holonomy/results/education_audit/edu_2a/review_design_summary.json) | Public summary of review quotas & packet hashes. |
+| **Public Audit Report** | [`results/education_audit/edu_2a/report.md`](file:///C:/Users/admir/Github/shadowspace-ambiguity-holonomy/results/education_audit/edu_2a/report.md) | Markdown audit report aligned 1-to-1 with status labels. |
+| **Private Blinding Key** | `private_review/edu_2a_r1_blinding_key.json` | Secret key mapping letter IDs to conditions (uncommitted). |
+| **Private Design Manifest** | `private_review/edu_2a_r1_review_design_manifest.json` | Secret design manifest with packet SHA256 hashes & R2 IDs. |
+| **Practice Calibration Packet** | [`private_review/working/practice_calibration_5letters.csv`](file:///C:/Users/admir/Github/shadowspace-ambiguity-holonomy/private_review/working/practice_calibration_5letters.csv) | 5 nonstudy practice letters for rater calibration. |
+| **Reviewer 1 Working Packet** | [`private_review/working/reviewer1_pass1_working.csv`](file:///C:/Users/admir/Github/shadowspace-ambiguity-holonomy/private_review/working/reviewer1_pass1_working.csv) | Reviewer 1 Pass 1 working copy (65 letters). |
+| **Reviewer 2 Working Packet** | [`private_review/working/reviewer2_pass1_working.csv`](file:///C:/Users/admir/Github/shadowspace-ambiguity-holonomy/private_review/working/reviewer2_pass1_working.csv) | Reviewer 2 Pass 1 working copy (20 shared letters). |
+
+---
+
+## 3. Step-by-Step Guide to Resuming Work
+
+When jumping back into the project to conduct human review or process ratings, follow this exact sequence:
+
+### Step 1: Rater Calibration (5 Nonstudy Practice Letters)
+1. Have Reviewer 1 and Reviewer 2 independently complete [`private_review/working/practice_calibration_5letters.csv`](file:///C:/Users/admir/Github/shadowspace-ambiguity-holonomy/private_review/working/practice_calibration_5letters.csv).
+2. Compare scores, discuss discrepancies, and align on score anchors in [`HUMAN_REVIEW_RUBRIC.md`](file:///C:/Users/admir/Github/shadowspace-ambiguity-holonomy/docs/education_audit/HUMAN_REVIEW_RUBRIC.md).
+3. Do not include these 5 practice letters in official study results.
+
+### Step 2: Pass 1 Shared 20-Letter Assessment
+1. Reviewer 1 rates Pass 1 in [`private_review/working/reviewer1_pass1_working.csv`](file:///C:/Users/admir/Github/shadowspace-ambiguity-holonomy/private_review/working/reviewer1_pass1_working.csv).
+2. Reviewer 2 rates Pass 1 in [`private_review/working/reviewer2_pass1_working.csv`](file:///C:/Users/admir/Github/shadowspace-ambiguity-holonomy/private_review/working/reviewer2_pass1_working.csv).
+3. Calculate agreement on the 20 shared letters (Within-1-point $\ge 90\%$, MAD $\le 0.50$).
+
+### Step 3: Complete & Lock Pass 1
+1. If agreement passes, Reviewer 1 completes the remaining 45 Pass 1 letters.
+2. Save immutable locked copies of Pass 1 working files under `private_review/locked/`.
+
+### Step 4: Release & Complete Pass 2 (Factual Grounding Adjudication)
+1. Release Pass 2 working files (`edu_2a_r1_reviewer1_pass2.csv` and `edu_2a_r1_reviewer2_pass2.csv`) showing target opportunity and verified facts.
+2. Reviewers complete factual fidelity scores, unsupported positive/negative claim counts, and omission counts.
+
+### Step 5: Submission Compilation & Final Analysis Gate
+Once all 4 filled working files exist ($65 + 65 + 20 + 20 = 170$ records), run:
 ```powershell
-# 1. Ensure you are on the education branch and up to date
-git checkout research/education-counterfactual-audit
-git pull origin research/education-counterfactual-audit
-
-# 2. Run unit tests to verify local setup (all 10 tests should pass)
+$env:PYTHONPATH="."
+python -c "from research.education_audit.evaluation.compile_review_submissions import compile_review_submissions; compile_review_submissions(valid_letter_ids=[f'LTR_R1_{i:03d}' for i in range(1, 66)])"
+python research/education_audit/analysis/edu_2a_analysis.py
 pytest --no-cov tests/education_audit
-
-# 3. View the Phase EDU-2a Live Canary Report
-cat results/education_audit/edu_2a/report.md
 ```
 
 ---
 
-## 2. Key Accomplishments Completed Today
+## 4. What NOT to Do
 
-1. **NLI Holonomy Closeout**: Closed at Phase E2-A1.2a-R1.2 (`docs/holonomy/PHASE_E2_A1_2A_R1_2_CLOSEOUT.md`). Provenance pair `000c696` $\to$ `ef0d669`.
-2. **Applied Project Governance**: Created charter, threat model, data governance policy, evidence labels, and roadmap in `docs/education_audit/` and `educational_counterfactual_ai_audit_roadmap.md`.
-3. **Phase EDU-1.1a Hardening**:
-   - Consolidated GitHub Actions CI workflow in `.github/workflows/pytest_holonomy.yml`.
-   - Implemented cross-process cryptographic seeding via `stable_seed(*parts)` in `adapters/mock.py`.
-   - Enforced cue-dose balance (isolated identity headers, identity-free fact payloads).
-   - Enforced strict zero-disparity null contract (`INDEPENDENT_NULL_CONTRACT_PASSED`).
-4. **Phase EDU-2a Live Canary Execution**:
-   - Pinned live model: `gemma3:12b` (digest `f4031aab637d1ffa37b42570452ae0e4fad0314754d17ded67322e4b95836f8a`, Ollama `0.32.5`, 100% GPU VRAM).
-   - 5-letter preflight + 60-letter frozen randomized canary run completed cleanly in ~10.5 minutes (0 fallback, 0 truncation, 0 errors).
-   - 0 identity leakage in blinded rating packets.
-   - Blinded rating packets exported to `results/education_audit/edu_2a/blinded_rating_packet.csv` and `blinded_rating_packet.jsonl` (blinding key in `blinding_key.json`).
-
----
-
-## 3. Key Artifact Locations
-
-* **Canary Manifest**: [`results/education_audit/edu_2a/analysis_manifest.json`](file:///C:/Users/admir/Github/shadowspace-ambiguity-holonomy/results/education_audit/edu_2a/analysis_manifest.json)
-* **Blinded Rating Packet (CSV)**: [`results/education_audit/edu_2a/blinded_rating_packet.csv`](file:///C:/Users/admir/Github/shadowspace-ambiguity-holonomy/results/education_audit/edu_2a/blinded_rating_packet.csv)
-* **Blinded Rating Packet (JSONL)**: [`results/education_audit/edu_2a/blinded_rating_packet.jsonl`](file:///C:/Users/admir/Github/shadowspace-ambiguity-holonomy/results/education_audit/edu_2a/blinded_rating_packet.jsonl)
-* **Secret Blinding Key**: [`results/education_audit/edu_2a/blinding_key.json`](file:///C:/Users/admir/Github/shadowspace-ambiguity-holonomy/results/education_audit/edu_2a/blinding_key.json)
-* **Raw LLM Generations**: [`results/education_audit/edu_2a/generations.jsonl`](file:///C:/Users/admir/Github/shadowspace-ambiguity-holonomy/results/education_audit/edu_2a/generations.jsonl)
-
----
-
-## 4. Next Immediate Steps (For Tomorrow)
-
-1. **Human Rating Packet Review**: Conduct blinded manual evaluation on the 60 letters in `blinded_rating_packet.csv` using the schema in `manual_review_schema.py`.
-2. **Phase EDU-2 Expansion**: Run the full 8-profile pilot (240 letters) using `run_live_canary.py` across all synthetic profiles.
+* **Do NOT rerun Gemma** or regenerate the 60 letters (generation is complete and 100% un-truncated).
+* **Do NOT modify frozen private packet CSV files** in `private_review/` (edits must happen in `private_review/working/` to preserve SHA256 hashes).
+* **Do NOT create new engineering phases** (all validators, compilers, and gates are complete and tested).
+* **Do NOT expand to 240 letters** until human review validation passes.
