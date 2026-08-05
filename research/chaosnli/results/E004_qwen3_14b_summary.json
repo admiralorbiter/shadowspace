@@ -1,0 +1,109 @@
+{
+  "model_tag": "qwen3:14b",
+  "num_items": 600,
+  "imputed_minus40_records": 0,
+  "censoring_sensitivity": {
+    "bound_A_primary_floor_minus40_raw_r": 11.923090057823488,
+    "bound_A_primary_floor_minus40_cal_r": 12.961990269054496,
+    "bound_B_fixed_minus20_stress_raw_r": 11.923090057823488,
+    "bound_B_fixed_minus20_stress_cal_r": 12.961990269054496,
+    "sensitivity_max_shift_pct": 0.0,
+    "bound_B_paired_contrasts": {
+      "delta_r_norm_raw_pct": 2.2021348852472773,
+      "delta_r_norm_raw_95ci": [
+        0.5788061780833483,
+        3.784228651353606
+      ],
+      "delta_r_norm_calibrated_pct": 3.205591609028458,
+      "delta_r_norm_calibrated_95ci": [
+        1.5391839562935716,
+        4.951175291320192
+      ],
+      "delta_effective_bits_raw": 0.2102391458778039,
+      "delta_effective_bits_calibrated": 0.2904448357179059,
+      "within_model_calibration_gain_target_pct": 1.0389002112310077,
+      "two_model_calibration_interaction_pct": 1.0034567237811807,
+      "two_model_calibration_interaction_95ci": [
+        -0.3572819987958811,
+        2.4937859526386004
+      ]
+    }
+  },
+  "metrics": {
+    "human_target_entropy_nats": 0.6542667055904634,
+    "excess_nll_raw_nats": 3.8465599112780877,
+    "excess_nll_calibrated_nats": 0.23223047670557706,
+    "excess_nll_closed_pct": 93.96264501107395,
+    "nll_raw_nats": 4.500826616868551,
+    "nll_calibrated_nats": 0.8864971822960405,
+    "brier_raw": 0.33661991361102483,
+    "brier_calibrated": 0.12970587703681288,
+    "jsd_raw_nats": 0.15066541810805786,
+    "jsd_raw_bits": 0.21736425153795733,
+    "jsd_calibrated_nats": 0.06091649198021231,
+    "jsd_calibrated_bits": 0.08788392088820461,
+    "fitted_temperatures_per_fold": [
+      14.064184730990709,
+      13.704817023230648,
+      14.077382965942824,
+      13.892232968806454,
+      13.825411472412734
+    ],
+    "mean_optimal_temperature": 13.912805832276675,
+    "q_support_raw": 0.04619309854928685,
+    "q_support_calibrated": 0.048734500050505926,
+    "q_null_raw": 0.016792262144561098,
+    "q_null_calibrated": 0.016768829394812855,
+    "r_norm_pct_raw": 11.923090057823488,
+    "r_norm_pct_calibrated": 12.961990269054496,
+    "r_norm_95ci_raw": [
+      10.542738761406145,
+      13.418932752315449
+    ],
+    "r_norm_95ci_calibrated": [
+      11.478325854653443,
+      14.618919103511596
+    ],
+    "within_model_calibration_gain_pct": 1.0389002112310077,
+    "within_model_calibration_gain_95ci": [
+      0.04260006781389046,
+      2.152655357884776
+    ],
+    "effective_bits_raw": 1.5806446765982771,
+    "k_eff_raw": 2.9910347598194624,
+    "effective_bits_calibrated": 1.664234177565619,
+    "k_eff_calibrated": 3.169453666144065
+  },
+  "paired_contrast_vs_gemma3_12b": {
+    "delta_r_norm_raw_pct": 2.2021348852472773,
+    "delta_r_norm_raw_95ci": [
+      0.5788061780833483,
+      3.784228651353606
+    ],
+    "delta_r_norm_calibrated_pct": 3.205591609028458,
+    "delta_r_norm_calibrated_95ci": [
+      1.5391839562935716,
+      4.951175291320192
+    ],
+    "calibrated_contrast_exceeds_5pp_margin_ci": false,
+    "delta_effective_bits_raw": 0.2102391458778039,
+    "delta_effective_bits_calibrated": 0.2904448357179059,
+    "within_model_calibration_gain_target_pct": 1.0389002112310077,
+    "within_model_calibration_gain_gemma_pct": 0.03544348744982706,
+    "two_model_calibration_interaction_pct": 1.0034567237811807,
+    "two_model_calibration_interaction_95ci": [
+      -0.3572819987958811,
+      2.4937859526386004
+    ]
+  },
+  "provenance": {
+    "responses_path": "research\\chaosnli\\artifacts\\E004\\raw_responses\\pilot600_qwen3-14b_v2_abc_t10_lpe.jsonl",
+    "responses_sha256": "2807a410c0f3307a12f2569b19e8f75e0c0be1b37dbc946fc42a244530e76afe",
+    "manifest_path": "research\\chaosnli\\artifacts\\E004\\manifests\\pilot_600.jsonl",
+    "manifest_sha256": "318c67354242771d2812b0d26dbd3d89e084ecc0afece250cae453d6531f4851",
+    "support_matrix_path": "research\\chaosnli\\artifacts\\E004\\pilot_support\\S_hellinger_k010_pilot.bin",
+    "support_matrix_sha256": "29ff35cfddbd1a4c30858eb2feac58aeb0c087aff99850736007a2a49fb40245",
+    "script": "analyze_llm_lpe.py",
+    "gemma3_regression_gate": "PASSED_NUMERICALLY_EXACT_WITHIN_TOLERANCE"
+  }
+}

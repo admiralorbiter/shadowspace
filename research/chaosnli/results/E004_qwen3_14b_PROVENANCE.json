@@ -1,0 +1,16 @@
+{
+  "experiment_id": "E004",
+  "model_tag": "qwen3:14b",
+  "subset": "pilot_600",
+  "n_items": 600,
+  "total_requests": 3600,
+  "temperature": 1.0,
+  "reasoning_control": "reasoning_effort=none",
+  "raw_responses_sha256": "2807a410c0f3307a12f2569b19e8f75e0c0be1b37dbc946fc42a244530e76afe",
+  "manifest_sha256": "318c67354242771d2812b0d26dbd3d89e084ecc0afece250cae453d6531f4851",
+  "support_matrix_sha256": "29ff35cfddbd1a4c30858eb2feac58aeb0c087aff99850736007a2a49fb40245",
+  "summary_sha256": "b42dd2b53a655e80b09dfe1282527e53a60d0a13f83efe2360296f117337787f",
+  "imputed_minus40_records": 0,
+  "censoring_audit": "ZERO_CENSORED_TOKENS_BIT_PERFECT_BOUNDS",
+  "audit_status": "PAPER_READY_FREEZE"
+}
