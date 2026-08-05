@@ -1,0 +1,91 @@
+{
+  "study_id": "ambiguity_doppelganger_atlas_v1",
+  "evidence_level": "exploratory_census",
+  "seed": 20260804,
+  "files": {
+    "data/chaosnli/processed/canonical_items.parquet": {
+      "size_bytes": 261274,
+      "sha256": "d60481bc758caa53583da2539aebc5eb34e6e90c943cd6df863d2aee5d0836ce"
+    },
+    "results/exploratory/oof_predictions.parquet": {
+      "size_bytes": 1343326,
+      "sha256": "f21eca2e1047bddc7108ce070e79af320ed08e1ee43bc98dc88020a106c9dc6d"
+    },
+    "research/ambiguity_atlas/configs/atlas_v1.yaml": {
+      "size_bytes": 799,
+      "sha256": "5484559cc09139efc698682364259ad13eb1a888a93be5c9abb2149632055dad"
+    },
+    "src/shadowspace/ambiguity_atlas/geometry.py": {
+      "size_bytes": 6542,
+      "sha256": "5f16d11e966f01e42d80a85e68014d87011bf5179f25ce679751e5da46c3a760"
+    },
+    "src/shadowspace/ambiguity_atlas/summaries.py": {
+      "size_bytes": 2447,
+      "sha256": "c05f900edad517dce81d7870468eed6958b27db297f5aed0abb94d8d5afa1608"
+    },
+    "src/shadowspace/ambiguity_atlas/pair_index.py": {
+      "size_bytes": 9993,
+      "sha256": "d920761bfb575f3e14af4738f24877264fc0544f20d14795b1763e471a816d87"
+    },
+    "src/shadowspace/ambiguity_atlas/posterior.py": {
+      "size_bytes": 2939,
+      "sha256": "348fba6796fd06f15c61daa86932f4939841908aab7aa2d980901f89a5f8956c"
+    },
+    "src/shadowspace/ambiguity_atlas/retention.py": {
+      "size_bytes": 5401,
+      "sha256": "ab94e7b6a5cc8a46d6574583293c064d69a58bc31f796fed039a0aef3897e826"
+    },
+    "src/shadowspace/ambiguity_atlas/schemas.py": {
+      "size_bytes": 2841,
+      "sha256": "9ec290c098e3650148dc6dcf3c2d24be0dc3a8e416177dfd1f05b30549c151d9"
+    },
+    "results/ambiguity_atlas/preflight_report.json": {
+      "size_bytes": 604,
+      "sha256": "51c6d6522698dbce3a1128132b49c73756f7d588086ba3836c9d8037a543b3c0"
+    },
+    "results/ambiguity_atlas/theory_surface.parquet": {
+      "size_bytes": 123847,
+      "sha256": "3cfa70596a65dde1b8fcc9d4543864a97880a4628f7db7b50ac0642573b2d5dc"
+    },
+    "results/ambiguity_atlas/strict_pairs.parquet": {
+      "size_bytes": 144632,
+      "sha256": "2d698af9ce0ae9b90d39a018140e222d748b9a6943eb9739f59e8eede5295f52"
+    },
+    "results/ambiguity_atlas/strict_summary.json": {
+      "size_bytes": 620,
+      "sha256": "b9061460774ae91558ed6522b6d2804b85c02503788d9bd3654b4f571872c967"
+    },
+    "results/ambiguity_atlas/approximate_pairs.parquet": {
+      "size_bytes": 659998,
+      "sha256": "1822f529fa34a3cc90898fe84d61bff0be3f48f04682fbf2afe1e5c932a0716d"
+    },
+    "results/ambiguity_atlas/posterior_stability.parquet": {
+      "size_bytes": 185297,
+      "sha256": "0a343dc258e66fe05b05fce8c50c4574b46c053880c15330c6bc3ddebb570710"
+    },
+    "results/ambiguity_atlas/model_retention.parquet": {
+      "size_bytes": 671014,
+      "sha256": "2e9c72180f0dadb6de0095a8953feb34954645c910ab44c1b8e9e3f45cbfb7b6"
+    },
+    "results/ambiguity_atlas/model_retention_summary.json": {
+      "size_bytes": 7506,
+      "sha256": "a822be4ec76f691572cb205421ea7ee53c20725088f3cca81e9238cc2188e6b9"
+    },
+    "results/ambiguity_atlas/atlas_payload.json": {
+      "size_bytes": 4610325,
+      "sha256": "0df84f843cfda436d2d06dc266d33caa9e8f6f9c9e2081a95e1c7e60dd696dfe"
+    },
+    "results/ambiguity_atlas/atlas_payload.js": {
+      "size_bytes": 4610349,
+      "sha256": "4a98bb472d5268d37739c112c5a65919eac8f67a18d8e8aee19825620e36bfe5"
+    },
+    "docs/viz/ambiguity_atlas/atlas_payload.js": {
+      "size_bytes": 4610349,
+      "sha256": "4a98bb472d5268d37739c112c5a65919eac8f67a18d8e8aee19825620e36bfe5"
+    },
+    "docs/viz/ambiguity_atlas/index.html": {
+      "size_bytes": 4641958,
+      "sha256": "3fb5aaaf6e67f19a2b2f6e82867979afddd493932c31c85611dd6644a08cfc42"
+    }
+  }
+}
