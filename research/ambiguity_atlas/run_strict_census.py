@@ -3,7 +3,7 @@
 import os
 import json
 import polars as pl
-from shadowspace.ambiguity_atlas.pair_index import find_strict_doppelgaenger_pairs
+from shadowspace.ambiguity_atlas.pair_index import find_strict_doppelgaenger_pairs, compute_source_splits
 
 CANONICAL_PATH = "data/chaosnli/processed/canonical_items.parquet"
 PAIRS_OUTPUT_PATH = "results/ambiguity_atlas/strict_pairs.parquet"
@@ -31,10 +31,7 @@ def run_strict_census():
         ds_a = pairs_df["source_dataset_a"].to_list()
         ds_b = pairs_df["source_dataset_b"].to_list()
         
-        within_snli = sum(1 for a, b in zip(ds_a, ds_b) if "snli" in a and "snli" in b)
-        within_mnli = sum(1 for a, b in zip(ds_a, ds_b) if "mnli" in a and "mnli" in b)
-        cross_source = sum(1 for a, b in zip(ds_a, ds_b) if ("snli" in a and "mnli" in b) or ("mnli" in a and "snli" in b))
-
+        split_counts = compute_source_splits(ds_a, ds_b)
         
         summary.update({
             "hellinger_median": dh_median,
@@ -42,12 +39,9 @@ def run_strict_census():
             "hellinger_min": dh_min,
             "hellinger_max": dh_max,
             "majority_label_distribution": maj_counts,
-            "source_splits": {
-                "within_snli": within_snli,
-                "within_mnli": within_mnli,
-                "cross_source": cross_source,
-            }
+            "source_splits": split_counts,
         })
+
 
     with open(SUMMARY_OUTPUT_PATH, "w") as f:
         json.dump(summary, f, indent=2)

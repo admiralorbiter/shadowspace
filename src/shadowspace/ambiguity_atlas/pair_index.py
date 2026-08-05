@@ -11,11 +11,38 @@ from .geometry import (
 )
 from .summaries import compute_minority_orientation, compute_shannon_entropy, LABEL_MAP
 
-LABEL_COLS = {
-    "entailment": "human_count_entailment",
-    "neutral": "human_count_neutral",
-    "contradiction": "human_count_contradiction",
-}
+
+def source_family(value: str) -> str:
+    """Normalize source dataset label to canonical family ('snli' or 'mnli')."""
+    if not value:
+        raise ValueError("Empty source dataset value")
+    normalized = str(value).strip().lower()
+    if normalized in {"snli", "chaosnli_snli", "chaosnli-snli"}:
+        return "snli"
+    if normalized in {"mnli", "chaosnli_mnli", "chaosnli-mnli"}:
+        return "mnli"
+    raise ValueError(f"Unknown source dataset: {value!r}")
+
+
+def compute_source_splits(ds_a: List[str], ds_b: List[str]) -> Dict[str, int]:
+    """Compute mutually exclusive and exhaustive source dataset split counts."""
+    split_counts = {
+        "within_snli": 0,
+        "within_mnli": 0,
+        "cross_source": 0,
+    }
+    for source_a, source_b in zip(ds_a, ds_b):
+        family_a = source_family(source_a)
+        family_b = source_family(source_b)
+        if family_a == "snli" and family_b == "snli":
+            split_counts["within_snli"] += 1
+        elif family_a == "mnli" and family_b == "mnli":
+            split_counts["within_mnli"] += 1
+        else:
+            split_counts["cross_source"] += 1
+            
+    assert sum(split_counts.values()) == len(ds_a), "Source split counts must sum exactly to total pair count"
+    return split_counts
 
 
 def find_strict_doppelgaenger_pairs(df_canon: pl.DataFrame) -> Tuple[pl.DataFrame, Dict[str, Any]]:
@@ -26,7 +53,7 @@ def find_strict_doppelgaenger_pairs(df_canon: pl.DataFrame) -> Tuple[pl.DataFram
     - Same majority_count
     - Same unordered minority counts (minority_low_count, minority_high_count)
     - Unequal minority counts (minority_low_count != minority_high_count)
-    - Opposite assignment of minority_high_count (item A assigns high to class X, item B to class Y)
+    - Opposite assignment of minority_high_count
     """
     records = []
     for row in df_canon.to_dicts():
@@ -147,96 +174,110 @@ def find_approximate_doppelgaenger_pairs(
 ) -> pl.DataFrame:
     """Find approximate human doppelgänger pairs within confidence & entropy tolerances.
     
-    Rule:
-    - Same human_majority_label
-    - Opposite minority orientation sign: delta_a * delta_b < 0
-    - |conf_a - conf_b| <= max_conf_diff
-    - |entropy_a - entropy_b| <= max_entropy_diff
+    Fixes metadata alignment issue by bundling endpoint objects before object_id swap.
+    Computes true Pareto non-domination frontier flag.
     """
     items = df_canon.to_dicts()
     n_items = len(items)
     
-    # Pre-extract arrays
-    p_vecs = np.zeros((n_items, 3), dtype=np.float64)
-    maj_indices = np.zeros(n_items, dtype=np.int32)
-    confidences = np.zeros(n_items, dtype=np.float64)
-    entropies = np.zeros(n_items, dtype=np.float64)
-    deltas = np.zeros(n_items, dtype=np.float64)
-    
-    for idx, item in enumerate(items):
+    endpoints = []
+    for item in items:
         p = np.array([item["human_p_entailment"], item["human_p_neutral"], item["human_p_contradiction"]], dtype=np.float64)
-        p_vecs[idx] = p
         m_idx = 0 if item["human_majority_label"] == "entailment" else (1 if item["human_majority_label"] == "neutral" else 2)
-        maj_indices[idx] = m_idx
-        confidences[idx] = p[m_idx]
-        entropies[idx] = item["human_entropy_bits"]
-        deltas[idx] = compute_minority_orientation(p, majority_idx=m_idx)
+        delta = compute_minority_orientation(p, majority_idx=m_idx)
+        
+        endpoints.append({
+            "item": item,
+            "p": p,
+            "maj_idx": m_idx,
+            "confidence": float(p[m_idx]),
+            "entropy": float(item["human_entropy_bits"]),
+            "delta": float(delta),
+        })
         
     pair_records = []
     
     for i in range(n_items):
         for j in range(i + 1, n_items):
+            ep_i, ep_j = endpoints[i], endpoints[j]
+            
             # 1. Same majority label
-            if maj_indices[i] != maj_indices[j]:
+            if ep_i["maj_idx"] != ep_j["maj_idx"]:
                 continue
                 
             # 2. Opposite minority orientation
-            d_i, d_j = deltas[i], deltas[j]
+            d_i, d_j = ep_i["delta"], ep_j["delta"]
             if d_i * d_j >= 0 or abs(d_i) < 1e-4 or abs(d_j) < 1e-4:
                 continue
                 
             # 3. Summary differences
-            conf_diff = abs(confidences[i] - confidences[j])
+            conf_diff = abs(ep_i["confidence"] - ep_j["confidence"])
             if conf_diff > max_conf_diff:
                 continue
                 
-            ent_diff = abs(entropies[i] - entropies[j])
+            ent_diff = abs(ep_i["entropy"] - ep_j["entropy"])
             if ent_diff > max_entropy_diff:
                 continue
                 
-            item_a, item_b = items[i], items[j]
-            p_a, p_b = p_vecs[i], p_vecs[j]
-            
-            # Canonicalize pair order by object_id
-            if item_a["object_id"] > item_b["object_id"]:
-                item_a, item_b = item_b, item_a
-                p_a, p_b = p_b, p_a
-                d_i, d_j = d_j, d_i
+            # Bundle endpoints and swap together to keep entropy_a/b, delta_a/b aligned
+            ep_a, ep_b = ep_i, ep_j
+            if ep_a["item"]["object_id"] > ep_b["item"]["object_id"]:
+                ep_a, ep_b = ep_b, ep_a
                 
+            p_a, p_b = ep_a["p"], ep_b["p"]
             dh = float(hellinger_distance(p_a, p_b))
             dfr = float(fisher_rao_distance(p_a, p_b))
             djs = float(js_distance(p_a, p_b))
             da = float(aitchison_distance(p_a, p_b, alpha=0.5))
             
-            # Summary discrepancy distance
             summary_dist = np.sqrt(conf_diff**2 + ent_diff**2)
-            
-            pair_id = f"approx_{item_a['object_id']}_{item_b['object_id']}"
+            pair_id = f"approx_{ep_a['item']['object_id']}_{ep_b['item']['object_id']}"
             
             pair_records.append({
                 "pair_id": pair_id,
-                "object_id_a": item_a["object_id"],
-                "object_id_b": item_b["object_id"],
-                "majority_label": item_a["human_majority_label"],
-                "confidence_a": float(p_a[maj_indices[i]]),
-                "confidence_b": float(p_b[maj_indices[j]]),
+                "object_id_a": ep_a["item"]["object_id"],
+                "object_id_b": ep_b["item"]["object_id"],
+                "majority_label": ep_a["item"]["human_majority_label"],
+                "confidence_a": ep_a["confidence"],
+                "confidence_b": ep_b["confidence"],
                 "confidence_diff": float(conf_diff),
-                "entropy_a": float(entropies[i]),
-                "entropy_b": float(entropies[j]),
+                "entropy_a": ep_a["entropy"],
+                "entropy_b": ep_b["entropy"],
                 "entropy_diff": float(ent_diff),
                 "summary_dist": float(summary_dist),
-                "minority_orientation_a": float(d_i),
-                "minority_orientation_b": float(d_j),
+                "minority_orientation_a": ep_a["delta"],
+                "minority_orientation_b": ep_b["delta"],
                 "d_hellinger": dh,
                 "d_fisher_rao": dfr,
                 "d_js": djs,
                 "d_aitchison": da,
-                "premise_a": item_a["premise"],
-                "hypothesis_a": item_a["hypothesis"],
-                "premise_b": item_b["premise"],
-                "hypothesis_b": item_b["hypothesis"],
-                "source_dataset_a": item_a["source_dataset"],
-                "source_dataset_b": item_b["source_dataset"],
+                "premise_a": ep_a["item"]["premise"],
+                "hypothesis_a": ep_a["item"]["hypothesis"],
+                "premise_b": ep_b["item"]["premise"],
+                "hypothesis_b": ep_b["item"]["hypothesis"],
+                "source_dataset_a": ep_a["item"]["source_dataset"],
+                "source_dataset_b": ep_b["item"]["source_dataset"],
             })
 
-    return pl.DataFrame(pair_records) if pair_records else pl.DataFrame()
+    if not pair_records:
+        return pl.DataFrame()
+        
+    df_pairs = pl.DataFrame(pair_records)
+    
+    # Compute Pareto non-domination: x dominates y if summary_dist(x) <= summary_dist(y) AND d_hellinger(x) >= d_hellinger(y)
+    summary_dists = df_pairs["summary_dist"].to_numpy()
+    dh_dists = df_pairs["d_hellinger"].to_numpy()
+    n_p = len(df_pairs)
+    
+    is_pareto = np.ones(n_p, dtype=bool)
+    for u in range(n_p):
+        for v in range(n_p):
+            if u == v:
+                continue
+            # v dominates u if v has <= summary_dist and >= d_hellinger, with at least one strict inequality
+            if (summary_dists[v] <= summary_dists[u]) and (dh_dists[v] >= dh_dists[u]):
+                if (summary_dists[v] < summary_dists[u]) or (dh_dists[v] > dh_dists[u]):
+                    is_pareto[u] = False
+                    break
+                    
+    return df_pairs.with_columns(pl.Series("is_pareto_optimal", is_pareto))

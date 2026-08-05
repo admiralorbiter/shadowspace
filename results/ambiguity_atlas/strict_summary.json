@@ -3,14 +3,10 @@
   "exact_pairs_count": 1375,
   "participating_items_count": 1100,
   "hellinger_median": 0.32426406871192853,
-  "hellinger_mean": 0.34172972637588245,
+  "hellinger_mean": 0.3417297263758824,
   "hellinger_min": 0.01361061113099181,
   "hellinger_max": 0.7,
   "majority_label_distribution": [
-    {
-      "majority_label": "entailment",
-      "count": 181
-    },
     {
       "majority_label": "contradiction",
       "count": 38
@@ -18,11 +14,15 @@
     {
       "majority_label": "neutral",
       "count": 1156
+    },
+    {
+      "majority_label": "entailment",
+      "count": 181
     }
   ],
   "source_splits": {
-    "within_snli": 1375,
+    "within_snli": 780,
     "within_mnli": 181,
-    "cross_source": 595
+    "cross_source": 414
   }
 }
