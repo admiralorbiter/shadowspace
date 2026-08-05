@@ -3,6 +3,7 @@
 from typing import Dict, Any, List
 import polars as pl
 import numpy as np
+from .summaries import compute_shannon_entropy
 
 REQUIRED_CANONICAL_COLUMNS = [
     "object_id",
@@ -30,11 +31,12 @@ REQUIRED_OOF_COLUMNS = [
     "q_t4_e", "q_t4_n", "q_t4_c",
 ]
 
+VALID_MAJORITY_LABELS = {"entailment", "neutral", "contradiction"}
 LABEL_MAP = {0: "entailment", 1: "neutral", 2: "contradiction"}
 
 
 def validate_canonical_df(df: pl.DataFrame) -> Dict[str, Any]:
-    """Validate canonical_items dataframe schema, probabilities, counts, entropy, and majority invariants."""
+    """Validate canonical_items schema, integer counts, recomputed entropy, and majority invariants."""
     missing = [c for c in REQUIRED_CANONICAL_COLUMNS if c not in df.columns]
     if missing:
         raise ValueError(f"Missing required columns in canonical_items: {missing}")
@@ -64,11 +66,14 @@ def validate_canonical_df(df: pl.DataFrame) -> Dict[str, Any]:
     if max_sum_diff > 1e-4:
         raise ValueError(f"Probabilities do not sum to 1.0; max diff: {max_sum_diff}")
 
-    # Check counts
+    # Check integer counts
     c_e = df["human_count_entailment"].to_numpy()
     c_n = df["human_count_neutral"].to_numpy()
     c_c = df["human_count_contradiction"].to_numpy()
     
+    if np.any(c_e != np.round(c_e)) or np.any(c_n != np.round(c_n)) or np.any(c_c != np.round(c_c)):
+        raise ValueError("Non-integer vote counts found in canonical items")
+        
     if np.min(c_e) < 0 or np.min(c_n) < 0 or np.min(c_c) < 0:
         raise ValueError("Negative vote count found")
         
@@ -76,21 +81,33 @@ def validate_canonical_df(df: pl.DataFrame) -> Dict[str, Any]:
     if np.any(total_counts <= 0):
         raise ValueError("Item with zero total vote count found")
 
-    # Check majority label agreement
+    # Check recomputed entropy
+    p_mat = np.column_stack([p_e, p_n, p_c])
+    recomputed_entropy = compute_shannon_entropy(p_mat)
+    stored_entropy = df["human_entropy_bits"].to_numpy()
+    max_ent_diff = float(np.max(np.abs(recomputed_entropy - stored_entropy)))
+    if max_ent_diff > 1e-4:
+        raise ValueError(f"Stored entropy does not match recomputed entropy; max diff: {max_ent_diff}")
+
+    # Check majority label agreement & valid label set
     maj_labels = df["human_majority_label"].to_list()
     for idx in range(row_count):
+        lbl = maj_labels[idx]
+        if lbl not in VALID_MAJORITY_LABELS:
+            raise ValueError(f"Unknown majority label '{lbl}' at row {idx}")
+            
         counts = [c_e[idx], c_n[idx], c_c[idx]]
         max_c = max(counts)
-        expected_maj = LABEL_MAP[counts.index(max_c)]
-        # Allow ties if count equals max_c
-        actual_count = counts[LABEL_MAP.get(maj_labels[idx], 0) if maj_labels[idx] == "entailment" else (1 if maj_labels[idx] == "neutral" else 2)]
+        expected_idx = 0 if lbl == "entailment" else (1 if lbl == "neutral" else 2)
+        actual_count = counts[expected_idx]
         if actual_count != max_c:
-            raise ValueError(f"Stored majority label '{maj_labels[idx]}' does not match maximum count {max_c} at row {idx}")
+            raise ValueError(f"Stored majority label '{lbl}' does not match maximum count {max_c} at row {idx}")
 
     return {
         "status": "VALID",
         "row_count": row_count,
         "max_prob_sum_diff": max_sum_diff,
+        "max_entropy_diff": max_ent_diff,
     }
 
 
@@ -113,7 +130,7 @@ def validate_oof_df(df: pl.DataFrame, canonical_ids: List[str]) -> Dict[str, Any
     if not oof_ids.issubset(canon_set):
         raise ValueError("oof_predictions contains object_ids not present in canonical items")
 
-    # Check tier probabilities sum to 1 and are finite
+    # Check tier probabilities sum to 1, are finite, and within [0, 1]
     tier_prefixes = ["q_raw", "q_t1", "q_t2", "q_t3", "q_t4"]
     for prefix in tier_prefixes:
         pe = df[f"{prefix}_e"].to_numpy()
@@ -122,6 +139,9 @@ def validate_oof_df(df: pl.DataFrame, canonical_ids: List[str]) -> Dict[str, Any
         
         if np.any(~np.isfinite(pe)) or np.any(~np.isfinite(pn)) or np.any(~np.isfinite(pc)):
             raise ValueError(f"Non-finite probability in tier {prefix}")
+            
+        if np.any(pe < 0.0) or np.any(pe > 1.0) or np.any(pn < 0.0) or np.any(pn > 1.0) or np.any(pc < 0.0) or np.any(pc > 1.0):
+            raise ValueError(f"Probability out of [0, 1] bounds in tier {prefix}")
             
         diff = np.max(np.abs(pe + pn + pc - 1.0))
         if diff > 1e-4:

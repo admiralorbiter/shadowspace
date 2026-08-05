@@ -1,86 +1,105 @@
 {
   "manifest_schema": "1.1.0",
-  "study_id": "ambiguity_doppelganger_atlas_v1",
+  "study_id": "ambiguity_doppelganger_atlas_v1_1",
   "evidence_level": "exploratory_census",
   "seed": 20260804,
-  "source_commit_sha": "68be211c9359e601d21885780173552fa0cf8884",
+  "source_commit_sha": "2a31b64eb884b470b8b9e69db5e4a32313c73791",
   "python_version": "3.13.7",
   "files": {
     "data/chaosnli/processed/canonical_items.parquet": {
+      "source_type": "external_file",
       "size_bytes": 261274,
       "sha256": "d60481bc758caa53583da2539aebc5eb34e6e90c943cd6df863d2aee5d0836ce"
     },
     "results/exploratory/oof_predictions.parquet": {
+      "source_type": "external_file",
       "size_bytes": 1343326,
       "sha256": "f21eca2e1047bddc7108ce070e79af320ed08e1ee43bc98dc88020a106c9dc6d"
     },
     "research/ambiguity_atlas/configs/atlas_v1.yaml": {
+      "source_type": "git_blob",
       "size_bytes": 799,
       "sha256": "5484559cc09139efc698682364259ad13eb1a888a93be5c9abb2149632055dad"
     },
     "src/shadowspace/ambiguity_atlas/geometry.py": {
+      "source_type": "git_blob",
       "size_bytes": 6542,
       "sha256": "5f16d11e966f01e42d80a85e68014d87011bf5179f25ce679751e5da46c3a760"
     },
     "src/shadowspace/ambiguity_atlas/summaries.py": {
+      "source_type": "git_blob",
       "size_bytes": 2447,
       "sha256": "c05f900edad517dce81d7870468eed6958b27db297f5aed0abb94d8d5afa1608"
     },
     "src/shadowspace/ambiguity_atlas/pair_index.py": {
+      "source_type": "git_blob",
       "size_bytes": 11752,
       "sha256": "d045f82d3866e74c7c785a47f4f0996e337b3c48f6957050b75adf3c712c9d5b"
     },
     "src/shadowspace/ambiguity_atlas/posterior.py": {
+      "source_type": "git_blob",
       "size_bytes": 4799,
       "sha256": "e1e6f32006de931e42210090f2047e9cf48ea6478b4007fdb3e14150483b095a"
     },
     "src/shadowspace/ambiguity_atlas/retention.py": {
+      "source_type": "git_blob",
       "size_bytes": 5401,
       "sha256": "ab94e7b6a5cc8a46d6574583293c064d69a58bc31f796fed039a0aef3897e826"
     },
     "src/shadowspace/ambiguity_atlas/schemas.py": {
-      "size_bytes": 5063,
-      "sha256": "3fb082f6a2b7924a49bb4ac338c92de441bd81bec52e3b0adb6a16059d7d33f0"
+      "source_type": "git_blob",
+      "size_bytes": 6103,
+      "sha256": "648cf271c2abd98e8461396cb7a16d18091d1d3edd633a948b6147f729bcc10d"
     },
     "results/ambiguity_atlas/preflight_report.json": {
-      "size_bytes": 604,
-      "sha256": "51c6d6522698dbce3a1128132b49c73756f7d588086ba3836c9d8037a543b3c0"
+      "source_type": "git_blob",
+      "size_bytes": 585,
+      "sha256": "beb8a8f53eb9633b666316c390b660f4b452d6449d353f34d00351cba19265eb"
     },
     "results/ambiguity_atlas/theory_surface.parquet": {
+      "source_type": "git_blob",
       "size_bytes": 123847,
       "sha256": "3cfa70596a65dde1b8fcc9d4543864a97880a4628f7db7b50ac0642573b2d5dc"
     },
     "results/ambiguity_atlas/strict_pairs.parquet": {
+      "source_type": "git_blob",
       "size_bytes": 144541,
       "sha256": "7dc7355f27d317a955215887b703ce65a06f7ffebec264a920cc9ee6d231e234"
     },
     "results/ambiguity_atlas/strict_summary.json": {
-      "size_bytes": 618,
-      "sha256": "8439fe115387deba38d7d79da121e4bb2f9552c95a13aae6ad12b88e8f75babc"
+      "source_type": "git_blob",
+      "size_bytes": 591,
+      "sha256": "37be99f695a0b934b12e94411613647ff1ff5cd375173a4f6326caf263cf6c52"
     },
     "results/ambiguity_atlas/approximate_pairs.parquet": {
+      "source_type": "git_blob",
       "size_bytes": 664524,
       "sha256": "ecc3b311e57b332b916e3f4fd34e870ad43bc54639621ffd615c5f96fd541d2b"
     },
     "results/ambiguity_atlas/posterior_stability.parquet": {
+      "source_type": "git_blob",
       "size_bytes": 196830,
       "sha256": "74b7d8a13b3cb29244c52cfeb77560e56e606aabcd3a031b5c868cfe13478654"
     },
     "results/ambiguity_atlas/model_retention.parquet": {
+      "source_type": "git_blob",
       "size_bytes": 671452,
       "sha256": "7461907015067810980872ff52d34f0bfc212c01f6481204493262c34e183abd"
     },
     "results/ambiguity_atlas/model_retention_summary.json": {
-      "size_bytes": 7506,
-      "sha256": "ba487e5d26477abb56e5f6cae54bcf95c4eb687482e542ca396f67c1285326f1"
+      "source_type": "git_blob",
+      "size_bytes": 7295,
+      "sha256": "480d0265fbdcfd0e02ab09fa6c157d63eac3dde595b29a141989257534251f8c"
     },
     "results/ambiguity_atlas/atlas_payload.json": {
+      "source_type": "git_blob",
       "size_bytes": 4610275,
       "sha256": "f1fc038e06e81c13c8b068065e63fcd1cfccb47e1aa7f013852e46a35f249525"
     },
     "docs/viz/ambiguity_atlas/index.html": {
-      "size_bytes": 4641908,
-      "sha256": "cdc8b3663ccd6405ca1f80d2ea4696858edf1a843f6dd8847db49c687d525b2c"
+      "source_type": "git_blob",
+      "size_bytes": 4641150,
+      "sha256": "f12399ed09fbc4b160711b3977d9c30c43ae191c78cd38df5c160f173c149dee"
     }
   }
 }

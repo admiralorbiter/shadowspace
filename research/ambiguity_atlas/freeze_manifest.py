@@ -1,4 +1,4 @@
-"""Generate cryptographic SHA-256 reproducibility manifest for the study bound to Git commit."""
+"""Generate cryptographic SHA-256 reproducibility manifest bound to Git commit blobs."""
 
 import os
 import sys
@@ -10,25 +10,25 @@ from typing import Dict, Any
 MANIFEST_PATH = "results/ambiguity_atlas/manifest.json"
 
 FILES_TO_MANIFEST = [
-    "data/chaosnli/processed/canonical_items.parquet",
-    "results/exploratory/oof_predictions.parquet",
-    "research/ambiguity_atlas/configs/atlas_v1.yaml",
-    "src/shadowspace/ambiguity_atlas/geometry.py",
-    "src/shadowspace/ambiguity_atlas/summaries.py",
-    "src/shadowspace/ambiguity_atlas/pair_index.py",
-    "src/shadowspace/ambiguity_atlas/posterior.py",
-    "src/shadowspace/ambiguity_atlas/retention.py",
-    "src/shadowspace/ambiguity_atlas/schemas.py",
-    "results/ambiguity_atlas/preflight_report.json",
-    "results/ambiguity_atlas/theory_surface.parquet",
-    "results/ambiguity_atlas/strict_pairs.parquet",
-    "results/ambiguity_atlas/strict_summary.json",
-    "results/ambiguity_atlas/approximate_pairs.parquet",
-    "results/ambiguity_atlas/posterior_stability.parquet",
-    "results/ambiguity_atlas/model_retention.parquet",
-    "results/ambiguity_atlas/model_retention_summary.json",
-    "results/ambiguity_atlas/atlas_payload.json",
-    "docs/viz/ambiguity_atlas/index.html",
+    ("data/chaosnli/processed/canonical_items.parquet", "external_file"),
+    ("results/exploratory/oof_predictions.parquet", "external_file"),
+    ("research/ambiguity_atlas/configs/atlas_v1.yaml", "git_blob"),
+    ("src/shadowspace/ambiguity_atlas/geometry.py", "git_blob"),
+    ("src/shadowspace/ambiguity_atlas/summaries.py", "git_blob"),
+    ("src/shadowspace/ambiguity_atlas/pair_index.py", "git_blob"),
+    ("src/shadowspace/ambiguity_atlas/posterior.py", "git_blob"),
+    ("src/shadowspace/ambiguity_atlas/retention.py", "git_blob"),
+    ("src/shadowspace/ambiguity_atlas/schemas.py", "git_blob"),
+    ("results/ambiguity_atlas/preflight_report.json", "git_blob"),
+    ("results/ambiguity_atlas/theory_surface.parquet", "git_blob"),
+    ("results/ambiguity_atlas/strict_pairs.parquet", "git_blob"),
+    ("results/ambiguity_atlas/strict_summary.json", "git_blob"),
+    ("results/ambiguity_atlas/approximate_pairs.parquet", "git_blob"),
+    ("results/ambiguity_atlas/posterior_stability.parquet", "git_blob"),
+    ("results/ambiguity_atlas/model_retention.parquet", "git_blob"),
+    ("results/ambiguity_atlas/model_retention_summary.json", "git_blob"),
+    ("results/ambiguity_atlas/atlas_payload.json", "git_blob"),
+    ("docs/viz/ambiguity_atlas/index.html", "git_blob"),
 ]
 
 
@@ -55,24 +55,54 @@ def get_git_commit() -> str:
         return "UNKNOWN"
 
 
+def read_committed_bytes(commit_sha: str, path: str) -> bytes:
+    """Read exact committed blob bytes from Git."""
+    return subprocess.check_output(
+        ["git", "show", f"{commit_sha}:{path}"],
+        stderr=subprocess.DEVNULL
+    )
+
+
 def generate_manifest():
-    """Generate manifest.json with SHA-256 checksums."""
-    print("=== Generating Cryptographic SHA-256 Reproducibility Manifest ===")
+    """Generate manifest.json with SHA-256 checksums bound to Git commit blobs."""
+    print("=== Generating Cryptographic SHA-256 Reproducibility Manifest (Git Blob Bound) ===")
     commit_sha = get_git_commit()
     
     file_manifest = {}
-    for rel_path in FILES_TO_MANIFEST:
-        if os.path.exists(rel_path):
-            file_manifest[rel_path] = {
-                "size_bytes": os.path.getsize(rel_path),
-                "sha256": compute_file_sha256(rel_path),
-            }
+    for rel_path, source_type in FILES_TO_MANIFEST:
+        if source_type == "git_blob":
+            try:
+                data = read_committed_bytes(commit_sha, rel_path)
+                file_manifest[rel_path] = {
+                    "source_type": "git_blob",
+                    "size_bytes": len(data),
+                    "sha256": compute_bytes_sha256(data),
+                }
+            except Exception:
+                # Fallback to filesystem bytes if not yet committed
+                if os.path.exists(rel_path):
+                    with open(rel_path, "rb") as f:
+                        content = f.read()
+                    file_manifest[rel_path] = {
+                        "source_type": "git_blob_fallback",
+                        "size_bytes": len(content),
+                        "sha256": compute_bytes_sha256(content),
+                    }
+                else:
+                    file_manifest[rel_path] = {"status": "MISSING"}
         else:
-            file_manifest[rel_path] = {"status": "MISSING"}
+            if os.path.exists(rel_path):
+                file_manifest[rel_path] = {
+                    "source_type": "external_file",
+                    "size_bytes": os.path.getsize(rel_path),
+                    "sha256": compute_file_sha256(rel_path),
+                }
+            else:
+                file_manifest[rel_path] = {"status": "MISSING"}
             
     manifest = {
         "manifest_schema": "1.1.0",
-        "study_id": "ambiguity_doppelganger_atlas_v1",
+        "study_id": "ambiguity_doppelganger_atlas_v1_1",
         "evidence_level": "exploratory_census",
         "seed": 20260804,
         "source_commit_sha": commit_sha,
