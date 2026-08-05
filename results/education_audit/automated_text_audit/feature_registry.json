@@ -1,8 +1,10 @@
 {
   "status": "COMPLETED",
   "generations_count": 60,
-  "counterfactual_pairs_count": 72,
+  "total_pairs_count": 72,
+  "primary_gender_pairs_count": 24,
+  "secondary_anonymous_pairs_count": 48,
   "calibration_status": "CALIBRATION_COMPLETED",
-  "atlas_generated": true,
-  "private_analysis_protected": true
+  "public_synthetic_atlas_generated": true,
+  "private_study_atlas_protected": true
 }

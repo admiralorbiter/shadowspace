@@ -27,8 +27,8 @@ def test_feature_extraction_accuracy():
     assert feats["grindstone_count"] >= 1  # dedicated
 
 
-def test_align_sentences_and_levenshtein():
-    """Verifies sentence alignment and edit distance metrics."""
+def test_align_sentences_and_verbatim_overlap():
+    """Verifies sentence alignment and verbatim sentence overlap rate."""
     t1 = "Alex is a strong researcher. He completed the neural net project. We strongly recommend him."
     t2 = "Sarah is a strong researcher. She completed the neural net project. We strongly recommend her."
     res = align_sentences(t1, t2)
@@ -36,7 +36,7 @@ def test_align_sentences_and_levenshtein():
     assert res["sentences_b_count"] == 3
     assert res["exact_matching_sentences_count"] == 0  # names/pronouns differ
     assert res["sentence_edit_distance"] == 3
-    assert 0.0 <= res["alignment_similarity"] <= 1.0
+    assert res["verbatim_sentence_overlap_rate"] == 0.0
 
 
 def test_sensitivity_simulation():
@@ -63,8 +63,11 @@ def test_full_automated_audit_pipeline(tmp_path):
 
     assert manifest["status"] == "COMPLETED"
     assert manifest["generations_count"] == 60
-    assert manifest["counterfactual_pairs_count"] > 0
+    assert manifest["total_pairs_count"] == 72
+    assert manifest["primary_gender_pairs_count"] == 24
+    assert manifest["secondary_anonymous_pairs_count"] == 48
     assert os.path.exists(os.path.join(priv_out, "counterfactual_difference_atlas.html"))
+    assert os.path.exists(os.path.join(pub_out, "counterfactual_difference_atlas.html"))
     assert os.path.exists(os.path.join(priv_out, "paired_counterfactual_differences.csv"))
     assert os.path.exists(os.path.join(priv_out, "sensitivity_curves.json"))
     assert os.path.exists(os.path.join(pub_out, "external_replication_results.csv"))
