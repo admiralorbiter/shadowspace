@@ -129,7 +129,9 @@ def run_edu2a_canary(
             f.write(json.dumps(e.__dict__) + "\n")
 
     # 4. Generate Blinded Rating Packet
-    generate_blinded_rating_packet(canary_generations, variants_map, out_dir=out_dir)
+    cases_map = {c.case_id: c for c in canary_cases}
+    generate_blinded_rating_packet(canary_generations, variants_map, cases_map=cases_map, out_dir=out_dir)
+
 
     # 5. Export Sub-Manifests
     from research.holonomy.experiments.run_phase_e0_summary import get_git_commit_sha
