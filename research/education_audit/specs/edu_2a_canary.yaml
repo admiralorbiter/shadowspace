@@ -21,6 +21,7 @@ seeds:
 generation_options:
   temperature: 0.7
   top_p: 0.9
-  num_predict: 700
+  num_predict: 250
+
 run_order_seed: 42
 preflight_count: 5
