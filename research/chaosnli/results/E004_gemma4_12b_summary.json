@@ -1,0 +1,100 @@
+{
+  "model_tag": "gemma4:12b",
+  "num_items": 600,
+  "imputed_minus40_records": 249,
+  "censoring_sensitivity": {
+    "bound_A_primary_floor_minus40_raw_r": 11.381022820229477,
+    "bound_A_primary_floor_minus40_cal_r": 11.587245752420007,
+    "bound_B_fixed_minus20_stress_raw_r": 11.438908018449942,
+    "bound_B_fixed_minus20_stress_cal_r": 11.686034580574404,
+    "sensitivity_max_shift_pct": 0.09878882815439738,
+    "bound_B_paired_contrasts": {
+      "delta_r_norm_raw_pct": 1.7179528458737305,
+      "delta_r_norm_raw_95ci": [
+        0.20809033746817907,
+        3.3681421631528754
+      ],
+      "delta_r_norm_calibrated_pct": 1.9296359205483657,
+      "delta_r_norm_calibrated_95ci": [
+        0.47724680338061737,
+        3.571694386593243
+      ],
+      "delta_effective_bits_raw": 0.16401399450800613,
+      "delta_effective_bits_calibrated": 0.1842235053397574,
+      "within_model_calibration_gain_target_pct": 0.24712656212446227,
+      "two_model_calibration_interaction_pct": 0.2116830746746352,
+      "two_model_calibration_interaction_95ci": [
+        -1.0908505602729666,
+        1.6260620236723606
+      ]
+    }
+  },
+  "metrics": {
+    "nll_raw_nats": 5.236977728003139,
+    "nll_calibrated_nats": 0.9548522202186298,
+    "brier_raw": 0.42354309084548325,
+    "brier_calibrated": 0.16981390046895414,
+    "jsd_raw_nats": 0.18220643635697334,
+    "jsd_raw_bits": 0.26286832215025596,
+    "jsd_calibrated_nats": 0.079859244013312,
+    "jsd_calibrated_bits": 0.11521253530714687,
+    "fitted_temperatures_per_fold": [
+      14.917780974941676,
+      14.884878616391243,
+      14.885576412855267,
+      14.498044981107912,
+      14.810590415156739
+    ],
+    "mean_optimal_temperature": 14.799374280090566,
+    "q_support_raw": 0.044851677795193,
+    "q_support_calibrated": 0.04534850003158984,
+    "q_null_raw": 0.016786900641835537,
+    "q_null_calibrated": 0.016773657571451328,
+    "r_norm_pct_raw": 11.381022820229477,
+    "r_norm_pct_calibrated": 11.587245752420007,
+    "r_norm_95ci_raw": [
+      10.052326907723224,
+      12.82750142005335
+    ],
+    "r_norm_95ci_calibrated": [
+      10.282394479709888,
+      13.024311474680488
+    ],
+    "effective_bits_raw": 1.5288931904365617,
+    "k_eff_raw": 2.885643727909243,
+    "effective_bits_calibrated": 1.54858141817166,
+    "k_eff_calibrated": 2.9252935770608786
+  },
+  "paired_contrast_vs_gemma3_12b": {
+    "delta_r_norm_raw_pct": 1.6600676476532659,
+    "delta_r_norm_raw_95ci": [
+      0.17157645169465105,
+      3.264037111274242
+    ],
+    "delta_r_norm_calibrated_pct": 1.8308470923939684,
+    "delta_r_norm_calibrated_95ci": [
+      0.5246400691942614,
+      3.470773118500371
+    ],
+    "calibrated_contrast_exceeds_5pp_margin_ci": false,
+    "delta_effective_bits_raw": 0.15848765971608847,
+    "delta_effective_bits_calibrated": 0.17479207632394678,
+    "within_model_calibration_gain_target_pct": 0.20622293219052956,
+    "within_model_calibration_gain_gemma_pct": 0.03544348744982706,
+    "two_model_calibration_interaction_pct": 0.1707794447407025,
+    "two_model_calibration_interaction_95ci": [
+      -1.2673098070128082,
+      1.727569992004347
+    ]
+  },
+  "provenance": {
+    "responses_path": "research\\chaosnli\\artifacts\\E004\\raw_responses\\pilot600_gemma4-12b_v2_abc_t10_lpe.jsonl",
+    "responses_sha256": "5de51244a5947d90870251e3af23f9b5b1860efb80f87ca7758d8ccf9dc19534",
+    "manifest_path": "research\\chaosnli\\artifacts\\E004\\manifests\\pilot_600.jsonl",
+    "manifest_sha256": "318c67354242771d2812b0d26dbd3d89e084ecc0afece250cae453d6531f4851",
+    "support_matrix_path": "research\\chaosnli\\artifacts\\E004\\pilot_support\\S_hellinger_k010_pilot.bin",
+    "support_matrix_sha256": "29ff35cfddbd1a4c30858eb2feac58aeb0c087aff99850736007a2a49fb40245",
+    "script": "analyze_llm_lpe.py",
+    "gemma3_regression_gate": "PASSED_NUMERICALLY_EXACT_WITHIN_TOLERANCE"
+  }
+}

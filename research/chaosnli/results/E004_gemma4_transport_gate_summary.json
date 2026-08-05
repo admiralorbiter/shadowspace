@@ -1,0 +1,9 @@
+{
+  "model_tag": "gemma4:12b",
+  "total_requests": 120,
+  "valid_outputs": 120,
+  "latency_total_sec": 365.00877809524536,
+  "requests_per_sec": 0.32875921676789704,
+  "responses_sha256": "cd805015c1a27dc04c5b3179d892702b6d76fc057cf34e7e30a6da2f3edaedf6",
+  "gate_status": "PASSED"
+}
