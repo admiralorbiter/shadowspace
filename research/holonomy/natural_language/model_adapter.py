@@ -7,14 +7,50 @@ Includes HuggingFaceNLIAdapter for live pre-trained model inference (e.g. robert
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 import hashlib
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 import numpy as np
 from numpy.typing import NDArray
 
 
+
+def get_helmert_basis() -> NDArray[np.float64]:
+    """Returns (3, 2) Helmert basis matrix V for 3-simplex ILR coordinates."""
+    v1 = np.array([1.0 / np.sqrt(2), -1.0 / np.sqrt(2), 0.0], dtype=np.float64)
+    v2 = np.array([1.0 / np.sqrt(6), 1.0 / np.sqrt(6), -2.0 / np.sqrt(6)], dtype=np.float64)
+    return np.column_stack([v1, v2])  # (3, 2)
+
+
+@dataclass(frozen=True)
+class LiveNLIConfig:
+    """Configuration for pinned live HuggingFace NLI model inference."""
+
+    model_id: str = "FacebookAI/roberta-large-mnli"
+    revision: str | None = None
+    device: str = "cpu"
+    dtype: str = "float32"
+    batch_size: int = 8
+    max_length: int = 128
+    truncation: bool = True
+    local_files_only: bool = False
+    use_mock_fallback: bool = False
+
+
+@dataclass(frozen=True)
+class NLIInferenceBatch:
+    """Structured result of batched live NLI inference."""
+
+    raw_logits: NDArray[np.float64]        # (N, 3) raw model logits in model native order
+    aligned_logits: NDArray[np.float64]    # (N, 3) aligned logits in [E, N, C] order
+    probabilities: NDArray[np.float64]     # (N, 3) probabilities in [E, N, C] order
+    ilr_coordinates: NDArray[np.float64]   # (N, 2) ILR coordinates calculated directly from aligned logits
+    token_counts: NDArray[np.int64]        # (N,) token counts per example
+    truncated: NDArray[np.bool_]           # (N,) boolean truncation flags
+
+
 class NLIModelAdapter:
-    """Safely aligns NLI model outputs to standard [E, N, C] probability order."""
+    """Safely aligns NLI model outputs to standard [E, N, C] probability and logit order."""
 
     def __init__(self, id2label: Dict[int, str] | None = None) -> None:
         # Default RoBERTa / DeBERTa MNLI mapping: 0: CONTRADICTION, 1: NEUTRAL, 2: ENTAILMENT
@@ -61,6 +97,21 @@ class NLIModelAdapter:
         sums = aligned.sum(axis=-1, keepdims=True)
         return aligned / np.maximum(sums, 1e-12)
 
+    def align_logits(self, raw_logits: NDArray[np.float64]) -> NDArray[np.float64]:
+        """Reorders raw model logits array to standard [Entailment, Neutral, Contradiction]."""
+        raw_arr = np.array(raw_logits, dtype=np.float64)
+        if raw_arr.shape[-1] != 3:
+            raise ValueError(f"Last dimension must be 3 classes, got shape {raw_arr.shape}")
+        return raw_arr[..., self.perm_indices]
+
+    def compute_direct_ilr_coordinates(self, aligned_logits: NDArray[np.float64]) -> NDArray[np.float64]:
+        """Computes ILR coordinates directly from aligned logits z = ell(x) @ V.
+
+        Bypasses softmax underflow and machine precision loss.
+        """
+        V = get_helmert_basis()  # (3, 2)
+        return np.dot(aligned_logits, V)
+
     def predict_mock_orbit_vertices(
         self, premise: str, hypothesis: str
     ) -> NDArray[np.float64]:
@@ -74,28 +125,42 @@ class NLIModelAdapter:
 
 
 class HuggingFaceNLIAdapter:
-    """Pre-trained HuggingFace NLI model adapter (e.g. roberta-large-mnli)."""
+    """Pre-trained HuggingFace NLI model adapter with pinned revision and batched logit-direct ILR coordinates."""
 
-    def __init__(self, model_name: str = "roberta-large-mnli", use_mock_fallback: bool = True) -> None:
+    def __init__(self, model_name: str = "FacebookAI/roberta-large-mnli", use_mock_fallback: bool = True, config: LiveNLIConfig | None = None) -> None:
         self.model_name = model_name
-        self.use_mock_fallback = use_mock_fallback
+        self.config = config or LiveNLIConfig(model_id=model_name, use_mock_fallback=use_mock_fallback)
+        self.use_mock_fallback = self.config.use_mock_fallback
         self.tokenizer = None
         self.model = None
         self.adapter = None
         self.is_loaded = False
         self.load_error: str | None = None
+        self.resolved_model_revision: str | None = None
+        self.resolved_tokenizer_revision: str | None = None
 
     def load(self) -> bool:
-        """Attempts to load tokenizer and sequence classification model from HuggingFace."""
+        """Attempts to load tokenizer and sequence classification model from HuggingFace with pinned revision."""
         try:
             import torch
             from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-            self.model = AutoModelForSequenceClassification.from_pretrained(self.model_name)
+            kwargs = {}
+            if self.config.revision:
+                kwargs["revision"] = self.config.revision
+            if self.config.local_files_only:
+                kwargs["local_files_only"] = True
+
+            self.tokenizer = AutoTokenizer.from_pretrained(self.config.model_id, **kwargs)
+            self.model = AutoModelForSequenceClassification.from_pretrained(self.config.model_id, **kwargs)
+
+            device = torch.device(self.config.device if torch.cuda.is_available() or self.config.device == "cpu" else "cpu")
+            self.model.to(device)
             self.model.eval()
 
-            # Align label ordering via config.id2label
+            self.resolved_model_revision = getattr(self.model.config, "_commit_hash", self.config.revision)
+            self.resolved_tokenizer_revision = getattr(self.tokenizer, "_commit_hash", self.config.revision)
+
             id2label = getattr(self.model.config, "id2label", None)
             if id2label:
                 id2label = {int(k): str(v) for k, v in id2label.items()}
@@ -109,11 +174,11 @@ class HuggingFaceNLIAdapter:
             self.is_loaded = False
             if not self.use_mock_fallback:
                 raise RuntimeError(
-                    f"Failed to load requested live model '{self.model_name}' and use_mock_fallback=False: {err}"
+                    f"Failed to load requested live model '{self.config.model_id}' and use_mock_fallback=False: {err}"
                 ) from err
             return False
 
-    def get_provenance_metadata(self) -> Dict[str, str | bool | None]:
+    def get_provenance_metadata(self) -> Dict[str, Any]:
         """Returns runtime model environment and loading provenance."""
         transformers_ver = None
         torch_ver = None
@@ -139,8 +204,10 @@ class HuggingFaceNLIAdapter:
                 pass
 
         return {
-            "model_requested": self.model_name,
-            "model_resolved": self.model_name if self.is_loaded else None,
+            "model_requested": self.config.model_id,
+            "model_resolved": self.config.model_id if self.is_loaded else None,
+            "resolved_model_revision": self.resolved_model_revision,
+            "resolved_tokenizer_revision": self.resolved_tokenizer_revision,
             "adapter_mode": "huggingface_live" if self.is_loaded else ("mock_fallback" if self.use_mock_fallback else "failed"),
             "is_loaded": self.is_loaded,
             "use_mock_fallback": self.use_mock_fallback,
@@ -152,18 +219,81 @@ class HuggingFaceNLIAdapter:
         }
 
     def predict(self, premise: str, hypothesis: str) -> NDArray[np.float64]:
-        """Runs inference and returns aligned [E, N, C] probability vector."""
+        """Runs single-example inference and returns aligned [E, N, C] probability vector."""
         if not self.is_loaded:
             if not self.load() and self.use_mock_fallback:
                 return self.adapter.predict_mock_orbit_vertices(premise, hypothesis)
 
         import torch
 
-        inputs = self.tokenizer(premise, hypothesis, return_tensors="pt", truncation=True)
-        with torch.no_grad():
+        device = next(self.model.parameters()).device
+        inputs = self.tokenizer(premise, hypothesis, return_tensors="pt", truncation=True, max_length=self.config.max_length)
+        inputs = {k: v.to(device) for k, v in inputs.items()}
+
+        with torch.inference_mode():
             outputs = self.model(**inputs)
-            logits = outputs.logits
-            probs = torch.softmax(logits, dim=-1).cpu().numpy()[0]
+            logits = outputs.logits.cpu().numpy()[0]
+            probs = torch.softmax(outputs.logits, dim=-1).cpu().numpy()[0]
 
         return self.adapter.align_probabilities(probs)
+
+    def predict_batch(self, pairs: List[Tuple[str, str]]) -> NLIInferenceBatch:
+        """Runs batched inference and returns NLIInferenceBatch with direct logit ILR coordinates."""
+        if not self.is_loaded:
+            if not self.load() and self.use_mock_fallback:
+                # Return mock batch
+                raw_probs = np.array([self.adapter.predict_mock_orbit_vertices(p, h) for p, h in pairs])
+                raw_logits = np.log(raw_probs + 1e-12)
+                aligned_logits = self.adapter.align_logits(raw_logits)
+                ilr_coords = self.adapter.compute_direct_ilr_coordinates(aligned_logits)
+                token_counts = np.array([len(p.split()) + len(h.split()) for p, h in pairs], dtype=np.int64)
+                truncated = np.zeros(len(pairs), dtype=bool)
+                return NLIInferenceBatch(
+                    raw_logits=raw_logits,
+                    aligned_logits=aligned_logits,
+                    probabilities=raw_probs,
+                    ilr_coordinates=ilr_coords,
+                    token_counts=token_counts,
+                    truncated=truncated,
+                )
+
+        import torch
+
+        device = next(self.model.parameters()).device
+        premises = [p for p, h in pairs]
+        hypotheses = [h for p, h in pairs]
+
+        inputs = self.tokenizer(
+            premises,
+            hypotheses,
+            return_tensors="pt",
+            padding=True,
+            truncation=self.config.truncation,
+            max_length=self.config.max_length,
+        )
+
+        input_ids = inputs["input_ids"]
+        token_counts = (input_ids != self.tokenizer.pad_token_id).sum(dim=1).cpu().numpy()
+        truncated = (token_counts >= self.config.max_length)
+
+        inputs_dev = {k: v.to(device) for k, v in inputs.items()}
+
+        with torch.inference_mode():
+            outputs = self.model(**inputs_dev)
+            raw_logits = outputs.logits.cpu().numpy()
+            probs = torch.softmax(outputs.logits, dim=-1).cpu().numpy()
+
+        aligned_logits = self.adapter.align_logits(raw_logits)
+        aligned_probs = self.adapter.align_probabilities(probs)
+        ilr_coords = self.adapter.compute_direct_ilr_coordinates(aligned_logits)
+
+        return NLIInferenceBatch(
+            raw_logits=raw_logits,
+            aligned_logits=aligned_logits,
+            probabilities=aligned_probs,
+            ilr_coordinates=ilr_coords,
+            token_counts=token_counts,
+            truncated=truncated,
+        )
+
 

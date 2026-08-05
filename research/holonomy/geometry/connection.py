@@ -91,7 +91,36 @@ class ParallelTransportMap:
         return np.dot(self.matrix_2d, vector) + self.bias_2d
 
 
+def whiten_coordinates(coords: NDArray[np.float64], mean: NDArray[np.float64], cov_sqrt_inv: NDArray[np.float64]) -> NDArray[np.float64]:
+    """Whitens coordinates z_tilde = (z - mu) @ cov_sqrt_inv."""
+    return np.dot(coords - mean, cov_sqrt_inv)
+
+
+def compute_derived_inverse_map(t_map: ParallelTransportMap, inverse_generator_name: str) -> ParallelTransportMap:
+    """Computes exact mathematical affine inverse T_g^{-1} where A^{-1} is linear inverse and b^{-1} = -A^{-1} b."""
+    A_inv = np.linalg.inv(t_map.matrix_2d)
+    b_inv = -np.dot(A_inv, t_map.bias_2d)
+    return ParallelTransportMap(
+        generator_name=inverse_generator_name,
+        source_id=t_map.target_id,
+        target_id=t_map.source_id,
+        matrix_2d=A_inv,
+        bias_2d=b_inv,
+        metadata={**t_map.metadata, "is_derived_inverse": True},
+    )
+
+
+def compute_forward_affine_commutator(t_a: ParallelTransportMap, t_b: ParallelTransportMap) -> Any:
+    """Derives exact affine commutator H_gamma = T_b^{-1} T_a^{-1} T_b T_a from forward maps."""
+    from research.holonomy.geometry.parallel_transport import PathTransport
+    t_a_inv = compute_derived_inverse_map(t_a, f"{t_a.generator_name}_inv")
+    t_b_inv = compute_derived_inverse_map(t_b, f"{t_b.generator_name}_inv")
+    return PathTransport([t_a, t_b, t_a_inv, t_b_inv])
+
+
+
 class ConnectionEstimator:
+
     """Estimates affine parallel transport maps T_{g,x} via OLS or Total Least Squares (TLS)."""
 
     def __init__(
@@ -242,9 +271,8 @@ class ConnectionEstimator:
             res_dict["absolute_singular_value_floor"] = self.absolute_singular_value_floor
             return res_dict
 
-
-
     def estimate_linear_transport(
+
         self,
         generator_name: str,
         source_id: str,
