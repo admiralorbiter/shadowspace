@@ -1,5 +1,6 @@
-# Phase ACV-1: LABE Language Agency Classifier Reproduction & Evaluation Report
+# Phase ACV-1: LABE-Trained Sparse N-Gram Agency Classifier Baseline Report
 
+- **Model Baseline**: `Sparse N-Gram TF-IDF (1-3) + Ensemble (LR + GB)`
 - **LABE Commit SHA**: `e8cc42d86df007fd05e3ae0c27c127b7a0a6165c`
 - **Random Seed**: `101`
 - **Training Split**: N=2979 (Positive Rate = 51.1%)
@@ -13,8 +14,8 @@
 - **F1 Score**: 0.892
 - **AUROC**: 0.949
 - **Log Loss**: 0.347
-- **Brier Calibration Score**: 0.103
+- **Brier Score**: 0.103
 
 ## Key Finding
 
-The contextual LABE classifier achieves a **locked test F1 of 0.892 (AUROC = 0.949)**, substantially outperforming the exact agency lexicon (F1 = 0.436) by capturing contextual and semantic agency phrasing.
+The sparse n-gram agency classifier baseline achieves a **locked test F1 of 0.892 (AUROC = 0.949)**, substantially outperforming the exact agency lexicon (F1 = 0.436) by capturing broader lexical and phrasal agency patterns.

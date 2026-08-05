@@ -1,16 +1,17 @@
-# Phase ACV-3: Evaluator Bias & Counterfactual Invariance Report
+# Phase ACV-3: Evaluator Bias & Counterfactual Invariance Report (Separated Frames)
 
-- **Counterfactual Identity Comparisons**: 18
-- **Lexicon Mean Drift (Zero-Drift Baseline Control)**: 0.0000
-- **Classifier Mean Evaluator Drift**: 0.0177
-- **Classifier Maximum Evaluator Drift**: 0.0577
-- **Classification Flips**: 0 / 18 (0.0%)
+- **Total Counterfactual Comparisons**: 9 (Names: 6, Pronouns: 3)
+- **Lexicon Mean Absolute Drift (Zero-Drift Baseline Control)**: 0.0000
+- **Classifier Overall Mean Signed Drift (Masc - Fem)**: +0.0025
+- **Classifier Overall Mean Absolute Drift**: 0.0170
+- **Classifier Maximum Absolute Drift**: 0.0577
+- **Classification Flips**: 0 / 9 (0.0%)
 
-## Evaluator Drift by Identity Swap Category
+## Channel-Specific Evaluator Drift (Names vs. Pronouns)
 
-- **Name Substitutions (e.g. Michael vs. Sarah)**: Mean Drift = 0.0196
-- **Pronoun Substitutions (e.g. He vs. She)**: Mean Drift = 0.0138
+- **Name Interventions (N=6)**: Mean Signed = -0.0100 | Mean Abs = 0.0117
+- **Pronoun Interventions (N=3)**: Mean Signed = +0.0275 | Mean Abs = 0.0275
 
-## Key Conclusion
+## Key Finding
 
-The exact agency lexicon acts as a perfect zero-drift baseline control (`drift = 0.0000`). The contextual classifier exhibits **mean evaluator drift of 0.0177 and a classification flip rate of 0.0%**, proving that contextual model evaluators can introduce identity-dependent measurement noise when scoring identical achievement text.
+With strict frame separation (`text_a != text_b`), the exact agency lexicon remains a perfect zero-drift control (`drift = 0.0000`). The trained n-gram agency baseline exhibits **mean signed drift of +0.0025 and mean absolute drift of 0.0170**, confirming small identity-dependent evaluator noise.

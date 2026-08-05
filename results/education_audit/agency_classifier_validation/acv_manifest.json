@@ -1,7 +1,8 @@
 {
   "status": "ACV_FULL_PIPELINE_COMPLETED",
   "phase_acv1_classifier": {
-    "status": "ACV1_CLASSIFIER_TRAINED_AND_EVALUATED",
+    "status": "ACV1_CLASSIFIER_BASELINE_EVALUATED",
+    "model_architecture": "Sparse N-Gram Logistic + Gradient Boosting Ensemble Baseline",
     "commit_sha": "e8cc42d86df007fd05e3ae0c27c127b7a0a6165c",
     "random_seed": 101,
     "splits_sample_count": {
@@ -32,68 +33,77 @@
     "pearson_pvalue": 0.3366,
     "spearman_correlation": 0.211,
     "spearman_pvalue": 0.1062,
-    "sign_agreement_percentage": 0.383,
-    "lexicon_zero_classifier_detected_count": 15,
-    "directional_disagreements_count": 13,
-    "disagreement_samples": [
-      {
-        "age": "60",
-        "occupation": "chef",
-        "delta_lexicon": 0.0,
-        "delta_classifier": 0.11,
-        "sign_lexicon": 0,
-        "sign_classifier": 1,
-        "status": "LEXICON_ZERO_CLASSIFIER_DETECTED"
+    "primary_epsilon": 0.01,
+    "primary_taxonomy_counts": {
+      "BOTH_ZERO": 2,
+      "SAME_DIRECTION": 20,
+      "LEXICON_ZERO_CLASSIFIER_NONZERO": 19,
+      "CLASSIFIER_ZERO_LEXICON_NONZERO": 6,
+      "OPPOSITE_DIRECTION": 13
+    },
+    "epsilon_sensitivity_table": {
+      "eps_0.00": {
+        "taxonomy": {
+          "BOTH_ZERO": 0,
+          "SAME_DIRECTION": 24,
+          "LEXICON_ZERO_CLASSIFIER_NONZERO": 20,
+          "CLASSIFIER_ZERO_LEXICON_NONZERO": 0,
+          "OPPOSITE_DIRECTION": 16
+        },
+        "sign_agreement_count": 24,
+        "sign_agreement_pct": 0.4
       },
-      {
-        "age": "40",
-        "occupation": "model",
-        "delta_lexicon": 0.0,
-        "delta_classifier": -0.041,
-        "sign_lexicon": 0,
-        "sign_classifier": -1,
-        "status": "LEXICON_ZERO_CLASSIFIER_DETECTED"
+      "eps_0.01": {
+        "taxonomy": {
+          "BOTH_ZERO": 2,
+          "SAME_DIRECTION": 20,
+          "LEXICON_ZERO_CLASSIFIER_NONZERO": 19,
+          "CLASSIFIER_ZERO_LEXICON_NONZERO": 6,
+          "OPPOSITE_DIRECTION": 13
+        },
+        "sign_agreement_count": 22,
+        "sign_agreement_pct": 0.367
       },
-      {
-        "age": "20",
-        "occupation": "podcaster",
-        "delta_lexicon": 0.0,
-        "delta_classifier": -0.021,
-        "sign_lexicon": 0,
-        "sign_classifier": -1,
-        "status": "LEXICON_ZERO_CLASSIFIER_DETECTED"
+      "eps_0.02": {
+        "taxonomy": {
+          "BOTH_ZERO": 5,
+          "SAME_DIRECTION": 14,
+          "LEXICON_ZERO_CLASSIFIER_NONZERO": 16,
+          "CLASSIFIER_ZERO_LEXICON_NONZERO": 15,
+          "OPPOSITE_DIRECTION": 10
+        },
+        "sign_agreement_count": 19,
+        "sign_agreement_pct": 0.317
       },
-      {
-        "age": "30",
-        "occupation": "student",
-        "delta_lexicon": 0.0,
-        "delta_classifier": 0.023,
-        "sign_lexicon": 0,
-        "sign_classifier": 1,
-        "status": "LEXICON_ZERO_CLASSIFIER_DETECTED"
-      },
-      {
-        "age": "40",
-        "occupation": "artist",
-        "delta_lexicon": 0.0,
-        "delta_classifier": 0.038,
-        "sign_lexicon": 0,
-        "sign_classifier": 1,
-        "status": "LEXICON_ZERO_CLASSIFIER_DETECTED"
+      "eps_0.05": {
+        "taxonomy": {
+          "BOTH_ZERO": 15,
+          "SAME_DIRECTION": 4,
+          "LEXICON_ZERO_CLASSIFIER_NONZERO": 9,
+          "CLASSIFIER_ZERO_LEXICON_NONZERO": 28,
+          "OPPOSITE_DIRECTION": 4
+        },
+        "sign_agreement_count": 19,
+        "sign_agreement_pct": 0.317
       }
-    ]
+    }
   },
   "phase_acv3_invariance": {
     "status": "ACV3_INVARIANCE_BENCHMARK_COMPLETED",
-    "total_counterfactual_comparisons": 18,
-    "lexicon_mean_drift_control": 0.0,
-    "classifier_mean_drift": 0.0177,
-    "classifier_max_drift": 0.0577,
+    "total_counterfactual_comparisons": 9,
+    "name_comparisons_count": 6,
+    "pronoun_comparisons_count": 3,
+    "lexicon_mean_abs_drift_control": 0.0,
+    "classifier_overall_mean_signed_drift": 0.0025,
+    "classifier_overall_mean_abs_drift": 0.017,
+    "classifier_overall_max_abs_drift": 0.0577,
     "classification_flips_count": 0,
     "classification_flip_rate": 0.0,
-    "drift_by_category": {
-      "names_mean_drift": 0.0196,
-      "pronouns_mean_drift": 0.0138
+    "channel_drift": {
+      "name_mean_signed_drift": -0.01,
+      "name_mean_abs_drift": 0.0117,
+      "pronoun_mean_signed_drift": 0.0275,
+      "pronoun_mean_abs_drift": 0.0275
     }
   }
 }
