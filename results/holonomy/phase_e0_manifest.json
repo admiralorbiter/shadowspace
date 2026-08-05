@@ -1,7 +1,7 @@
 {
-  "timestamp_utc": "2026-08-05T00:12:36.883808+00:00",
-  "phase": "E2-A1.1a",
-  "git_commit_sha": "409b01d9023c95f96a624e13302cf6a64157e3b5",
+  "timestamp_utc": "2026-08-05T00:17:25.795738+00:00",
+  "phase": "E2-A1.1b",
+  "git_commit_sha": "0671d188532be1684729c112f9f7aa47a0ed985d",
   "environment": {
     "python_version": "3.12.0",
     "numpy_version": "2.2.6",
@@ -57,6 +57,8 @@
         "condition_number": null,
         "condition_threshold": 1000000.0,
         "v22_condition_number": null,
+        "v22_determinant": null,
+        "v22_determinant_threshold": null,
         "matrix_norm": null,
         "bias_norm": null,
         "singular_values": [
@@ -76,6 +78,8 @@
         "condition_number": null,
         "condition_threshold": 1000000.0,
         "v22_condition_number": null,
+        "v22_determinant": null,
+        "v22_determinant_threshold": null,
         "matrix_norm": null,
         "bias_norm": null,
         "singular_values": [
@@ -95,6 +99,8 @@
         "condition_number": null,
         "condition_threshold": 1000000.0,
         "v22_condition_number": null,
+        "v22_determinant": null,
+        "v22_determinant_threshold": null,
         "matrix_norm": null,
         "bias_norm": null,
         "singular_values": [
@@ -114,6 +120,8 @@
         "condition_number": null,
         "condition_threshold": 1000000.0,
         "v22_condition_number": null,
+        "v22_determinant": null,
+        "v22_determinant_threshold": null,
         "matrix_norm": null,
         "bias_norm": null,
         "singular_values": [
