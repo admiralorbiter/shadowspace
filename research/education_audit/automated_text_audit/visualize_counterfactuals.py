@@ -2,9 +2,9 @@
 
 Generates an intuitive visual dashboard with 5 tabs:
 1. Overview ("What should I know?")
-2. Direct Comparisons (24 Primary Pairs)
-3. Anonymous Reference (48 Secondary Pairs)
-4. Identity vs. Normal Variation (Matched SNR v2, Displacement Geometry Coherence, & Tail Risk)
+2. Direct Comparisons (Dynamic Count)
+3. Anonymous Reference (Dynamic Count)
+4. Identity vs. Normal Variation (Matched SNR v2, Standardized Coherence kappa*, & Tail Risk)
 5. Methods & Metric Definitions (with Metric Status Badges)
 """
 
@@ -20,6 +20,7 @@ def generate_counterfactual_atlas_html(
     letter_features: List[Dict[str, Any]],
     out_dir: str = "results/education_audit/automated_text_audit",
     snr_metrics: Dict[str, Any] = None,
+    is_public_demo: bool = False,
 ) -> str:
     """Generates a visual Counterfactual Difference Atlas HTML document."""
     os.makedirs(out_dir, exist_ok=True)
@@ -31,25 +32,32 @@ def generate_counterfactual_atlas_html(
 
     max_edit_dist = max([p.get("sentence_edit_distance", 0) for p in paired_diffs], default=0)
     avg_overlap = round(sum([p.get("verbatim_sentence_overlap_rate", 0) for p in paired_diffs]) / max(1, total_pairs), 1)
-    flagged_spec = sum(1 for f in letter_features if f.get("specificity_screening_flag"))
 
     sorted_pairs = sorted(paired_diffs, key=lambda x: x.get("sentence_edit_distance", 0), reverse=True)
     top_5_outliers = sorted_pairs[:5]
 
     snr_data = snr_metrics or {
-        "overall_median_identity_perturbation": 3.0,
-        "overall_median_seed_sampling_noise": 4.5,
-        "matched_counterfactual_snr_ratio": 0.667,
-        "log_snr_ratio": -0.405,
-        "displacement_coherence_kappa": 0.124,
-        "coherence_permutation_p_value": 0.452,
-        "seed_null_exceedance_probability": 0.042,
-        "snr_interpretation": "Matched cell-level SNR R = 0.667 (Log SNR L = -0.405). Identity displacement is below seed noise.",
-        "seed_null_exceedance_prob_gt_q95": 0.042,
-        "quantile_effect_q90": 4.0,
-        "cvar_90_worst_tail_average": 4.5,
+        "typical_matched_snr_ratio": 0.500,
+        "median_cell_log_snr": -0.693,
+        "standardized_coherence_kappa_star": 0.050,
+        "exact_permutation_p_value_256": 0.500,
+        "median_matched_seed_null_percentile": 0.286,
+        "snr_interpretation": "Synthetic Demonstration Only — No Study Data",
+        "cell_r_lt_1_count": 8,
+        "cell_r_eq_1_count": 0,
+        "cell_r_gt_1_count": 0,
+        "quantile_effect_q90": 3.0,
+        "cvar_90_worst_tail_average": 3.5,
         "directional_consistency_rate": 0.667,
     }
+
+    watermark_html = ""
+    if is_public_demo:
+        watermark_html = """
+        <div style="background: rgba(251, 191, 36, 0.15); border: 2px dashed var(--accent-amber); border-radius: 12px; padding: 14px 20px; margin-bottom: 24px; text-align: center; color: var(--accent-amber); font-weight: 700; font-size: 1.05rem;">
+            Synthetic UI Demonstration &mdash; No Study Data or Study Results
+        </div>
+        """
 
     paired_json = json.dumps(paired_diffs)
     primary_json = json.dumps(primary_pairs)
@@ -203,13 +211,15 @@ def generate_counterfactual_atlas_html(
 </head>
 <body>
     <div class="container">
+        {watermark_html}
+
         <header>
             <div class="title-group">
                 <h1>Counterfactual Difference Atlas</h1>
                 <p>Offline Text Audit & Paired Variation Inspector (Phase EDU-2a)</p>
             </div>
             <div style="text-align: right;">
-                <span class="tag-pill" style="font-size:0.85rem;">60 Gemma Letters Analyzed</span>
+                <span class="tag-pill" style="font-size:0.85rem;">{len(letter_features)} Letters Analyzed</span>
             </div>
         </header>
 
@@ -222,8 +232,8 @@ def generate_counterfactual_atlas_html(
         <div class="kpi-grid">
             <div class="kpi-card">
                 <div class="kpi-title">Letters Analyzed</div>
-                <div class="kpi-value" style="color: var(--text-primary);">60</div>
-                <div class="kpi-sub">Complete live Gemma generations</div>
+                <div class="kpi-value" style="color: var(--text-primary);">{len(letter_features)}</div>
+                <div class="kpi-sub">Complete generations evaluated</div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-title">Primary Gender Comparisons</div>
@@ -251,8 +261,8 @@ def generate_counterfactual_atlas_html(
 
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab('overviewTab')">Overview</button>
-            <button class="tab-btn" onclick="switchTab('directTab')">Direct Comparisons (24)</button>
-            <button class="tab-btn" onclick="switchTab('anonTab')">Anonymous Reference (48)</button>
+            <button class="tab-btn" onclick="switchTab('directTab')">Direct Comparisons ({len(primary_pairs)})</button>
+            <button class="tab-btn" onclick="switchTab('anonTab')">Anonymous Reference ({len(secondary_pairs)})</button>
             <button class="tab-btn" onclick="switchTab('snrTab')">Identity vs. Normal Variation</button>
             <button class="tab-btn" onclick="switchTab('outliersTab')">Outliers (Tail Risk)</button>
             <button class="tab-btn" onclick="switchTab('methodsTab')">Methods & Badges</button>
@@ -262,56 +272,51 @@ def generate_counterfactual_atlas_html(
         <div id="overviewTab" class="tab-content active">
             <div style="background: var(--bg-card); border-radius: 12px; padding: 24px; border: 1px solid var(--border-color);">
                 <h2>Key Audit Findings & Dashboard Guide</h2>
-                <p>This atlas quantifies structural, lexical, and sentence-level variations across the 60 frozen Gemma recommendation letters generated under Phase EDU-2a.</p>
+                <p>This atlas quantifies structural, lexical, and sentence-level variations across the recommendation letters generated under Phase EDU-2a.</p>
 
                 <h3>How to Interpret Metrics</h3>
                 <ul>
                     <li><strong>Signed Differences (Masc &minus; Fem)</strong>: Positive values indicate higher frequency in Masculine letters; negative values indicate higher frequency in Feminine letters.</li>
                     <li><strong>Verbatim Sentence Overlap (%)</strong>: Measures exact verbatim sentence identity across paired letters.</li>
-                    <li><strong>Counterfactual Signal-to-Noise Ratio (R)</strong>: Compares identity perturbation against ordinary seed sampling noise.</li>
+                    <li><strong>Typical Matched Counterfactual SNR (R_typical)</strong>: Compares matched identity perturbation against ordinary seed sampling noise.</li>
                 </ul>
             </div>
         </div>
 
-        <!-- Tab 2: Direct Comparisons (24 Primary Pairs) -->
+        <!-- Tab 2: Direct Comparisons -->
         <div id="directTab" class="tab-content">
             <div id="directContainer" class="cards-grid"></div>
         </div>
 
-        <!-- Tab 3: Anonymous Reference (48 Secondary Pairs) -->
+        <!-- Tab 3: Anonymous Reference -->
         <div id="anonTab" class="tab-content">
             <div id="anonContainer" class="cards-grid"></div>
         </div>
 
-        <!-- Tab 4: Identity vs. Normal Variation (Counterfactual SNR & Tail Risk) -->
+        <!-- Tab 4: Identity vs. Normal Variation -->
         <div id="snrTab" class="tab-content">
             <div style="background: var(--bg-card); border-radius: 12px; padding: 24px; border: 1px solid var(--border-color); margin-bottom: 24px;">
-                <h2>Counterfactual Signal-to-Noise Ratio (Matched SNR v2)</h2>
-                <p style="color: var(--text-secondary);">Compares matched identity perturbation against ordinary stochastic seed sampling noise.</p>
+                <h2>Matched Cell Counterfactual SNR v2 & Displacement Geometry</h2>
+                <p style="color: var(--text-secondary);">Compares matched cell identity perturbation against ordinary stochastic seed sampling noise.</p>
                 <div class="kpi-grid">
                     <div class="kpi-card">
-                        <div class="kpi-title">Median Identity Perturbation (D_identity)</div>
-                        <div class="kpi-value" style="color: var(--accent-pink);">{snr_data.get('overall_median_identity_perturbation', 0)} sents</div>
-                        <div class="kpi-sub">Sentence distance (Masc vs Fem)</div>
+                        <div class="kpi-title">Typical Matched SNR (R_typical)</div>
+                        <div class="kpi-value" style="color: var(--accent-purple);">{snr_data.get('typical_matched_snr_ratio', 0)}</div>
+                        <div class="kpi-sub">Median Log SNR L = {snr_data.get('median_cell_log_snr', 0)}</div>
                     </div>
                     <div class="kpi-card">
-                        <div class="kpi-title">Median Seed Noise (D_seed)</div>
-                        <div class="kpi-value" style="color: var(--accent-cyan);">{snr_data.get('overall_median_seed_sampling_noise', 0)} sents</div>
-                        <div class="kpi-sub">Sentence distance between seeds</div>
+                        <div class="kpi-title">Standardized Coherence (&kappa;*)</div>
+                        <div class="kpi-value" style="color: var(--accent-green);">{snr_data.get('standardized_coherence_kappa_star', 0)}</div>
+                        <div class="kpi-sub">Exact 2^8 permutation test p = {snr_data.get('exact_permutation_p_value_256', 1.0)}</div>
                     </div>
                     <div class="kpi-card">
-                        <div class="kpi-title">Counterfactual SNR (R)</div>
-                        <div class="kpi-value" style="color: var(--accent-purple);">{snr_data.get('matched_counterfactual_snr_ratio', 0)}</div>
-                        <div class="kpi-sub">Ratio R = D_identity / D_seed (Log L = {snr_data.get('log_snr_ratio', 0)})</div>
-                    </div>
-                    <div class="kpi-card">
-                        <div class="kpi-title">Displacement Coherence (&kappa;)</div>
-                        <div class="kpi-value" style="color: var(--accent-green);">{snr_data.get('displacement_coherence_kappa', 0)}</div>
-                        <div class="kpi-sub">Sign-Flip Permutation p = {snr_data.get('coherence_permutation_p_value', 1.0)}</div>
+                        <div class="kpi-title">Matched Seed-Null Percentile</div>
+                        <div class="kpi-value" style="color: var(--accent-cyan);">{snr_data.get('median_matched_seed_null_percentile', 0)}</div>
+                        <div class="kpi-sub">Empirical percentile vs. matched seeds</div>
                     </div>
                 </div>
                 <div class="surfaced-box">
-                    <div class="surfaced-title">Baseline Interpretation</div>
+                    <div class="surfaced-title">Interpretation</div>
                     <div style="color: var(--text-primary); font-size: 0.95rem; font-weight: 500;">
                         {snr_data.get('snr_interpretation', '')}
                     </div>
@@ -325,7 +330,7 @@ def generate_counterfactual_atlas_html(
                         <tr><th>Tail Metric</th><th>Value</th><th>Definition</th></tr>
                     </thead>
                     <tbody>
-                        <tr><td>Seed-Null Exceedance P(|D_identity| > Q_0.95(D_seed))</td><td style="color:var(--accent-pink); font-weight:700;">{snr_data.get('seed_null_exceedance_probability', 0)}</td><td>Proportion of identity pairs exceeding 95% of seed noise</td></tr>
+                        <tr><td>Cells with R < 1.0</td><td style="color:var(--accent-green); font-weight:700;">{snr_data.get('cell_r_lt_1_count', 0)} / {snr_data.get('observed_cells_count', 8)}</td><td>Observed cells where identity displacement is below seed noise</td></tr>
                         <tr><td>Quantile Effect Q_0.90</td><td style="color:var(--accent-cyan); font-weight:700;">{snr_data.get('quantile_effect_q90', 0)} sents</td><td>Divergence magnitude in worst 10% tail</td></tr>
                         <tr><td>CVaR_0.90 (Conditional Value at Risk)</td><td style="color:var(--accent-purple); font-weight:700;">{snr_data.get('cvar_90_worst_tail_average', 0)} sents</td><td>Average severity of worst 10% tail</td></tr>
                         <tr><td>Directional Consistency Rate</td><td style="color:var(--accent-green); font-weight:700;">{round(snr_data.get('directional_consistency_rate', 0) * 100, 1)}%</td><td>Proportion of cells with 100% sign agreement across seeds</td></tr>
@@ -351,7 +356,7 @@ def generate_counterfactual_atlas_html(
                         <tr><td>Word Count & Sentence Count</td><td><span class="status-badge badge-exact">STRUCTURAL_EXACT</span></td><td>Exact string tokenization and sentence split</td></tr>
                         <tr><td>Lexical Categories (Agentic, Communal)</td><td><span class="status-badge badge-lexicon">LEXICON_SCREENING_ONLY</span></td><td>Published exact-word dictionary densities per 100 words</td></tr>
                         <tr><td>Verbatim Sentence Overlap</td><td><span class="status-badge badge-exact">STRUCTURAL_EXACT</span></td><td>(Exact Matching Sentences / Max Sentences) &times; 100</td></tr>
-                        <tr><td>Profile-Aware Fact-Coverage Screen</td><td><span class="status-badge badge-exploratory">MODEL_BASED_EXPLORATORY</span></td><td>Classifies atomic claims against profile fact sheet</td></tr>
+                        <tr><td>Profile-Aware Lexical Fact-Coverage Screen</td><td><span class="status-badge badge-exploratory">MODEL_BASED_EXPLORATORY</span></td><td>Classifies atomic claims against profile fact sheet</td></tr>
                         <tr><td>Human Recommendation Score</td><td><span class="status-badge badge-exploratory">HUMAN_VALIDATED_PENDING</span></td><td>Double-blind human ratings (Pass 1 & Pass 2)</td></tr>
                     </tbody>
                 </table>

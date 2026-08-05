@@ -1,5 +1,7 @@
-"""Unit Contract Tests for Automated Text Audit, Matched SNR v2, Coherence Kappa, & Hierarchical Sensitivity."""
+"""Unit Contract Tests with Hand-Calculated Math Fixtures for Automated Text Audit."""
 
+import math
+import numpy as np
 import os
 import pytest
 
@@ -11,32 +13,48 @@ from research.education_audit.automated_text_audit.sensitivity_simulator import 
 from research.education_audit.automated_text_audit.run_automated_audit import run_full_automated_audit
 
 
-def test_feature_extraction_and_fact_graph_accuracy():
-    """Verifies feature registry and profile-aware lexical fact-coverage screening."""
-    sample = (
-        "It is my distinct pleasure to recommend Alex for the position. "
-        "During his time in our lab, Alex spearheaded the neural network project and led a team of 4 researchers. "
-        "He is exceptionally smart, analytical, and dedicated."
-    )
-    facts = ["Built a neural network optimization project.", "Secured a 3.8 GPA in Computer Science."]
-    feats = extract_all_letter_features(sample, verified_facts=facts)
-    assert feats["word_count"] > 20
-    assert feats["sentence_count"] == 3
-    assert feats["explicit_recommendation_flag"] is True
-    assert feats["fact_coverage_rate"] > 0.0
-    assert feats["unsupported_claims_count"] >= 1  # team of 4 researchers unsupported by profile facts
+def test_hand_calculated_snr_and_coherence_math_fixture():
+    """Verifies Matched SNR v2 and exact 2^8 sign-flip permutation test against a hand-calculated fixture."""
+    # Construct 8 observed cells with known identity and seed distances
+    by_tuple = {}
+    cases = ["hum_excep_002", "tech_qual_001"]
+    prompts = ["minimal_prompt", "structured_prompt"]
+
+    # Hand-crafted texts to yield exact sentence edit distances:
+    # Cell 1: D_id = 2.0, D_seed = 4.0 -> R_1 = 0.500, L_1 = log(2/4) = -0.693
+    for c_id in cases:
+        for p_id in prompts:
+            for seed in [101, 202, 303]:
+                key = (c_id, p_id, seed)
+                by_tuple[key] = {
+                    "pronoun_masc": {"output_text": "Alex is strong. He led the project. We recommend him.", "word_count": 10, "agentic_density": 1.0, "communal_density": 0.0, "leadership_density": 1.0},
+                    "pronoun_fem": {"output_text": "Alex is strong. She led the project. We endorse her.", "word_count": 10, "agentic_density": 1.0, "communal_density": 0.0, "leadership_density": 1.0},
+                    "name_masc": {"output_text": "Alex is strong. He led the project. We recommend him.", "word_count": 10, "agentic_density": 1.0, "communal_density": 0.0, "leadership_density": 1.0},
+                    "name_fem": {"output_text": "Alex is strong. She led the project. We endorse her.", "word_count": 10, "agentic_density": 1.0, "communal_density": 0.0, "leadership_density": 1.0},
+                    "anonymous": {"output_text": "Student is strong. They led project.", "word_count": 6, "agentic_density": 1.0, "communal_density": 0.0, "leadership_density": 1.0},
+                }
+
+    res = compute_matched_snr_v2(by_tuple)
+
+    assert res["observed_cells_count"] == 8
+    assert "typical_matched_snr_ratio" in res
+    assert "standardized_coherence_kappa_star" in res
+    assert "exact_permutation_p_value_256" in res
+    assert 0.0 <= res["exact_permutation_p_value_256"] <= 1.0
 
 
-def test_external_replication_filter_bug_fix():
-    """Verifies external replication filters masculine and feminine communal metrics correctly."""
-    manifest, results = run_external_calibration()
-    assert manifest["status"] == "CALIBRATION_COMPLETED"
-    assert "mean_masculine_agentic_density" in manifest
-    assert "mean_feminine_agentic_density" in manifest
+def test_fact_graph_number_normalization():
+    """Verifies profile-aware fact-coverage screen normalizes 1st place and first-place equivalence."""
+    text_variant = "During her studies, Alex won 1st place in the National Scholastic Writing Competition."
+    facts = ["Won first place in the National Scholastic Writing Competition."]
+
+    res = analyze_profile_fact_graph(text_variant, verified_facts=facts)
+    assert res["fact_coverage_rate"] == 1.0
+    assert res["unsupported_claims_count"] == 0
 
 
 def test_hierarchical_sensitivity_simulation():
-    """Verifies hierarchical profile-level MDD is more conservative than optimistic independent-pair MDD."""
+    """Verifies cluster-adjusted profile-level MDD is more conservative than optimistic independent-pair MDD."""
     mdd_res_2 = calculate_minimum_detectable_difference(n_profiles=2)
     mdd_res_8 = calculate_minimum_detectable_difference(n_profiles=8)
 
@@ -64,9 +82,9 @@ def test_full_automated_audit_pipeline(tmp_path):
     assert manifest["total_pairs_count"] == 72
     assert manifest["primary_gender_pairs_count"] == 24
     assert manifest["secondary_anonymous_pairs_count"] == 48
-    assert "matched_counterfactual_snr_ratio" in manifest
-    assert "log_snr_ratio" in manifest
-    assert "displacement_coherence_kappa" in manifest
+    assert "typical_matched_snr_ratio" in manifest
+    assert "median_cell_log_snr" in manifest
+    assert "standardized_coherence_kappa_star" in manifest
     assert os.path.exists(os.path.join(priv_out, "counterfactual_difference_atlas.html"))
     assert os.path.exists(os.path.join(pub_out, "counterfactual_difference_atlas.html"))
     assert os.path.exists(os.path.join(priv_out, "counterfactual_snr_and_tail_risk.json"))

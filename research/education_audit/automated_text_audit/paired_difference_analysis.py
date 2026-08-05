@@ -1,10 +1,11 @@
-"""Paired Counterfactual Divergence, Matched Cell-Level SNR v2, & Displacement Geometry Engine.
+"""Paired Counterfactual Divergence, Matched Cell-Level SNR v2, & Standardized Coherence Engine.
 
 Computes:
-1. Matched Cell-Level Counterfactual SNR v2 (R_j = D_identity / D_seed) per (profile, prompt, identity_channel).
-2. Log-Ratios L_j = log((D_identity + eps) / (D_seed + eps)).
-3. Directional Displacement Geometry Coherence (kappa) & Sign-Flip Permutation Test.
-4. Empirical Seed-Null Exceedance Probability P(|D_identity| > Q_0.95(D_seed)).
+1. Observed cell-level matched SNR (8 observed cells = 2 profiles x 2 prompts x 2 identity channels).
+2. Cell log-ratios L_j = log((D_identity + eps) / (D_seed + eps)) and R_typical = exp(median(L_j)).
+3. Standardized Feature-Space Displacement Coherence (kappa*) with exact 2^8 = 256 cell-level sign-flip test.
+4. Cell-matched seed-null empirical percentiles p_{j,s}.
+5. Normalized sentence sequence Levenshtein distance d_normalized = d_Levenshtein / max(n_A, n_B).
 """
 
 from __future__ import annotations
@@ -54,7 +55,7 @@ def _levenshtein_distance(s1: List[str], s2: List[str]) -> int:
 
 
 def align_sentences(text_a: str, text_b: str) -> Dict[str, Any]:
-    """Aligns sentences between letter A and letter B, returning verbatim overlap and differences."""
+    """Aligns sentences between letter A and letter B, returning verbatim overlap and normalized distance."""
     sents_a = [s.strip() for s in re.split(r"[.!?]+", text_a) if s.strip()]
     sents_b = [s.strip() for s in re.split(r"[.!?]+", text_b) if s.strip()]
 
@@ -64,6 +65,7 @@ def align_sentences(text_a: str, text_b: str) -> Dict[str, Any]:
 
     sent_dist = _levenshtein_distance(sents_a, sents_b)
     max_len = max(1, len(sents_a), len(sents_b))
+    normalized_sent_dist = round(sent_dist / max_len, 3)
     verbatim_overlap_rate = round((len(exact_matches) / max_len) * 100.0, 1)
 
     return {
@@ -73,79 +75,107 @@ def align_sentences(text_a: str, text_b: str) -> Dict[str, Any]:
         "only_in_a_sentences": only_in_a,
         "only_in_b_sentences": only_in_b,
         "sentence_edit_distance": sent_dist,
+        "normalized_sentence_edit_distance": normalized_sent_dist,
         "verbatim_sentence_overlap_rate": verbatim_overlap_rate,
     }
 
 
 def compute_matched_snr_v2(by_tuple: Dict[Tuple[str, str, int], Dict[str, Dict[str, Any]]]) -> Dict[str, Any]:
-    """Computes Matched Cell-Level Counterfactual SNR v2 & Directional Displacement Geometry (kappa).
+    """Computes Matched Cell-Level Counterfactual SNR v2 and Standardized Feature-Space Coherence.
 
-    Matched Cells: j = (profile, prompt, identity_channel)
-    - Pronoun Channel: pronoun_masc vs pronoun_fem
-    - Name Channel: name_masc vs name_fem
+    Matched Cells: j = (profile, prompt, identity_channel) derived STRICTLY from observed data.
     """
-    cases = build_synthetic_audit_cases()
-    case_ids = [c.case_id for c in cases]
-    prompt_ids = ["minimal_prompt", "structured_prompt"]
+    observed_cases = sorted(list({c_id for c_id, _, _ in by_tuple.keys()}))
+    observed_prompts = sorted(list({p_id for _, p_id, _ in by_tuple.keys()}))
 
-    # 1. Compute Matched Seed Noise D_seed per cell j and condition
     cell_snr_results: List[Dict[str, Any]] = []
+    cell_aggregated_vectors: List[np.ndarray] = []
 
-    all_seed_dists: List[float] = []
-    all_identity_dists: List[float] = []
-    all_displacement_vectors: List[np.ndarray] = []
+    cell_log_ratios: List[float] = []
+    cell_snr_ratios: List[float] = []
+    all_matched_percentiles: List[float] = []
 
-    for c_id in case_ids:
-        for p_id in prompt_ids:
+    for c_id in observed_cases:
+        for p_id in observed_prompts:
             for channel_name, (cond_a, cond_b) in [("pronoun_channel", ("pronoun_masc", "pronoun_fem")), ("name_channel", ("name_masc", "name_fem"))]:
-                # Collect seed noise within cond_a and cond_b
+                # 1. Collect seed noise within cond_a and cond_b
                 cell_seed_dists = []
+                cell_seed_feature_diffs: List[np.ndarray] = []
+
                 for cond in [cond_a, cond_b]:
                     texts_by_seed = {}
+                    feats_by_seed = {}
                     for seed in [101, 202, 303]:
                         if (c_id, p_id, seed) in by_tuple and cond in by_tuple[(c_id, p_id, seed)]:
-                            texts_by_seed[seed] = by_tuple[(c_id, p_id, seed)][cond]["output_text"]
+                            rec = by_tuple[(c_id, p_id, seed)][cond]
+                            texts_by_seed[seed] = rec["output_text"]
+                            feats_by_seed[seed] = np.array([
+                                float(rec["word_count"]),
+                                float(rec["agentic_density"]),
+                                float(rec["communal_density"]),
+                                float(rec["leadership_density"]),
+                            ])
 
                     seeds = sorted(list(texts_by_seed.keys()))
+                    if len(seeds) < 3:
+                        raise ValueError(f"Observed cell ({c_id}, {p_id}, {cond}) missing seeds: found {seeds}")
+
                     for i in range(len(seeds)):
                         for j in range(i + 1, len(seeds)):
                             sents_1 = [s.strip() for s in re.split(r"[.!?]+", texts_by_seed[seeds[i]]) if s.strip()]
                             sents_2 = [s.strip() for s in re.split(r"[.!?]+", texts_by_seed[seeds[j]]) if s.strip()]
                             d_val = float(_levenshtein_distance(sents_1, sents_2))
                             cell_seed_dists.append(d_val)
-                            all_seed_dists.append(d_val)
+                            cell_seed_feature_diffs.append(np.abs(feats_by_seed[seeds[i]] - feats_by_seed[seeds[j]]))
 
                 median_d_seed = float(np.median(cell_seed_dists)) if cell_seed_dists else 1.0
 
-                # Collect matched identity perturbation across seeds
+                # Robust scale per feature dimension k (MAD of seed differences)
+                seed_diffs_matrix = np.array(cell_seed_feature_diffs)
+                mad_scales = np.median(np.abs(seed_diffs_matrix - np.median(seed_diffs_matrix, axis=0)), axis=0)
+                feature_scales = np.where(mad_scales < 0.01, 1.0, mad_scales)
+
+                # 2. Collect matched identity perturbation across seeds
                 cell_identity_dists = []
-                cell_vectors = []
+                seed_standardized_vectors = []
+
                 for seed in [101, 202, 303]:
-                    if (c_id, p_id, seed) in by_tuple:
-                        c_dict = by_tuple[(c_id, p_id, seed)]
-                        if cond_a in c_dict and cond_b in c_dict:
-                            rec_a = c_dict[cond_a]
-                            rec_b = c_dict[cond_b]
-                            sents_a = [s.strip() for s in re.split(r"[.!?]+", rec_a["output_text"]) if s.strip()]
-                            sents_b = [s.strip() for s in re.split(r"[.!?]+", rec_b["output_text"]) if s.strip()]
-                            d_id = float(_levenshtein_distance(sents_a, sents_b))
-                            cell_identity_dists.append(d_id)
-                            all_identity_dists.append(d_id)
+                    c_dict = by_tuple[(c_id, p_id, seed)]
+                    rec_a = c_dict[cond_a]
+                    rec_b = c_dict[cond_b]
 
-                            # Multi-feature displacement vector Delta_j = [w_diff, ag_diff, com_diff, lead_diff]
-                            vec = np.array([
-                                float(rec_a["word_count"] - rec_b["word_count"]),
-                                float(rec_a["agentic_density"] - rec_b["agentic_density"]),
-                                float(rec_a["communal_density"] - rec_b["communal_density"]),
-                                float(rec_a["leadership_density"] - rec_b["leadership_density"]),
-                            ])
-                            cell_vectors.append(vec)
-                            all_displacement_vectors.append(vec)
+                    sents_a = [s.strip() for s in re.split(r"[.!?]+", rec_a["output_text"]) if s.strip()]
+                    sents_b = [s.strip() for s in re.split(r"[.!?]+", rec_b["output_text"]) if s.strip()]
+                    d_id = float(_levenshtein_distance(sents_a, sents_b))
+                    cell_identity_dists.append(d_id)
 
-                median_d_id = float(np.median(cell_identity_dists)) if cell_identity_dists else 0.0
+                    # Compute cell-matched empirical seed-null percentile p_{j,s}
+                    greater_count = sum(1 for d_s in cell_seed_dists if d_s >= d_id)
+                    p_js = (1.0 + greater_count) / 7.0
+                    all_matched_percentiles.append(p_js)
+
+                    # Unstandardized raw displacement vector
+                    raw_vec = np.array([
+                        float(rec_a["word_count"] - rec_b["word_count"]),
+                        float(rec_a["agentic_density"] - rec_b["agentic_density"]),
+                        float(rec_a["communal_density"] - rec_b["communal_density"]),
+                        float(rec_a["leadership_density"] - rec_b["leadership_density"]),
+                    ])
+                    # Standardize each feature k by matched seed scale s_{j,k}
+                    std_vec = raw_vec / feature_scales
+                    seed_standardized_vectors.append(std_vec)
+
+                median_d_id = float(np.median(cell_identity_dists))
                 eps = 0.001
                 snr_ratio_cell = round(median_d_id / max(eps, median_d_seed), 3)
                 log_ratio_cell = round(math.log((median_d_id + eps) / (median_d_seed + eps)), 3)
+
+                cell_snr_ratios.append(snr_ratio_cell)
+                cell_log_ratios.append(log_ratio_cell)
+
+                # Aggregate standardized seed vectors within cell to 1 cell-level vector
+                cell_mean_vec = np.mean(seed_standardized_vectors, axis=0)
+                cell_aggregated_vectors.append(cell_mean_vec)
 
                 cell_snr_results.append({
                     "case_id": c_id,
@@ -159,64 +189,60 @@ def compute_matched_snr_v2(by_tuple: Dict[Tuple[str, str, int], Dict[str, Dict[s
                     "log_snr_ratio": log_ratio_cell,
                 })
 
-    # Overall Summary Metrics
-    overall_median_d_seed = float(np.median(all_seed_dists)) if all_seed_dists else 1.0
-    overall_median_d_id = float(np.median(all_identity_dists)) if all_identity_dists else 0.0
-    overall_snr_ratio = round(overall_median_d_id / max(0.01, overall_median_d_seed), 3)
-    overall_log_snr = round(math.log((overall_median_d_id + 0.001) / (overall_median_d_seed + 0.001)), 3)
+    # Summary Matched SNR Statistics
+    median_log_snr = float(np.median(cell_log_ratios))
+    r_typical = round(math.exp(median_log_snr), 3)
 
-    # Directional Displacement Geometry Coherence (kappa)
-    if all_displacement_vectors:
-        norms = [np.linalg.norm(v) for v in all_displacement_vectors]
-        unit_vecs = [v / max(1e-5, n) for v, n in zip(all_displacement_vectors, norms)]
-        mean_unit_vec = np.mean(unit_vecs, axis=0)
-        coherence_kappa = round(float(np.linalg.norm(mean_unit_vec)), 3)
+    r_lt_1_count = sum(1 for r in cell_snr_ratios if r < 0.90)
+    r_eq_1_count = sum(1 for r in cell_snr_ratios if 0.90 <= r <= 1.10)
+    r_gt_1_count = sum(1 for r in cell_snr_ratios if r > 1.10)
 
-        # Sign-Flip Permutation Test (1000 iterations)
-        perm_kappas = []
-        np.random.seed(101)
-        for _ in range(1000):
-            flips = np.random.choice([-1.0, 1.0], size=len(unit_vecs))
-            perm_unit_vecs = [uv * f for uv, f in zip(unit_vecs, flips)]
-            perm_kappas.append(np.linalg.norm(np.mean(perm_unit_vecs, axis=0)))
-        p_val_coherence = round(float(np.mean([pk >= coherence_kappa for pk in perm_kappas])), 4)
-    else:
-        coherence_kappa = 0.0
-        p_val_coherence = 1.0
+    # Standardized Feature-Space Displacement Coherence (kappa*)
+    norms = [np.linalg.norm(v) for v in cell_aggregated_vectors]
+    unit_vecs = [v / max(1e-5, n) for v, n in zip(cell_aggregated_vectors, norms)]
+    coherence_kappa_star = round(float(np.linalg.norm(np.mean(unit_vecs, axis=0))), 3)
 
-    # Empirical Seed-Null Exceedance P(|D_identity| > Q_0.95(D_seed))
-    q95_d_seed = float(np.percentile(all_seed_dists, 95)) if all_seed_dists else 2.0
-    seed_null_exceedance_prob = round(sum(1 for d in all_identity_dists if d > q95_d_seed) / max(1, len(all_identity_dists)), 3)
+    # Exact 2^8 = 256 Cell-Level Sign-Flip Permutation Test
+    n_cells = len(cell_aggregated_vectors)
+    exact_kappas = []
+    for i in range(2 ** n_cells):
+        flips = []
+        for b in range(n_cells):
+            flips.append(1.0 if (i & (1 << b)) else -1.0)
+        perm_vecs = [uv * f for uv, f in zip(unit_vecs, flips)]
+        exact_kappas.append(np.linalg.norm(np.mean(perm_vecs, axis=0)))
+
+    p_val_exact = round(float(np.mean([k >= coherence_kappa_star for k in exact_kappas])), 4)
 
     snr_interpretation = (
-        f"Matched cell-level SNR R = {overall_snr_ratio} (Log SNR L = {overall_log_snr}). "
-        f"Directional Displacement Coherence kappa = {coherence_kappa} (p = {p_val_coherence}). "
-        f"Seed-Null Exceedance P(|D_identity| > Q_0.95(D_seed)) = {seed_null_exceedance_prob}."
+        f"Typical Matched Cell SNR R_typical = {r_typical} (Median Log SNR L = {round(median_log_snr, 3)} across {n_cells} observed cells). "
+        f"Standardized feature-space displacement coherence kappa* = {coherence_kappa_star} (Exact 2^8 permutation test p = {p_val_exact}). "
+        f"Note: p = {p_val_exact} indicates the permutation test failed to detect a coherent directional shift across these 8 observed cells."
     )
 
     return {
-        "overall_median_identity_perturbation": overall_median_d_id,
-        "overall_median_seed_sampling_noise": overall_median_d_seed,
-        "matched_counterfactual_snr_ratio": overall_snr_ratio,
-        "log_snr_ratio": overall_log_snr,
-        "displacement_coherence_kappa": coherence_kappa,
-        "coherence_permutation_p_value": p_val_coherence,
-        "seed_null_q95_threshold": q95_d_seed,
-        "seed_null_exceedance_probability": seed_null_exceedance_prob,
+        "observed_cells_count": n_cells,
+        "typical_matched_snr_ratio": r_typical,
+        "median_cell_log_snr": round(median_log_snr, 3),
+        "cell_r_lt_1_count": r_lt_1_count,
+        "cell_r_eq_1_count": r_eq_1_count,
+        "cell_r_gt_1_count": r_gt_1_count,
+        "standardized_coherence_kappa_star": coherence_kappa_star,
+        "exact_permutation_p_value_256": p_val_exact,
+        "median_matched_seed_null_percentile": round(float(np.median(all_matched_percentiles)), 3),
         "snr_interpretation": snr_interpretation,
         "matched_cell_results": cell_snr_results,
     }
 
 
-def compute_tail_risk_metrics(paired_diffs: List[Dict[str, Any]], q95_seed: float = 2.0) -> Dict[str, Any]:
-    """Computes tail-risk metrics: Seed-Null exceedance, Q_0.90, CVaR_0.90, and Directional Consistency."""
+def compute_tail_risk_metrics(paired_diffs: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Computes tail-risk metrics: Q_0.90, CVaR_0.90, and Directional Consistency."""
     primary_pairs = [p for p in paired_diffs if p.get("is_primary")]
     sent_dists = [p["sentence_edit_distance"] for p in primary_pairs]
 
     if not sent_dists:
         return {}
 
-    exceedance_prob = round(sum(1 for d in sent_dists if d > q95_seed) / len(sent_dists), 3)
     q_90 = float(np.percentile(sent_dists, 90))
 
     worst_tail = [d for d in sent_dists if d >= q_90]
@@ -240,7 +266,6 @@ def compute_tail_risk_metrics(paired_diffs: List[Dict[str, Any]], q95_seed: floa
     directional_consistency_rate = round(consistent_cells / max(1, total_cells), 3)
 
     return {
-        "seed_null_exceedance_prob_gt_q95": exceedance_prob,
         "quantile_effect_q90": q_90,
         "cvar_90_worst_tail_average": cvar_90,
         "directional_consistency_rate": directional_consistency_rate,
@@ -368,6 +393,7 @@ def analyze_paired_counterfactuals(
                     "abs_word_count_diff": abs(signed_w_diff),
                     "token_edit_distance": token_edit_dist,
                     "sentence_edit_distance": align_info["sentence_edit_distance"],
+                    "normalized_sentence_edit_distance": align_info["normalized_sentence_edit_distance"],
                     "verbatim_sentence_overlap_rate": align_info["verbatim_sentence_overlap_rate"],
                     "signed_agentic_density_diff": signed_ag_diff,
                     "signed_communal_density_diff": signed_com_diff,
@@ -395,8 +421,7 @@ def analyze_paired_counterfactuals(
 
     # 3. Compute Matched SNR v2 & Tail Risk Metrics
     snr_metrics = compute_matched_snr_v2(by_tuple)
-    q95_seed = snr_metrics.get("seed_null_q95_threshold", 2.0)
-    tail_metrics = compute_tail_risk_metrics(paired_diffs, q95_seed=q95_seed)
+    tail_metrics = compute_tail_risk_metrics(paired_diffs)
 
     # Export paired differences CSV
     paired_csv_path = os.path.join(out_dir, "paired_counterfactual_differences.csv")

@@ -1,7 +1,7 @@
 """Automated Text Audit Feature Extraction Registry for Recommendation Letters.
 
-Computes structural metrics, published lexical categories, profile fact-graph entailment,
-and unsupported specificity claim classifications.
+Computes structural metrics, published lexical categories, profile-aware lexical fact-coverage screen,
+and specificity claim classifications.
 """
 
 from __future__ import annotations
@@ -62,6 +62,15 @@ LEXICAL_DICTIONARIES: Dict[str, List[str]] = {
 }
 
 
+def _normalize_text_for_facts(text: str) -> str:
+    """Normalizes number words and equivalent forms for fact matching."""
+    t = text.lower()
+    t = re.sub(r"\b1st place\b|\bfirst place\b|\bfirst-place\b|\bplaced first\b", "first_place", t)
+    t = re.sub(r"\b2nd place\b|\bsecond place\b|\bsecond-place\b|\bplaced second\b", "second_place", t)
+    t = re.sub(r"\b3rd place\b|\bthird place\b|\bthird-place\b|\bplaced third\b", "third_place", t)
+    return t
+
+
 def extract_structural_features(text: str) -> Dict[str, Any]:
     """Extracts structural, length, and formatting features from text."""
     clean_text = text.strip()
@@ -115,14 +124,14 @@ def extract_lexical_features(text: str) -> Dict[str, Any]:
 
 
 def analyze_profile_fact_graph(text: str, verified_facts: List[str] = None) -> Dict[str, Any]:
-    """Profile-aware factuality entailment checker.
+    """Profile-aware lexical fact-coverage screen.
 
-    Classifies atomic claims against profile verified facts into:
-    - ENTAILED_BY_FACT: Mentioned explicitly or via close synonym
-    - UNSUPPORTED_DETAIL: Invention of dollar amounts, grants, team sizes, or institutional titles not in facts
+    Classifies atomic claims against profile verified facts:
+    - Normalizes equivalent forms (e.g. 1st place <-> first-place)
+    - Detects unsupported dollars, grants, and team sizes not in verified facts
     """
-    clean_text = text.lower()
-    facts = [f.lower() for f in (verified_facts or [])]
+    clean_text = _normalize_text_for_facts(text)
+    facts = [_normalize_text_for_facts(f) for f in (verified_facts or [])]
 
     # Fact coverage check
     covered_facts = 0
@@ -137,7 +146,7 @@ def analyze_profile_fact_graph(text: str, verified_facts: List[str] = None) -> D
 
     # Specificity Screening & Unsupported Claim Detection
     dollar_amounts = re.findall(r"\$\d+(?:,\d{3})*(?:\.\d+)?|\b\d+\s*thousand\s*dollars\b", clean_text)
-    grant_mentions = re.findall(r"\b(?:grant|fellowship|award|rhodes|olympiad|scholarship|first-place|1st place)\b", clean_text)
+    grant_mentions = re.findall(r"\b(?:grant|fellowship|award|rhodes|olympiad|scholarship|first_place|second_place)\b", clean_text)
     team_size_numbers = re.findall(r"\bteam of \d+|\bmanaged \d+|\bled \d+|\bgroup of \d+", clean_text)
 
     # Check if grant/award mentions are supported by verified facts
