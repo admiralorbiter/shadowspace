@@ -136,5 +136,6 @@ def test_e002_experiment_mock_mode_identifiability():
     assert res.affine_is_flat is None
     assert res.curvature_magnitude is None
     assert res.mean_held_out_return_residual is None
-    assert "rename_a" in res.edge_diagnostics
+    assert set(res.edge_diagnostics.keys()) == {"rename_a", "rename_b", "rename_a_inv", "rename_b_inv"}
+
 

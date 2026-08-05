@@ -141,60 +141,80 @@ def run_e002_classifier_holonomy_experiment(
         edge_pairs["rename_b_inv"][0].append(z3)
         edge_pairs["rename_b_inv"][1].append(z0)
 
-    # Estimate cross-orbit edge transport connections (Ta, Tb, Ta_inv, Tb_inv) with identifiability checks
+    # Estimate cross-orbit edge transport connections (Ta, Tb, Ta_inv, Tb_inv) with loop-wide 4-edge diagnostics
     edge_diagnostics: Dict[str, Dict[str, Any]] = {}
-    try:
-        t_a = estimator.estimate_total_least_squares_transport("rename_a", "x0", "x1", np.array(edge_pairs["rename_a"][0]), np.array(edge_pairs["rename_a"][1]))
-        t_b = estimator.estimate_total_least_squares_transport("rename_b", "x1", "x2", np.array(edge_pairs["rename_b"][0]), np.array(edge_pairs["rename_b"][1]))
-        t_a_inv = estimator.estimate_total_least_squares_transport("rename_a_inv", "x2", "x3", np.array(edge_pairs["rename_a_inv"][0]), np.array(edge_pairs["rename_a_inv"][1]))
-        t_b_inv = estimator.estimate_total_least_squares_transport("rename_b_inv", "x3", "x0", np.array(edge_pairs["rename_b_inv"][0]), np.array(edge_pairs["rename_b_inv"][1]))
+    all_edges_estimable = True
 
-        transports = [t_a, t_b, t_a_inv, t_b_inv]
-        for t in transports:
-            edge_diagnostics[t.generator_name] = t.metadata
+    for edge_name, (src_list, tgt_list) in edge_pairs.items():
+        diag = estimator.diagnose_transport_design(edge_name, np.array(src_list), np.array(tgt_list))
+        edge_diagnostics[edge_name] = diag
+        if diag.get("status") != "estimable":
+            all_edges_estimable = False
 
-        min_rank = min(t.metadata.get("design_rank", 2) for t in transports)
-        max_cond = max(t.metadata.get("condition_number", 0.0) for t in transports)
-        max_norm = max(t.metadata.get("matrix_norm", 0.0) for t in transports)
+    min_rank = min(diag.get("design_rank", 1) for diag in edge_diagnostics.values() if diag.get("design_rank") is not None) if edge_diagnostics else 1
+    max_cond_vals = [diag.get("condition_number") for diag in edge_diagnostics.values() if diag.get("condition_number") is not None]
+    max_cond = max(max_cond_vals) if max_cond_vals else None
 
-        path_transport = PathTransport(transports)
-        hol_res = evaluate_holonomy("E2_A1_NaturalLanguage_Square", path_transport)
-
-        # Evaluate held-out return residuals on test_orbits
-        test_residuals = []
-        A_gamma = path_transport.compute_composite_matrix()
-        H_hom = path_transport.compute_homogeneous_matrix()
-        b_gamma = H_hom[:2, 2]
-
-        for orb in (test_orbits or val_orbits):
-            v0 = orb.get_vertex("x0")
-            z0 = ilr_transform(predict_fn(v0.premise, v0.hypothesis))
-            z0_returned = np.dot(A_gamma, z0) + b_gamma
-            res_norm = float(np.linalg.norm(z0_returned - z0))
-            test_residuals.append(res_norm)
-
-        mean_residual = float(np.mean(test_residuals)) if test_residuals else 0.0
-        estimator_identifiable = True
-        audit_status = "estimable"
-        linear_flat = hol_res.linear_is_flat
-        affine_flat = hol_res.affine_is_flat
-        curvature_mag = hol_res.curvature_magnitude
-        artif_curv = bool(not hol_res.affine_is_flat)
-
-    except EstimatorIdentifiabilityError as err:
+    if not all_edges_estimable:
         estimator_identifiable = False
         audit_status = "not_estimable"
-        min_rank = err.design_rank if err.design_rank is not None else 1
-        max_cond = err.condition_number
-        max_norm = err.matrix_norm
+        max_norm = None
         mean_residual = None
         linear_flat = None
         affine_flat = None
         curvature_mag = None
         artif_curv = False  # Rank deficiency is not evidence of artificial curvature
-        if err.generator_name:
-            edge_diagnostics[err.generator_name] = err.to_dict()
-        provenance["identifiability_error"] = err.to_dict()
+        provenance["identifiability_summary"] = "One or more edge designs are rank-deficient or ill-conditioned."
+    else:
+        try:
+            t_a = estimator.estimate_total_least_squares_transport("rename_a", "x0", "x1", np.array(edge_pairs["rename_a"][0]), np.array(edge_pairs["rename_a"][1]))
+            t_b = estimator.estimate_total_least_squares_transport("rename_b", "x1", "x2", np.array(edge_pairs["rename_b"][0]), np.array(edge_pairs["rename_b"][1]))
+            t_a_inv = estimator.estimate_total_least_squares_transport("rename_a_inv", "x2", "x3", np.array(edge_pairs["rename_a_inv"][0]), np.array(edge_pairs["rename_a_inv"][1]))
+            t_b_inv = estimator.estimate_total_least_squares_transport("rename_b_inv", "x3", "x0", np.array(edge_pairs["rename_b_inv"][0]), np.array(edge_pairs["rename_b_inv"][1]))
+
+            transports = [t_a, t_b, t_a_inv, t_b_inv]
+            for t in transports:
+                edge_diagnostics[t.generator_name] = t.metadata
+
+            max_norm = max(t.metadata.get("matrix_norm", 0.0) for t in transports)
+
+            path_transport = PathTransport(transports)
+            hol_res = evaluate_holonomy("E2_A1_NaturalLanguage_Square", path_transport)
+
+            # Evaluate held-out return residuals on test_orbits
+            test_residuals = []
+            A_gamma = path_transport.compute_composite_matrix()
+            H_hom = path_transport.compute_homogeneous_matrix()
+            b_gamma = H_hom[:2, 2]
+
+            for orb in (test_orbits or val_orbits):
+                v0 = orb.get_vertex("x0")
+                z0 = ilr_transform(predict_fn(v0.premise, v0.hypothesis))
+                z0_returned = np.dot(A_gamma, z0) + b_gamma
+                res_norm = float(np.linalg.norm(z0_returned - z0))
+                test_residuals.append(res_norm)
+
+            mean_residual = float(np.mean(test_residuals)) if test_residuals else 0.0
+            estimator_identifiable = True
+            audit_status = "estimable"
+            linear_flat = hol_res.linear_is_flat
+            affine_flat = hol_res.affine_is_flat
+            curvature_mag = hol_res.curvature_magnitude
+            artif_curv = bool(not hol_res.affine_is_flat)
+
+        except EstimatorIdentifiabilityError as err:
+            estimator_identifiable = False
+            audit_status = "not_estimable"
+            min_rank = err.design_rank if err.design_rank is not None else 1
+            max_cond = err.condition_number
+            max_norm = err.matrix_norm
+            mean_residual = None
+            linear_flat = None
+            affine_flat = None
+            curvature_mag = None
+            artif_curv = False
+            provenance["identifiability_error"] = err.to_dict()
+
 
     text_closure_rate = float(np.mean([o.is_closed for o in active_orbits]))
 

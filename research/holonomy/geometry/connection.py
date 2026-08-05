@@ -24,6 +24,7 @@ class EstimatorIdentifiabilityError(ValueError):
         reason: str | None = None,
         design_rank: int | None = None,
         required_rank: int | None = None,
+        required_observations: int | None = None,
         condition_number: float | None = None,
         condition_threshold: float | None = None,
         v22_condition_number: float | None = None,
@@ -36,6 +37,7 @@ class EstimatorIdentifiabilityError(ValueError):
         self.reason = reason
         self.design_rank = design_rank
         self.required_rank = required_rank
+        self.required_observations = required_observations
         self.condition_number = condition_number
         self.condition_threshold = condition_threshold
         self.v22_condition_number = v22_condition_number
@@ -49,6 +51,7 @@ class EstimatorIdentifiabilityError(ValueError):
             "reason": self.reason,
             "design_rank": self.design_rank,
             "required_rank": self.required_rank,
+            "required_observations": self.required_observations,
             "condition_number": self.condition_number,
             "condition_threshold": self.condition_threshold,
             "v22_condition_number": self.v22_condition_number,
@@ -85,10 +88,19 @@ class ParallelTransportMap:
 class ConnectionEstimator:
     """Estimates affine parallel transport maps T_{g,x} via OLS or Total Least Squares (TLS)."""
 
-    def __init__(self, ridge_alpha: float = 1e-6, max_condition_number: float = 1e6, max_transform_norm: float = 1e3) -> None:
+    def __init__(
+        self,
+        ridge_alpha: float = 1e-6,
+        max_condition_number: float = 1e6,
+        max_transform_norm: float = 1e3,
+        relative_rank_tolerance: float = 1e-7,
+        absolute_singular_value_floor: float = 1e-15,
+    ) -> None:
         self.ridge_alpha = ridge_alpha
         self.max_condition_number = max_condition_number
         self.max_transform_norm = max_transform_norm
+        self.relative_rank_tolerance = relative_rank_tolerance
+        self.absolute_singular_value_floor = absolute_singular_value_floor
 
     def _validate_raw_inputs(
         self, generator_name: str, source_coords: NDArray[np.float64], target_coords: NDArray[np.float64]
@@ -124,7 +136,7 @@ class ConnectionEstimator:
                 f"Edge '{generator_name}' insufficient observations: N={N} < required={d+1}",
                 generator_name=generator_name,
                 reason="insufficient_observations",
-                required_rank=d + 1,
+                required_observations=d + 1,
             )
 
         return Z_src, Z_tgt
@@ -136,9 +148,8 @@ class ConnectionEstimator:
         s_list = [float(v) for v in s]
         s_max = float(s[0]) if len(s) > 0 else 0.0
 
-        rel_tol = 1e-7
-        rank = int(np.sum(s > rel_tol * s_max)) if s_max > 0 else 0
-        cond = float(s_max / s[-1]) if (len(s) > 0 and s[-1] > 1e-15) else float("inf")
+        rank = int(np.sum(s > self.relative_rank_tolerance * s_max)) if s_max > 0 else 0
+        cond = float(s_max / s[-1]) if (len(s) > 0 and s[-1] > self.absolute_singular_value_floor) else float("inf")
 
         if rank < d_x:
             raise EstimatorIdentifiabilityError(
@@ -163,6 +174,45 @@ class ConnectionEstimator:
                 singular_values=s_list,
             )
         return rank, cond, s_list
+
+    def diagnose_transport_design(
+        self, generator_name: str, source_coords: NDArray[np.float64], target_coords: NDArray[np.float64]
+    ) -> Dict[str, Any]:
+        """Runs pre-fit diagnostic checks on an edge without altering estimator state."""
+        try:
+            Z_src, Z_tgt = self._validate_raw_inputs(generator_name, source_coords, target_coords)
+            mean_src = Z_src.mean(axis=0)
+            mean_tgt = Z_tgt.mean(axis=0)
+            Z_src_c = Z_src - mean_src
+            Z_tgt_c = Z_tgt - mean_tgt
+            d_x = Z_src_c.shape[1]
+
+            rank, cond, s_list = self.validate_design_matrix(generator_name, Z_src_c)
+
+            Aug = np.column_stack([Z_src_c, Z_tgt_c])
+            _, _, Vt = np.linalg.svd(Aug, full_matrices=True)
+            V = Vt.T
+            V22 = V[d_x:, d_x:]
+            cond_v22 = float(np.linalg.cond(V22))
+
+            return {
+                "generator_name": generator_name,
+                "status": "estimable",
+                "design_rank": rank,
+                "required_rank": d_x,
+                "condition_number": cond,
+                "v22_condition_number": cond_v22,
+                "singular_values": s_list,
+                "relative_rank_tolerance": self.relative_rank_tolerance,
+                "absolute_singular_value_floor": self.absolute_singular_value_floor,
+            }
+        except EstimatorIdentifiabilityError as err:
+            res_dict = err.to_dict()
+            res_dict["status"] = "not_estimable"
+            res_dict["relative_rank_tolerance"] = self.relative_rank_tolerance
+            res_dict["absolute_singular_value_floor"] = self.absolute_singular_value_floor
+            return res_dict
+
 
     def estimate_linear_transport(
         self,

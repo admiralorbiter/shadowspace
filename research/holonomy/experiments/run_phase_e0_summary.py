@@ -119,7 +119,7 @@ def main() -> None:
     print(f"    - Coherent extension GlueOOD score: {score_coherent:.6f}")
     print(f"    - Incoherent extension GlueOOD score: {score_incoherent:.6f} -> {'PASSED' if glue_pass else 'FAILED'}")
 
-    # 6. Phase E2-A1.1 Natural Language Model Audit Pilot
+    # 6. Phase E2-A1.1a Natural Language Model Audit Pilot
     audit_results = run_e002_classifier_holonomy_experiment()
     e2_res = audit_results[0]
     smoke_test_pass = bool(
@@ -128,13 +128,13 @@ def main() -> None:
         and e2_res.train_orbit_count >= 2
         and e2_res.test_orbit_count >= 1
     )
-    identifiability_status = "PASSED" if e2_res.estimator_identifiable else "NOT_ESTIMABLE"
+    identifiability_status = "ESTIMABLE" if e2_res.estimator_identifiable else "NOT_ESTIMABLE"
     if e2_res.is_live_model:
-        model_audit_status = "PASSED" if (e2_res.estimator_identifiable and not e2_res.artificial_curvature_detected) else "FAILED"
+        model_audit_status = "COMPLETED" if e2_res.estimator_identifiable else "FAILED"
     else:
         model_audit_status = "NOT_RUN"
 
-    print(f"\n[6] Phase E2-A1.1 Natural Language Model Audit Pilot (Tier 1 Reversible Entity Renaming):")
+    print(f"\n[6] Phase E2-A1.1a Natural Language Model Audit Pilot (Tier 1 Reversible Entity Renaming):")
     print(f"    - Adapter Mode: {e2_res.adapter_mode}")
     print(f"    - Active Orbits: {e2_res.num_active_orbits}")
     print(f"    - Textual Path Closure Rate: {e2_res.text_path_closure_rate * 100:.1f}%")
@@ -166,7 +166,7 @@ def main() -> None:
     # Machine-readable manifest export
     manifest_raw = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-        "phase": "E2-A1.1",
+        "phase": "E2-A1.1a",
         "git_commit_sha": get_git_commit_sha(),
         "environment": {
             "python_version": sys.version.split()[0],
@@ -174,6 +174,10 @@ def main() -> None:
             "scipy_version": scipy.__version__,
         },
         "status": "PASSED" if all_passed else "FAILED",
+        "hardening_status": "PASSED" if all_passed else "FAILED",
+        "orbit_pipeline_status": "PASSED" if smoke_test_pass else "FAILED",
+        "transport_status": identifiability_status,
+        "model_audit_status": model_audit_status,
         "gates": {
             "flat_world": flat_pass,
             "planted_curvature_4corner": all(curvature_results),
@@ -246,12 +250,13 @@ def main() -> None:
 
     print("\n================================================================================")
     if all_passed:
-        print("ALL PHASE E0.7.2 & E2-A1.1 MATHEMATICAL HARDENING GATES PASSED CLEANLY")
+        print("E0.7.2 synthetic gates and E2-A1.1a hardening gates passed; natural-language transport was not estimable and live audit was not run.")
         print("================================================================================")
     else:
-        print("PHASE E0.7.2 & E2-A1.1 GATES FAILED — CHECK MANIFEST FOR DETAILS")
+        print("PHASE E0.7.2 & E2-A1.1a GATES FAILED — CHECK MANIFEST FOR DETAILS")
         print("================================================================================")
         sys.exit(1)
+
 
 
 
