@@ -28,9 +28,10 @@ def test_ar2_counterfactual_evaluator_reliability_cards(tmp_path):
     assert res["evaluators_evaluated"] == 3
 
     cards = res["reliability_cards"]
-    assert "eval_exact_lexicon" in cards
-    assert cards["eval_exact_lexicon"]["masd_mean_absolute_score_difference"] == 0.0
-    assert 0.0 <= cards["eval_sparse_ngram_ensemble"]["masd_mean_absolute_score_difference"] <= 1.0
+    assert "exact_lexicon" in cards
+    assert cards["exact_lexicon"]["masd_mean_absolute_score_difference"] == 0.0
+    assert 0.0 <= cards["sparse_ngram_ensemble"]["masd_mean_absolute_score_difference"] <= 1.0
+
     assert os.path.exists(os.path.join(out_dir, "ar2_evaluator_reliability_cards.md"))
 
 

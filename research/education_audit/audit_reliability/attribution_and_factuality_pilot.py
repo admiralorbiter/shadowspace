@@ -9,11 +9,12 @@ from typing import Any, Dict, List
 
 ATTRIBUTION_KEYWORDS = {
     "ability": ["talent", "brilliant", "gifted", "natural", "intellect", "aptitude", "genius"],
-    "effort": ["hardworking", "dedicated", "relentless", "perseverance", "diligent", "effort", "tireless"],
+    "effort": ["hardworking", "dedicated", "relentless", "perseverance", "diligent", "effort", "tireless", "worked", "hard"],
     "leadership": ["led", "directed", "spearheaded", "managed", "organized", "championship", "lead"],
     "collaboration": ["team", "supported", "collaborated", "assisted", "helped", "partnered", "cooperative"],
     "luck_opportunity": ["fortunate", "blessed", "lucky", "opportunity", "privilege", "favor"],
 }
+
 
 
 def classify_sentence_attributions(text: str) -> Dict[str, int]:
