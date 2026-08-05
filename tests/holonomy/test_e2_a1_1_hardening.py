@@ -121,15 +121,21 @@ def test_huggingface_adapter_mocked_fast_failure(monkeypatch):
     assert "Failed to load requested live model" in str(exc_info.value)
 
 
-def test_diagnose_transport_design_v22_ill_conditioned():
-    """Verifies diagnose_transport_design returns status='not_estimable' when edge is rank-deficient or V22 is singular."""
+def test_diagnose_transport_design_reaches_v22_gate():
+    """Verifies that full-rank source design with anisotropic map reaches V22 gate and returns ill_conditioned_v22."""
     estimator = ConnectionEstimator()
-    src = np.array([[1.0, 1.0], [2.0, 2.0], [3.0, 3.0]], dtype=np.float64)
-    tgt = np.array([[2.0, 1.0], [4.0, 2.0], [6.0, 3.0]], dtype=np.float64)
+    src = np.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]], dtype=np.float64)
+    target_map = np.diag([1e8, 1.0])
+    tgt = src @ target_map.T
 
     diag = estimator.diagnose_transport_design("v22_test", src, tgt)
+
+    assert diag["design_rank"] == 2
     assert diag["status"] == "not_estimable"
-    assert diag["reason"] in ("rank_deficient", "ill_conditioned_v22")
+    assert diag["reason"] == "ill_conditioned_v22"
+    assert diag["v22_condition_number"] > estimator.max_v22_condition_number
+    assert "v22_determinant" in diag
+
 
 
 def test_e002_experiment_mock_mode_identifiability():

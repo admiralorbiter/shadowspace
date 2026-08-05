@@ -28,6 +28,8 @@ class EstimatorIdentifiabilityError(ValueError):
         condition_number: float | None = None,
         condition_threshold: float | None = None,
         v22_condition_number: float | None = None,
+        v22_determinant: float | None = None,
+        v22_determinant_threshold: float | None = None,
         matrix_norm: float | None = None,
         bias_norm: float | None = None,
         singular_values: List[float] | None = None,
@@ -41,6 +43,8 @@ class EstimatorIdentifiabilityError(ValueError):
         self.condition_number = condition_number
         self.condition_threshold = condition_threshold
         self.v22_condition_number = v22_condition_number
+        self.v22_determinant = v22_determinant
+        self.v22_determinant_threshold = v22_determinant_threshold
         self.matrix_norm = matrix_norm
         self.bias_norm = bias_norm
         self.singular_values = singular_values or []
@@ -55,6 +59,8 @@ class EstimatorIdentifiabilityError(ValueError):
             "condition_number": self.condition_number,
             "condition_threshold": self.condition_threshold,
             "v22_condition_number": self.v22_condition_number,
+            "v22_determinant": self.v22_determinant,
+            "v22_determinant_threshold": self.v22_determinant_threshold,
             "matrix_norm": self.matrix_norm,
             "bias_norm": self.bias_norm,
             "singular_values": self.singular_values,
@@ -92,12 +98,16 @@ class ConnectionEstimator:
         self,
         ridge_alpha: float = 1e-6,
         max_condition_number: float = 1e6,
+        max_v22_condition_number: float = 1e6,
+        min_abs_v22_determinant: float = 1e-8,
         max_transform_norm: float = 1e3,
         relative_rank_tolerance: float = 1e-7,
         absolute_singular_value_floor: float = 1e-15,
     ) -> None:
         self.ridge_alpha = ridge_alpha
         self.max_condition_number = max_condition_number
+        self.max_v22_condition_number = max_v22_condition_number
+        self.min_abs_v22_determinant = min_abs_v22_determinant
         self.max_transform_norm = max_transform_norm
         self.relative_rank_tolerance = relative_rank_tolerance
         self.absolute_singular_value_floor = absolute_singular_value_floor
@@ -195,9 +205,7 @@ class ConnectionEstimator:
             cond_v22 = float(np.linalg.cond(V22))
             det_v22 = float(np.linalg.det(V22))
 
-
-
-            if cond_v22 > self.max_condition_number or abs(det_v22) < 1e-8:
+            if cond_v22 > self.max_v22_condition_number or abs(det_v22) < self.min_abs_v22_determinant:
                 return {
                     "generator_name": generator_name,
                     "status": "not_estimable",
@@ -206,7 +214,9 @@ class ConnectionEstimator:
                     "required_rank": d_x,
                     "condition_number": cond,
                     "v22_condition_number": cond_v22,
-                    "condition_threshold": self.max_condition_number,
+                    "v22_determinant": det_v22,
+                    "v22_determinant_threshold": self.min_abs_v22_determinant,
+                    "condition_threshold": self.max_v22_condition_number,
                     "singular_values": s_list,
                     "relative_rank_tolerance": self.relative_rank_tolerance,
                     "absolute_singular_value_floor": self.absolute_singular_value_floor,
@@ -219,8 +229,9 @@ class ConnectionEstimator:
                 "required_rank": d_x,
                 "condition_number": cond,
                 "v22_condition_number": cond_v22,
+                "v22_determinant": det_v22,
+                "v22_determinant_threshold": self.min_abs_v22_determinant,
                 "singular_values": s_list,
-
                 "relative_rank_tolerance": self.relative_rank_tolerance,
                 "absolute_singular_value_floor": self.absolute_singular_value_floor,
             }
@@ -230,6 +241,7 @@ class ConnectionEstimator:
             res_dict["relative_rank_tolerance"] = self.relative_rank_tolerance
             res_dict["absolute_singular_value_floor"] = self.absolute_singular_value_floor
             return res_dict
+
 
 
     def estimate_linear_transport(
@@ -329,20 +341,24 @@ class ConnectionEstimator:
         V22 = V[d_x:, d_x:]
 
         cond_v22 = float(np.linalg.cond(V22))
-        if strict_identifiability and (cond_v22 > self.max_condition_number or abs(float(np.linalg.det(V22))) < 1e-8):
+        det_v22 = float(np.linalg.det(V22))
+
+        if strict_identifiability and (cond_v22 > self.max_v22_condition_number or abs(det_v22) < self.min_abs_v22_determinant):
             raise EstimatorIdentifiabilityError(
-                f"Edge '{generator_name}' TLS V22 submatrix is ill-conditioned (cond(V22)={cond_v22:.2e}).",
+                f"Edge '{generator_name}' TLS V22 submatrix is ill-conditioned (cond(V22)={cond_v22:.2e}, det={det_v22:.2e}).",
                 generator_name=generator_name,
                 reason="ill_conditioned_v22",
                 design_rank=rank,
                 required_rank=d_x,
                 condition_number=cond,
                 v22_condition_number=cond_v22,
-                condition_threshold=self.max_condition_number,
+                v22_determinant=det_v22,
+                v22_determinant_threshold=self.min_abs_v22_determinant,
+                condition_threshold=self.max_v22_condition_number,
                 singular_values=s_list,
             )
 
-        if cond_v22 > 1e10 or abs(float(np.linalg.det(V22))) < 1e-10:
+        if cond_v22 > 1e10 or abs(det_v22) < 1e-10:
             T_mat_T = -np.dot(V12, np.linalg.pinv(V22))
         else:
             T_mat_T = -np.linalg.solve(V22.T, V12.T).T
@@ -362,6 +378,7 @@ class ConnectionEstimator:
                 required_rank=d_x,
                 condition_number=cond,
                 v22_condition_number=cond_v22,
+                v22_determinant=det_v22,
                 matrix_norm=matrix_norm,
                 bias_norm=bias_norm,
                 singular_values=s_list,
@@ -377,10 +394,9 @@ class ConnectionEstimator:
                 "design_rank": rank,
                 "condition_number": cond,
                 "v22_condition_number": cond_v22,
+                "v22_determinant": det_v22,
                 "matrix_norm": matrix_norm,
                 "bias_norm": bias_norm,
                 "singular_values": s_list,
             },
         )
-
-

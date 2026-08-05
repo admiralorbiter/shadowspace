@@ -166,8 +166,9 @@ def main() -> None:
     # Machine-readable manifest export
     manifest_raw = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-        "phase": "E2-A1.1a",
+        "phase": "E2-A1.1b",
         "git_commit_sha": get_git_commit_sha(),
+
         "environment": {
             "python_version": sys.version.split()[0],
             "numpy_version": np.__version__,
