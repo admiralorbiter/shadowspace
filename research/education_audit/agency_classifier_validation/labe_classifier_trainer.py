@@ -1,4 +1,4 @@
-"""Phase ACV-1: LABE Language Agency Classifier Training, Hyperparameter Tuning, & Locked-Test Evaluation."""
+"""Phase ACV-1: LABE-Trained Sparse N-Gram Agency Classifier Baseline & Locked-Test Evaluation."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ def train_and_evaluate_labe_classifier(
     out_dir: str = "results/education_audit/agency_classifier_validation",
     seed: int = 101,
 ) -> Dict[str, Any]:
-    """Phase ACV-1: Trains agency classifier on Train/Validation, locks pipeline, and evaluates on locked Test split."""
+    """Phase ACV-1: Trains sparse n-gram agency classifier baseline on Train/Validation, locks pipeline, and evaluates on locked Test split."""
     os.makedirs(out_dir, exist_ok=True)
 
     # 1. Ingest Commit-Pinned Real LABE Dataset
@@ -38,12 +38,11 @@ def train_and_evaluate_labe_classifier(
     X_test_raw = [s["text"] for s in test_sentences]
     y_test = np.array([s["label_int"] for s in test_sentences])
 
-    # Record class balance
     train_balance = float(np.mean(y_train))
     val_balance = float(np.mean(y_val))
     test_balance = float(np.mean(y_test))
 
-    # 2. Extract N-gram & Word Character Features (strictly fitted on Train split ONLY)
+    # 2. Extract Sparse Word N-gram Features (strictly fitted on Train split ONLY)
     vectorizer = TfidfVectorizer(
         ngram_range=(1, 3),
         max_features=10000,
@@ -54,14 +53,14 @@ def train_and_evaluate_labe_classifier(
     X_val_vec = vectorizer.transform(X_val_raw)
     X_test_vec = vectorizer.transform(X_test_raw)
 
-    # 3. Train Calibrated Logistic + Gradient Boosting Ensemble Model
+    # 3. Train Sparse N-Gram Logistic + Gradient Boosting Ensemble Baseline
     clf_lr = LogisticRegression(C=2.0, max_iter=1000, random_state=seed, class_weight="balanced")
     clf_lr.fit(X_train_vec, y_train)
 
     clf_gb = GradientBoostingClassifier(n_estimators=150, max_depth=4, learning_rate=0.08, random_state=seed)
     clf_gb.fit(X_train_vec, y_train)
 
-    # Validation probabilistic ensemble predictions
+    # Validation ensemble probability predictions
     val_probs_lr = clf_lr.predict_proba(X_val_vec)[:, 1]
     val_probs_gb = clf_gb.predict_proba(X_val_vec)[:, 1]
     val_probs = 0.5 * val_probs_lr + 0.5 * val_probs_gb
@@ -98,7 +97,8 @@ def train_and_evaluate_labe_classifier(
     }
 
     report = {
-        "status": "ACV1_CLASSIFIER_TRAINED_AND_EVALUATED",
+        "status": "ACV1_CLASSIFIER_BASELINE_EVALUATED",
+        "model_architecture": "Sparse N-Gram Logistic + Gradient Boosting Ensemble Baseline",
         "commit_sha": labe_data["commit_sha"],
         "random_seed": seed,
         "splits_sample_count": {
@@ -125,7 +125,8 @@ def train_and_evaluate_labe_classifier(
 
     report_path = os.path.join(out_dir, "acv1_classifier_report.md")
     report_lines = [
-        "# Phase ACV-1: LABE Language Agency Classifier Reproduction & Evaluation Report\n",
+        "# Phase ACV-1: LABE-Trained Sparse N-Gram Agency Classifier Baseline Report\n",
+        f"- **Model Baseline**: `Sparse N-Gram TF-IDF (1-3) + Ensemble (LR + GB)`",
         f"- **LABE Commit SHA**: `{labe_data['commit_sha']}`",
         f"- **Random Seed**: `{seed}`",
         f"- **Training Split**: N={len(train_sentences)} (Positive Rate = {train_balance*100:.1f}%)",
@@ -137,9 +138,9 @@ def train_and_evaluate_labe_classifier(
         f"- **F1 Score**: {test_f1:.3f}",
         f"- **AUROC**: {test_auroc:.3f}",
         f"- **Log Loss**: {test_logloss:.3f}",
-        f"- **Brier Calibration Score**: {test_brier:.3f}\n",
+        f"- **Brier Score**: {test_brier:.3f}\n",
         "## Key Finding\n",
-        "The contextual LABE classifier achieves a **locked test F1 of {:.3f} (AUROC = {:.3f})**, substantially outperforming the exact agency lexicon (F1 = 0.436) by capturing contextual and semantic agency phrasing.".format(test_f1, test_auroc),
+        "The sparse n-gram agency classifier baseline achieves a **locked test F1 of {:.3f} (AUROC = {:.3f})**, substantially outperforming the exact agency lexicon (F1 = 0.436) by capturing broader lexical and phrasal agency patterns.".format(test_f1, test_auroc),
     ]
     with open(report_path, "w", encoding="utf-8") as f:
         f.write("\n".join(report_lines))
