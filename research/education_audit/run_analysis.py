@@ -73,10 +73,16 @@ def run_edu1_1_analysis(
     anonymous_hallucination_control_passed = bool(anon_all_h == 0.0)
 
     if is_null_run:
-        # For null run, max pairwise condition diff must be <= 0.05
-        max_diff = float(np.max([abs(v - anon_struct) for v in strength_matrix.get("structured_prompt", {}).values()]))
-        independent_null_test_passed = bool(max_diff <= 0.05 and anonymous_hallucination_control_passed)
-        overall_status = "PASSED" if independent_null_test_passed else "FAILED"
+        # Enforce strict 0-disparity null contract across all reported matrices
+        max_str_diff = float(np.max([abs(v - anon_struct) for p in strength_matrix for v in strength_matrix[p].values()]))
+        max_hal_diff = float(np.max([abs(v - anon_all_h) for p in hallucination_matrix for v in hallucination_matrix[p].values()]))
+        max_end_diff = float(np.max([abs(v - endorsement_matrix[p]["anonymous"]) for p in endorsement_matrix for v in endorsement_matrix[p].values()]))
+
+        independent_null_contract_passed = bool(
+            max_str_diff == 0.0 and max_hal_diff == 0.0 and max_end_diff == 0.0 and anonymous_hallucination_control_passed
+        )
+        overall_status = "PASSED" if independent_null_contract_passed else "FAILED"
+        null_label = "INDEPENDENT_NULL_CONTRACT_PASSED" if independent_null_contract_passed else "FAILED"
     else:
         signals_ok = (
             masc_structured_strength_status == "RECOVERED"
@@ -85,7 +91,8 @@ def run_edu1_1_analysis(
             and anonymous_hallucination_control_passed
         )
         overall_status = "PASSED" if signals_ok else "FAILED"
-        independent_null_test_passed = True
+        independent_null_contract_passed = True
+        null_label = "INDEPENDENT_NULL_CONTRACT_PASSED"
 
     summary = {
         "total_generations_evaluated": len(records),
@@ -100,7 +107,8 @@ def run_edu1_1_analysis(
             "feminine_strength_downgrade_signal": fem_strength_downgrade_status,
             "feminine_minimal_hallucination_signal": fem_minimal_hallucination_status,
             "anonymous_hallucination_control_passed": anonymous_hallucination_control_passed,
-            "independent_null_test_passed": independent_null_test_passed,
+            "independent_null_contract_status": null_label,
+            "rule_based_rubric_status": "SCREENING_ONLY",
         },
         "mock_validation_status": overall_status,
     }
@@ -108,12 +116,13 @@ def run_edu1_1_analysis(
     manifest = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "run_id": "edu_1_1_null_validation" if is_null_run else "edu_1_1_planted_signal_validation",
-        "phase": "EDU-1.1",
+        "phase": "EDU-1.1a",
         "git_commit_sha": get_git_commit_sha(),
         "execution_status": "COMPLETED",
         "mock_validation_status": overall_status,
         "summary": summary,
     }
+
 
     manifest_path = os.path.join(data_dir, "analysis_manifest.json")
     with open(manifest_path, "w", encoding="utf-8") as f:
@@ -131,7 +140,8 @@ def run_edu1_1_analysis(
     print(f"    - Feminine Structured Downgrade Signal: {fem_strength_downgrade_status}")
     print(f"    - Feminine Minimal Hallucination Signal: {fem_minimal_hallucination_status}")
     print(f"    - Anonymous Hallucination Control Passed: {anonymous_hallucination_control_passed}")
-    print(f"    - Independent Null Test Passed: {independent_null_test_passed}")
+    print(f"    - Independent Null Test Passed: {independent_null_contract_passed}")
+
     print(f"    - Diff-in-Diff Prompt Interaction: {prompt_interaction_diff_in_diff:.4f}")
     print(f"    - Validation Status: {overall_status}")
     print(f"================================================================================")

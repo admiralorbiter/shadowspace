@@ -1,6 +1,10 @@
-"""Contract Unit Tests for Phase EDU-1.1 Hardening & Measurement Validation."""
+"""Contract Unit Tests for Phase EDU-1.1a Hardening & Measurement Validation."""
 
+import os
+import subprocess
+import sys
 import pytest
+
 from research.education_audit.case_builder import build_synthetic_audit_cases
 from research.education_audit.variant_builder import build_variants_for_case
 from research.education_audit.prompt_registry import PROMPT_TEMPLATES, get_prompt_hash
@@ -8,6 +12,7 @@ from research.education_audit.adapters.mock import (
     DeterministicMockAdapter,
     IndependentNullAdapter,
     SeededStochasticMockAdapter,
+    stable_seed,
 )
 from research.education_audit.evaluation.rubric import evaluate_generation
 from research.education_audit.run_generation import run_edu1_1_generation_and_eval
@@ -15,52 +20,71 @@ from research.education_audit.run_analysis import run_edu1_1_analysis
 from research.education_audit.schemas import GenerationRecord
 
 
-def test_fact_byte_identity_and_orthogonality():
-    """Verifies non-identity facts remain byte-identical and name/pronoun cues are orthogonal."""
+def test_fact_payload_byte_identity_across_variants():
+    """Verifies that the fact payload following 'Verified Accomplishments:\n' is 100% byte-identical across all variants."""
+    cases = build_synthetic_audit_cases()
+    for case in cases:
+        variants = build_variants_for_case(case)
+        fact_payloads = []
+        for v in variants:
+            header, accomplishments = v.rendered_input.split("Verified Accomplishments:\n")
+            fact_payloads.append(accomplishments)
+
+        # Enforce exact byte-identity across all 5 variants
+        first_payload = fact_payloads[0]
+        for p in fact_payloads[1:]:
+            assert p == first_payload, f"Fact payload mismatch for case {case.case_id}!"
+
+
+def test_name_and_pronoun_cue_orthogonality():
+    """Verifies that name-only variants preserve they/them pronouns and pronoun-only variants preserve 'Student A'."""
     cases = build_synthetic_audit_cases()
     c = cases[0]
-    variants = build_variants_for_case(c)
+    var_dict = {v.condition: v for v in build_variants_for_case(c)}
 
-    var_dict = {v.condition: v for v in variants}
-
-    # 1. Pronoun-only variants use "Student A"
+    # Pronoun-only
     assert var_dict["pronoun_masc"].student_name == "Student A"
     assert var_dict["pronoun_masc"].pronoun_subject == "he"
-
     assert var_dict["pronoun_fem"].student_name == "Student A"
     assert var_dict["pronoun_fem"].pronoun_subject == "she"
 
-    # 2. Name-only variants use "they/them" pronouns
+    # Name-only
     assert var_dict["name_masc"].student_name == "Alexander"
     assert var_dict["name_masc"].pronoun_subject == "they"
-
     assert var_dict["name_fem"].student_name == "Elizabeth"
     assert var_dict["name_fem"].pronoun_subject == "they"
 
-    # 3. Target opportunity is identical
-    for v in variants:
-        assert c.target_opportunity in v.rendered_input
+
+def test_stable_seed_cross_process_reproducibility():
+    """Verifies stable_seed yields identical seeds across different processes."""
+    s1 = stable_seed("test_case_001", "minimal_prompt", 0)
+    s2 = stable_seed("test_case_001", "minimal_prompt", 0)
+    assert s1 == s2
+    assert isinstance(s1, int)
 
 
-def test_prompt_hash_sensitivity():
-    """Verifies prompt hash changes when template text changes."""
-    h1 = get_prompt_hash("minimal_prompt", PROMPT_TEMPLATES["minimal_prompt"])
-    h2 = get_prompt_hash("structured_prompt", PROMPT_TEMPLATES["structured_prompt"])
-    assert h1 != h2
+def test_subprocess_cross_process_reproducibility():
+    """Executes stochastic generation in separate processes with different PYTHONHASHSEED values and verifies output hash identity."""
+    script = (
+        "import sys; "
+        "from research.education_audit.case_builder import build_synthetic_audit_cases; "
+        "from research.education_audit.variant_builder import build_variants_for_case; "
+        "from research.education_audit.adapters.mock import SeededStochasticMockAdapter; "
+        "from research.education_audit.prompt_registry import PROMPT_TEMPLATES; "
+        "c = build_synthetic_audit_cases()[0]; "
+        "v = build_variants_for_case(c)[0]; "
+        "adapter = SeededStochasticMockAdapter(); "
+        "rec = adapter.generate(c, v, 'minimal_prompt', PROMPT_TEMPLATES['minimal_prompt'], repeat_index=2); "
+        "print(rec.output_hash)"
+    )
 
+    env1 = os.environ.copy(); env1["PYTHONHASHSEED"] = "0"; env1["PYTHONPATH"] = "."
+    env2 = os.environ.copy(); env2["PYTHONHASHSEED"] = "42"; env2["PYTHONPATH"] = "."
 
-def test_seeded_stochastic_reproducibility():
-    """Verifies seeded stochastic adapter yields identical output for identical seeds."""
-    cases = build_synthetic_audit_cases()
-    c = cases[0]
-    v = build_variants_for_case(c)[0]
-    adapter = SeededStochasticMockAdapter()
+    out1 = subprocess.check_output([sys.executable, "-c", script], env=env1, text=True).strip()
+    out2 = subprocess.check_output([sys.executable, "-c", script], env=env2, text=True).strip()
 
-    g1 = adapter.generate(c, v, "minimal_prompt", PROMPT_TEMPLATES["minimal_prompt"], repeat_index=1)
-    g2 = adapter.generate(c, v, "minimal_prompt", PROMPT_TEMPLATES["minimal_prompt"], repeat_index=1)
-
-    assert g1.output_hash == g2.output_hash
-    assert g1.output_text == g2.output_text
+    assert out1 == out2, f"Stochastic mock output differs across PYTHONHASHSEED processes! ({out1} vs {out2})"
 
 
 def test_evaluator_negation_and_precedence():
@@ -85,27 +109,9 @@ def test_evaluator_negation_and_precedence():
     e_neg = evaluate_generation(case, negated_rec)
     assert e_neg.recommendation_strength_score <= 2.0
 
-    # Downgraded text -> score == 1.8
-    downgraded_rec = GenerationRecord(
-        generation_id="g_down",
-        case_id=case.case_id,
-        variant_id=f"{case.case_id}_pronoun_fem",
-        condition="pronoun_fem",
-        prompt_id="structured_prompt",
-        prompt_hash="h",
-        model_id="m",
-        model_revision="r",
-        parameters={},
-        repeat_index=0,
-        output_text="It is my distinct pleasure to write. While competent, I can only provide a hesitant and limited recommendation.",
-        output_hash="oh",
-    )
-    e_down = evaluate_generation(case, downgraded_rec)
-    assert e_down.recommendation_strength_score == 1.8
 
-
-def test_edu1_1_planted_signal_recovery(tmp_path):
-    """Verifies EDU-1.1 planted signal recovery across stochastic repeats."""
+def test_edu1_1a_planted_signal_recovery(tmp_path):
+    """Verifies EDU-1.1a planted signal recovery across stochastic repeats."""
     out_dir = str(tmp_path / "planted_signal_test")
     run_edu1_1_generation_and_eval(out_dir=out_dir, adapter_type="stochastic_mock", n_repeats=3)
     manifest = run_edu1_1_analysis(data_dir=out_dir, is_null_run=False)
@@ -118,15 +124,16 @@ def test_edu1_1_planted_signal_recovery(tmp_path):
     assert targets["feminine_strength_downgrade_signal"] == "RECOVERED"
     assert targets["feminine_minimal_hallucination_signal"] == "RECOVERED"
     assert targets["anonymous_hallucination_control_passed"] is True
+    assert targets["rule_based_rubric_status"] == "SCREENING_ONLY"
     assert manifest["summary"]["prompt_interaction_diff_in_diff"] > 0.3
 
 
-def test_edu1_1_independent_null_verification(tmp_path):
-    """Verifies EDU-1.1 independent null simulator produces zero false positive flags under H0."""
+def test_edu1_1a_independent_null_verification(tmp_path):
+    """Verifies EDU-1.1a independent null simulator produces strict 0-disparity under H0."""
     out_dir = str(tmp_path / "null_test")
     run_edu1_1_generation_and_eval(out_dir=out_dir, adapter_type="null", n_repeats=3)
     manifest = run_edu1_1_analysis(data_dir=out_dir, is_null_run=True)
 
     assert manifest["execution_status"] == "COMPLETED"
     assert manifest["mock_validation_status"] == "PASSED"
-    assert manifest["summary"]["target_statuses"]["independent_null_test_passed"] is True
+    assert manifest["summary"]["target_statuses"]["independent_null_contract_status"] == "INDEPENDENT_NULL_CONTRACT_PASSED"

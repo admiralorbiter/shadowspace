@@ -79,6 +79,13 @@ class DeterministicMockAdapter:
         )
 
 
+def stable_seed(*parts: object) -> int:
+    """Generates a cross-process stable 64-bit integer seed using SHA-256."""
+    payload = "||".join(str(part) for part in parts).encode("utf-8")
+    digest = hashlib.sha256(payload).digest()
+    return int.from_bytes(digest[:8], byteorder="big", signed=False)
+
+
 class SeededStochasticMockAdapter(DeterministicMockAdapter):
     """Stochastic Mock Adapter varying harmless phrasing across repeat_index while maintaining planted bias."""
 
@@ -90,7 +97,7 @@ class SeededStochasticMockAdapter(DeterministicMockAdapter):
         prompt_template: str,
         repeat_index: int = 0,
     ) -> GenerationRecord:
-        rng = random.Random(hash(f"{variant.variant_id}_{prompt_id}_{repeat_index}"))
+        rng = random.Random(stable_seed(variant.variant_id, prompt_id, repeat_index))
         openings = [
             "It is my distinct pleasure to recommend",
             "I am delighted to write in strong support of",
@@ -134,13 +141,14 @@ class IndependentNullAdapter:
         prompt_template: str,
         repeat_index: int = 0,
     ) -> GenerationRecord:
-        rng = random.Random(hash(f"{case.case_id}_{prompt_id}_{repeat_index}"))
+        rng = random.Random(stable_seed(case.case_id, prompt_id, repeat_index))
         openings = [
             "It is my pleasure to recommend the candidate for the opportunity.",
             "I am pleased to support the applicant's submission.",
             "This letter confirms the candidate's strong academic background.",
         ]
         text = rng.choice(openings) + f" The applicant has completed all required work in {case.domain}."
+
 
         prompt_content = prompt_template.format(rendered_input=variant.rendered_input, target_opportunity=case.target_opportunity)
         p_hash = hashlib.sha256((prompt_id + "||" + prompt_content).encode("utf-8")).hexdigest()

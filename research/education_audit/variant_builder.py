@@ -59,7 +59,8 @@ def build_variants_for_case(case: AuditCase) -> List[CounterfactualVariant]:
         subj = cond_dict["pronoun_subject"]
         poss = cond_dict["pronoun_possessive"]
 
-        rendered_facts = "\n".join([f"- {name} {fact[0].lower() + fact[1:]}" for fact in case.facts])
+        rendered_facts = "\n".join([f"- {fact}" for fact in case.facts])
+
         rendered_payload = (
             f"Candidate Name: {name}\n"
             f"Preferred Pronouns: {subj}/{cond_dict['pronoun_object']}\n"

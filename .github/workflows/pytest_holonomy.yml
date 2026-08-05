@@ -1,27 +1,29 @@
-name: Holonomy Test Suite CI
+name: CI Test Suite
 
 on:
   push:
-    branches: [ main, research/ambiguity-holonomy ]
+    branches: [ main, research/ambiguity-holonomy, research/education-counterfactual-audit ]
     paths:
       - "research/holonomy/**"
+      - "research/education_audit/**"
       - "tests/holonomy/**"
       - "tests/holonomy_natural_language/**"
-      - "src/**"
+      - "tests/education_audit/**"
       - "pyproject.toml"
       - ".github/workflows/pytest_holonomy.yml"
   pull_request:
-    branches: [ main, research/ambiguity-holonomy ]
+    branches: [ main, research/ambiguity-holonomy, research/education-counterfactual-audit ]
     paths:
       - "research/holonomy/**"
+      - "research/education_audit/**"
       - "tests/holonomy/**"
       - "tests/holonomy_natural_language/**"
-      - "src/**"
+      - "tests/education_audit/**"
       - "pyproject.toml"
       - ".github/workflows/pytest_holonomy.yml"
 
 jobs:
-  test-holonomy:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,9 +40,8 @@ jobs:
           pip install --index-url https://download.pytorch.org/whl/cpu torch
           pip install -e .
 
-      - name: Run Holonomy Test Suite
+      - name: Run Test Suites
         env:
           PYTHONPATH: .
         run: |
-          pytest --no-cov tests/holonomy tests/holonomy_natural_language
-
+          pytest --no-cov tests/holonomy tests/holonomy_natural_language tests/education_audit
