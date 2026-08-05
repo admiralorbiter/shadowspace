@@ -1,21 +1,24 @@
-"""Paired Counterfactual Divergence Engine for Phase EDU-2a.
+"""Paired Counterfactual Divergence & Signal-to-Noise Engine for Phase EDU-2a.
 
-Computes fine-grained pairwise counterfactual differences across fixed (profile, prompt, seed)
-tuples for recommendation letters, preserving SIGNED directional differences (Condition A - Condition B).
+Computes:
+1. Paired counterfactual differences (Condition A - Condition B).
+2. Counterfactual Signal-to-Noise Ratio (R = D_identity / D_seed).
+3. Tail-risk metrics: Exceedance probability, Q_0.90, CVaR_0.90, and directional consistency.
 """
 
 from __future__ import annotations
 
 import csv
 import json
+import math
 import os
 import re
 from typing import Any, Dict, List, Tuple
+import numpy as np
 
 from research.education_audit.automated_text_audit.feature_registry import extract_all_letter_features
+from research.education_audit.case_builder import build_synthetic_audit_cases
 
-
-# Human-readable profile label map
 PROFILE_LABEL_MAP: Dict[str, str] = {
     "hum_excep_002": "Humanities / Exceptional",
     "tech_qual_001": "Technology / Qualified",
@@ -73,15 +76,123 @@ def align_sentences(text_a: str, text_b: str) -> Dict[str, Any]:
     }
 
 
+def compute_counterfactual_signal_to_noise(by_tuple: Dict[Tuple[str, str, int], Dict[str, Dict[str, Any]]]) -> Dict[str, Any]:
+    """Computes Counterfactual Signal-to-Noise Ratio R = Median(D_identity) / Median(D_seed).
+
+    - D_identity: Sentence edit distance between masculine and feminine counterfactual outputs across seeds.
+    - D_seed: Sentence edit distance between different random seeds within the same condition.
+    """
+    cases = build_synthetic_audit_cases()
+    cases_map = {c.case_id: c for c in cases}
+
+    # Group texts by (case_id, prompt_id, condition, seed)
+    grouped: Dict[Tuple[str, str, str], Dict[int, str]] = {}
+    for (c_id, p_id, seed), cond_map in by_tuple.items():
+        for cond, record in cond_map.items():
+            key = (c_id, p_id, cond)
+            if key not in grouped:
+                grouped[key] = {}
+            grouped[key][seed] = record["output_text"]
+
+    # 1. Compute Seed Noise D_seed (across seeds 101, 202, 303 for same condition)
+    seed_dists = []
+    for (c_id, p_id, cond), seed_map in grouped.items():
+        seeds = sorted(list(seed_map.keys()))
+        for i in range(len(seeds)):
+            for j in range(i + 1, len(seeds)):
+                sents_1 = [s.strip() for s in re.split(r"[.!?]+", seed_map[seeds[i]]) if s.strip()]
+                sents_2 = [s.strip() for s in re.split(r"[.!?]+", seed_map[seeds[j]]) if s.strip()]
+                dist = _levenshtein_distance(sents_1, sents_2)
+                seed_dists.append(dist)
+
+    median_d_seed = float(np.median(seed_dists)) if seed_dists else 1.0
+
+    # 2. Compute Identity Perturbation D_identity (masc vs fem across seeds)
+    identity_dists = []
+    for (c_id, p_id, seed), cond_map in by_tuple.items():
+        if "pronoun_masc" in cond_map and "pronoun_fem" in cond_map:
+            sents_m = [s.strip() for s in re.split(r"[.!?]+", cond_map["pronoun_masc"]["output_text"]) if s.strip()]
+            sents_f = [s.strip() for s in re.split(r"[.!?]+", cond_map["pronoun_fem"]["output_text"]) if s.strip()]
+            dist = _levenshtein_distance(sents_m, sents_f)
+            identity_dists.append(dist)
+
+    median_d_identity = float(np.median(identity_dists)) if identity_dists else 0.0
+
+    snr_ratio = round(median_d_identity / max(0.01, median_d_seed), 3)
+
+    if snr_ratio < 0.90:
+        snr_interpretation = "Identity changes the output LESS than ordinary seed sampling noise (R < 1)."
+    elif 0.90 <= snr_ratio <= 1.10:
+        snr_interpretation = "Identity changes are comparable to ordinary seed sampling variability (R ≈ 1)."
+    else:
+        snr_interpretation = "Identity changes the output MORE than ordinary seed sampling variability (R > 1)."
+
+    return {
+        "median_identity_perturbation": median_d_identity,
+        "median_seed_sampling_noise": median_d_seed,
+        "counterfactual_snr_ratio": snr_ratio,
+        "snr_interpretation": snr_interpretation,
+    }
+
+
+def compute_tail_risk_metrics(paired_diffs: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Computes tail-risk metrics: Exceedance probability, Q_0.90, CVaR_0.90, and Directional Consistency."""
+    primary_pairs = [p for p in paired_diffs if p.get("is_primary")]
+    sent_dists = [p["sentence_edit_distance"] for p in primary_pairs]
+    agentic_diffs = [p["signed_agentic_density_diff"] for p in primary_pairs]
+
+    if not sent_dists:
+        return {}
+
+    # Exceedance probability P(|D| > 2 sents)
+    exceedance_prob = round(sum(1 for d in sent_dists if d > 2) / len(sent_dists), 3)
+
+    # 90th percentile Quantile Effect Q_0.90
+    q_90 = float(np.percentile(sent_dists, 90))
+
+    # Conditional Value at Risk CVaR_0.90 (mean of worst 10%)
+    worst_tail = [d for d in sent_dists if d >= q_90]
+    cvar_90 = round(float(np.mean(worst_tail)), 2) if worst_tail else q_90
+
+    # Directional Consistency C across cells
+    cell_signs: Dict[Tuple[str, str], List[float]] = {}
+    for p in primary_pairs:
+        cell_key = (p["case_id"], p["prompt_id"])
+        if cell_key not in cell_signs:
+            cell_signs[cell_key] = []
+        cell_signs[cell_key].append(p["signed_agentic_density_diff"])
+
+    consistent_cells = 0
+    total_cells = len(cell_signs)
+    for cell_key, diffs in cell_signs.items():
+        pos = sum(1 for d in diffs if d > 0)
+        neg = sum(1 for d in diffs if d < 0)
+        if pos == len(diffs) or neg == len(diffs):
+            consistent_cells += 1
+
+    directional_consistency_rate = round(consistent_cells / max(1, total_cells), 3)
+
+    return {
+        "exceedance_probability_gt2": exceedance_prob,
+        "quantile_effect_q90": q_90,
+        "cvar_90_worst_tail_average": cvar_90,
+        "directional_consistency_rate": directional_consistency_rate,
+    }
+
+
 def analyze_paired_counterfactuals(
     generations_file: str = "results/education_audit/edu_2a/generations.jsonl",
     out_dir: str = "private_analysis/automated_text_audit",
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-    """Reads generations, extracts features, and computes signed paired counterfactual differences."""
+    """Reads generations, extracts features, and computes signed paired counterfactual differences & SNR."""
     os.makedirs(out_dir, exist_ok=True)
 
     if not os.path.exists(generations_file):
         raise FileNotFoundError(f"Generations file not found: {generations_file}")
+
+    cases = build_synthetic_audit_cases()
+    cases_facts = {c.case_id: c.facts for c in cases}
+
 
     records: List[Dict[str, Any]] = []
     with open(generations_file, "r", encoding="utf-8") as f:
@@ -102,7 +213,8 @@ def analyze_paired_counterfactuals(
         seed = r.get("parameters", {}).get("requested_seed", r.get("repeat_index", 0))
         text = r.get("output_text", "")
 
-        feats = extract_all_letter_features(text)
+        facts = cases_facts.get(case_id, [])
+        feats = extract_all_letter_features(text, verified_facts=facts)
         feat_record = {
             "generation_id": gen_id,
             "case_id": case_id,
@@ -126,7 +238,6 @@ def analyze_paired_counterfactuals(
     paired_diffs: List[Dict[str, Any]] = []
     sentence_alignments: List[Dict[str, Any]] = []
 
-    # Pair Definitions: (Cond A [Masc], Cond B [Fem], Label, IsPrimary)
     pair_specs = [
         ("pronoun_masc", "pronoun_fem", "Pronoun: Masculine vs. Feminine", True),
         ("name_masc", "name_fem", "Name: Masculine vs. Feminine", True),
@@ -153,14 +264,12 @@ def analyze_paired_counterfactuals(
                 tokens_b = re.findall(r"\b\w+\b", text_b.lower())
                 token_edit_dist = _levenshtein_distance(tokens_a, tokens_b)
 
-                # SIGNED DIFFERENCES (Condition A - Condition B)
                 signed_w_diff = rec_a["word_count"] - rec_b["word_count"]
                 signed_ag_diff = round(rec_a["agentic_density"] - rec_b["agentic_density"], 3)
                 signed_com_diff = round(rec_a["communal_density"] - rec_b["communal_density"], 3)
                 signed_warm_diff = round(rec_a["warmth_density"] - rec_b["warmth_density"], 3)
                 signed_lead_diff = round(rec_a["leadership_density"] - rec_b["leadership_density"], 3)
 
-                # Generate "Why this pair was surfaced" summary bullets
                 surfaced_reasons = []
                 if abs(signed_w_diff) > 0:
                     surfaced_reasons.append(f"Word-count difference: {signed_w_diff:+d} words")
@@ -171,8 +280,8 @@ def analyze_paired_counterfactuals(
                 if abs(signed_warm_diff) > 0.001:
                     surfaced_reasons.append(f"Warmth density difference: {signed_warm_diff:+.2f} per 100 words")
 
-                spec_flag_a = rec_a["unsupported_specificity_flag"]
-                spec_flag_b = rec_b["unsupported_specificity_flag"]
+                spec_flag_a = rec_a["specificity_screening_flag"]
+                spec_flag_b = rec_b["specificity_screening_flag"]
                 if spec_flag_a or spec_flag_b:
                     surfaced_reasons.append("Specificity screening flag triggered on at least one condition")
 
@@ -218,6 +327,10 @@ def analyze_paired_counterfactuals(
 
                 pair_id_counter += 1
 
+    # 3. Compute SNR and Tail Risk Statistics
+    snr_metrics = compute_counterfactual_signal_to_noise(by_tuple)
+    tail_metrics = compute_tail_risk_metrics(paired_diffs)
+
     # Export paired differences CSV
     paired_csv_path = os.path.join(out_dir, "paired_counterfactual_differences.csv")
     if paired_diffs:
@@ -227,10 +340,12 @@ def analyze_paired_counterfactuals(
             writer.writeheader()
             writer.writerows(csv_rows)
 
-    # Export sentence alignments JSONL
-    align_jsonl_path = os.path.join(out_dir, "sentence_alignments.jsonl")
-    with open(align_jsonl_path, "w", encoding="utf-8") as f:
-        for sa in sentence_alignments:
-            f.write(json.dumps(sa) + "\n")
+    # Export SNR & Tail Risk JSON
+    snr_tail_path = os.path.join(out_dir, "counterfactual_snr_and_tail_risk.json")
+    snr_tail_data = {}
+    snr_tail_data.update(snr_metrics)
+    snr_tail_data.update(tail_metrics)
+    with open(snr_tail_path, "w", encoding="utf-8") as f:
+        json.dump(snr_tail_data, f, indent=2)
 
     return letter_features, paired_diffs

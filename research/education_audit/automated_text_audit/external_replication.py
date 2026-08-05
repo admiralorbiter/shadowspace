@@ -97,8 +97,9 @@ def run_external_calibration(
     # Compute baseline benchmark deltas (masculine vs feminine agentic/communal density)
     masc_agentic = [r["agentic_density"] for r in results if r["gender_cue"] == "masculine"]
     fem_agentic = [r["agentic_density"] for r in results if r["gender_cue"] == "feminine"]
-    masc_communal = [r["communal_density"] for r in results if r["gender_cue"] == "feminine"]
+    masc_communal = [r["communal_density"] for r in results if r["gender_cue"] == "masculine"]
     fem_communal = [r["communal_density"] for r in results if r["gender_cue"] == "feminine"]
+
 
     manifest = {
         "status": "CALIBRATION_COMPLETED",

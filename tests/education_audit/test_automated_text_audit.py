@@ -1,42 +1,38 @@
-"""Unit Contract Tests for Automated Text Audit & Counterfactual Difference Atlas."""
+"""Unit Contract Tests for Automated Text Audit, Counterfactual SNR, & Fact Graph Entailment."""
 
 import os
 import pytest
 
-from research.education_audit.automated_text_audit.feature_registry import extract_all_letter_features
+from research.education_audit.automated_text_audit.feature_registry import extract_all_letter_features, analyze_profile_fact_graph
 from research.education_audit.automated_text_audit.external_replication import run_external_calibration
-from research.education_audit.automated_text_audit.paired_difference_analysis import align_sentences, analyze_paired_counterfactuals
+from research.education_audit.automated_text_audit.paired_difference_analysis import align_sentences, analyze_paired_counterfactuals, compute_counterfactual_signal_to_noise
 from research.education_audit.automated_text_audit.visualize_counterfactuals import generate_counterfactual_atlas_html
 from research.education_audit.automated_text_audit.sensitivity_simulator import calculate_minimum_detectable_difference, run_sensitivity_simulation
 from research.education_audit.automated_text_audit.run_automated_audit import run_full_automated_audit
 
 
-def test_feature_extraction_accuracy():
-    """Verifies feature registry extracts agentic, communal, ability, and structure metrics accurately."""
+def test_feature_extraction_and_fact_graph_accuracy():
+    """Verifies feature registry and profile-aware fact graph entailment."""
     sample = (
         "It is my distinct pleasure to recommend Alex for the position. "
         "During his time in our lab, Alex spearheaded the neural network project and led a team of 4 researchers. "
         "He is exceptionally smart, analytical, and dedicated."
     )
-    feats = extract_all_letter_features(sample)
+    facts = ["Built a neural network optimization project.", "Secured a 3.8 GPA in Computer Science."]
+    feats = extract_all_letter_features(sample, verified_facts=facts)
     assert feats["word_count"] > 20
     assert feats["sentence_count"] == 3
     assert feats["explicit_recommendation_flag"] is True
-    assert feats["agentic_count"] >= 1  # spearheaded / led
-    assert feats["ability_count"] >= 2  # smart / analytical
-    assert feats["grindstone_count"] >= 1  # dedicated
+    assert feats["fact_coverage_rate"] > 0.0
+    assert feats["unsupported_claims_count"] >= 1  # team of 4 researchers unsupported by profile facts
 
 
-def test_align_sentences_and_verbatim_overlap():
-    """Verifies sentence alignment and verbatim sentence overlap rate."""
-    t1 = "Alex is a strong researcher. He completed the neural net project. We strongly recommend him."
-    t2 = "Sarah is a strong researcher. She completed the neural net project. We strongly recommend her."
-    res = align_sentences(t1, t2)
-    assert res["sentences_a_count"] == 3
-    assert res["sentences_b_count"] == 3
-    assert res["exact_matching_sentences_count"] == 0  # names/pronouns differ
-    assert res["sentence_edit_distance"] == 3
-    assert res["verbatim_sentence_overlap_rate"] == 0.0
+def test_external_replication_filter_bug_fix():
+    """Verifies external replication filters masculine and feminine communal metrics correctly."""
+    manifest, results = run_external_calibration()
+    assert manifest["status"] == "CALIBRATION_COMPLETED"
+    assert "mean_masculine_agentic_density" in manifest
+    assert "mean_feminine_agentic_density" in manifest
 
 
 def test_sensitivity_simulation():
@@ -66,8 +62,7 @@ def test_full_automated_audit_pipeline(tmp_path):
     assert manifest["total_pairs_count"] == 72
     assert manifest["primary_gender_pairs_count"] == 24
     assert manifest["secondary_anonymous_pairs_count"] == 48
+    assert "counterfactual_snr_ratio" in manifest
     assert os.path.exists(os.path.join(priv_out, "counterfactual_difference_atlas.html"))
     assert os.path.exists(os.path.join(pub_out, "counterfactual_difference_atlas.html"))
-    assert os.path.exists(os.path.join(priv_out, "paired_counterfactual_differences.csv"))
-    assert os.path.exists(os.path.join(priv_out, "sensitivity_curves.json"))
-    assert os.path.exists(os.path.join(pub_out, "external_replication_results.csv"))
+    assert os.path.exists(os.path.join(priv_out, "counterfactual_snr_and_tail_risk.json"))

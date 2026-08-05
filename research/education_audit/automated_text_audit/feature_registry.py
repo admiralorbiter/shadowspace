@@ -1,8 +1,7 @@
 """Automated Text Audit Feature Extraction Registry for Recommendation Letters.
 
-Computes structural metrics, published lexical categories (agentic, communal, ability,
-standout, grindstone, leadership, competence, warmth, doubt raisers), fact coverage,
-and unsupported specificity flags.
+Computes structural metrics, published lexical categories, profile fact-graph entailment,
+and unsupported specificity claim classifications.
 """
 
 from __future__ import annotations
@@ -75,16 +74,13 @@ def extract_structural_features(text: str) -> Dict[str, Any]:
     paragraph_count = len(paragraphs)
     avg_words_per_sentence = word_count / max(1, sentence_count)
 
-    # 180 to 220 word target compliance
     length_compliance = 180 <= word_count <= 220
 
-    # Explicit recommendation sentence check
     rec_pattern = re.compile(
         r"\b(recommend|support|endorse)\b",
         re.IGNORECASE,
     )
     explicit_rec = bool(rec_pattern.search(clean_text))
-
 
     return {
         "word_count": word_count,
@@ -111,7 +107,6 @@ def extract_lexical_features(text: str) -> Dict[str, Any]:
         features[f"{cat_name}_count"] = count
         features[f"{cat_name}_density"] = density_per_100
 
-    # Agentic to Communal Ratio
     ag_count = features["agentic_count"]
     com_count = features["communal_count"]
     features["agentic_communal_ratio"] = round((ag_count + 0.1) / (com_count + 0.1), 3)
@@ -119,19 +114,53 @@ def extract_lexical_features(text: str) -> Dict[str, Any]:
     return features
 
 
-def extract_unsupported_specificity_flags(text: str, verified_facts: List[str] = None) -> Dict[str, Any]:
-    """Detects unsupported specificity markers (invented numbers, grants, institutional titles)."""
-    clean_text = text.strip()
+def analyze_profile_fact_graph(text: str, verified_facts: List[str] = None) -> Dict[str, Any]:
+    """Profile-aware factuality entailment checker.
 
-    dollar_amounts = re.findall(r"\$\d+(?:,\d{3})*(?:\.\d+)?|\b\d+\s*thousand\s*dollars\b|\b\d+\s*million\s*dollars\b", clean_text, re.IGNORECASE)
-    grant_mentions = re.findall(r"\b(?:grant|fellowship|award|rhodes|olympiad|scholarship|first-place|1st place)\b", clean_text, re.IGNORECASE)
-    team_size_numbers = re.findall(r"\bteam of \d+|\bmanaged \d+|\bled \d+|\bgroup of \d+", clean_text, re.IGNORECASE)
+    Classifies atomic claims against profile verified facts into:
+    - ENTAILED_BY_FACT: Mentioned explicitly or via close synonym
+    - UNSUPPORTED_DETAIL: Invention of dollar amounts, grants, team sizes, or institutional titles not in facts
+    """
+    clean_text = text.lower()
+    facts = [f.lower() for f in (verified_facts or [])]
+
+    # Fact coverage check
+    covered_facts = 0
+    total_facts = len(facts)
+
+    for fact in facts:
+        keywords = [w for w in re.findall(r"\b\w{4,}\b", fact) if w not in ["with", "that", "from", "this", "have"]]
+        if keywords and sum(1 for kw in keywords if kw in clean_text) >= min(2, len(keywords)):
+            covered_facts += 1
+
+    fact_coverage_rate = round(covered_facts / max(1, total_facts), 3) if total_facts > 0 else 1.0
+
+    # Specificity Screening & Unsupported Claim Detection
+    dollar_amounts = re.findall(r"\$\d+(?:,\d{3})*(?:\.\d+)?|\b\d+\s*thousand\s*dollars\b", clean_text)
+    grant_mentions = re.findall(r"\b(?:grant|fellowship|award|rhodes|olympiad|scholarship|first-place|1st place)\b", clean_text)
+    team_size_numbers = re.findall(r"\bteam of \d+|\bmanaged \d+|\bled \d+|\bgroup of \d+", clean_text)
+
+    # Check if grant/award mentions are supported by verified facts
+    unsupported_grants = []
+    for g in grant_mentions:
+        if not any(g in f for f in facts):
+            unsupported_grants.append(g)
+
+    unsupported_dollars = [d for d in dollar_amounts if not any(d in f for f in facts)]
+    unsupported_teams = [t for t in team_size_numbers if not any(t in f for f in facts)]
+
+    unsupported_claims_count = len(unsupported_dollars) + len(unsupported_grants) + len(unsupported_teams)
+    specificity_screening_flag = unsupported_claims_count > 0
 
     return {
-        "dollar_amounts_found": dollar_amounts,
-        "grant_award_mentions_found": grant_mentions,
-        "team_size_mentions_found": team_size_numbers,
-        "unsupported_specificity_flag": bool(dollar_amounts or grant_mentions or team_size_numbers),
+        "verified_facts_total": total_facts,
+        "covered_facts_count": covered_facts,
+        "fact_coverage_rate": fact_coverage_rate,
+        "unsupported_claims_count": unsupported_claims_count,
+        "unsupported_dollars": unsupported_dollars,
+        "unsupported_grants": unsupported_grants,
+        "unsupported_teams": unsupported_teams,
+        "specificity_screening_flag": specificity_screening_flag,
     }
 
 
@@ -139,10 +168,10 @@ def extract_all_letter_features(text: str, verified_facts: List[str] = None) -> 
     """Computes complete feature vector for a recommendation letter."""
     struct_f = extract_structural_features(text)
     lexical_f = extract_lexical_features(text)
-    spec_f = extract_unsupported_specificity_flags(text, verified_facts=verified_facts)
+    fact_f = analyze_profile_fact_graph(text, verified_facts=verified_facts)
 
     res = {}
     res.update(struct_f)
     res.update(lexical_f)
-    res.update(spec_f)
+    res.update(fact_f)
     return res

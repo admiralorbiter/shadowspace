@@ -4,6 +4,8 @@
   "total_pairs_count": 72,
   "primary_gender_pairs_count": 24,
   "secondary_anonymous_pairs_count": 48,
+  "counterfactual_snr_ratio": 1.0,
+  "snr_interpretation": "Identity changes are comparable to ordinary seed sampling variability (R \u2248 1).",
   "calibration_status": "CALIBRATION_COMPLETED",
   "public_synthetic_atlas_generated": true,
   "private_study_atlas_protected": true
