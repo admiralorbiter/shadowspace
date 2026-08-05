@@ -35,8 +35,9 @@ def test_er1r_transformer_loads_finetuned_checkpoint_and_model_card():
     assert evaluator.provenance.is_independent is True
     assert len(evaluator.provenance.checkpoint_sha256) == 64
 
-    card_path = os.path.join("models/labe_bert_agency", "model_card.json")
+    card_path = os.path.abspath(os.path.join("models/labe_bert_agency", "model_card.json"))
     assert os.path.exists(card_path)
+
     with open(card_path, "r", encoding="utf-8") as f:
         card = json.load(f)
     assert card["locked_test_metrics"]["auroc"] > 0.85
