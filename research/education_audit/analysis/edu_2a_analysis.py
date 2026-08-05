@@ -228,7 +228,8 @@ def run_edu2a_analysis(data_dir: str = "results/education_audit/edu_2a") -> Dict
         "r1_1_analysis_code_commit_sha": "2ba487e037ceee48bae073633427427b91bf29bc",
         "review_activation_code_commit_sha": "12310764692913e4af4234f06d0d5f2cebd8a0c8",
         "documentation_commit_sha": "77764aeaffdce74a26ee03a8a1ae84e7040cb907",
-        "parent_code_commit_sha": "12310764692913e4af4234f06d0d5f2cebd8a0c8",
+        "parent_code_commit_sha": "1444f404494951478142ce7efac8aaadce3a4e9b",
+
         "execution_status": "COMPLETED",
         "live_model_provenance_status": "PASSED_FOR_THIS_RUN",
         "generation_count_status": "PASSED" if total_gens == 60 else "FAILED",

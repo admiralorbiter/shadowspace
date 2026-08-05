@@ -1,6 +1,6 @@
 # Phase EDU-2a-R1 Live Canary Audit Report
 
-**Date**: 2026-08-05 14:49 UTC
+**Date**: 2026-08-05 15:22 UTC
 **Source Code SHA**: `6468917c1861d71bd6c61b1e5e36ab69e88d6725`
 **Total Letters Evaluated**: 60
 
@@ -12,6 +12,7 @@
 - truncation_count: `0`
 - truncation_rate: `0.0`
 - manual_review_status: `NOT_STARTED`
+- review_reliability_status: `NOT_EVALUABLE`
 - blind_integrity_status: `PROCEDURAL_BLIND_AVAILABLE`
 - rule_based_rubric_status: `SCREENING_ONLY`
 - counterfactual_effect_status: `NOT_EVALUABLE`

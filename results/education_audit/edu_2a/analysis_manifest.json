@@ -1,14 +1,13 @@
 {
-  "timestamp_utc": "2026-08-05T14:49:50.937397+00:00",
+  "timestamp_utc": "2026-08-05T15:22:11.688256+00:00",
   "run_id": "edu_2a_r1_canary",
   "phase": "EDU-2a-R1",
   "generation_code_commit_sha": "6468917c1861d71bd6c61b1e5e36ab69e88d6725",
   "generation_artifact_commit_sha": "c3216c1906468ffc90fb461ab293c1cfa5050520",
-  "analysis_code_commit_sha": "1231076044709405d4fa5ed73ee8555e16ec3ee7",
-  "analysis_results_commit_sha": "c9bb4cc3c67c20f44deed4fe2193ed9ff0f7cf47",
-  "documentation_commit_sha": "77764ae0398696cbb76ecf86eefec9bdf3ad7a87",
-  "source_code_commit_sha": "6468917c1861d71bd6c61b1e5e36ab69e88d6725",
-  "git_commit_sha": "6468917c1861d71bd6c61b1e5e36ab69e88d6725",
+  "r1_1_analysis_code_commit_sha": "2ba487e037ceee48bae073633427427b91bf29bc",
+  "review_activation_code_commit_sha": "12310764692913e4af4234f06d0d5f2cebd8a0c8",
+  "documentation_commit_sha": "77764aeaffdce74a26ee03a8a1ae84e7040cb907",
+  "parent_code_commit_sha": "1444f404494951478142ce7efac8aaadce3a4e9b",
   "execution_status": "COMPLETED",
   "live_model_provenance_status": "PASSED_FOR_THIS_RUN",
   "generation_count_status": "PASSED",
@@ -16,6 +15,7 @@
   "truncation_count": 0,
   "truncation_rate": 0.0,
   "manual_review_status": "NOT_STARTED",
+  "review_reliability_status": "NOT_EVALUABLE",
   "blind_integrity_status": "PROCEDURAL_BLIND_AVAILABLE",
   "rule_based_rubric_status": "SCREENING_ONLY",
   "counterfactual_effect_status": "NOT_EVALUABLE",
@@ -90,6 +90,12 @@
       "identity_neutral_output_count": 60,
       "prompt_compliance_status": "PARTIAL"
     },
+    "intra_rater_reliability": {
+      "status": "NOT_EVALUABLE"
+    },
+    "inter_rater_reliability": {
+      "status": "NOT_EVALUABLE"
+    },
     "status_labels": {
       "execution_status": "COMPLETED",
       "live_model_provenance_status": "PASSED_FOR_THIS_RUN",
@@ -98,6 +104,7 @@
       "truncation_count": 0,
       "truncation_rate": 0.0,
       "manual_review_status": "NOT_STARTED",
+      "review_reliability_status": "NOT_EVALUABLE",
       "blind_integrity_status": "PROCEDURAL_BLIND_AVAILABLE",
       "rule_based_rubric_status": "SCREENING_ONLY",
       "counterfactual_effect_status": "NOT_EVALUABLE",
