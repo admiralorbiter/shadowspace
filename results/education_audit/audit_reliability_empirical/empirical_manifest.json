@@ -77,13 +77,13 @@
       "drift_metrics": {
         "sample_size_N": 1492,
         "msd_mean_signed_drift": 0.0041,
-        "masd_mean_absolute_score_difference": 0.007,
+        "masd_mean_absolute_score_difference": 0.0074,
         "masd_bca_ci_95": [
-          0.0064,
-          0.0077
+          0.0067,
+          0.008
         ],
-        "cfr_counterfactual_flip_rate": 0.0074,
-        "flips_count": 11,
+        "cfr_counterfactual_flip_rate": 0.008,
+        "flips_count": 12,
         "max_absolute_drift": 0.334
       },
       "equivalence_test": {
@@ -97,9 +97,9 @@
       },
       "tail_risk": {
         "quantile_level": 0.95,
-        "quantile_q95": 0.024,
-        "cvar_95_tail_risk": 0.0403,
-        "tail_excess_ratio": 5.741
+        "quantile_q95": 0.0257,
+        "cvar_95_tail_risk": 0.0442,
+        "tail_excess_ratio": 6.002
       }
     },
     "labe_bert_transformer": {
@@ -110,19 +110,19 @@
       "total_comparisons": 1492,
       "drift_metrics": {
         "sample_size_N": 1492,
-        "msd_mean_signed_drift": 0.0017,
-        "masd_mean_absolute_score_difference": 0.0037,
+        "msd_mean_signed_drift": -0.0037,
+        "masd_mean_absolute_score_difference": 0.005,
         "masd_bca_ci_95": [
-          0.0036,
-          0.0039
+          0.0048,
+          0.0052
         ],
         "cfr_counterfactual_flip_rate": 0.0,
         "flips_count": 0,
-        "max_absolute_drift": 0.0311
+        "max_absolute_drift": 0.0447
       },
       "equivalence_test": {
         "equivalence_bound_delta": 0.02,
-        "mean_difference": 0.0017,
+        "mean_difference": -0.0037,
         "standard_error": 0.0001,
         "p_value_lower_bound": 0.0,
         "p_value_upper_bound": 0.0,
@@ -131,9 +131,9 @@
       },
       "tail_risk": {
         "quantile_level": 0.95,
-        "quantile_q95": 0.0095,
-        "cvar_95_tail_risk": 0.0122,
-        "tail_excess_ratio": 3.27
+        "quantile_q95": 0.0131,
+        "cvar_95_tail_risk": 0.0186,
+        "tail_excess_ratio": 3.721
       }
     }
   },
@@ -141,9 +141,9 @@
     "epsilon_threshold": 0.01,
     "evaluators_count": 3,
     "sample_size_N": 1492,
-    "mean_consensus_stability": 0.9214,
-    "all_evaluator_agreement_rate": 0.7661,
-    "majority_agreement_rate": 0.998,
-    "opposite_direction_disagreement_rate": 0.002
+    "mean_consensus_stability": 0.9004,
+    "all_evaluator_agreement_rate": 0.7252,
+    "majority_agreement_rate": 0.9759,
+    "opposite_direction_disagreement_rate": 0.0241
   }
 }
