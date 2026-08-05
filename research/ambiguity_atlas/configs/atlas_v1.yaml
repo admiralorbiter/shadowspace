@@ -1,0 +1,34 @@
+study:
+  id: ambiguity_doppelganger_atlas_v1
+  seed: 20260804
+  evidence_level: exploratory_census
+
+geometry:
+  primary_metric: hellinger
+  fisher_rao_factor: 2.0
+  js_log_base: 2
+  js_output: distance
+  aitchison_policy: dirichlet_count_smoothing
+  dirichlet_alpha: 0.5
+
+strict_collision:
+  require_same_majority_label: true
+  require_same_majority_count: true
+  require_same_sorted_minority_counts: true
+  exclude_equal_minority_counts: true
+
+approximate_collision:
+  confidence_tolerances: [0.005, 0.01, 0.02]
+  entropy_tolerances_bits: [0.01, 0.02, 0.05]
+  require_opposite_minority_orientation: true
+
+posterior:
+  draws: 2000
+  alpha: 0.5
+  seed: 20260804
+
+retention:
+  collapse_ratio: 0.10
+  strong_retention_ratio: 0.50
+  amplification_ratio: 1.50
+  category_thresholds_are_descriptive: true

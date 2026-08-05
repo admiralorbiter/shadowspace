@@ -1,0 +1,20 @@
+{
+  "status": "PREFLIGHT_PASSED",
+  "canonical_items": {
+    "path": "data/chaosnli/processed/canonical_items.parquet",
+    "sha256": "d60481bc758caa53583da2539aebc5eb34e6e90c943cd6df863d2aee5d0836ce",
+    "row_count": 3113,
+    "max_prob_sum_diff": 2.220446049250313e-16
+  },
+  "oof_predictions": {
+    "path": "results/exploratory/oof_predictions.parquet",
+    "sha256": "f21eca2e1047bddc7108ce070e79af320ed08e1ee43bc98dc88020a106c9dc6d",
+    "row_count": 9339,
+    "models": [
+      "albert-xxlarge",
+      "roberta-large",
+      "bart-large"
+    ],
+    "unique_objects": 3113
+  }
+}
