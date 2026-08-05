@@ -133,16 +133,28 @@ def run_edu2a_analysis(data_dir: str = "results/education_audit/edu_2a") -> Dict
     completion_integrity_status = "PASSED" if (total_gens == 60 and truncation_count == 0) else "FAILED"
     prompt_compliance_status = "PASSED" if (word_limit_compliance_count == 60 and three_paragraph_compliance_count == 60) else "PARTIAL"
 
-    # 4. Check manual ratings file & strict validation
+    # 4. Check manual ratings file, strict validation, and reliability calculations
     ratings_file = os.path.join(data_dir, "manual_ratings.jsonl")
     manual_review_status = "NOT_STARTED"
+    review_reliability_status = "NOT_EVALUABLE"
+    intra_reliability_summary = {"status": "NOT_EVALUABLE"}
+    inter_reliability_summary = {"status": "NOT_EVALUABLE"}
+
     if os.path.exists(ratings_file) and os.path.getsize(ratings_file) > 100:
         from research.education_audit.evaluation.validate_manual_ratings import validate_manual_ratings_file
+        from research.education_audit.evaluation.analyze_review_reliability import (
+            compute_intra_rater_reliability,
+            compute_inter_rater_reliability,
+        )
         valid_lids = [row["letter_id"] for row in packet_rows]
-        r2_lids = valid_lids[:20]  # Subset
-        valid, errs = validate_manual_ratings_file(ratings_file, valid_lids, r2_lids)
+        valid, errs = validate_manual_ratings_file(ratings_file, valid_lids)
         if valid:
             manual_review_status = "COMPLETED"
+            with open(ratings_file, "r", encoding="utf-8") as f:
+                r_data = [json.loads(l) for l in f if l.strip()]
+                intra_reliability_summary = compute_intra_rater_reliability(r_data)
+                inter_reliability_summary = compute_inter_rater_reliability(r_data)
+                review_reliability_status = inter_reliability_summary.get("status", "FAILED")
 
     # 5. Check procedural blind status
     public_key_file = os.path.join(data_dir, "blinding_key.json")
@@ -160,6 +172,7 @@ def run_edu2a_analysis(data_dir: str = "results/education_audit/edu_2a") -> Dict
     go_to_full_pilot = bool(
         completion_integrity_status == "PASSED"
         and manual_review_status == "COMPLETED"
+        and review_reliability_status in {"PASSED", "PASSED_WITH_KAPPA_UNIDENTIFIABLE"}
         and blind_integrity_status == "PROCEDURAL_BLIND_AVAILABLE"
         and truncation_count == 0
     )
@@ -174,6 +187,7 @@ def run_edu2a_analysis(data_dir: str = "results/education_audit/edu_2a") -> Dict
         "truncation_count": truncation_count,
         "truncation_rate": float(truncation_count / max(1, total_gens)),
         "manual_review_status": manual_review_status,
+        "review_reliability_status": review_reliability_status,
         "blind_integrity_status": blind_integrity_status,
         "rule_based_rubric_status": "SCREENING_ONLY",
         "counterfactual_effect_status": counterfactual_effect_status,
@@ -200,6 +214,8 @@ def run_edu2a_analysis(data_dir: str = "results/education_audit/edu_2a") -> Dict
         "paired_contrasts": paired_contrasts,
         "packet_summary": packet_summary,
         "prompt_compliance_metrics": prompt_compliance_metrics,
+        "intra_rater_reliability": intra_reliability_summary,
+        "inter_rater_reliability": inter_reliability_summary,
         "status_labels": status_labels,
     }
 
@@ -209,12 +225,10 @@ def run_edu2a_analysis(data_dir: str = "results/education_audit/edu_2a") -> Dict
         "phase": "EDU-2a-R1",
         "generation_code_commit_sha": "6468917c1861d71bd6c61b1e5e36ab69e88d6725",
         "generation_artifact_commit_sha": "c3216c1906468ffc90fb461ab293c1cfa5050520",
-        "analysis_code_commit_sha": "1231076044709405d4fa5ed73ee8555e16ec3ee7",
-        "analysis_results_commit_sha": "c9bb4cc3c67c20f44deed4fe2193ed9ff0f7cf47",
-        "documentation_commit_sha": "77764ae0398696cbb76ecf86eefec9bdf3ad7a87",
-
-        "source_code_commit_sha": source_code_sha,
-        "git_commit_sha": source_code_sha,
+        "r1_1_analysis_code_commit_sha": "2ba487e037ceee48bae073633427427b91bf29bc",
+        "review_activation_code_commit_sha": "12310764692913e4af4234f06d0d5f2cebd8a0c8",
+        "documentation_commit_sha": "77764aeaffdce74a26ee03a8a1ae84e7040cb907",
+        "parent_code_commit_sha": "12310764692913e4af4234f06d0d5f2cebd8a0c8",
         "execution_status": "COMPLETED",
         "live_model_provenance_status": "PASSED_FOR_THIS_RUN",
         "generation_count_status": "PASSED" if total_gens == 60 else "FAILED",
@@ -222,6 +236,7 @@ def run_edu2a_analysis(data_dir: str = "results/education_audit/edu_2a") -> Dict
         "truncation_count": truncation_count,
         "truncation_rate": float(truncation_count / max(1, total_gens)),
         "manual_review_status": manual_review_status,
+        "review_reliability_status": review_reliability_status,
         "blind_integrity_status": blind_integrity_status,
         "rule_based_rubric_status": "SCREENING_ONLY",
         "counterfactual_effect_status": counterfactual_effect_status,
@@ -229,6 +244,7 @@ def run_edu2a_analysis(data_dir: str = "results/education_audit/edu_2a") -> Dict
         "finding": finding,
         "summary": summary,
     }
+
 
 
     manifest_path = os.path.join(data_dir, "analysis_manifest.json")

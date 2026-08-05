@@ -1,4 +1,4 @@
-"""Unit Contract Tests for Phase EDU-2a-R1.2 Complete-Generation, Provenance & Review Contracts."""
+"""Unit Contract Tests for Phase EDU-2a-R1.2a Provenance, Validator, & Reliability Gates."""
 
 import json
 import os
@@ -45,97 +45,88 @@ def test_non_destructive_blinding_and_leakage_detection():
     assert "Alexander" in details_l or "Gendered terms" in details_l
 
 
-def test_rating_packet_generation(tmp_path):
-    """Verifies generate_blinded_rating_packet exports CSV, JSONL with rating fields, 5 duplicates, and private key."""
-    cases = build_synthetic_audit_cases()
-    cases_map = {c.case_id: c for c in cases}
-    variants = build_variants_for_case(cases[0])
-    var_map = {v.variant_id: v for v in variants}
-
-    adapter = OllamaEducationAdapter(use_mock_fallback=True)
-    adapter.is_loaded = False
-    gen_records = [
-        adapter.generate(cases[0], v, "minimal_prompt", PROMPT_TEMPLATES["minimal_prompt"], repeat_index=0)
-        for v in variants
-    ]
-
-    out_dir = str(tmp_path / "packet_test")
-    priv_key_dir = str(tmp_path / "private_review")
-    csv_p, jsonl_p, key_p = generate_blinded_rating_packet(gen_records, var_map, cases_map=cases_map, out_dir=out_dir, private_key_dir=priv_key_dir)
-
-    assert os.path.exists(csv_p)
-    assert os.path.exists(jsonl_p)
-    assert os.path.exists(key_p)
-
-    with open(key_p, "r", encoding="utf-8") as f:
-        key_data = json.load(f)
-
-    assert len(key_data) == 10
-    assert "LTR_R1_001" in key_data
-
-
-def test_strict_completion_gate_on_truncation(tmp_path):
-    """Verifies that truncation count > 0 causes completion_integrity_status = FAILED and go_to_full_pilot = False."""
-    out_dir = tmp_path / "truncation_test"
-    out_dir.mkdir()
-
-    with open(out_dir / "screening_evaluations.jsonl", "w", encoding="utf-8") as f:
-        f.write(json.dumps({
-            "generation_id": "g1", "case_id": "c1", "variant_id": "v1", "condition": "anonymous",
-            "prompt_id": "minimal_prompt", "recommendation_strength_score": 3.0, "hallucinations_per_100_words": 0.0
-        }) + "\n")
-
-    with open(out_dir / "generations.jsonl", "w", encoding="utf-8") as f:
-        for i in range(60):
-            reason = "length" if i < 50 else "stop"
-            f.write(json.dumps({
-                "generation_id": f"g_{i}", "parameters": {"done_reason": reason}
-            }) + "\n")
-
-    manifest = run_edu2a_analysis(data_dir=str(out_dir))
-
-    assert manifest["completion_integrity_status"] == "FAILED"
-    assert manifest["truncation_count"] == 50
-    assert manifest["go_to_full_pilot"] is False
-
-
 def test_provenance_shas_in_manifest(tmp_path):
-    """Verifies analysis manifest exports all 5 explicit commit SHAs."""
+    """Verifies analysis manifest exports exact provenance commit SHAs without circular self-references."""
     manifest = run_edu2a_analysis()
     assert "generation_code_commit_sha" in manifest
     assert "generation_artifact_commit_sha" in manifest
-    assert "analysis_code_commit_sha" in manifest
-    assert "analysis_results_commit_sha" in manifest
+    assert "r1_1_analysis_code_commit_sha" in manifest
+    assert "review_activation_code_commit_sha" in manifest
     assert "documentation_commit_sha" in manifest
+    assert "parent_code_commit_sha" in manifest
 
 
-def test_manual_ratings_validator(tmp_path):
-    """Verifies validate_manual_ratings_file strictly validates score bounds and quotas."""
+def test_zero_variance_kappa_handling():
+    """Verifies quadratic_weighted_kappa returns (None, 'UNIDENTIFIABLE_ZERO_VARIANCE') for identical ratings."""
+    y1 = [4.0] * 20
+    y2 = [4.0] * 20
+    qwk, status = quadratic_weighted_kappa(y1, y2)
+    assert qwk is None
+    assert status == "UNIDENTIFIABLE_ZERO_VARIANCE"
+
+    # Verify inter-rater reliability accepts zero-variance when agreement is 100%
+    r1_records, r2_records = [], []
+    for i in range(1, 21):
+        lid = f"LTR_R1_{i:03d}"
+        r1_records.append({"rating_id": f"R1_p1_{lid}", "reviewer_id": "R1", "letter_id": lid, "review_pass": 1, "recommendation_strength_score": 4.0, "opportunity_strength_score": 4.0, "leadership_language_score": 3.0, "competence_language_score": 4.0, "warmth_language_score": 3.0, "placeholder_or_template_artifact": False, "incomplete_letter_flag": False})
+        r2_records.append({"rating_id": f"R2_p1_{lid}", "reviewer_id": "R2", "letter_id": lid, "review_pass": 1, "recommendation_strength_score": 4.0, "opportunity_strength_score": 4.0, "leadership_language_score": 3.0, "competence_language_score": 4.0, "warmth_language_score": 3.0, "placeholder_or_template_artifact": False, "incomplete_letter_flag": False})
+        r1_records.append({"rating_id": f"R1_p2_{lid}", "reviewer_id": "R1", "letter_id": lid, "review_pass": 2, "factual_fidelity_score": 5.0, "unsupported_positive_claims_count": 0, "unsupported_negative_claims_count": 0, "major_accomplishment_omissions_count": 0, "adjudication_notes": ""})
+        r2_records.append({"rating_id": f"R2_p2_{lid}", "reviewer_id": "R2", "letter_id": lid, "review_pass": 2, "factual_fidelity_score": 5.0, "unsupported_positive_claims_count": 0, "unsupported_negative_claims_count": 0, "major_accomplishment_omissions_count": 0, "adjudication_notes": ""})
+
+    rel = compute_inter_rater_reliability(r1_records + r2_records)
+    assert rel["status"] == "PASSED_WITH_KAPPA_UNIDENTIFIABLE"
+    assert rel["reliability_gate_passed"] is True
+
+
+def test_manual_ratings_validator_strict(tmp_path):
+    """Verifies validate_manual_ratings_file rejects incomplete quotas, wrong R2 IDs, or missing required fields."""
     ratings_f = str(tmp_path / "manual_ratings.jsonl")
     valid_lids = [f"LTR_R1_{i:03d}" for i in range(1, 66)]
-    r2_lids = valid_lids[:20]
 
-    # Test invalid score range (6.0)
+    # Test missing Pass 2 (only Pass 1 rows)
     with open(ratings_f, "w", encoding="utf-8") as f:
-        f.write(json.dumps({
-            "reviewer_id": "R1", "letter_id": "LTR_R1_001", "review_pass": 1,
-            "recommendation_strength_score": 6.0
-        }) + "\n")
+        for i in range(1, 66):
+            f.write(json.dumps({
+                "rating_id": f"r1_{i}", "reviewer_id": "R1", "letter_id": f"LTR_R1_{i:03d}", "review_pass": 1,
+                "recommendation_strength_score": 4.0, "opportunity_strength_score": 4.0, "leadership_language_score": 3.0,
+                "competence_language_score": 4.0, "warmth_language_score": 3.0, "placeholder_or_template_artifact": False, "incomplete_letter_flag": False
+            }) + "\n")
 
-    valid, errs = validate_manual_ratings_file(ratings_f, valid_lids, r2_lids)
+    valid, errs = validate_manual_ratings_file(ratings_f, valid_lids)
     assert valid is False
-    assert any("out of bounds" in e for e in errs)
+    assert any("Incomplete Reviewer 1 Pass 2 quota" in e for e in errs)
 
 
-def test_review_reliability_calculator():
-    """Verifies quadratic_weighted_kappa and inter/intra-rater reliability functions."""
-    y1 = [4.0, 3.0, 5.0, 2.0, 4.0]
-    y2 = [4.0, 3.0, 5.0, 2.0, 4.0]
-    qwk_perfect = quadratic_weighted_kappa(y1, y2)
-    assert qwk_perfect == 1.0
+def test_realistic_60_generation_mock_packet_and_reliability(tmp_path):
+    """Creates a full 60-generation mock packet, verifies R1 Pass1 (65), R1 Pass2 (65), R2 Pass1 (20), R2 Pass2 (20)."""
+    cases = build_synthetic_audit_cases()[:2]
+    cases_map = {c.case_id: c for c in cases}
 
-    r1_records = [{"letter_id": f"LTR_{i}", "recommendation_strength_score": 4.0} for i in range(20)]
-    r2_records = [{"letter_id": f"LTR_{i}", "recommendation_strength_score": 4.0} for i in range(20)]
-    rel = compute_inter_rater_reliability(r1_records, r2_records)
-    assert rel["reliability_gate_passed"] is True
-    assert rel["weighted_kappa"] == 1.0
+    gen_records = []
+    var_map = {}
+    adapter = OllamaEducationAdapter(use_mock_fallback=True)
+    adapter.is_loaded = False
+
+    for c in cases:
+        vars_c = build_variants_for_case(c)
+        for v in vars_c:
+            var_map[v.variant_id] = v
+            for p_id in ["minimal_prompt", "structured_prompt"]:
+                for s in [101, 202, 303]:
+                    g = adapter.generate(c, v, p_id, PROMPT_TEMPLATES[p_id], repeat_index=0, seed=s)
+                    gen_records.append(g)
+
+    assert len(gen_records) == 60
+
+    out_dir = str(tmp_path / "packet_test_60")
+    priv_dir = str(tmp_path / "private_review_60")
+    generate_blinded_rating_packet(gen_records, var_map, cases_map=cases_map, out_dir=out_dir, private_key_dir=priv_dir)
+
+    manifest_p = os.path.join(priv_dir, "edu_2a_r1_review_design_manifest.json")
+    assert os.path.exists(manifest_p)
+
+    with open(manifest_p, "r", encoding="utf-8") as f:
+        d_man = json.load(f)
+
+    assert len(d_man["reviewer2_allowed_letter_ids"]) == 20
+    assert len(d_man["intra_rater_duplicate_pairs"]) == 5

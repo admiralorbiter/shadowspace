@@ -1,8 +1,9 @@
-"""Two-Pass Blinded Rating Packet Generator for Phase EDU-2a-R1.2."""
+"""Two-Pass Blinded Rating Packet Generator for Phase EDU-2a-R1.2a."""
 
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import os
 import random
@@ -10,6 +11,15 @@ from typing import Any, Dict, List, Tuple
 
 from research.education_audit.evaluation.blinding import blind_generation_text
 from research.education_audit.schemas import GenerationRecord
+
+
+def _hash_file(filepath: str) -> str:
+    """Computes SHA256 hex digest of a file."""
+    h = hashlib.sha256()
+    with open(filepath, "rb") as f:
+        while chunk := f.read(8192):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def generate_blinded_rating_packet(
@@ -28,7 +38,7 @@ def generate_blinded_rating_packet(
     records_shuffled = list(gen_records)
     rng.shuffle(records_shuffled)
 
-    # 1. Include 5 duplicate letters under new IDs for Reviewer 1 intra-rater consistency
+    # 1. Select 5 duplicate letters under new IDs for Reviewer 1 intra-rater consistency
     duplicates = rng.sample(records_shuffled, k=min(5, len(records_shuffled)))
     r1_combined = [(g, False) for g in records_shuffled] + [(g, True) for g in duplicates]
     rng.shuffle(r1_combined)
@@ -38,7 +48,6 @@ def generate_blinded_rating_packet(
     r2_subset: List[GenerationRecord] = []
     cell_groups: Dict[Tuple[str, str, str], List[GenerationRecord]] = {}
     for g in records_shuffled:
-        var = variants_map.get(g.variant_id)
         cond = g.condition
         cell_key = (g.case_id, g.prompt_id, cond)
         cell_groups.setdefault(cell_key, []).append(g)
@@ -54,7 +63,6 @@ def generate_blinded_rating_packet(
 
     expected_r2_count = min(20, len(cell_groups))
     assert len(r2_subset) == expected_r2_count, f"Reviewer 2 subset size error: expected {expected_r2_count}, got {len(r2_subset)}"
-
 
     # 3. Define Packet Field Schema
     pass1_fields = [
@@ -85,13 +93,13 @@ def generate_blinded_rating_packet(
 
     packet_rows_public = []
     blinding_key = {}
+    gen_id_to_letter_id: Dict[str, str] = {}
+    duplicate_pairs: List[Tuple[str, str]] = []
 
     r1_pass1_rows, r1_pass2_rows = [], []
     r2_pass1_rows, r2_pass2_rows = [], []
 
-    # Map for context ID facts
-    context_id_counter = 1
-
+    # Map original letters first
     for idx, (gen, is_duplicate) in enumerate(r1_combined, start=1):
         letter_id = f"LTR_R1_{idx:03d}"
         var = variants_map.get(gen.variant_id)
@@ -119,6 +127,9 @@ def generate_blinded_rating_packet(
             "is_intra_rater_duplicate": is_duplicate,
         }
 
+        if not is_duplicate and gen.generation_id not in gen_id_to_letter_id:
+            gen_id_to_letter_id[gen.generation_id] = letter_id
+
         # Pass 1 Row
         r1_p1 = {fn: "" for fn in pass1_fields}
         r1_p1["letter_id"] = letter_id
@@ -134,7 +145,6 @@ def generate_blinded_rating_packet(
         r1_p2["verified_accomplishments"] = " | ".join(c_obj.facts) if c_obj else ""
         r1_pass2_rows.append(r1_p2)
 
-        # Public summary row
         pub_row = {
             "letter_id": letter_id,
             "blinded_text": blinded_text,
@@ -142,12 +152,20 @@ def generate_blinded_rating_packet(
         }
         packet_rows_public.append(pub_row)
 
+    # Reconstruct duplicate pairs
+    for lid, info in blinding_key.items():
+        if info["is_intra_rater_duplicate"]:
+            orig_lid = gen_id_to_letter_id[info["generation_id"]]
+            duplicate_pairs.append((orig_lid, lid))
+
     # Build R2 Pass 1 and Pass 2 Rows (20 unique letters)
     r2_shuffled = list(r2_subset)
     rng.shuffle(r2_shuffled)
+    r2_allowed_lids = []
+
     for g in r2_shuffled:
-        # Find R1 letter_id corresponding to original g (not duplicate)
-        r1_match = [lid for lid, info in blinding_key.items() if info["generation_id"] == g.generation_id and not info["is_intra_rater_duplicate"]][0]
+        r1_match = gen_id_to_letter_id[g.generation_id]
+        r2_allowed_lids.append(r1_match)
 
         var = variants_map.get(g.variant_id)
         c_obj = cases_map.get(g.case_id) if cases_map else None
@@ -169,36 +187,48 @@ def generate_blinded_rating_packet(
         r2_p2["verified_accomplishments"] = " | ".join(c_obj.facts) if c_obj else ""
         r2_pass2_rows.append(r2_p2)
 
-
-    # Export Public CSV Packet (letter_id, blinded_text, identity_leakage_flag)
+    # Export Public CSV & JSONL Packets
     csv_path = os.path.join(out_dir, "blinded_rating_packet.csv")
     with open(csv_path, "w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=["letter_id", "blinded_text", "identity_leakage_flag"])
         writer.writeheader()
         writer.writerows(packet_rows_public)
 
-    # Export Public JSONL Packet
     jsonl_path = os.path.join(out_dir, "blinded_rating_packet.jsonl")
     with open(jsonl_path, "w", encoding="utf-8") as f:
         for r in packet_rows_public:
             f.write(json.dumps(r) + "\n")
 
-    # Export Secret Private Blinding Key (outside Git)
     key_path = os.path.join(private_key_dir, "edu_2a_r1_blinding_key.json")
     with open(key_path, "w", encoding="utf-8") as f:
         json.dump(blinding_key, f, indent=2)
 
     # Export Private Two-Pass Packets for Reviewer 1 and Reviewer 2
-    def write_csv(p: str, fields: List[str], rows: List[Dict[str, Any]]) -> None:
+    def write_csv(p: str, fields: List[str], rows: List[Dict[str, Any]]) -> str:
         with open(p, "w", encoding="utf-8", newline="") as f:
             w = csv.DictWriter(f, fieldnames=fields)
             w.writeheader()
             w.writerows(rows)
+        return p
 
-    write_csv(os.path.join(private_key_dir, "edu_2a_r1_reviewer1_pass1.csv"), pass1_fields, r1_pass1_rows)
-    write_csv(os.path.join(private_key_dir, "edu_2a_r1_reviewer1_pass2.csv"), pass2_fields, r1_pass2_rows)
-    write_csv(os.path.join(private_key_dir, "edu_2a_r1_reviewer2_pass1.csv"), pass1_fields, r2_pass1_rows)
-    write_csv(os.path.join(private_key_dir, "edu_2a_r1_reviewer2_pass2.csv"), pass2_fields, r2_pass2_rows)
+    p_r1_p1 = write_csv(os.path.join(private_key_dir, "edu_2a_r1_reviewer1_pass1.csv"), pass1_fields, r1_pass1_rows)
+    p_r1_p2 = write_csv(os.path.join(private_key_dir, "edu_2a_r1_reviewer1_pass2.csv"), pass2_fields, r1_pass2_rows)
+    p_r2_p1 = write_csv(os.path.join(private_key_dir, "edu_2a_r1_reviewer2_pass1.csv"), pass1_fields, r2_pass1_rows)
+    p_r2_p2 = write_csv(os.path.join(private_key_dir, "edu_2a_r1_reviewer2_pass2.csv"), pass2_fields, r2_pass2_rows)
 
-    print(f"Two-Pass Rating Packets exported to {private_key_dir} (R1 Pass1/Pass2: 65, R2 Pass1/Pass2: 20). Public summary exported to {csv_path}.")
+    # Export Frozen Review-Design Manifest
+    design_manifest = {
+        "reviewer2_allowed_letter_ids": r2_allowed_lids,
+        "intra_rater_duplicate_pairs": duplicate_pairs,
+        "r1_pass1_sha256": _hash_file(p_r1_p1),
+        "r1_pass2_sha256": _hash_file(p_r1_p2),
+        "r2_pass1_sha256": _hash_file(p_r2_p1),
+        "r2_pass2_sha256": _hash_file(p_r2_p2),
+    }
+
+    manifest_path = os.path.join(private_key_dir, "edu_2a_r1_review_design_manifest.json")
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(design_manifest, f, indent=2)
+
+    print(f"Two-Pass Rating Packets & Design Manifest exported to {private_key_dir}.")
     return csv_path, jsonl_path, key_path
