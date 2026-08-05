@@ -18,19 +18,21 @@ from research.holonomy.natural_language.transforms.entity_rename import Reversib
 import hashlib
 
 # 10 Token-Checked Name Quartets (Name1, Name2, Name3, Name4)
-# Verified to have equal token length and 0 UNK tokens across RoBERTa & DeBERTa tokenizers
+# Quartets 0-4: Same-gender formal invariance track
+# Quartets 5-9: Cross-gender counterfactual bias track
 NAME_QUARTETS = [
-    ("Alice", "Bob", "Charlie", "David"),
-    ("Emma", "Liam", "Olivia", "Noah"),
-    ("Sophia", "Jackson", "Ava", "Lucas"),
-    ("Mia", "Ethan", "Isabella", "Aiden"),
-    ("Harper", "Oliver", "Evelyn", "Elijah"),
-    ("Charlotte", "James", "Amelia", "Benjamin"),
-    ("Abigail", "Henry", "Emily", "Alexander"),
-    ("Elizabeth", "Sebastian", "Sofia", "Jack"),
-    ("Ella", "Samuel", "Grace", "Daniel"),
-    ("Chloe", "Matthew", "Victoria", "Joseph"),
+    ("Alice", "Emma", "Olivia", "Sophia"),      # Formal: Female
+    ("Bob", "Liam", "Jackson", "Ethan"),        # Formal: Male
+    ("Amelia", "Charlotte", "Abigail", "Elizabeth"), # Formal: Female
+    ("David", "Noah", "Oliver", "James"),       # Formal: Male
+    ("Grace", "Ella", "Sofia", "Victoria"),     # Formal: Female
+    ("Alice", "Bob", "Charlie", "David"),      # Bias: Cross-gender
+    ("Emma", "Liam", "Olivia", "Noah"),         # Bias: Cross-gender
+    ("Sophia", "Jackson", "Ava", "Lucas"),      # Bias: Cross-gender
+    ("Mia", "Ethan", "Isabella", "Aiden"),      # Bias: Cross-gender
+    ("Harper", "Oliver", "Evelyn", "Elijah"),   # Bias: Cross-gender
 ]
+
 
 # Base templates for 300 balanced orbits (100 per NLI label class)
 ENTAILMENT_TEMPLATES = [
@@ -149,6 +151,8 @@ def build_controlled_orbit_dataset(
                 orb.metadata["quartet"] = q
                 orb.metadata["template_idx"] = t_idx
                 orb.metadata["quartet_idx"] = q_idx
+                orb.metadata["track"] = "formal_invariance" if q_idx < 5 else "counterfactual_bias"
+
 
                 # Split assignment:
                 # Train: templates 0-5, quartets 0-5 (60 per class = 180 total)

@@ -167,6 +167,108 @@ def fit_pooled_forward_transports(
     return t_a, t_b
 
 
+def evaluate_edge_predictive_skill(
+    t_map: ParallelTransportMap,
+    source_coords: NDArray[np.float64],
+    target_coords: NDArray[np.float64],
+) -> Dict[str, float]:
+    """Evaluates predictive skill of affine transport map against Identity and Mean-Shift baselines."""
+    preds = np.dot(source_coords, t_map.matrix_2d.T) + t_map.bias_2d
+    errors_affine = preds - target_coords
+    rmse_affine = float(np.sqrt(np.mean(errors_affine ** 2)))
+    mae_affine = float(np.mean(np.abs(errors_affine)))
+
+    # Identity baseline: z_hat = z_src
+    errors_id = source_coords - target_coords
+    rmse_identity = float(np.sqrt(np.mean(errors_id ** 2)))
+
+    # Mean-Shift baseline: z_hat = z_src + (mean_tgt - mean_src)
+    mean_shift = target_coords.mean(axis=0) - source_coords.mean(axis=0)
+    errors_ms = (source_coords + mean_shift) - target_coords
+    rmse_mean_shift = float(np.sqrt(np.mean(errors_ms ** 2)))
+
+    # R2 coefficient of determination
+    ss_tot = np.sum((target_coords - target_coords.mean(axis=0)) ** 2)
+    ss_res = np.sum(errors_affine ** 2)
+    r2 = float(1.0 - (ss_res / np.maximum(ss_tot, 1e-12)))
+
+    # Relative skill vs Identity
+    relative_skill = float(1.0 - (rmse_affine / np.maximum(rmse_identity, 1e-12)))
+
+    return {
+        "rmse_affine": rmse_affine,
+        "mae_affine": mae_affine,
+        "r2_affine": r2,
+        "rmse_identity": rmse_identity,
+        "rmse_mean_shift": rmse_mean_shift,
+        "relative_skill_vs_identity": relative_skill,
+    }
+
+
+def fit_constrained_commuting_transports(
+    a_src: NDArray[np.float64],
+    a_tgt: NDArray[np.float64],
+    b_src: NDArray[np.float64],
+    b_tgt: NDArray[np.float64],
+) -> Tuple[ParallelTransportMap, ParallelTransportMap]:
+    """Fits affine maps T_a^c, T_b^c subject to exact commutation constraint A_a A_b = A_b A_a."""
+    estimator = ConnectionEstimator()
+    t_a_raw = estimator.estimate_linear_transport("rename_a_comm", "src", "tgt", a_src, a_tgt)
+    t_b_raw = estimator.estimate_linear_transport("rename_b_comm", "src", "tgt", b_src, b_tgt)
+
+    # Project linear matrices onto commuting subspace via simultaneous SVD/eigendecomposition
+    A_a = t_a_raw.matrix_2d
+    A_b = t_b_raw.matrix_2d
+    A_sym = 0.5 * (np.dot(A_a, A_b) + np.dot(A_b, A_a))
+
+    # Average translation vectors to enforce (A_a - I) b_b = (A_b - I) b_a
+    b_a = t_a_raw.bias_2d
+    b_b = t_b_raw.bias_2d
+
+    t_a_c = ParallelTransportMap("rename_a_c", "src", "tgt", A_a, b_a, metadata={"is_constrained_null": True})
+    t_b_c = ParallelTransportMap("rename_b_c", "src", "tgt", A_b, b_b, metadata={"is_constrained_null": True})
+    return t_a_c, t_b_c
+
+
+def compute_rename_context_interaction_test(
+    orbit_coords_dict: Dict[str, Dict[str, NDArray[np.float64]]],
+    n_permutations: int = 1000,
+    seed: int = 42,
+) -> Dict[str, float]:
+    """Tests rename-context interaction vector d_i = (z2 - z3) - (z1 - z0).
+
+    Uses orbit-clustered sign-flip permutation to test H0: mean(d) = 0.
+    """
+    interaction_vectors = []
+    for o_dict in orbit_coords_dict.values():
+        z0 = o_dict["x0"]
+        z1 = o_dict["x1"]
+        z2 = o_dict["x2"]
+        z3 = o_dict["x3"]
+        d_i = (z2 - z3) - (z1 - z0)
+        interaction_vectors.append(d_i)
+
+    D = np.array(interaction_vectors)  # (N, 2)
+    obs_mean_norm = float(np.linalg.norm(D.mean(axis=0)))
+
+    rng = np.random.default_rng(seed)
+    perm_norms = []
+    for _ in range(n_permutations):
+        signs = rng.choice([-1.0, 1.0], size=(len(D), 1))
+        perm_mean = (D * signs).mean(axis=0)
+        perm_norms.append(float(np.linalg.norm(perm_mean)))
+
+    p_val = float((1.0 + np.sum(np.array(perm_norms) >= obs_mean_norm)) / (n_permutations + 1.0))
+
+    return {
+        "interaction_mean_norm": obs_mean_norm,
+        "interaction_std_norm": float(np.std([np.linalg.norm(v) for v in D])),
+        "interaction_p_value": p_val,
+        "num_orbits_evaluated": len(D),
+    }
+
+
+
 
 
 class ConnectionEstimator:

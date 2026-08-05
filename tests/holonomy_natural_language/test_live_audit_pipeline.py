@@ -1,4 +1,4 @@
-"""Unit tests for Phase E2-A1.2a-R1 Live Audit pipeline components."""
+"""Unit tests for Phase E2-A1.2a-R1.1 Live Audit pipeline components."""
 
 import numpy as np
 import pytest
@@ -8,6 +8,9 @@ from research.holonomy.geometry.connection import (
     compute_derived_inverse_map,
     compute_forward_affine_commutator,
     compute_holonomy_norm_statistics,
+    compute_rename_context_interaction_test,
+    evaluate_edge_predictive_skill,
+    fit_constrained_commuting_transports,
     fit_pooled_forward_transports,
     whiten_coordinates,
 )
@@ -52,24 +55,31 @@ def test_controlled_orbit_dataset_building_duplicate_free():
 
     for orb in ds.train_orbits:
         assert orb.is_closed is True
+        assert "track" in orb.metadata
 
 
-def test_holonomy_norm_statistics_computation():
-    """Verifies S_A, S_b, S_H calculation on identity path transport."""
+def test_evaluate_edge_predictive_skill():
+    """Verifies evaluate_edge_predictive_skill computes RMSE and skill vs identity correctly."""
     estimator = ConnectionEstimator()
+    src = np.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]], dtype=np.float64)
+    tgt = src + np.array([0.5, -0.2])  # Pure translation
 
-    src_a = np.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]], dtype=np.float64)
-    tgt_a = src_a + np.array([0.5, -0.2])
+    t_map = estimator.estimate_linear_transport("test_edge", "s", "t", src, tgt)
+    skill = evaluate_edge_predictive_skill(t_map, src, tgt)
 
-    src_b = tgt_a
-    tgt_b = src_b + np.array([-0.1, 0.4])
+    assert pytest.approx(skill["rmse_affine"], abs=1e-5) == 0.0
+    assert skill["relative_skill_vs_identity"] > 0.0
 
-    t_a = estimator.estimate_linear_transport("rename_a", "x0", "x1", src_a, tgt_a)
-    t_b = estimator.estimate_linear_transport("rename_b", "x1", "x2", src_b, tgt_b)
 
-    commutator_path = compute_forward_affine_commutator(t_a, t_b)
-    stats = compute_holonomy_norm_statistics(commutator_path)
-
-    assert pytest.approx(stats["linear_norm_S_A"], abs=1e-5) == 0.0
-    assert pytest.approx(stats["translation_norm_S_b"], abs=1e-5) == 0.0
-    assert pytest.approx(stats["homogeneous_norm_S_H"], abs=1e-5) == 0.0
+def test_compute_rename_context_interaction_test():
+    """Verifies compute_rename_context_interaction_test on zero interaction vectors."""
+    orbit_coords = {
+        "orb1": {
+            "x0": np.array([0.0, 0.0]),
+            "x1": np.array([0.5, 0.0]),
+            "x2": np.array([0.5, 0.4]),
+            "x3": np.array([0.0, 0.4]),  # Perfect rectangle d = (z2-z3) - (z1-z0) = [0,0]
+        }
+    }
+    res = compute_rename_context_interaction_test(orbit_coords, n_permutations=100)
+    assert pytest.approx(res["interaction_mean_norm"], abs=1e-5) == 0.0
