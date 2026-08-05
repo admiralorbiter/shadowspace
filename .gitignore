@@ -56,10 +56,10 @@ private_analysis/
 *.swp
 *.swo
 
-# Large binary model weights
-models/**/*.bin
-models/**/*.safetensors
-models/**/*.joblib
+# Large binary model weights and local models directory
+models/*
+!models/**/manifest.json
+
 
 # macOS
 .DS_Store
