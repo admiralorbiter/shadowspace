@@ -132,8 +132,9 @@ class OllamaEducationAdapter:
             headers={"Content-Type": "application/json"},
         )
 
-        with urllib.request.urlopen(req, timeout=120) as resp:
+        with urllib.request.urlopen(req, timeout=600) as resp:
             data = json.loads(resp.read().decode("utf-8"))
+
 
         elapsed_ms = float((time.perf_counter() - start_time) * 1000.0)
         output_text = data.get("response", "").strip()
