@@ -50,6 +50,8 @@ research/chaosnli/artifacts/
 # Education Audit Blinding Keys & Private Review Packets
 results/**/blinding_key*.json
 private_review/
+private_analysis/
+
 
 *.swp
 *.swo
