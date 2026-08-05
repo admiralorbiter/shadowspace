@@ -1,0 +1,10 @@
+{
+  "review_design_manifest_sha256": "8b77712b4cb8ab3d180f77d2b8d7d5ce3b0483ceb3ee25e800448d88aab10ca3",
+  "r1_pass1_count": 65,
+  "r1_pass2_count": 65,
+  "r2_pass1_count": 20,
+  "r2_pass2_count": 20,
+  "intra_rater_pair_count": 5,
+  "packet_hash_validation_status": "PASSED",
+  "private_ids_exposed": false
+}
