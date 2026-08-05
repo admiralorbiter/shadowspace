@@ -1,20 +1,22 @@
 {
-  "timestamp_utc": "2026-08-05T01:01:30.591195+00:00",
-  "phase": "E2-A1.2a-R1.1",
-  "git_commit_sha": "ecbb8750c43b5accf07cbff7e5ad10f57986900f",
+  "timestamp_utc": "2026-08-05T01:14:15.021701+00:00",
+  "phase": "E2-A1.2a-R1.2",
+  "git_commit_sha": "000c6960e4c6458bd10b2df0de830bec01458077",
   "execution_status": "COMPLETED",
   "direct_sensitivity_status": "OBSERVED",
-  "global_commutator_test": "NOT_REJECTED",
+  "global_commutator_status": "DESCRIPTIVELY_SMALL",
+  "global_commutator_null_test": "NOT_REJECTED",
   "local_holonomy_status": "DESCRIPTIVE_ONLY",
-  "affine_translation_status": "DESCRIPTIVE_ONLY",
-  "finding": "CANDIDATE_RESPONSE_FIELD_CURVATURE",
+  "context_interaction_test": "NOT_REJECTED",
+  "finding": "POINTWISE_RENAMING_SENSITIVITY",
   "summary": {
     "execution_status": "COMPLETED",
     "direct_sensitivity_status": "OBSERVED",
-    "global_commutator_test": "NOT_REJECTED",
+    "global_commutator_status": "DESCRIPTIVELY_SMALL",
+    "global_commutator_null_test": "NOT_REJECTED",
     "local_holonomy_status": "DESCRIPTIVE_ONLY",
-    "affine_translation_status": "DESCRIPTIVE_ONLY",
-    "finding": "CANDIDATE_RESPONSE_FIELD_CURVATURE",
+    "context_interaction_test": "NOT_REJECTED",
+    "finding": "POINTWISE_RENAMING_SENSITIVITY",
     "model_name": "FacebookAI/roberta-large-mnli",
     "adapter_mode": "huggingface_live",
     "resolved_model_revision": "2a8f12d27941090092df78e4ba6f0928eb5eac98",
@@ -31,10 +33,14 @@
     "edge_predictive_skill_ta_rmse": 0.3334627142862055,
     "edge_predictive_skill_ta_mae": 0.13528709609107442,
     "edge_predictive_skill_ta_r2": 0.9918662852674016,
+    "edge_predictive_skill_ta_rmse_identity": 0.33312669768931374,
+    "edge_predictive_skill_ta_rmse_mean_shift": 0.3326982338637299,
     "edge_predictive_skill_ta_skill_vs_identity": -0.0010086750753466323,
     "edge_predictive_skill_tb_rmse": 0.3431078712609583,
     "edge_predictive_skill_tb_mae": 0.14246092145626968,
     "edge_predictive_skill_tb_r2": 0.991409465450026,
+    "edge_predictive_skill_tb_rmse_identity": 0.34289681033615843,
+    "edge_predictive_skill_tb_rmse_mean_shift": 0.3423662450706274,
     "edge_predictive_skill_tb_skill_vs_identity": -0.0006155231499325176,
     "all_edges_displacement_mean": 0.2006312647756072,
     "all_edges_displacement_median": 0.09026037434967604,
@@ -46,9 +52,11 @@
     "formal_track_displacement_max": 5.232045234645685,
     "bias_track_displacement_mean": 0.19201980353033343,
     "bias_track_displacement_max": 3.3468683010193474,
-    "pointwise_jsd_mean": 0.0020225561215294428,
-    "pointwise_jsd_max": 0.19495945112047025,
-    "label_flip_rate": 0.006666666666666667,
+    "pointwise_jsd_mean": 0.0014953487890009387,
+    "pointwise_jsd_max": 0.22004198043507567,
+    "total_directed_edges_evaluated": 1200,
+    "total_label_flips_observed": 6,
+    "label_flip_rate_all_edges": 0.005,
     "label_flips": [
       {
         "orbit_id": "ctrl_neutral_t04_q04",
@@ -78,6 +86,33 @@
         "flip_description": "Neutral -> Contradiction"
       },
       {
+        "orbit_id": "ctrl_neutral_t04_q04",
+        "vertex_src": "x1",
+        "vertex_tgt": "x2",
+        "original_text": "Ella borrows money from Sofia. |= Sofia earns more money than Ella.",
+        "transformed_text": "Ella borrows money from Victoria. |= Victoria earns more money than Ella.",
+        "original_probs": [
+          0.02057329369033037,
+          0.4650295775222789,
+          0.5143971287873907
+        ],
+        "transformed_probs": [
+          0.03377736535997359,
+          0.5159171492712203,
+          0.4503054853688061
+        ],
+        "label_original": 2,
+        "label_transformed": 1,
+        "quartet": [
+          "Grace",
+          "Ella",
+          "Sofia",
+          "Victoria"
+        ],
+        "intended_label": "neutral",
+        "flip_description": "Contradiction -> Neutral"
+      },
+      {
         "orbit_id": "ctrl_neutral_t04_q05",
         "vertex_src": "x0",
         "vertex_tgt": "x1",
@@ -103,6 +138,87 @@
         ],
         "intended_label": "neutral",
         "flip_description": "Contradiction -> Neutral"
+      },
+      {
+        "orbit_id": "ctrl_neutral_t04_q05",
+        "vertex_src": "x3",
+        "vertex_tgt": "x0",
+        "original_text": "Alice borrows money from David. |= David earns more money than Alice.",
+        "transformed_text": "Alice borrows money from Charlie. |= Charlie earns more money than Alice.",
+        "original_probs": [
+          0.034549025114406745,
+          0.5790830448707469,
+          0.3863679300148464
+        ],
+        "transformed_probs": [
+          0.023963030516963565,
+          0.4639069455262532,
+          0.5121300239567832
+        ],
+        "label_original": 1,
+        "label_transformed": 2,
+        "quartet": [
+          "Alice",
+          "Bob",
+          "Charlie",
+          "David"
+        ],
+        "intended_label": "neutral",
+        "flip_description": "Neutral -> Contradiction"
+      },
+      {
+        "orbit_id": "ctrl_neutral_t04_q09",
+        "vertex_src": "x1",
+        "vertex_tgt": "x2",
+        "original_text": "Oliver borrows money from Evelyn. |= Evelyn earns more money than Oliver.",
+        "transformed_text": "Oliver borrows money from Elijah. |= Elijah earns more money than Oliver.",
+        "original_probs": [
+          0.015718958920561694,
+          0.5742130151194406,
+          0.4100680259599978
+        ],
+        "transformed_probs": [
+          0.01835857724799116,
+          0.46223682681735784,
+          0.519404595934651
+        ],
+        "label_original": 1,
+        "label_transformed": 2,
+        "quartet": [
+          "Harper",
+          "Oliver",
+          "Evelyn",
+          "Elijah"
+        ],
+        "intended_label": "neutral",
+        "flip_description": "Neutral -> Contradiction"
+      },
+      {
+        "orbit_id": "ctrl_neutral_t04_q09",
+        "vertex_src": "x2",
+        "vertex_tgt": "x3",
+        "original_text": "Oliver borrows money from Elijah. |= Elijah earns more money than Oliver.",
+        "transformed_text": "Harper borrows money from Elijah. |= Elijah earns more money than Harper.",
+        "original_probs": [
+          0.01835857724799116,
+          0.46223682681735784,
+          0.519404595934651
+        ],
+        "transformed_probs": [
+          0.020985678723748832,
+          0.5875456655609577,
+          0.39146865571529343
+        ],
+        "label_original": 2,
+        "label_transformed": 1,
+        "quartet": [
+          "Harper",
+          "Oliver",
+          "Evelyn",
+          "Elijah"
+        ],
+        "intended_label": "neutral",
+        "flip_description": "Contradiction -> Neutral"
       }
     ],
     "top_10_sensitive_orbits": [
@@ -110,7 +226,7 @@
         "orbit_id": "ctrl_contradiction_t04_q04",
         "max_displacement": 5.232045234645685,
         "mean_displacement": 2.6412351686380786,
-        "jsd": 0.19495945112047025,
+        "max_jsd": 0.22004198043507567,
         "base_text": "Grace arrived before Sofia. |= Sofia arrived before Grace.",
         "track": "formal_invariance",
         "label_class": "contradiction"
@@ -119,7 +235,7 @@
         "orbit_id": "ctrl_contradiction_t05_q01",
         "max_displacement": 4.229509957815681,
         "mean_displacement": 2.150082816448734,
-        "jsd": 8.276014613580007e-07,
+        "max_jsd": 0.04841547328815335,
         "base_text": "Bob defeated Jackson in the match. |= Jackson defeated Bob in the match.",
         "track": "formal_invariance",
         "label_class": "contradiction"
@@ -128,7 +244,7 @@
         "orbit_id": "ctrl_contradiction_t04_q08",
         "max_displacement": 3.3468683010193474,
         "mean_displacement": 1.676276860928834,
-        "jsd": 0.0154169907746996,
+        "max_jsd": 0.0154169907746996,
         "base_text": "Mia arrived before Isabella. |= Isabella arrived before Mia.",
         "track": "counterfactual_bias",
         "label_class": "contradiction"
@@ -137,7 +253,7 @@
         "orbit_id": "ctrl_contradiction_t05_q09",
         "max_displacement": 2.8631433035368135,
         "mean_displacement": 1.4370003632149275,
-        "jsd": 1.4966211024255177e-06,
+        "max_jsd": 0.008130901121568208,
         "base_text": "Harper defeated Evelyn in the match. |= Evelyn defeated Harper in the match.",
         "track": "counterfactual_bias",
         "label_class": "contradiction"
@@ -146,7 +262,7 @@
         "orbit_id": "ctrl_contradiction_t05_q04",
         "max_displacement": 2.549810340847101,
         "mean_displacement": 1.298636922824679,
-        "jsd": 0.00612769600617241,
+        "max_jsd": 0.006244801163683095,
         "base_text": "Grace defeated Sofia in the match. |= Sofia defeated Grace in the match.",
         "track": "formal_invariance",
         "label_class": "contradiction"
@@ -155,7 +271,7 @@
         "orbit_id": "ctrl_contradiction_t05_q07",
         "max_displacement": 1.8312736605508415,
         "mean_displacement": 0.9290996730743355,
-        "jsd": 0.0014500715726218183,
+        "max_jsd": 0.0016571854422087653,
         "base_text": "Sophia defeated Ava in the match. |= Ava defeated Sophia in the match.",
         "track": "counterfactual_bias",
         "label_class": "contradiction"
@@ -164,7 +280,7 @@
         "orbit_id": "ctrl_neutral_t09_q09",
         "max_displacement": 1.764693890106472,
         "mean_displacement": 1.0221386455130022,
-        "jsd": 0.11101005282682247,
+        "max_jsd": 0.13933223920495283,
         "base_text": "Harper drives Evelyn to school. |= Evelyn does not have a driver's license.",
         "track": "counterfactual_bias",
         "label_class": "neutral"
@@ -173,7 +289,7 @@
         "orbit_id": "ctrl_contradiction_t08_q07",
         "max_displacement": 1.306562578947024,
         "mean_displacement": 0.7276076710202085,
-        "jsd": 0.006185161322056346,
+        "max_jsd": 0.012250109827321073,
         "base_text": "Sophia gave birth to Ava. |= Ava is older than Sophia.",
         "track": "counterfactual_bias",
         "label_class": "contradiction"
@@ -182,7 +298,7 @@
         "orbit_id": "ctrl_contradiction_t00_q02",
         "max_displacement": 1.2548818335075214,
         "mean_displacement": 0.7070438175069788,
-        "jsd": 4.577521340674852e-06,
+        "max_jsd": 0.000977799042284308,
         "base_text": "Amelia is older than Abigail. |= Abigail is older than Amelia.",
         "track": "formal_invariance",
         "label_class": "contradiction"
@@ -191,7 +307,7 @@
         "orbit_id": "ctrl_neutral_t09_q06",
         "max_displacement": 1.2054609311592448,
         "mean_displacement": 0.904744711973862,
-        "jsd": 0.05556355936370107,
+        "max_jsd": 0.05556355936370107,
         "base_text": "Emma drives Olivia to school. |= Olivia does not have a driver's license.",
         "track": "counterfactual_bias",
         "label_class": "neutral"
@@ -208,12 +324,12 @@
     "local_canonical_S_H": 0.027590730327866714,
     "held_out_test_residual_mean": 0.00012165759430843148,
     "held_out_test_residual_max": 0.00021152832016710875,
-    "constrained_null_p_value": 0.985014985014985,
+    "constrained_null_p_value": 0.995004995004995,
     "rename_context_interaction_norm": 0.04334315581720918,
     "rename_context_interaction_p_value": 0.1068931068931069,
     "bootstrap_S_H_ci": [
-      5.618664584316384e-05,
-      0.0010492753679754497
+      6.658855833522275e-05,
+      0.0008425226297028822
     ],
     "provenance": {
       "model_requested": "FacebookAI/roberta-large-mnli",
@@ -222,12 +338,9 @@
       "resolved_tokenizer_revision": "2a8f12d27941090092df78e4ba6f0928eb5eac98",
       "adapter_mode": "huggingface_live",
       "is_loaded": true,
-      "use_mock_fallback": true,
-      "transformers_version": "4.36.2",
-      "torch_version": "2.5.1+cu121",
+      "use_mock_fallback": false,
       "device": "cpu",
-      "dtype": "torch.float32",
-      "load_error": null
+      "dtype": "float32"
     }
   }
 }
