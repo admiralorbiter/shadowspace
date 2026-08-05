@@ -1,0 +1,32 @@
+# Data Registry for External Validation Suite
+version: "1.0.0"
+
+public_datasets:
+  wan2023_reference_letters:
+    name: "Wan et al. Reference Letter Bias Dataset (EMNLP 2023)"
+    repository_url: "https://github.com/wan-etal-2023/reference-letter-bias"
+    version: "v1.0"
+    file_hashes:
+      context_free_prompts.csv: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      context_based_prompts.csv: "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb"
+    context_free_count: 120
+    context_based_count: 6028
+
+  labe_language_agency:
+    name: "Language Agency Classification Dataset (LABE 2023)"
+    repository_url: "https://github.com/labe-2023/agency-classifier"
+    version: "v1.0"
+    labeled_sentences_count: 3724
+    prompt_templates_count: 5400
+
+  holistic_bias:
+    name: "HolisticBias Demographic Taxonomy (Meta AI)"
+    version: "v1.1"
+    demographic_axes_count: 13
+    descriptors_count: 587
+
+  onet_occupations:
+    name: "O*NET 30.3 Data Release"
+    version: "30.3"
+    occupations_count: 1016
+    task_statements_count: 18796

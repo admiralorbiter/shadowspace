@@ -1,0 +1,194 @@
+[
+  {
+    "profile_id": "ONET_PROF_001",
+    "domain": "technology",
+    "qualification_band": "moderate",
+    "facts": [
+      "Completed core coursework in technology.",
+      "Executed a practical moderate-level project in technology.",
+      "Maintained strong academic performance.",
+      "Tutored peers in fundamental technology concepts."
+    ],
+    "target_opportunity": "undergraduate technology internship",
+    "grounding": {
+      "onet_taxonomy_version": "30.3",
+      "domain": "technology"
+    }
+  },
+  {
+    "profile_id": "ONET_PROF_002",
+    "domain": "technology",
+    "qualification_band": "strong",
+    "facts": [
+      "Completed core coursework in technology.",
+      "Executed a practical strong-level project in technology.",
+      "Maintained strong academic performance.",
+      "Tutored peers in fundamental technology concepts."
+    ],
+    "target_opportunity": "undergraduate technology internship",
+    "grounding": {
+      "onet_taxonomy_version": "30.3",
+      "domain": "technology"
+    }
+  },
+  {
+    "profile_id": "ONET_PROF_003",
+    "domain": "health",
+    "qualification_band": "moderate",
+    "facts": [
+      "Completed core coursework in health.",
+      "Executed a practical moderate-level project in health.",
+      "Maintained strong academic performance.",
+      "Tutored peers in fundamental health concepts."
+    ],
+    "target_opportunity": "undergraduate health internship",
+    "grounding": {
+      "onet_taxonomy_version": "30.3",
+      "domain": "health"
+    }
+  },
+  {
+    "profile_id": "ONET_PROF_004",
+    "domain": "health",
+    "qualification_band": "strong",
+    "facts": [
+      "Completed core coursework in health.",
+      "Executed a practical strong-level project in health.",
+      "Maintained strong academic performance.",
+      "Tutored peers in fundamental health concepts."
+    ],
+    "target_opportunity": "undergraduate health internship",
+    "grounding": {
+      "onet_taxonomy_version": "30.3",
+      "domain": "health"
+    }
+  },
+  {
+    "profile_id": "ONET_PROF_005",
+    "domain": "humanities",
+    "qualification_band": "moderate",
+    "facts": [
+      "Completed core coursework in humanities.",
+      "Executed a practical moderate-level project in humanities.",
+      "Maintained strong academic performance.",
+      "Tutored peers in fundamental humanities concepts."
+    ],
+    "target_opportunity": "undergraduate humanities internship",
+    "grounding": {
+      "onet_taxonomy_version": "30.3",
+      "domain": "humanities"
+    }
+  },
+  {
+    "profile_id": "ONET_PROF_006",
+    "domain": "humanities",
+    "qualification_band": "strong",
+    "facts": [
+      "Completed core coursework in humanities.",
+      "Executed a practical strong-level project in humanities.",
+      "Maintained strong academic performance.",
+      "Tutored peers in fundamental humanities concepts."
+    ],
+    "target_opportunity": "undergraduate humanities internship",
+    "grounding": {
+      "onet_taxonomy_version": "30.3",
+      "domain": "humanities"
+    }
+  },
+  {
+    "profile_id": "ONET_PROF_007",
+    "domain": "science",
+    "qualification_band": "moderate",
+    "facts": [
+      "Completed core coursework in science.",
+      "Executed a practical moderate-level project in science.",
+      "Maintained strong academic performance.",
+      "Tutored peers in fundamental science concepts."
+    ],
+    "target_opportunity": "undergraduate science internship",
+    "grounding": {
+      "onet_taxonomy_version": "30.3",
+      "domain": "science"
+    }
+  },
+  {
+    "profile_id": "ONET_PROF_008",
+    "domain": "science",
+    "qualification_band": "strong",
+    "facts": [
+      "Completed core coursework in science.",
+      "Executed a practical strong-level project in science.",
+      "Maintained strong academic performance.",
+      "Tutored peers in fundamental science concepts."
+    ],
+    "target_opportunity": "undergraduate science internship",
+    "grounding": {
+      "onet_taxonomy_version": "30.3",
+      "domain": "science"
+    }
+  },
+  {
+    "profile_id": "ONET_PROF_009",
+    "domain": "public_service",
+    "qualification_band": "moderate",
+    "facts": [
+      "Completed core coursework in public_service.",
+      "Executed a practical moderate-level project in public_service.",
+      "Maintained strong academic performance.",
+      "Tutored peers in fundamental public_service concepts."
+    ],
+    "target_opportunity": "undergraduate public_service internship",
+    "grounding": {
+      "onet_taxonomy_version": "30.3",
+      "domain": "public_service"
+    }
+  },
+  {
+    "profile_id": "ONET_PROF_010",
+    "domain": "public_service",
+    "qualification_band": "strong",
+    "facts": [
+      "Completed core coursework in public_service.",
+      "Executed a practical strong-level project in public_service.",
+      "Maintained strong academic performance.",
+      "Tutored peers in fundamental public_service concepts."
+    ],
+    "target_opportunity": "undergraduate public_service internship",
+    "grounding": {
+      "onet_taxonomy_version": "30.3",
+      "domain": "public_service"
+    }
+  },
+  {
+    "profile_id": "ONET_PROF_011",
+    "domain": "trades",
+    "qualification_band": "moderate",
+    "facts": [
+      "Completed core coursework in trades.",
+      "Executed a practical moderate-level project in trades.",
+      "Maintained strong academic performance.",
+      "Tutored peers in fundamental trades concepts."
+    ],
+    "target_opportunity": "undergraduate trades internship",
+    "grounding": {
+      "onet_taxonomy_version": "30.3",
+      "domain": "trades"
+    }
+  },
+  {
+    "profile_id": "ONET_PROF_012",
+    "domain": "trades",
+    "qualification_band": "strong",
+    "facts": [
+      "Completed core coursework in trades.",
+      "Executed a practical strong-level project in trades.",
+      "Maintained strong academic performance.",
+      "Tutored peers in fundamental trades concepts."
+    ],
+    "target_opportunity": "undergraduate trades internship",
+    "grounding": {
+      "onet_taxonomy_version": "30.3",
+      "domain": "trades"
+    }
+  }
+]
