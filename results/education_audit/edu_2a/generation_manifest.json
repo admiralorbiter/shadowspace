@@ -1,5 +1,7 @@
 {
+  "source_code_commit_sha": "6468917c1861d71bd6c61b1e5e36ab69e88d6725",
   "total_generations": 60,
+
   "model_name": "gemma3:12b",
   "model_digest": "f4031aab637d1ffa37b42570452ae0e4fad0314754d17ded67322e4b95836f8a",
   "is_live_adapter": true,

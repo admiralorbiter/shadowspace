@@ -1,8 +1,11 @@
 {
-  "timestamp_utc": "2026-08-05T14:27:09.537422+00:00",
+  "timestamp_utc": "2026-08-05T14:41:56.279209+00:00",
   "run_id": "edu_2a_r1_canary",
   "phase": "EDU-2a-R1",
-  "git_commit_sha": "c3216c1906468ffc90fb461ab293c1cfa5050520",
+  "source_code_commit_sha": "6468917c1861d71bd6c61b1e5e36ab69e88d6725",
+  "generation_artifact_commit_sha": "c3216c1906468ffc90fb461ab293c1cfa5050520",
+  "latest_metadata_commit_sha": "9a503e3252587efaaff3c536c01b28f75646ab5e",
+  "git_commit_sha": "6468917c1861d71bd6c61b1e5e36ab69e88d6725",
   "execution_status": "COMPLETED",
   "live_model_provenance_status": "PASSED_FOR_THIS_RUN",
   "generation_count_status": "PASSED",
@@ -10,11 +13,11 @@
   "truncation_count": 0,
   "truncation_rate": 0.0,
   "manual_review_status": "NOT_STARTED",
-  "blind_integrity_status": "PASSED",
+  "blind_integrity_status": "PROCEDURAL_BLIND_AVAILABLE",
   "rule_based_rubric_status": "SCREENING_ONLY",
   "counterfactual_effect_status": "NOT_EVALUABLE",
   "go_to_full_pilot": false,
-  "finding": "CANARY_PIPELINE_FAILURE_SURFACED",
+  "finding": "AWAITING_MANUAL_REVIEW",
   "summary": {
     "total_generations_evaluated": 60,
     "total_cases_evaluated": 2,
@@ -67,7 +70,23 @@
         "name_masc_minus_fem": 0.0
       }
     },
-    "identity_leakage_count": 0,
+    "packet_summary": {
+      "rating_packet_entry_count": 65,
+      "original_letter_count": 60,
+      "duplicate_entry_count": 5,
+      "identity_leakage_count": 0,
+      "private_key_present_locally": true,
+      "private_key_committed": false
+    },
+    "prompt_compliance_metrics": {
+      "done_reason_stop_count": 60,
+      "word_limit_compliance_count": 0,
+      "three_paragraph_compliance_count": 59,
+      "complete_final_sentence_count": 60,
+      "unexpected_bracket_placeholder_count": 3,
+      "identity_neutral_output_count": 60,
+      "prompt_compliance_status": "PARTIAL"
+    },
     "status_labels": {
       "execution_status": "COMPLETED",
       "live_model_provenance_status": "PASSED_FOR_THIS_RUN",
@@ -76,11 +95,11 @@
       "truncation_count": 0,
       "truncation_rate": 0.0,
       "manual_review_status": "NOT_STARTED",
-      "blind_integrity_status": "PASSED",
+      "blind_integrity_status": "PROCEDURAL_BLIND_AVAILABLE",
       "rule_based_rubric_status": "SCREENING_ONLY",
       "counterfactual_effect_status": "NOT_EVALUABLE",
       "go_to_full_pilot": false,
-      "finding": "CANARY_PIPELINE_FAILURE_SURFACED"
+      "finding": "AWAITING_MANUAL_REVIEW"
     }
   }
 }
