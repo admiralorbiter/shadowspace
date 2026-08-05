@@ -26,7 +26,8 @@ class OllamaEducationAdapter:
         host: str = "http://localhost:11434",
         temperature: float = 0.7,
         top_p: float = 0.9,
-        num_predict: int = 400,
+        num_predict: int = 650,
+
         use_mock_fallback: bool = False,
 
     ) -> None:
