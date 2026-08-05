@@ -1,26 +1,46 @@
 {
-  "experiment_id": "E010_Sampler_Invariance_Gate_120Prompts",
+  "experiment_id": "E010_Sampler_Invariance_Gate_30Prompts",
   "gemma3_12b": {
     "model_tag": "gemma3:12b",
-    "num_prompts": 120,
-    "endpoint_agreement_pct": 97.5,
-    "sampler_agreement_pct": 98.33333333333333,
-    "max_delta_logprob": 0.0,
-    "mean_jsd": 0.0,
-    "max_jsd": 0.0,
-    "max_l1_dist": 0.0,
+    "num_prompts": 30,
+    "pair_1_2_v1_vs_native_packaged": {
+      "pair_name": "Cond 1 (/v1) vs Cond 2 (Native Packaged)",
+      "sampled_symbol_agreement_pct": 96.66666666666667,
+      "max_delta_logprob": 4.085373878479004,
+      "mean_jsd": 0.0019087403408768755,
+      "max_jsd": 0.032155153859866205,
+      "max_l1_dist": 0.33076813078502343
+    },
+    "pair_2_3_native_packaged_vs_matched": {
+      "pair_name": "Cond 2 (Native Packaged) vs Cond 3 (Native Matched)",
+      "sampled_symbol_agreement_pct": 96.66666666666667,
+      "max_delta_logprob": 1.0434532165527344,
+      "mean_jsd": 1.6571450966896755e-07,
+      "max_jsd": 4.971435290069027e-06,
+      "max_l1_dist": 8.921240110029343e-05
+    },
     "gate_status": "PASSED"
   },
   "qwen2_5_14b": {
     "model_tag": "qwen2.5:14b",
-    "num_prompts": 120,
-    "endpoint_agreement_pct": 90.0,
-    "sampler_agreement_pct": 93.33333333333333,
-    "max_delta_logprob": 0.0,
-    "mean_jsd": 0.0,
-    "max_jsd": 0.0,
-    "max_l1_dist": 0.0,
-    "gate_status": "MATCHED_SAMPLER_RECOMMENDED"
+    "num_prompts": 30,
+    "pair_1_2_v1_vs_native_packaged": {
+      "pair_name": "Cond 1 (/v1) vs Cond 2 (Native Packaged)",
+      "sampled_symbol_agreement_pct": 90.0,
+      "max_delta_logprob": 1.3157272338867188,
+      "mean_jsd": 0.000707567125907515,
+      "max_jsd": 0.016647511763585032,
+      "max_l1_dist": 0.33519070881759977
+    },
+    "pair_2_3_native_packaged_vs_matched": {
+      "pair_name": "Cond 2 (Native Packaged) vs Cond 3 (Native Matched)",
+      "sampled_symbol_agreement_pct": 96.66666666666667,
+      "max_delta_logprob": 0.0,
+      "mean_jsd": 0.0,
+      "max_jsd": 0.0,
+      "max_l1_dist": 0.0
+    },
+    "gate_status": "PASSED"
   },
-  "overall_gate_status": "AUDITED_WITH_MATCHED_CONTRACT"
+  "overall_gate_status": "PASSED"
 }

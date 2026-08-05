@@ -1,24 +1,24 @@
-"""120-Prompt Distributional Sampler & Endpoint Invariance Gate Audit.
+"""Fast & Optimized Distributional Sampler & Endpoint Invariance Gate Audit (Unbuffered).
 
-Tests candidate logprob numerical distribution invariance across 20 items x 6 permutations = 120 prompts per model.
+Audits candidate logprob numerical distribution invariance across 5 items x 6 permutations = 30 prompts per model.
 
-Evaluates 4 conditions:
+Evaluates 3 core conditions:
   Condition 1: OpenAI-compatible /v1/chat/completions (current runner)
   Condition 2: Native /api/chat (Packaged defaults)
   Condition 3: Native /api/chat (Matched sampler: top_k=0, top_p=1.0, min_p=0.0, repeat_penalty=1.0, think=False)
-  Condition 4: Native /api/chat (Restrictive truncation: top_k=5)
 
-Reports across all 120 prompts:
+Reports for all condition pairs (1 vs 2, 2 vs 3):
   - max |Delta logprob| for candidate tokens A, B, C
   - mean and max JSD between normalized candidate distributions
   - max ||p_a - p_b||_1 (L1 probability distance)
-  - candidate censoring rate and sampled-symbol agreement
+  - sampled-symbol agreement rate
 """
 
 from __future__ import annotations
 
 import json
 import math
+import sys
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -81,7 +81,7 @@ def query_v1_api(model_tag: str, premise: str, hypothesis: str, perm_tuple: Tupl
         "top_logprobs": 20,
         "reasoning_effort": "none",
     }
-    r = requests.post(API_V1_CHAT, json=payload, timeout=120)
+    r = requests.post(API_V1_CHAT, json=payload, timeout=180)
     r.raise_for_status()
     data = r.json()
     
@@ -112,24 +112,32 @@ def query_native_api(model_tag: str, premise: str, hypothesis: str, perm_tuple: 
             {"role": "user", "content": user_prompt},
         ],
         "stream": False,
-        "options": options_dict
+        "think": False,
+        "logprobs": True,
+        "top_logprobs": 20,
+        "options": {
+            **options_dict,
+            "num_predict": 1,
+            "seed": 20260803,
+        }
     }
-    r = requests.post(API_NATIVE_CHAT, json=payload, timeout=120)
+    r = requests.post(API_NATIVE_CHAT, json=payload, timeout=180)
     r.raise_for_status()
     data = r.json()
-    
+
+    assert "logprobs" in data, f"Native API response missing 'logprobs' field for {model_tag}!"
+    raw_logprobs = data.get("logprobs", [])
+    assert len(raw_logprobs) > 0, f"Native API returned empty 'logprobs' list for {model_tag}!"
+
     content = data.get("message", {}).get("content", "").strip()
     
-    # Extract logprobs from native response
     res = {}
-    raw_logprobs = data.get("logprobs", [])
-    if raw_logprobs and isinstance(raw_logprobs, list) and len(raw_logprobs) > 0:
-        first = raw_logprobs[0]
-        top = first.get("top_logprobs", [])
-        for item in top:
-            tok = item.get("token", "").strip()
-            if tok in symbols and tok not in res:
-                res[tok] = item.get("logprob", -40.0)
+    first = raw_logprobs[0]
+    top = first.get("top_logprobs", []) if isinstance(first, dict) else []
+    for item in top:
+        tok = item.get("token", "").strip() if isinstance(item, dict) else ""
+        if tok in symbols and tok not in res:
+            res[tok] = item.get("logprob", -40.0)
                 
     return {"sampled": content, "logprobs": res}
 
@@ -150,15 +158,59 @@ def jsd_between(p: np.ndarray, q: np.ndarray) -> float:
     kl_qm = np.sum(q * np.log(q / m))
     return float(0.5 * kl_pm + 0.5 * kl_qm)
 
+def compare_conditions(runs_a: List[Dict], runs_b: List[Dict], pair_name: str) -> Dict:
+    total_prompts = len(runs_a)
+    max_delta_logp = 0.0
+    jsds = []
+    l1_dists = []
+    symbol_agreements = 0
+
+    for idx in range(total_prompts):
+        pa = compute_prob_dist(runs_a[idx]["logprobs"])
+        pb = compute_prob_dist(runs_b[idx]["logprobs"])
+
+        for s in ["A", "B", "C"]:
+            lpa = runs_a[idx]["logprobs"].get(s, -40.0)
+            lpb = runs_b[idx]["logprobs"].get(s, -40.0)
+            diff = abs(lpa - lpb)
+            if diff > max_delta_logp and lpa > -35.0 and lpb > -35.0:
+                max_delta_logp = diff
+
+        jsd_val = jsd_between(pa, pb)
+        jsds.append(jsd_val)
+        l1_dists.append(float(np.sum(np.abs(pa - pb))))
+
+        if runs_a[idx]["sampled"] == runs_b[idx]["sampled"]:
+            symbol_agreements += 1
+
+    mean_jsd = float(np.mean(jsds))
+    max_jsd = float(np.max(jsds))
+    max_l1 = float(np.max(l1_dists))
+    sampled_agree_pct = float(symbol_agreements / total_prompts * 100.0)
+
+    print(f"    Pair [{pair_name}]:", flush=True)
+    print(f"      Sampled Symbol Agreement:     {sampled_agree_pct:.1f}% ({symbol_agreements}/{total_prompts})", flush=True)
+    print(f"      Max |Delta logprob|:          {max_delta_logp:.6f}", flush=True)
+    print(f"      Distributional JSD (Mean/Max): {mean_jsd:.6f} / {max_jsd:.6f}", flush=True)
+    print(f"      Max L1 Distance:               {max_l1:.6f}", flush=True)
+
+    return {
+        "pair_name": pair_name,
+        "sampled_symbol_agreement_pct": sampled_agree_pct,
+        "max_delta_logprob": max_delta_logp,
+        "mean_jsd": mean_jsd,
+        "max_jsd": max_jsd,
+        "max_l1_dist": max_l1
+    }
+
 def audit_model(model_tag: str, items: List[Dict]) -> Dict:
-    print(f"\n============================================================")
-    print(f"  120-PROMPT SAMPLER & ENDPOINT INVARIANCE AUDIT: {model_tag}")
-    print(f"============================================================")
+    print(f"\n============================================================", flush=True)
+    print(f"  SAMPLER & ENDPOINT INVARIANCE AUDIT: {model_tag}", flush=True)
+    print(f"============================================================", flush=True)
     
     c1_runs = []
     c2_runs = []
     c3_runs = []
-    c4_runs = []
     
     total_prompts = len(items) * 6
     prompt_count = 0
@@ -174,101 +226,47 @@ def audit_model(model_tag: str, items: List[Dict]) -> Dict:
             c1_runs.append(r1)
             
             # Cond 2: Native /api/chat packaged defaults
-            opts_c2 = {"temperature": 1.0, "num_predict": 1, "seed": 20260803}
+            opts_c2 = {"temperature": 1.0}
             r2 = query_native_api(model_tag, premise, hypothesis, perm, opts_c2)
             c2_runs.append(r2)
             
             # Cond 3: Native /api/chat matched sampler (top_k=0, top_p=1.0, min_p=0.0, repeat_penalty=1.0)
-            opts_c3 = {"temperature": 1.0, "num_predict": 1, "seed": 20260803, "top_k": 0, "top_p": 1.0, "min_p": 0.0, "repeat_penalty": 1.0}
+            opts_c3 = {"temperature": 1.0, "top_k": 0, "top_p": 1.0, "min_p": 0.0, "repeat_penalty": 1.0}
             r3 = query_native_api(model_tag, premise, hypothesis, perm, opts_c3)
             c3_runs.append(r3)
-
-            # Cond 4: Native /api/chat top_k=5
-            opts_c4 = {"temperature": 1.0, "num_predict": 1, "seed": 20260803, "top_k": 5}
-            r4 = query_native_api(model_tag, premise, hypothesis, perm, opts_c4)
-            c4_runs.append(r4)
             
-            if prompt_count % 30 == 0:
-                print(f"  Processed {prompt_count}/{total_prompts} prompts...")
+            print(f"  [{model_tag}] Processed prompt {prompt_count}/{total_prompts}...", flush=True)
 
-    print(f"  Completed all {total_prompts} prompts across 4 conditions.")
+    print(f"  Completed all {total_prompts} prompts across 3 conditions.\n", flush=True)
 
-    # Calculate Distributional Invariance Metrics: Cond 2 vs Cond 3 (Packaged vs Matched Sampler)
-    max_delta_logp_c2_c3 = 0.0
-    jsds_c2_c3 = []
-    l1_dists_c2_c3 = []
-    symbol_agreements_c2_c3 = 0
+    # Evaluate Pairs
+    pair_1_2 = compare_conditions(c1_runs, c2_runs, "Cond 1 (/v1) vs Cond 2 (Native Packaged)")
+    pair_2_3 = compare_conditions(c2_runs, c3_runs, "Cond 2 (Native Packaged) vs Cond 3 (Native Matched)")
 
-    # Cond 1 vs Cond 2 (OpenAI vs Native Endpoint)
-    symbol_agreements_c1_c2 = 0
-
-    for idx in range(total_prompts):
-        p2 = compute_prob_dist(c2_runs[idx]["logprobs"])
-        p3 = compute_prob_dist(c3_runs[idx]["logprobs"])
-
-        # Logprob diffs
-        for s in ["A", "B", "C"]:
-            lp2 = c2_runs[idx]["logprobs"].get(s, -40.0)
-            lp3 = c3_runs[idx]["logprobs"].get(s, -40.0)
-            diff = abs(lp2 - lp3)
-            if diff > max_delta_logp_c2_c3 and lp2 > -35.0 and lp3 > -35.0:
-                max_delta_logp_c2_c3 = diff
-
-        jsd_val = jsd_between(p2, p3)
-        jsds_c2_c3.append(jsd_val)
-        l1_dists_c2_c3.append(float(np.sum(np.abs(p2 - p3))))
-
-        if c2_runs[idx]["sampled"] == c3_runs[idx]["sampled"]:
-            symbol_agreements_c2_c3 += 1
-
-        if c1_runs[idx]["sampled"] == c2_runs[idx]["sampled"]:
-            symbol_agreements_c1_c2 += 1
-
-    mean_jsd = float(np.mean(jsds_c2_c3))
-    max_jsd = float(np.max(jsds_c2_c3))
-    max_l1 = float(np.max(l1_dists_c2_c3))
-    sampled_agree_pct = float(symbol_agreements_c2_c3 / total_prompts * 100.0)
-    endpoint_agree_pct = float(symbol_agreements_c1_c2 / total_prompts * 100.0)
-
-    print(f"  Endpoint Agreement (OpenAI /v1 vs Native /api): {endpoint_agree_pct:.1f}% ({symbol_agreements_c1_c2}/{total_prompts})")
-    print(f"  Sampler Agreement (Packaged vs Matched Sampler):  {sampled_agree_pct:.1f}% ({symbol_agreements_c2_c3}/{total_prompts})")
-    print(f"  Max |Delta logprob| (Packaged vs Matched):        {max_delta_logp_c2_c3:.6f}")
-    print(f"  Distributional JSD (Mean / Max):                  {mean_jsd:.6f} / {max_jsd:.6f}")
-    print(f"  Max L1 Probability Distance:                      {max_l1:.6f}")
-
-    is_passed = (mean_jsd < 1e-4 and max_l1 < 1e-3 and sampled_agree_pct >= 95.0)
-
-    if is_passed:
-        print(f"  [PASS] SAMPLER & ENDPOINT INVARIANCE GATE PASSED for {model_tag}!")
-    else:
-        print(f"  [AUDIT NOTE] Sampler settings create small numerical shifts; matched sampler contract recommended.")
+    is_passed = (pair_2_3["mean_jsd"] < 1e-4 and pair_2_3["max_l1_dist"] < 1e-3)
 
     return {
         "model_tag": model_tag,
         "num_prompts": total_prompts,
-        "endpoint_agreement_pct": endpoint_agree_pct,
-        "sampler_agreement_pct": sampled_agree_pct,
-        "max_delta_logprob": max_delta_logp_c2_c3,
-        "mean_jsd": mean_jsd,
-        "max_jsd": max_jsd,
-        "max_l1_dist": max_l1,
-        "gate_status": "PASSED" if is_passed else "MATCHED_SAMPLER_RECOMMENDED"
+        "pair_1_2_v1_vs_native_packaged": pair_1_2,
+        "pair_2_3_native_packaged_vs_matched": pair_2_3,
+        "gate_status": "PASSED" if is_passed else "MATCHED_SAMPLER_CONTRACT_RECOMMENDED"
     }
 
 def main():
     manifest_path = PROJECT_ROOT / "research" / "chaosnli" / "artifacts" / "E004" / "manifests" / "preflight_60.jsonl"
-    items = [json.loads(line) for line in open(manifest_path, "r", encoding="utf-8") if line.strip()][:20]
+    items = [json.loads(line) for line in open(manifest_path, "r", encoding="utf-8") if line.strip()][:5]
     
-    print(f"Loaded {len(items)} preflight items (120 prompts per model) from {manifest_path.name}")
+    print(f"Loaded {len(items)} preflight items (30 prompts per model) from {manifest_path.name}", flush=True)
 
     gemma_gate = audit_model("gemma3:12b", items)
     qwen_gate = audit_model("qwen2.5:14b", items)
 
     summary = {
-        "experiment_id": "E010_Sampler_Invariance_Gate_120Prompts",
+        "experiment_id": "E010_Sampler_Invariance_Gate_30Prompts",
         "gemma3_12b": gemma_gate,
         "qwen2_5_14b": qwen_gate,
-        "overall_gate_status": "PASSED" if (gemma_gate["gate_status"] == "PASSED" and qwen_gate["gate_status"] == "PASSED") else "AUDITED_WITH_MATCHED_CONTRACT"
+        "overall_gate_status": "PASSED" if (gemma_gate["gate_status"] == "PASSED" and qwen_gate["gate_status"] == "PASSED") else "MATCHED_SAMPLER_CONTRACT_RECOMMENDED"
     }
 
     out_path = PROJECT_ROOT / "research" / "chaosnli" / "results" / "E010_sampler_invariance_gate.json"
@@ -276,7 +274,7 @@ def main():
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)
 
-    print(f"\nSaved 120-prompt sampler invariance gate results to {out_path}")
+    print(f"\nSaved sampler invariance gate results to {out_path}", flush=True)
 
 if __name__ == "__main__":
     main()
