@@ -41,13 +41,15 @@ class OllamaEducationAdapter:
         self.model_digest: Optional[str] = None
         self.ollama_version: Optional[str] = None
         self.quantization: Optional[str] = None
-        self.is_loaded: bool = False
+        self.load_attempted: bool = False
         self.load_error: Optional[str] = None
 
     def ping_and_inspect(self) -> bool:
         """Pings Ollama service and inspects model metadata."""
+        self.load_attempted = True
         try:
             # Check version
+
             ver_req = urllib.request.Request(f"{self.host}/api/version")
             with urllib.request.urlopen(ver_req, timeout=5) as resp:
                 ver_data = json.loads(resp.read().decode("utf-8"))
@@ -95,8 +97,9 @@ class OllamaEducationAdapter:
         seed: int = 101,
     ) -> GenerationRecord:
         """Executes live Ollama generation or mock fallback if allowed."""
-        if not self.is_loaded:
+        if not self.load_attempted:
             self.ping_and_inspect()
+
 
         if not self.is_loaded:
             if not self.use_mock_fallback:

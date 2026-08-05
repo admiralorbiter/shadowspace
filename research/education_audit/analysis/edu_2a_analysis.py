@@ -11,8 +11,12 @@ import numpy as np
 from research.holonomy.experiments.run_phase_e0_summary import get_git_commit_sha
 
 
-def run_edu2a_analysis(data_dir: str = "results/education_audit/edu_2a") -> Dict[str, Any]:
+def run_edu2a_analysis(
+    data_dir: str = "results/education_audit/edu_2a",
+    private_key_dir: str = "private_review",
+) -> Dict[str, Any]:
     """Analyzes EDU-2a canary screening evaluations and exports manifest & markdown report."""
+
     eval_file = os.path.join(data_dir, "screening_evaluations.jsonl")
     records = []
     with open(eval_file, "r", encoding="utf-8") as f:
@@ -146,15 +150,17 @@ def run_edu2a_analysis(data_dir: str = "results/education_audit/edu_2a") -> Dict
             compute_intra_rater_reliability,
             compute_inter_rater_reliability,
         )
+        design_manifest_path = os.path.join(private_key_dir, "edu_2a_r1_review_design_manifest.json")
         valid_lids = [row["letter_id"] for row in packet_rows]
-        valid, errs = validate_manual_ratings_file(ratings_file, valid_lids)
+        valid, errs = validate_manual_ratings_file(ratings_file, valid_lids, design_manifest_path=design_manifest_path, private_key_dir=private_key_dir)
         if valid:
             manual_review_status = "COMPLETED"
             with open(ratings_file, "r", encoding="utf-8") as f:
                 r_data = [json.loads(l) for l in f if l.strip()]
-                intra_reliability_summary = compute_intra_rater_reliability(r_data)
+                intra_reliability_summary = compute_intra_rater_reliability(r_data, design_manifest_path=design_manifest_path)
                 inter_reliability_summary = compute_inter_rater_reliability(r_data)
                 review_reliability_status = inter_reliability_summary.get("status", "FAILED")
+
 
     # 5. Check procedural blind status
     public_key_file = os.path.join(data_dir, "blinding_key.json")

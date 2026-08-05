@@ -120,7 +120,8 @@ class SeededStochasticMockAdapter(DeterministicMockAdapter):
             prompt_hash=base_rec.prompt_hash,
             model_id=self.model_id,
             model_revision=self.revision,
-            parameters={"temperature": 0.7, "top_p": 0.9, "repeat_index": repeat_index, "seed": repeat_index},
+            parameters={"temperature": 0.7, "top_p": 0.9, "repeat_index": repeat_index, "seed": repeat_index, "done_reason": "stop"},
+
             repeat_index=repeat_index,
             output_text=stochastic_text,
             output_hash=out_hash,

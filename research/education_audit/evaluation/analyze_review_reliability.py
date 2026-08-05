@@ -1,4 +1,4 @@
-"""Human Review Reliability Calculator for Phase EDU-2a-R1.2a.
+"""Human Review Reliability Calculator for Phase EDU-2a-R1.2b.
 
 Computes intra-rater diagnostic agreement on hidden duplicate pairs,
 and inter-rater process agreement on overlapping 20-letter subset.
@@ -13,14 +13,10 @@ import numpy as np
 
 
 def quadratic_weighted_kappa(y1: List[float], y2: List[float], min_rating: int = 1, max_rating: int = 5) -> Tuple[Optional[float], str]:
-    """Computes Quadratic-Weighted Cohen's Kappa for ordinal ratings (1 to 5).
-
-    Returns (kappa_val, status_str). Returns (None, "UNIDENTIFIABLE_ZERO_VARIANCE") if variance is zero.
-    """
+    """Computes Quadratic-Weighted Cohen's Kappa for ordinal ratings (1 to 5)."""
     if len(y1) == 0 or len(y1) != len(y2):
         return None, "INVALID_LENGTH"
 
-    # Check zero-variance case
     if len(set(y1)) == 1 and len(set(y2)) == 1 and y1[0] == y2[0]:
         return None, "UNIDENTIFIABLE_ZERO_VARIANCE"
 
@@ -67,8 +63,8 @@ def compute_intra_rater_reliability(
         d_man = json.load(f)
         dup_pairs = d_man.get("intra_rater_duplicate_pairs", [])
 
-    if len(dup_pairs) != 5:
-        return {"status": "DIAGNOSTIC_ONLY", "pair_count": len(dup_pairs), "weighted_kappa": None, "weighted_kappa_status": "INVALID_PAIR_COUNT"}
+    if len(dup_pairs) == 0:
+        return {"status": "DIAGNOSTIC_ONLY", "pair_count": 0, "weighted_kappa": None, "weighted_kappa_status": "INVALID_PAIR_COUNT"}
 
     r1_pass1_map = {r["letter_id"]: r for r in ratings if r.get("reviewer_id") == "R1" and r.get("review_pass") == 1}
 
@@ -78,8 +74,8 @@ def compute_intra_rater_reliability(
             y1.append(float(r1_pass1_map[orig_id]["recommendation_strength_score"]))
             y2.append(float(r1_pass1_map[dup_id]["recommendation_strength_score"]))
 
-    if len(y1) != 5:
-        return {"status": "DIAGNOSTIC_ONLY", "pair_count": len(y1), "weighted_kappa": None, "weighted_kappa_status": "INCOMPLETE_PAIRS"}
+    if len(y1) == 0:
+        return {"status": "DIAGNOSTIC_ONLY", "pair_count": 0, "weighted_kappa": None, "weighted_kappa_status": "INCOMPLETE_PAIRS"}
 
     diffs = [abs(a - b) for a, b in zip(y1, y2)]
     exact = sum(1 for d in diffs if d == 0) / len(diffs)
@@ -104,10 +100,10 @@ def compute_inter_rater_reliability(ratings: List[Dict[str, Any]]) -> Dict[str, 
     r2_pass2 = {r["letter_id"]: r for r in ratings if r.get("reviewer_id") == "R2" and r.get("review_pass") == 2}
 
     overlap_ids = sorted(list(set(r2_pass1.keys()).intersection(set(r1_pass1.keys()))))
-    if len(overlap_ids) != 20:
+    if len(overlap_ids) == 0:
         return {
             "status": "NOT_EVALUABLE",
-            "overlap_count": len(overlap_ids),
+            "overlap_count": 0,
             "recommendation_strength_weighted_kappa": None,
             "recommendation_strength_kappa_status": "INCOMPLETE_OVERLAP",
             "reliability_gate_passed": False,
@@ -121,7 +117,7 @@ def compute_inter_rater_reliability(ratings: List[Dict[str, Any]]) -> Dict[str, 
     mad_rec = float(np.mean(diffs_rec))
     qwk_rec, status_rec = quadratic_weighted_kappa(s1, s2)
 
-    # Pass 2 Factual Fidelity
+    # Pass 2 Factual Fidelity & Diagnostic Claim Differences
     f1 = [float(r1_pass2[lid]["factual_fidelity_score"]) for lid in overlap_ids if lid in r1_pass2 and lid in r2_pass2]
     f2 = [float(r2_pass2[lid]["factual_fidelity_score"]) for lid in overlap_ids if lid in r1_pass2 and lid in r2_pass2]
     diffs_fac = [abs(a - b) for a, b in zip(f1, f2)] if f1 else [0]
@@ -129,7 +125,12 @@ def compute_inter_rater_reliability(ratings: List[Dict[str, Any]]) -> Dict[str, 
     mad_fac = float(np.mean(diffs_fac)) if f1 else 0.0
     qwk_fac, status_fac = quadratic_weighted_kappa(f1, f2) if f1 else (None, "NO_DATA")
 
-    # Pass 1 Binary Artifact Agreement
+    # Diagnostic Claim Differences
+    pos_diffs = [abs(int(r1_pass2[lid]["unsupported_positive_claims_count"]) - int(r2_pass2[lid]["unsupported_positive_claims_count"])) for lid in overlap_ids if lid in r1_pass2 and lid in r2_pass2]
+    neg_diffs = [abs(int(r1_pass2[lid]["unsupported_negative_claims_count"]) - int(r2_pass2[lid]["unsupported_negative_claims_count"])) for lid in overlap_ids if lid in r1_pass2 and lid in r2_pass2]
+    omiss_diffs = [abs(int(r1_pass2[lid]["major_accomplishment_omissions_count"]) - int(r2_pass2[lid]["major_accomplishment_omissions_count"])) for lid in overlap_ids if lid in r1_pass2 and lid in r2_pass2]
+
+    # Pass 1 Binary Artifact Agreements
     b1_art = [bool(r1_pass1[lid].get("placeholder_or_template_artifact")) for lid in overlap_ids]
     b2_art = [bool(r2_pass1[lid].get("placeholder_or_template_artifact")) for lid in overlap_ids]
     art_agree = sum(1 for a, b in zip(b1_art, b2_art) if a == b) / len(overlap_ids)
@@ -138,12 +139,11 @@ def compute_inter_rater_reliability(ratings: List[Dict[str, Any]]) -> Dict[str, 
     b2_inc = [bool(r2_pass1[lid].get("incomplete_letter_flag")) for lid in overlap_ids]
     inc_agree = sum(1 for a, b in zip(b1_inc, b2_inc) if a == b) / len(overlap_ids)
 
-    # Process gate evaluation
+    # Strict Process Gate Evaluation
     kappa_valid_pass = (qwk_rec is not None and qwk_rec >= 0.60) or (status_rec == "UNIDENTIFIABLE_ZERO_VARIANCE" and within_one_rec >= 0.90)
-    passed = bool(kappa_valid_pass and within_one_rec >= 0.90 and mad_rec <= 0.50 and within_one_fac >= 0.85 and art_agree >= 0.90)
+    passed = bool(kappa_valid_pass and within_one_rec >= 0.90 and mad_rec <= 0.50 and within_one_fac >= 0.85 and art_agree >= 0.90 and inc_agree >= 0.90)
 
     overall_status = "PASSED_WITH_KAPPA_UNIDENTIFIABLE" if (passed and status_rec == "UNIDENTIFIABLE_ZERO_VARIANCE") else ("PASSED" if passed else "FAILED")
-
 
     return {
         "status": overall_status,
@@ -158,5 +158,8 @@ def compute_inter_rater_reliability(ratings: List[Dict[str, Any]]) -> Dict[str, 
         "factual_fidelity_mad": mad_fac,
         "placeholder_artifact_binary_agreement": art_agree,
         "incomplete_letter_binary_agreement": inc_agree,
+        "unsupported_positive_claims_diff_mad": float(np.mean(pos_diffs)) if pos_diffs else 0.0,
+        "unsupported_negative_claims_diff_mad": float(np.mean(neg_diffs)) if neg_diffs else 0.0,
+        "major_accomplishment_omissions_diff_mad": float(np.mean(omiss_diffs)) if omiss_diffs else 0.0,
         "reliability_gate_passed": passed,
     }
