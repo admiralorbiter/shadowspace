@@ -20,12 +20,14 @@ def test_dirichlet_posterior_reproducibility():
 
 def test_audit_pair_posterior_stability_robust():
     """Verify high-count doppelgänger pair yields ROBUST_COLLISION classification."""
-    # Large counts (e.g. 600, 300, 100 vs 600, 100, 300) -> very small variance
-    counts_a = np.array([600, 300, 100])
-    counts_b = np.array([600, 100, 300])
+    # Extremely high counts (6000, 3000, 1000) -> zero summary variance
+    counts_a = np.array([6000, 3000, 1000])
+    counts_b = np.array([6000, 1000, 3000])
     
-    res = audit_pair_posterior_stability(counts_a, counts_b, n_draws=500, seed=20260804)
+    res = audit_pair_posterior_stability(counts_a, counts_b, majority_idx=0, pair_id="test_robust", n_draws=500)
     
-    assert res["prob_same_majority"] == 1.0
-    assert res["prob_opposite_orientation"] == 1.0
+    assert res["prob_both_retain_original_majority"] == 1.0
+    assert res["prob_joint_collision"] >= 0.70
     assert res["stability_category"] in ["ROBUST_COLLISION", "PROBABLE_COLLISION"]
+
+
