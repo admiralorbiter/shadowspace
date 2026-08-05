@@ -115,8 +115,7 @@ def run_edu2a_canary(
 
     # Fail closed if any record truncated
     if truncation_count > 0:
-        print(f"WARNING: {truncation_count}/60 generations were truncated (done_reason != 'stop'). Execution flagged as incomplete.")
-
+        raise RuntimeError(f"Canary execution rejected: {truncation_count}/60 generations were truncated (done_reason != 'stop').")
 
     # 3. Export Generations & Screening Evaluations
     gen_path = os.path.join(out_dir, "generations.jsonl")
@@ -133,6 +132,9 @@ def run_edu2a_canary(
     generate_blinded_rating_packet(canary_generations, variants_map, out_dir=out_dir)
 
     # 5. Export Sub-Manifests
+    from research.holonomy.experiments.run_phase_e0_summary import get_git_commit_sha
+    source_code_sha = get_git_commit_sha()
+
     with open(os.path.join(out_dir, "case_manifest.json"), "w", encoding="utf-8") as f:
         json.dump([c.__dict__ for c in canary_cases], f, indent=2)
 
@@ -144,6 +146,7 @@ def run_edu2a_canary(
 
     with open(os.path.join(out_dir, "generation_manifest.json"), "w", encoding="utf-8") as f:
         json.dump({
+            "source_code_commit_sha": source_code_sha,
             "total_generations": len(canary_generations),
             "model_name": model_name,
             "model_digest": adapter.model_digest,
@@ -151,6 +154,7 @@ def run_edu2a_canary(
             "seeds_used": [101, 202, 303],
             "run_order_seed": run_order_seed,
         }, f, indent=2)
+
 
     print(f"\nEDU-2a Canary Execution Complete! All artifacts exported to {out_dir}")
     return out_dir

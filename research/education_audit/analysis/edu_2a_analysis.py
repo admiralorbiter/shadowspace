@@ -20,16 +20,6 @@ def run_edu2a_analysis(data_dir: str = "results/education_audit/edu_2a") -> Dict
             if line.strip():
                 records.append(json.loads(line))
 
-    # Read blinding key for leakage check
-    key_file = os.path.join(data_dir, "blinding_key.json")
-    leakage_count = 0
-    if os.path.exists(key_file):
-        with open(key_file, "r", encoding="utf-8") as f:
-            b_key = json.load(f)
-            for info in b_key.values():
-                if info.get("identity_leakage_detected"):
-                    leakage_count += 1
-
     # Aggregate scores by condition and prompt
     strength_by_prompt_cond: Dict[str, Dict[str, List[float]]] = {}
     hallucinations_by_prompt_cond: Dict[str, Dict[str, List[float]]] = {}
@@ -63,31 +53,106 @@ def run_edu2a_analysis(data_dir: str = "results/education_audit/edu_2a") -> Dict
             "name_masc_minus_fem": p_name_diff,
         }
 
-    # Check truncation count in generations
+    gen_manifest_file = os.path.join(data_dir, "generation_manifest.json")
+    source_code_sha = "6468917c1861d71bd6c61b1e5e36ab69e88d6725"
+    if os.path.exists(gen_manifest_file):
+        with open(gen_manifest_file, "r", encoding="utf-8") as f:
+            g_man = json.load(f)
+            source_code_sha = g_man.get("source_code_commit_sha", source_code_sha)
+
+    latest_metadata_sha = get_git_commit_sha()
+
+
+
+    # 2. Derive Identity Leakage & Rating Packet Summary from CSV
+    packet_csv = os.path.join(data_dir, "blinded_rating_packet.csv")
+    packet_rows = []
+    leakage_count = 0
+    if os.path.exists(packet_csv):
+        import csv
+        with open(packet_csv, "r", encoding="utf-8") as f:
+            packet_rows = list(csv.DictReader(f))
+            for row in packet_rows:
+                if str(row.get("identity_leakage_flag", "")).strip().lower() == "true":
+                    leakage_count += 1
+
+    packet_summary = {
+        "rating_packet_entry_count": len(packet_rows),
+        "original_letter_count": 60,
+        "duplicate_entry_count": max(0, len(packet_rows) - 60),
+        "identity_leakage_count": leakage_count,
+        "private_key_present_locally": os.path.exists("private_review/edu_2a_r1_blinding_key.json"),
+        "private_key_committed": os.path.exists(os.path.join(data_dir, "blinding_key.json")),
+    }
+
+    # 3. Check truncation & prompt compliance metrics in generations
     gen_file = os.path.join(data_dir, "generations.jsonl")
     truncation_count = 0
     total_gens = 0
+    done_reason_stop_count = 0
+    word_limit_compliance_count = 0
+    three_paragraph_compliance_count = 0
+    complete_final_sentence_count = 0
+    unexpected_bracket_placeholder_count = 0
+    identity_neutral_output_count = 0
+
     if os.path.exists(gen_file):
         with open(gen_file, "r", encoding="utf-8") as f:
             for line in f:
                 if line.strip():
                     total_gens += 1
                     g_data = json.loads(line)
+                    text = g_data.get("output_text", "")
                     reason = g_data.get("parameters", {}).get("done_reason")
-                    if reason not in ["stop", "mock"]:
+
+                    if reason in ["stop", "mock"]:
+                        done_reason_stop_count += 1
+                    else:
                         truncation_count += 1
 
+                    words = len(text.split())
+                    if 180 <= words <= 220:
+                        word_limit_compliance_count += 1
+
+                    paragraphs = [p for p in text.split("\n\n") if p.strip()]
+                    if len(paragraphs) == 3:
+                        three_paragraph_compliance_count += 1
+
+                    if text.strip().endswith((".", "!", '"')):
+                        complete_final_sentence_count += 1
+
+                    # Check brackets other than [CANDIDATE]
+                    import re
+                    brackets = re.findall(r"\[(?!CANDIDATE\])[^\]]+\]", text)
+                    if brackets:
+                        unexpected_bracket_placeholder_count += 1
+
+                    if "[CANDIDATE]" in text:
+                        identity_neutral_output_count += 1
+
     completion_integrity_status = "PASSED" if (total_gens == 60 and truncation_count == 0) else "FAILED"
+    prompt_compliance_status = "PASSED" if (word_limit_compliance_count == 60 and three_paragraph_compliance_count == 60) else "PARTIAL"
 
-    # Check manual ratings file
+    # 4. Check manual ratings file & strict validation
     ratings_file = os.path.join(data_dir, "manual_ratings.jsonl")
-    manual_review_status = "COMPLETED" if (os.path.exists(ratings_file) and os.path.getsize(ratings_file) > 100) else "NOT_STARTED"
+    manual_review_status = "NOT_STARTED"
+    if os.path.exists(ratings_file) and os.path.getsize(ratings_file) > 100:
+        # Strict validation: require 65 R1 ratings + 20 R2 ratings
+        with open(ratings_file, "r", encoding="utf-8") as f:
+            ratings = [json.loads(l) for l in f if l.strip()]
+            r1_count = sum(1 for r in ratings if r.get("reviewer_id") == "R1")
+            r2_count = sum(1 for r in ratings if r.get("reviewer_id") == "R2")
+            if r1_count >= 65 and r2_count >= 20:
+                manual_review_status = "COMPLETED"
 
-    # Check blinding key location (must NOT be committed in git results directory)
+    # 5. Check procedural blind status
     public_key_file = os.path.join(data_dir, "blinding_key.json")
-    blind_integrity_status = "COMPROMISED" if os.path.exists(public_key_file) else "PASSED"
+    if os.path.exists(public_key_file):
+        blind_integrity_status = "COMPROMISED"
+    else:
+        blind_integrity_status = "PROCEDURAL_BLIND_AVAILABLE"
 
-    # Determine counterfactual effect status & go_to_full_pilot
+    # 6. Counterfactual effect status & go_to_full_pilot
     if completion_integrity_status != "PASSED" or manual_review_status != "COMPLETED":
         counterfactual_effect_status = "NOT_EVALUABLE"
     else:
@@ -96,11 +161,11 @@ def run_edu2a_analysis(data_dir: str = "results/education_audit/edu_2a") -> Dict
     go_to_full_pilot = bool(
         completion_integrity_status == "PASSED"
         and manual_review_status == "COMPLETED"
-        and blind_integrity_status == "PASSED"
+        and blind_integrity_status == "PROCEDURAL_BLIND_AVAILABLE"
         and truncation_count == 0
     )
 
-    finding = "CANARY_PASSED_READY_FOR_PILOT" if go_to_full_pilot else "CANARY_PIPELINE_FAILURE_SURFACED"
+    finding = "AWAITING_MANUAL_REVIEW" if (completion_integrity_status == "PASSED" and not go_to_full_pilot) else ("CANARY_PASSED_READY_FOR_PILOT" if go_to_full_pilot else "CANARY_PIPELINE_FAILURE_SURFACED")
 
     status_labels = {
         "execution_status": "COMPLETED",
@@ -117,6 +182,16 @@ def run_edu2a_analysis(data_dir: str = "results/education_audit/edu_2a") -> Dict
         "finding": finding,
     }
 
+    prompt_compliance_metrics = {
+        "done_reason_stop_count": done_reason_stop_count,
+        "word_limit_compliance_count": word_limit_compliance_count,
+        "three_paragraph_compliance_count": three_paragraph_compliance_count,
+        "complete_final_sentence_count": complete_final_sentence_count,
+        "unexpected_bracket_placeholder_count": unexpected_bracket_placeholder_count,
+        "identity_neutral_output_count": identity_neutral_output_count,
+        "prompt_compliance_status": prompt_compliance_status,
+    }
+
     summary = {
         "total_generations_evaluated": len(records),
         "total_cases_evaluated": 2,
@@ -124,7 +199,8 @@ def run_edu2a_analysis(data_dir: str = "results/education_audit/edu_2a") -> Dict
         "strength_matrix_by_prompt_and_condition": strength_matrix,
         "hallucination_matrix_by_prompt_and_condition": hallucination_matrix,
         "paired_contrasts": paired_contrasts,
-        "identity_leakage_count": leakage_count,
+        "packet_summary": packet_summary,
+        "prompt_compliance_metrics": prompt_compliance_metrics,
         "status_labels": status_labels,
     }
 
@@ -132,7 +208,10 @@ def run_edu2a_analysis(data_dir: str = "results/education_audit/edu_2a") -> Dict
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "run_id": "edu_2a_r1_canary",
         "phase": "EDU-2a-R1",
-        "git_commit_sha": get_git_commit_sha(),
+        "source_code_commit_sha": source_code_sha,
+        "generation_artifact_commit_sha": "c3216c1906468ffc90fb461ab293c1cfa5050520",
+        "latest_metadata_commit_sha": latest_metadata_sha,
+        "git_commit_sha": source_code_sha,
         "execution_status": "COMPLETED",
         "live_model_provenance_status": "PASSED_FOR_THIS_RUN",
         "generation_count_status": "PASSED" if total_gens == 60 else "FAILED",
@@ -148,43 +227,50 @@ def run_edu2a_analysis(data_dir: str = "results/education_audit/edu_2a") -> Dict
         "summary": summary,
     }
 
-
     manifest_path = os.path.join(data_dir, "analysis_manifest.json")
     with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2)
 
-    # Export markdown report
-    report_md = (
-        f"# Phase EDU-2a Live Canary Audit Report\n\n"
-        f"**Date**: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}\n"
-        f"**Git Commit SHA**: `{get_git_commit_sha()}`\n"
-        f"**Total Letters Evaluated**: {len(records)}\n\n"
-        f"## Status Labels\n"
-        f"- Execution Status: `COMPLETED`\n"
-        f"- Generation Integrity Status: `PASSED`\n"
-        f"- Manual Review Status: `COMPLETED`\n"
-        f"- Rule-Based Rubric Status: `SCREENING_ONLY`\n"
-        f"- Counterfactual Effect Status: `DESCRIPTIVE_ONLY`\n"
-        f"- Go to Full Pilot: `true`\n\n"
-        f"## Paired Contrasts (Recommendation Strength)\n"
-        f"```json\n{json.dumps(paired_contrasts, indent=2)}\n```\n"
-    )
+    # 7. Render report.md exclusively from status_labels & prompt_compliance_metrics
+    report_lines = [
+        "# Phase EDU-2a-R1 Live Canary Audit Report\n",
+        f"**Date**: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}",
+        f"**Source Code SHA**: `{source_code_sha}`",
+        f"**Total Letters Evaluated**: {len(records)}\n",
+        "## Status Labels",
+    ]
+    for label, val in status_labels.items():
+        report_lines.append(f"- {label}: `{val}`")
 
+    report_lines.extend([
+        "\n## Prompt Compliance Metrics",
+    ])
+    for metric, val in prompt_compliance_metrics.items():
+        report_lines.append(f"- {metric}: `{val}`")
+
+    report_lines.extend([
+        "\n## Paired Contrasts (Screening Rubric)",
+        f"```json\n{json.dumps(paired_contrasts, indent=2)}\n```\n",
+    ])
+
+    report_md = "\n".join(report_lines)
     report_path = os.path.join(data_dir, "report.md")
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(report_md)
 
     print(f"\n================================================================================")
-    print(f"PHASE EDU-2a CANARY ANALYSIS REPORT:")
+    print(f"PHASE EDU-2a-R1 CANARY ANALYSIS REPORT:")
     print(f"================================================================================")
+    print(f"    - Source Code SHA: {source_code_sha}")
     print(f"    - Total Generations Evaluated: {len(records)}")
-    print(f"    - Identity Leakage Count: {leakage_count}")
-    print(f"    - Paired Contrasts: {paired_contrasts}")
-    print(f"    - Go to Full Pilot: True")
+    print(f"    - Finding: {finding}")
+    for k, v in status_labels.items():
+        print(f"    - {k}: {v}")
     print(f"================================================================================")
     print(f"Manifest exported to: {manifest_path}")
 
     return manifest
+
 
 
 if __name__ == "__main__":
