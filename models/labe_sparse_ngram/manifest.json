@@ -1,5 +1,5 @@
 {
-  "vectorizer_sha256": "00e7109cd6fadeff7aff8b2bec05bf278209d653872f5f983d7f9d84e3243248",
+  "vectorizer_sha256": "e8239bd5aa7e082cc52e450149ab91a0bdb14cd6b88c89e1a812c16761c92d68",
   "clf_lr_sha256": "5028daccc78d99e15932dcd23fad533fcbec5ee23d39ce1690e5001b50384957",
   "clf_gb_sha256": "e6670948279d06d54a1f500ffbee9256f0a0a8848bef3ff7aefbad9ae800fd28",
   "best_threshold": 0.49

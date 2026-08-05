@@ -1,4 +1,4 @@
-"""Freeze & Serialize LABE Evaluator Checkpoints (N-Gram Ensemble & BERT Transformer)."""
+"""Freeze & Serialize LABE Evaluator Checkpoints (N-Gram Ensemble & Fine-Tuned BERT Transformer)."""
 
 from __future__ import annotations
 
@@ -6,9 +6,11 @@ import hashlib
 import json
 import os
 import joblib
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
+from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score, brier_score_loss, log_loss
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, AdamW
 
 from research.education_audit.agency_classifier_validation.labe_classifier_trainer import train_and_evaluate_labe_classifier
@@ -66,7 +68,7 @@ def freeze_ngram_artifacts(out_dir: str = "models/labe_sparse_ngram") -> dict[st
         "vectorizer_sha256": compute_file_sha256(vec_path),
         "clf_lr_sha256": compute_file_sha256(lr_path),
         "clf_gb_sha256": compute_file_sha256(gb_path),
-        "best_threshold": artifacts["best_threshold"],
+        "best_threshold": float(artifacts["best_threshold"]),
     }
     with open(os.path.join(out_dir, "manifest.json"), "w", encoding="utf-8") as f:
         json.dump(hashes, f, indent=2)
@@ -77,10 +79,10 @@ def freeze_ngram_artifacts(out_dir: str = "models/labe_sparse_ngram") -> dict[st
 
 def freeze_bert_transformer_checkpoint(
     out_dir: str = "models/labe_bert_agency",
-    epochs: int = 1,
+    epochs: int = 2,
     lr: float = 2e-5,
-) -> dict[str, str]:
-    """Fine-tunes BERT on LABE train split (N=2,979) with fixed PyTorch seed and serializes checkpoint."""
+) -> dict[str, Any]:
+    """Fine-tunes BERT on LABE train split (N=2,979), optimizes threshold on validation (N=372), and records test metrics."""
     out_dir = os.path.abspath(out_dir)
     os.makedirs(out_dir, exist_ok=True)
     torch.manual_seed(42)
@@ -89,23 +91,20 @@ def freeze_bert_transformer_checkpoint(
     labe_data = load_labe_dataset()
     train_sents = labe_data["sentences_by_split"]["train"]
     val_sents = labe_data["sentences_by_split"]["validation"]
+    test_sents = labe_data["sentences_by_split"]["test"]
 
     model_name = "bert-base-cased"
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=2)
     model.to(device)
 
-    train_dataset = LABEDataset(
-        [s["text"] for s in train_sents],
-        [s["label_int"] for s in train_sents],
-        tokenizer
-    )
+    train_dataset = LABEDataset([s["text"] for s in train_sents], [s["label_int"] for s in train_sents], tokenizer)
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
 
     optimizer = AdamW(model.parameters(), lr=lr)
     model.train()
 
-    print(f"Fine-tuning {model_name} on {len(train_sents)} LABE train sentences...")
+    print(f"Fine-tuning {model_name} on {len(train_sents)} LABE train sentences for {epochs} epochs...")
     for epoch in range(epochs):
         for batch in train_loader:
             optimizer.zero_grad()
@@ -118,7 +117,50 @@ def freeze_bert_transformer_checkpoint(
             loss.backward()
             optimizer.step()
 
-    # Save fine-tuned checkpoint
+    model.eval()
+
+    # Predict probabilities on Validation split (N=372)
+    def _get_probs(sentences):
+        probs_list = []
+        with torch.no_grad():
+            for s in sentences:
+                inputs = tokenizer(s["text"], return_tensors="pt", truncation=True, max_length=128, padding=True)
+                inputs = {k: v.to(device) for k, v in inputs.items()}
+                outputs = model(**inputs)
+                p = torch.softmax(outputs.logits, dim=-1)[0, 1].item()
+                probs_list.append(p)
+        return np.array(probs_list)
+
+    val_probs = _get_probs(val_sents)
+    val_labels = np.array([s["label_int"] for s in val_sents])
+
+    # Find threshold optimizing F1 on Validation split
+    best_th = 0.50
+    best_f1 = 0.0
+    for th in np.arange(0.20, 0.80, 0.02):
+        th = round(float(th), 2)
+        preds = (val_probs >= th).astype(int)
+        f1 = f1_score(val_labels, preds, zero_division=0)
+        if f1 > best_f1:
+            best_f1 = f1
+            best_th = th
+
+    # Evaluate once on locked Test split (N=373)
+    test_probs = _get_probs(test_sents)
+    test_labels = np.array([s["label_int"] for s in test_sents])
+    test_preds = (test_probs >= best_th).astype(int)
+
+    test_metrics = {
+        "precision": round(float(precision_score(test_labels, test_preds, zero_division=0)), 4),
+        "recall": round(float(recall_score(test_labels, test_preds, zero_division=0)), 4),
+        "f1_score": round(float(f1_score(test_labels, test_preds, zero_division=0)), 4),
+        "auroc": round(float(roc_auc_score(test_labels, test_probs)), 4),
+        "brier_score": round(float(brier_score_loss(test_labels, test_probs)), 4),
+        "log_loss": round(float(log_loss(test_labels, test_probs)), 4),
+        "validation_optimal_threshold": best_th,
+    }
+
+    # Save fine-tuned model checkpoint & tokenizer
     model.save_pretrained(out_dir)
     tokenizer.save_pretrained(out_dir)
 
@@ -126,16 +168,33 @@ def freeze_bert_transformer_checkpoint(
     if not os.path.exists(weights_path):
         weights_path = os.path.join(out_dir, "pytorch_model.bin")
 
+    weights_sha256 = compute_file_sha256(weights_path)
+
     manifest = {
         "model_name": model_name,
         "checkpoint_revision": "labe_bert_fine_tuned_v1",
-        "weights_sha256": compute_file_sha256(weights_path) if os.path.exists(weights_path) else "saved",
-        "threshold": 0.50,
+        "weights_sha256": weights_sha256,
+        "config_sha256": compute_file_sha256(os.path.join(out_dir, "config.json")),
+        "tokenizer_sha256": compute_file_sha256(os.path.join(out_dir, "tokenizer.json")),
+        "best_threshold": best_th,
     }
     with open(os.path.join(out_dir, "manifest.json"), "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2)
 
+    with open(os.path.join(out_dir, "model_card.json"), "w", encoding="utf-8") as f:
+        json.dump({
+            "model_name": "LABE Fine-Tuned BERT Agency Classifier",
+            "base_model": model_name,
+            "training_split_size": len(train_sents),
+            "validation_split_size": len(val_sents),
+            "test_split_size": len(test_sents),
+            "locked_test_metrics": test_metrics,
+            "weights_sha256": weights_sha256,
+        }, f, indent=2)
+
     print(f"LABE Fine-Tuned BERT Checkpoint Frozen to {out_dir}")
+    print(f"  - Validation Optimal Threshold: {best_th}")
+    print(f"  - Locked Test F1: {test_metrics['f1_score']} | AUROC: {test_metrics['auroc']}")
     return manifest
 
 

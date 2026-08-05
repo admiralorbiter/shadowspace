@@ -1,6 +1,8 @@
 {
   "model_name": "bert-base-cased",
   "checkpoint_revision": "labe_bert_fine_tuned_v1",
-  "weights_sha256": "e878fe2db219365914af4fd380503b7bbb103da13499466f91dcddddf7301e58",
-  "threshold": 0.5
+  "weights_sha256": "c0a62e149b143fe9cb90ad2293f5198ca4e192d3b56de9c4d04083e09a3dc23b",
+  "config_sha256": "20b9f47fb3927032347b5e691fd33f7548e476eb32bea4991e5a29472817cd4f",
+  "tokenizer_sha256": "a34f2311070c1be5d1125494c326494c17af9d2c740c044732d42ec8a87eabde",
+  "best_threshold": 0.22
 }

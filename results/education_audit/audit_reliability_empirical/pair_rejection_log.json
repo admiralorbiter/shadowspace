@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "base_sentence_id": "LAC_test_0337",
+    "type": "natural",
+    "reason": "Unapproved token difference at index 4: ''He's' vs ''She's'"
+  },
+  {
+    "base_sentence_id": "LAC_test_0357",
+    "type": "natural",
+    "reason": "Unapproved token difference at index 23: '\"He's' vs '\"She's'"
+  }
+]

@@ -1,5 +1,5 @@
 {
-  "status": "EMPIRICAL_BENCHMARK_COMPLETED",
+  "status": "EMPIRICAL_BENCHMARK_REPAIR_COMPLETED",
   "protocol": {
     "study_title": "Empirical Audit Reliability & Counterfactual Meta-Evaluation Framework",
     "primary_research_question": "Under what conditions is a counterfactual bias conclusion reliable across evaluators, contexts, prompts, profiles, and sampling seeds?",
@@ -32,118 +32,296 @@
   },
   "evaluators_count": 3,
   "independent_evaluators_count": 3,
-  "total_counterfactual_pairs": 1492,
+  "natural_pairs_count": 247,
+  "injection_pairs_count": 476,
   "reliability_cards": {
-    "exact_lexicon": {
-      "evaluator_id": "eval_exact_lexicon",
-      "evaluator_name": "Exact Lexicon Keyword Density",
-      "model_family": "deterministic_lexicon",
-      "is_independent": true,
-      "total_comparisons": 1492,
-      "drift_metrics": {
-        "sample_size_N": 1492,
-        "msd_mean_signed_drift": 0.0,
-        "masd_mean_absolute_score_difference": 0.0,
-        "masd_bca_ci_95": [
-          0.0,
-          0.0
+    "natural_substitutions": {
+      "evaluator_cards": {
+        "exact_lexicon": {
+          "evaluator_id": "eval_exact_lexicon",
+          "evaluator_name": "Exact Lexicon Keyword Density",
+          "model_family": "deterministic_lexicon",
+          "checkpoint_sha256": "deterministic_hash_zero_drift",
+          "is_independent": true,
+          "corpus_name": "natural_substitutions",
+          "drift_metrics": {
+            "total_pairs_N": 247,
+            "independent_clusters_count_N": 247,
+            "msd_mean_signed_drift": 0.0,
+            "masd_mean_absolute_score_difference": 0.0,
+            "masd_cluster_percentile_ci_95": [
+              0.0,
+              0.0
+            ],
+            "cfr_counterfactual_flip_rate": 0.0,
+            "flips_count": 0,
+            "max_absolute_drift": 0.0
+          },
+          "equivalence_test": {
+            "evaluator_type": "exact_lexicon",
+            "evaluator_specific_margin_delta": 2.0,
+            "cluster_sample_size_N": 247,
+            "mean_signed_drift": 0.0,
+            "standard_error": 0.0,
+            "p_value_tost": 0.0,
+            "mean_signed_drift_equivalence_passed": true,
+            "status_label": "Mean Signed Drift Equivalence Passed"
+          },
+          "tail_risk": {
+            "quantile_level": 0.95,
+            "quantile_q95": 0.0,
+            "cvar_95_tail_risk": 0.0,
+            "tail_excess_ratio": 0.0
+          }
+        },
+        "sparse_ngram_ensemble": {
+          "evaluator_id": "eval_sparse_ngram_ensemble",
+          "evaluator_name": "Sparse N-Gram Baseline Ensemble",
+          "model_family": "sklearn_tfidf_lr_gb_ensemble",
+          "checkpoint_sha256": "287972f38c0d5f9cd50736583fda95583680d72d7921eb4e1771b6b576022555",
+          "is_independent": true,
+          "corpus_name": "natural_substitutions",
+          "drift_metrics": {
+            "total_pairs_N": 247,
+            "independent_clusters_count_N": 247,
+            "msd_mean_signed_drift": 0.0082,
+            "masd_mean_absolute_score_difference": 0.0172,
+            "masd_cluster_percentile_ci_95": [
+              0.0152,
+              0.0194
+            ],
+            "cfr_counterfactual_flip_rate": 0.0202,
+            "flips_count": 5,
+            "max_absolute_drift": 0.1154
+          },
+          "equivalence_test": {
+            "evaluator_type": "sparse_ngram_ensemble",
+            "evaluator_specific_margin_delta": 0.02,
+            "cluster_sample_size_N": 247,
+            "mean_signed_drift": 0.0082,
+            "standard_error": 0.0014,
+            "p_value_tost": 0.0,
+            "mean_signed_drift_equivalence_passed": true,
+            "status_label": "Mean Signed Drift Equivalence Passed"
+          },
+          "tail_risk": {
+            "quantile_level": 0.95,
+            "quantile_q95": 0.0483,
+            "cvar_95_tail_risk": 0.0691,
+            "tail_excess_ratio": 4.02
+          }
+        },
+        "labe_bert_transformer": {
+          "evaluator_id": "eval_labe_bert_transformer",
+          "evaluator_name": "LABE Fine-Tuned BERT Transformer Classifier",
+          "model_family": "bert_sequence_classification",
+          "checkpoint_sha256": "e878fe2db219365914af4fd380503b7bbb103da13499466f91dcddddf7301e58",
+          "is_independent": true,
+          "corpus_name": "natural_substitutions",
+          "drift_metrics": {
+            "total_pairs_N": 247,
+            "independent_clusters_count_N": 247,
+            "msd_mean_signed_drift": 0.0024,
+            "masd_mean_absolute_score_difference": 0.0044,
+            "masd_cluster_percentile_ci_95": [
+              0.0036,
+              0.0054
+            ],
+            "cfr_counterfactual_flip_rate": 0.004,
+            "flips_count": 1,
+            "max_absolute_drift": 0.0701
+          },
+          "equivalence_test": {
+            "evaluator_type": "labe_bert_transformer",
+            "evaluator_specific_margin_delta": 0.02,
+            "cluster_sample_size_N": 247,
+            "mean_signed_drift": 0.0024,
+            "standard_error": 0.0005,
+            "p_value_tost": 0.0,
+            "mean_signed_drift_equivalence_passed": true,
+            "status_label": "Mean Signed Drift Equivalence Passed"
+          },
+          "tail_risk": {
+            "quantile_level": 0.95,
+            "quantile_q95": 0.0152,
+            "cvar_95_tail_risk": 0.0278,
+            "tail_excess_ratio": 6.252
+          }
+        }
+      },
+      "substantive_consensus": {
+        "epsilon_threshold": 0.01,
+        "substantive_evaluators": [
+          "sparse_ngram_ensemble",
+          "labe_bert_transformer"
         ],
-        "cfr_counterfactual_flip_rate": 0.0,
-        "flips_count": 0,
-        "max_absolute_drift": 0.0
-      },
-      "equivalence_test": {
-        "equivalence_bound_delta": 0.02,
-        "mean_difference": 0.0,
-        "standard_error": 0.0,
-        "p_value_lower_bound": 0.0,
-        "p_value_upper_bound": 0.0,
-        "p_value_tost": 0.0,
-        "tost_equivalence_passed": true
-      },
-      "tail_risk": {
-        "quantile_level": 0.95,
-        "quantile_q95": 0.0,
-        "cvar_95_tail_risk": 0.0,
-        "tail_excess_ratio": 0.0
+        "sample_size_N": 247,
+        "category_cross_tabulation_3x3": {
+          "Negative": {
+            "Negative": 0,
+            "Zero": 24,
+            "Positive": 6
+          },
+          "Zero": {
+            "Negative": 2,
+            "Zero": 87,
+            "Positive": 11
+          },
+          "Positive": {
+            "Negative": 5,
+            "Zero": 105,
+            "Positive": 7
+          }
+        },
+        "exact_category_agreement_rate": 0.3806,
+        "opposite_direction_disagreement_rate": 0.0445,
+        "conditional_nonzero_agreement_rate": 0.0437,
+        "nonzero_evaluations_count": 160
       }
     },
-    "sparse_ngram_ensemble": {
-      "evaluator_id": "eval_sparse_ngram_ensemble",
-      "evaluator_name": "Sparse N-Gram Baseline Ensemble",
-      "model_family": "sklearn_tfidf_lr_gb_ensemble",
-      "is_independent": true,
-      "total_comparisons": 1492,
-      "drift_metrics": {
-        "sample_size_N": 1492,
-        "msd_mean_signed_drift": 0.0041,
-        "masd_mean_absolute_score_difference": 0.0074,
-        "masd_bca_ci_95": [
-          0.0067,
-          0.008
+    "controlled_injection": {
+      "evaluator_cards": {
+        "exact_lexicon": {
+          "evaluator_id": "eval_exact_lexicon",
+          "evaluator_name": "Exact Lexicon Keyword Density",
+          "model_family": "deterministic_lexicon",
+          "checkpoint_sha256": "deterministic_hash_zero_drift",
+          "is_independent": true,
+          "corpus_name": "controlled_injection",
+          "drift_metrics": {
+            "total_pairs_N": 476,
+            "independent_clusters_count_N": 119,
+            "msd_mean_signed_drift": 0.0,
+            "masd_mean_absolute_score_difference": 0.0,
+            "masd_cluster_percentile_ci_95": [
+              0.0,
+              0.0
+            ],
+            "cfr_counterfactual_flip_rate": 0.0,
+            "flips_count": 0,
+            "max_absolute_drift": 0.0
+          },
+          "equivalence_test": {
+            "evaluator_type": "exact_lexicon",
+            "evaluator_specific_margin_delta": 2.0,
+            "cluster_sample_size_N": 119,
+            "mean_signed_drift": 0.0,
+            "standard_error": 0.0,
+            "p_value_tost": 0.0,
+            "mean_signed_drift_equivalence_passed": true,
+            "status_label": "Mean Signed Drift Equivalence Passed"
+          },
+          "tail_risk": {
+            "quantile_level": 0.95,
+            "quantile_q95": 0.0,
+            "cvar_95_tail_risk": 0.0,
+            "tail_excess_ratio": 0.0
+          }
+        },
+        "sparse_ngram_ensemble": {
+          "evaluator_id": "eval_sparse_ngram_ensemble",
+          "evaluator_name": "Sparse N-Gram Baseline Ensemble",
+          "model_family": "sklearn_tfidf_lr_gb_ensemble",
+          "checkpoint_sha256": "287972f38c0d5f9cd50736583fda95583680d72d7921eb4e1771b6b576022555",
+          "is_independent": true,
+          "corpus_name": "controlled_injection",
+          "drift_metrics": {
+            "total_pairs_N": 476,
+            "independent_clusters_count_N": 119,
+            "msd_mean_signed_drift": -0.0085,
+            "masd_mean_absolute_score_difference": 0.0086,
+            "masd_cluster_percentile_ci_95": [
+              0.0085,
+              0.0087
+            ],
+            "cfr_counterfactual_flip_rate": 0.0231,
+            "flips_count": 11,
+            "max_absolute_drift": 0.0176
+          },
+          "equivalence_test": {
+            "evaluator_type": "sparse_ngram_ensemble",
+            "evaluator_specific_margin_delta": 0.02,
+            "cluster_sample_size_N": 119,
+            "mean_signed_drift": -0.0085,
+            "standard_error": 0.0001,
+            "p_value_tost": 0.0,
+            "mean_signed_drift_equivalence_passed": true,
+            "status_label": "Mean Signed Drift Equivalence Passed"
+          },
+          "tail_risk": {
+            "quantile_level": 0.95,
+            "quantile_q95": 0.0176,
+            "cvar_95_tail_risk": 0.0176,
+            "tail_excess_ratio": 2.045
+          }
+        },
+        "labe_bert_transformer": {
+          "evaluator_id": "eval_labe_bert_transformer",
+          "evaluator_name": "LABE Fine-Tuned BERT Transformer Classifier",
+          "model_family": "bert_sequence_classification",
+          "checkpoint_sha256": "e878fe2db219365914af4fd380503b7bbb103da13499466f91dcddddf7301e58",
+          "is_independent": true,
+          "corpus_name": "controlled_injection",
+          "drift_metrics": {
+            "total_pairs_N": 476,
+            "independent_clusters_count_N": 119,
+            "msd_mean_signed_drift": 0.0118,
+            "masd_mean_absolute_score_difference": 0.0119,
+            "masd_cluster_percentile_ci_95": [
+              0.0118,
+              0.0121
+            ],
+            "cfr_counterfactual_flip_rate": 0.0042,
+            "flips_count": 2,
+            "max_absolute_drift": 0.0221
+          },
+          "equivalence_test": {
+            "evaluator_type": "labe_bert_transformer",
+            "evaluator_specific_margin_delta": 0.02,
+            "cluster_sample_size_N": 119,
+            "mean_signed_drift": 0.0118,
+            "standard_error": 0.0001,
+            "p_value_tost": 0.0,
+            "mean_signed_drift_equivalence_passed": true,
+            "status_label": "Mean Signed Drift Equivalence Passed"
+          },
+          "tail_risk": {
+            "quantile_level": 0.95,
+            "quantile_q95": 0.0221,
+            "cvar_95_tail_risk": 0.0221,
+            "tail_excess_ratio": 1.849
+          }
+        }
+      },
+      "substantive_consensus": {
+        "epsilon_threshold": 0.01,
+        "substantive_evaluators": [
+          "sparse_ngram_ensemble",
+          "labe_bert_transformer"
         ],
-        "cfr_counterfactual_flip_rate": 0.008,
-        "flips_count": 12,
-        "max_absolute_drift": 0.334
-      },
-      "equivalence_test": {
-        "equivalence_bound_delta": 0.02,
-        "mean_difference": 0.0041,
-        "standard_error": 0.0004,
-        "p_value_lower_bound": 0.0,
-        "p_value_upper_bound": 0.0,
-        "p_value_tost": 0.0,
-        "tost_equivalence_passed": true
-      },
-      "tail_risk": {
-        "quantile_level": 0.95,
-        "quantile_q95": 0.0257,
-        "cvar_95_tail_risk": 0.0442,
-        "tail_excess_ratio": 6.002
-      }
-    },
-    "labe_bert_transformer": {
-      "evaluator_id": "eval_labe_bert_transformer",
-      "evaluator_name": "LABE Independent BERT Transformer Classifier",
-      "model_family": "bert_sequence_classification",
-      "is_independent": true,
-      "total_comparisons": 1492,
-      "drift_metrics": {
-        "sample_size_N": 1492,
-        "msd_mean_signed_drift": -0.0037,
-        "masd_mean_absolute_score_difference": 0.005,
-        "masd_bca_ci_95": [
-          0.0048,
-          0.0052
-        ],
-        "cfr_counterfactual_flip_rate": 0.0,
-        "flips_count": 0,
-        "max_absolute_drift": 0.0447
-      },
-      "equivalence_test": {
-        "equivalence_bound_delta": 0.02,
-        "mean_difference": -0.0037,
-        "standard_error": 0.0001,
-        "p_value_lower_bound": 0.0,
-        "p_value_upper_bound": 0.0,
-        "p_value_tost": 0.0,
-        "tost_equivalence_passed": true
-      },
-      "tail_risk": {
-        "quantile_level": 0.95,
-        "quantile_q95": 0.0131,
-        "cvar_95_tail_risk": 0.0186,
-        "tail_excess_ratio": 3.721
+        "sample_size_N": 476,
+        "category_cross_tabulation_3x3": {
+          "Negative": {
+            "Negative": 0,
+            "Zero": 1,
+            "Positive": 118
+          },
+          "Zero": {
+            "Negative": 1,
+            "Zero": 232,
+            "Positive": 124
+          },
+          "Positive": {
+            "Negative": 0,
+            "Zero": 0,
+            "Positive": 0
+          }
+        },
+        "exact_category_agreement_rate": 0.4874,
+        "opposite_direction_disagreement_rate": 0.2479,
+        "conditional_nonzero_agreement_rate": 0.0,
+        "nonzero_evaluations_count": 244
       }
     }
-  },
-  "consensus_agreement": {
-    "epsilon_threshold": 0.01,
-    "evaluators_count": 3,
-    "sample_size_N": 1492,
-    "mean_consensus_stability": 0.9004,
-    "all_evaluator_agreement_rate": 0.7252,
-    "majority_agreement_rate": 0.9759,
-    "opposite_direction_disagreement_rate": 0.0241
   }
 }

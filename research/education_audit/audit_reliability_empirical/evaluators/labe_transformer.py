@@ -1,4 +1,4 @@
-"""LABE Fine-Tuned Independent BERT Transformer Agency Classifier Evaluator."""
+"""LABE Fine-Tuned Independent BERT Transformer Agency Classifier Evaluator (With Fail-Closed Hash Verification)."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ def compute_file_sha256(filepath: str) -> str:
 
 
 class LABETransformerAgencyEvaluator:
-    """LABE Fine-Tuned Independent BERT Transformer Classifier Evaluator (Loaded from Frozen Checkpoint)."""
+    """LABE Fine-Tuned Independent BERT Transformer Classifier Evaluator (With Fail-Closed Hash Verification)."""
 
     def __init__(self, checkpoint_dir: str = "models/labe_bert_agency"):
         checkpoint_dir = os.path.abspath(checkpoint_dir)
@@ -36,12 +36,22 @@ class LABETransformerAgencyEvaluator:
         if not os.path.exists(weights_path):
             weights_path = os.path.join(checkpoint_dir, "pytorch_model.bin")
 
-        if not os.path.exists(weights_path):
-            raise FileNotFoundError(f"Required weights file missing in {checkpoint_dir}")
+        if not os.path.exists(weights_path) or not os.path.exists(manifest_path):
+            raise FileNotFoundError(f"Required weights or manifest file missing in {checkpoint_dir}")
 
-        weights_hash = compute_file_sha256(weights_path)
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            manifest = json.load(f)
+
+        actual_weights_hash = compute_file_sha256(weights_path)
+        expected_weights_hash = manifest.get("weights_sha256")
+
+        if expected_weights_hash and actual_weights_hash != expected_weights_hash:
+            raise ValueError(
+                f"BERT Model weights hash mismatch! Expected {expected_weights_hash}, got {actual_weights_hash}"
+            )
+
+        self.threshold = float(manifest.get("best_threshold", 0.60))
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.threshold = 0.50
 
         # Load fine-tuned tokenizer & model
         self.tokenizer = AutoTokenizer.from_pretrained(checkpoint_dir)
@@ -63,7 +73,7 @@ class LABETransformerAgencyEvaluator:
             evaluator_name="LABE Fine-Tuned BERT Transformer Classifier",
             model_family="bert_sequence_classification",
             checkpoint_revision="labe_bert_fine_tuned_v1",
-            checkpoint_sha256=weights_hash,
+            checkpoint_sha256=actual_weights_hash,
             training_data_revision="abcc3ec6032e3b265cbf15c6d8a3da668a2a030675b00f0425b96698c8cd5b56",
             score_scale=[0.0, 1.0],
             threshold=self.threshold,

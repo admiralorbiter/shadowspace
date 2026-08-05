@@ -1,4 +1,4 @@
-"""LABE-Trained Sparse N-Gram Ensemble Evaluator (Loaded from Frozen Joblib Artifacts)."""
+"""LABE-Trained Sparse N-Gram Ensemble Evaluator (Loaded from Frozen Joblib Artifacts With Fail-Closed Hash Verification)."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ def compute_file_sha256(filepath: str) -> str:
 
 
 class SparseNgramEnsembleEvaluator:
-    """LABE-Trained Sparse N-Gram Ensemble Evaluator (Loaded from Frozen Joblib Artifacts)."""
+    """LABE-Trained Sparse N-Gram Ensemble Evaluator (With Fail-Closed Hash Verification)."""
 
     def __init__(self, model_dir: str = "models/labe_sparse_ngram"):
         model_dir = os.path.abspath(model_dir)
@@ -32,19 +32,30 @@ class SparseNgramEnsembleEvaluator:
         gb_path = os.path.join(model_dir, "clf_gb.joblib")
         manifest_path = os.path.join(model_dir, "manifest.json")
 
-        if not os.path.exists(vec_path) or not os.path.exists(lr_path) or not os.path.exists(gb_path):
-            raise FileNotFoundError(f"Required frozen n-gram joblib artifacts missing in {model_dir}")
+        if not os.path.exists(vec_path) or not os.path.exists(lr_path) or not os.path.exists(gb_path) or not os.path.exists(manifest_path):
+            raise FileNotFoundError(f"Required frozen n-gram joblib artifacts or manifest missing in {model_dir}")
+
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            manifest = json.load(f)
+
+        actual_vec_hash = compute_file_sha256(vec_path)
+        actual_lr_hash = compute_file_sha256(lr_path)
+        actual_gb_hash = compute_file_sha256(gb_path)
+
+        if manifest.get("vectorizer_sha256") and actual_vec_hash != manifest["vectorizer_sha256"]:
+            raise ValueError(f"Vectorizer joblib hash mismatch: expected {manifest['vectorizer_sha256']}, got {actual_vec_hash}")
+        if manifest.get("clf_lr_sha256") and actual_lr_hash != manifest["clf_lr_sha256"]:
+            raise ValueError(f"Logistic clf joblib hash mismatch: expected {manifest['clf_lr_sha256']}, got {actual_lr_hash}")
+        if manifest.get("clf_gb_sha256") and actual_gb_hash != manifest["clf_gb_sha256"]:
+            raise ValueError(f"Gradient boosting joblib hash mismatch: expected {manifest['clf_gb_sha256']}, got {actual_gb_hash}")
 
         self.vectorizer = joblib.load(vec_path)
         self.clf_lr = joblib.load(lr_path)
         self.clf_gb = joblib.load(gb_path)
-
-        with open(manifest_path, "r", encoding="utf-8") as f:
-            manifest = json.load(f)
         self.threshold = float(manifest.get("best_threshold", 0.49))
 
         combined_hash = hashlib.sha256(
-            (manifest["vectorizer_sha256"] + manifest["clf_lr_sha256"] + manifest["clf_gb_sha256"]).encode("utf-8")
+            (actual_vec_hash + actual_lr_hash + actual_gb_hash).encode("utf-8")
         ).hexdigest()
 
         self.provenance = EvaluatorProvenance(

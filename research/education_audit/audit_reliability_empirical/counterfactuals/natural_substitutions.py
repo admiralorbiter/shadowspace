@@ -1,34 +1,50 @@
-"""POS-Aware Natural In-Place Identity Substitutions."""
+"""Symmetric Natural Pronoun Substitutions via Canonical Identity-Neutral Representation."""
 
 from __future__ import annotations
 
 import re
 from typing import Dict, Optional, Tuple
 
-PRONOUN_POS_PAIRS = [
-    (r"\bHe\b", "He", "She"),
-    (r"\bhe\b", "he", "she"),
-    (r"\bHim\b", "Him", "Her"),
-    (r"\bhim\b", "him", "her"),
-    (r"\bHis\b", "His", "Her"),
-    (r"\bhis\b", "his", "her"),
-    (r"\bHers\b", "His", "Hers"),
-    (r"\bhers\b", "his", "hers"),
-]
 
+def apply_symmetric_natural_pronoun_swap(text: str) -> Optional[Tuple[str, str]]:
+    """Performs symmetric natural pronoun substitution for both masculine- and feminine-source sentences."""
+    # Count distinct identity references; reject multi-person sentences
+    masc_pronouns = len(re.findall(r"\b(he|him|his)\b", text, re.IGNORECASE))
+    fem_pronouns = len(re.findall(r"\b(she|her|hers)\b", text, re.IGNORECASE))
 
-def apply_natural_pronoun_swap(text: str) -> Optional[Tuple[str, str]]:
-    """Performs natural POS-aware in-place pronoun substitution if text contains pronouns."""
-    has_pronouns = any(re.search(pat, text) for pat, _, _ in PRONOUN_POS_PAIRS)
-    if not has_pronouns:
+    if masc_pronouns > 0 and fem_pronouns > 0:
+        # Mixed/multiple gender references present; reject pair for purity
         return None
 
-    text_masc = text
-    text_fem = text
+    if masc_pronouns == 0 and fem_pronouns == 0:
+        return None
 
-    for pat, masc_tok, fem_tok in PRONOUN_POS_PAIRS:
-        text_masc = re.sub(pat, masc_tok, text_masc)
-        text_fem = re.sub(pat, fem_tok, text_fem)
+    # Canonicalize to neutral tokens
+    canonical = text
+    canonical = re.sub(r"\bShe\b", "[SHE_HE]", canonical)
+    canonical = re.sub(r"\bshe\b", "[she_he]", canonical)
+    canonical = re.sub(r"\bHe\b", "[SHE_HE]", canonical)
+    canonical = re.sub(r"\bhe\b", "[she_he]", canonical)
+
+    canonical = re.sub(r"\bHim\b", "[HER_HIM]", canonical)
+    canonical = re.sub(r"\bhim\b", "[her_him]", canonical)
+
+    # Render Masculine and Feminine conditions from shared canonical representation
+    text_masc = canonical
+    text_masc = re.sub(r"\[SHE_HE\]", "He", text_masc)
+    text_masc = re.sub(r"\[she_he\]", "he", text_masc)
+    text_masc = re.sub(r"\[HER_HIM\]", "Him", text_masc)
+    text_masc = re.sub(r"\[her_him\]", "him", text_masc)
+    text_masc = re.sub(r"\bHer\b", "His", text_masc)
+    text_masc = re.sub(r"\bher\b", "his", text_masc)
+
+    text_fem = canonical
+    text_fem = re.sub(r"\[SHE_HE\]", "She", text_fem)
+    text_fem = re.sub(r"\[she_he\]", "she", text_fem)
+    text_fem = re.sub(r"\[HER_HIM\]", "Her", text_fem)
+    text_fem = re.sub(r"\[her_him\]", "her", text_fem)
+    text_fem = re.sub(r"\bHis\b", "Her", text_fem)
+    text_fem = re.sub(r"\bhis\b", "her", text_fem)
 
     if text_masc == text_fem:
         return None
