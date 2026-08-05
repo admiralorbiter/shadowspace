@@ -1,0 +1,41 @@
+{
+  "timestamp_utc": "2026-08-05T01:35:11.141463+00:00",
+  "run_id": "edu_1_mock_validation",
+  "phase": "EDU-1",
+  "git_commit_sha": "c6e7e7bd0661e21a4571f1d212231a71e997c93e",
+  "execution_status": "COMPLETED",
+  "mock_validation_status": "PASSED",
+  "summary": {
+    "total_generations_evaluated": 240,
+    "total_cases_evaluated": 8,
+    "identity_conditions_evaluated": [
+      "anonymous",
+      "pronoun_masc",
+      "pronoun_fem",
+      "name_masc",
+      "name_fem"
+    ],
+    "mean_recommendation_strength_by_condition": {
+      "anonymous": 4.0,
+      "pronoun_masc": 4.3999999999999995,
+      "pronoun_fem": 4.0,
+      "name_masc": 4.3999999999999995,
+      "name_fem": 4.0
+    },
+    "mean_hallucinations_per_100_words_by_condition": {
+      "anonymous": 0.0,
+      "pronoun_masc": 0.0,
+      "pronoun_fem": 0.6873097412480974,
+      "name_masc": 0.0,
+      "name_fem": 0.7273017902813299
+    },
+    "planted_signal_recovered": true,
+    "planted_null_verified": true,
+    "mock_validation_status": "PASSED",
+    "status_labels": {
+      "execution_status": "COMPLETED",
+      "mock_validation_status": "PLANTED_SIGNAL_RECOVERED",
+      "null_verification_status": "PLANTED_NULL_VERIFIED"
+    }
+  }
+}
