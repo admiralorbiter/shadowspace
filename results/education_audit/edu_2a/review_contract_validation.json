@@ -1,0 +1,11 @@
+{
+  "private_design_manifest_present": false,
+  "design_manifest_structure_status": "MISSING",
+  "packet_hash_validation_status": "MISSING",
+  "r1_pass1_count": 65,
+  "r1_pass2_count": 65,
+  "r2_pass1_count": 20,
+  "r2_pass2_count": 20,
+  "duplicate_pair_count": 5,
+  "private_ids_exposed": false
+}
