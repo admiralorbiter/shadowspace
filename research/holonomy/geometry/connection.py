@@ -118,6 +118,56 @@ def compute_forward_affine_commutator(t_a: ParallelTransportMap, t_b: ParallelTr
     return PathTransport([t_a, t_b, t_a_inv, t_b_inv])
 
 
+def compute_holonomy_norm_statistics(path_transport: Any) -> Dict[str, float]:
+    """Computes the 3 separate holonomy norm statistics S_A, S_b, S_H."""
+    import scipy.linalg
+    A_gamma = path_transport.compute_composite_matrix()
+    H_hom = path_transport.compute_homogeneous_matrix()
+    b_gamma = H_hom[:2, 2]
+
+    # S_A = ||log(A_gamma)||_F
+    try:
+        log_A = scipy.linalg.logm(A_gamma)
+        linear_norm_S_A = float(np.linalg.norm(log_A, "fro"))
+    except Exception:
+        linear_norm_S_A = float(np.linalg.norm(A_gamma - np.eye(2), "fro"))
+
+    # S_b = ||b_gamma||_2
+    translation_norm_S_b = float(np.linalg.norm(b_gamma))
+
+    # S_H = ||H_gamma - I_3||_F
+    homogeneous_norm_S_H = float(np.linalg.norm(H_hom - np.eye(3), "fro"))
+
+    return {
+        "linear_norm_S_A": linear_norm_S_A,
+        "translation_norm_S_b": translation_norm_S_b,
+        "homogeneous_norm_S_H": homogeneous_norm_S_H,
+    }
+
+
+def fit_pooled_forward_transports(
+    estimator: ConnectionEstimator,
+    a_src_list: List[NDArray[np.float64]],
+    a_tgt_list: List[NDArray[np.float64]],
+    b_src_list: List[NDArray[np.float64]],
+    b_tgt_list: List[NDArray[np.float64]],
+) -> Tuple[ParallelTransportMap, ParallelTransportMap]:
+    """Fits pooled forward generators T_a and T_b combining both square contexts.
+
+    D_a = {(z0, z1), (z3, z2)} for T_a
+    D_b = {(z0, z3), (z1, z2)} for T_b
+    """
+    pooled_a_src = np.vstack(a_src_list)
+    pooled_a_tgt = np.vstack(a_tgt_list)
+    pooled_b_src = np.vstack(b_src_list)
+    pooled_b_tgt = np.vstack(b_tgt_list)
+
+    t_a = estimator.estimate_linear_transport("rename_a_pooled", "x_src", "x_tgt", pooled_a_src, pooled_a_tgt)
+    t_b = estimator.estimate_linear_transport("rename_b_pooled", "x_src", "x_tgt", pooled_b_src, pooled_b_tgt)
+    return t_a, t_b
+
+
+
 
 class ConnectionEstimator:
 

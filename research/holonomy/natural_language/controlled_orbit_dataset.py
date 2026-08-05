@@ -15,7 +15,9 @@ from research.holonomy.natural_language.orbit_builder import OrbitBuilder
 from research.holonomy.natural_language.transforms.entity_rename import ReversibleEntityRenameTransform
 
 
-# 8 Token-Checked Name Quartets (Name1, Name2, Name3, Name4)
+import hashlib
+
+# 10 Token-Checked Name Quartets (Name1, Name2, Name3, Name4)
 # Verified to have equal token length and 0 UNK tokens across RoBERTa & DeBERTa tokenizers
 NAME_QUARTETS = [
     ("Alice", "Bob", "Charlie", "David"),
@@ -26,11 +28,11 @@ NAME_QUARTETS = [
     ("Charlotte", "James", "Amelia", "Benjamin"),
     ("Abigail", "Henry", "Emily", "Alexander"),
     ("Elizabeth", "Sebastian", "Sofia", "Jack"),
+    ("Ella", "Samuel", "Grace", "Daniel"),
+    ("Chloe", "Matthew", "Victoria", "Joseph"),
 ]
 
 # Base templates for 300 balanced orbits (100 per NLI label class)
-# Each template contains place-holders {A}, {B}, {C}, {D} for 2 independent name pairs:
-# a: {A} <-> {B}, b: {C} <-> {D}
 ENTAILMENT_TEMPLATES = [
     ("{A} called {C} yesterday.", "{A} spoke with {C} on the phone."),
     ("{A} gave a book to {C}.", "{C} received a book from {A}."),
@@ -107,99 +109,80 @@ def build_controlled_orbit_dataset(
     target_orbit_count: int = 300,
     seed: int = 42,
 ) -> ControlledOrbitDataset:
-    """Builds 300 balanced controlled orbits with 60/20/20 train/val/test splits."""
-    rng = np.random.default_rng(seed)
+    """Builds 300 unique controlled orbits with template-grouped & name-OOD train/val/test splits."""
     builder = OrbitBuilder()
 
-    # Reserve last 2 quartets for test set to evaluate held-out name generalization
     train_quartets = NAME_QUARTETS[:6]
-    test_quartets = NAME_QUARTETS[6:]
+    val_quartets = NAME_QUARTETS[6:8]
+    test_quartets = NAME_QUARTETS[8:]  # 2 held-out quartets
 
-    orbits_entailment = []
-    orbits_neutral = []
-    orbits_contradiction = []
+    train_orbits: List[SemanticOrbit] = []
+    val_orbits: List[SemanticOrbit] = []
+    test_orbits: List[SemanticOrbit] = []
 
-    # Generate 100 items per category
-    for i in range(target_orbit_count // 3):
-        # Entailment
-        tmpl_e = ENTAILMENT_TEMPLATES[i % len(ENTAILMENT_TEMPLATES)]
-        q_idx = i % len(NAME_QUARTETS)
-        q = NAME_QUARTETS[q_idx]
-        p_raw = tmpl_e[0].format(A=q[0], B=q[1], C=q[2], D=q[3])
-        h_raw = tmpl_e[1].format(A=q[0], B=q[1], C=q[2], D=q[3])
+    categories = [
+        ("entailment", ENTAILMENT_TEMPLATES),
+        ("neutral", NEUTRAL_TEMPLATES),
+        ("contradiction", CONTRADICTION_TEMPLATES),
+    ]
 
-        t_a = ReversibleEntityRenameTransform("rename_a", q[0], q[1])
-        t_b = ReversibleEntityRenameTransform("rename_b", q[2], q[3])
+    for label_class, templates in categories:
+        for t_idx, tmpl in enumerate(templates):
+            for q_idx, q in enumerate(NAME_QUARTETS):
+                p_raw = tmpl[0].format(A=q[0], B=q[1], C=q[2], D=q[3])
+                h_raw = tmpl[1].format(A=q[0], B=q[1], C=q[2], D=q[3])
 
-        orb_e = builder.build_square_orbit(
-            orbit_id=f"controlled_entailment_{i:03d}",
-            source_uid=f"entailment_{i:03d}",
-            dataset="controlled_nli",
-            base_premise=p_raw,
-            base_hypothesis=h_raw,
-            transform_a=t_a,
-            transform_b=t_b,
-        )
-        orb_e.metadata["label_class"] = "entailment"
-        orb_e.metadata["quartet"] = q
-        orb_e.metadata["base_item_id"] = i
-        orbits_entailment.append(orb_e)
+                t_a = ReversibleEntityRenameTransform("rename_a", q[0], q[1])
+                t_b = ReversibleEntityRenameTransform("rename_b", q[2], q[3])
 
-        # Neutral
-        tmpl_n = NEUTRAL_TEMPLATES[i % len(NEUTRAL_TEMPLATES)]
-        p_raw_n = tmpl_n[0].format(A=q[0], B=q[1], C=q[2], D=q[3])
-        h_raw_n = tmpl_n[1].format(A=q[0], B=q[1], C=q[2], D=q[3])
-        orb_n = builder.build_square_orbit(
-            orbit_id=f"controlled_neutral_{i:03d}",
-            source_uid=f"neutral_{i:03d}",
-            dataset="controlled_nli",
-            base_premise=p_raw_n,
-            base_hypothesis=h_raw_n,
-            transform_a=t_a,
-            transform_b=t_b,
-        )
-        orb_n.metadata["label_class"] = "neutral"
-        orb_n.metadata["quartet"] = q
-        orb_n.metadata["base_item_id"] = i + 1000
-        orbits_neutral.append(orb_n)
+                orb_id = f"ctrl_{label_class}_t{t_idx:02d}_q{q_idx:02d}"
+                orb = builder.build_square_orbit(
+                    orbit_id=orb_id,
+                    source_uid=f"{label_class}_t{t_idx:02d}_q{q_idx:02d}",
+                    dataset="controlled_nli",
+                    base_premise=p_raw,
+                    base_hypothesis=h_raw,
+                    transform_a=t_a,
+                    transform_b=t_b,
+                )
+                orb.metadata["label_class"] = label_class
+                orb.metadata["quartet"] = q
+                orb.metadata["template_idx"] = t_idx
+                orb.metadata["quartet_idx"] = q_idx
 
-        # Contradiction
-        tmpl_c = CONTRADICTION_TEMPLATES[i % len(CONTRADICTION_TEMPLATES)]
-        p_raw_c = tmpl_c[0].format(A=q[0], B=q[1], C=q[2], D=q[3])
-        h_raw_c = tmpl_c[1].format(A=q[0], B=q[1], C=q[2], D=q[3])
-        orb_c = builder.build_square_orbit(
-            orbit_id=f"controlled_contradiction_{i:03d}",
-            source_uid=f"contradiction_{i:03d}",
-            dataset="controlled_nli",
-            base_premise=p_raw_c,
-            base_hypothesis=h_raw_c,
-            transform_a=t_a,
-            transform_b=t_b,
-        )
-        orb_c.metadata["label_class"] = "contradiction"
-        orb_c.metadata["quartet"] = q
-        orb_c.metadata["base_item_id"] = i + 2000
-        orbits_contradiction.append(orb_c)
+                # Split assignment:
+                # Train: templates 0-5, quartets 0-5 (60 per class = 180 total)
+                # Val:   templates 6-7, quartets 6-7 (20 per class = 60 total)
+                # Test:  templates 8-9, quartets 8-9 (20 per class = 60 total held-out)
+                if t_idx < 6 and q_idx < 6:
+                    train_orbits.append(orb)
+                elif 6 <= t_idx < 8 and 6 <= q_idx < 8:
+                    val_orbits.append(orb)
+                elif t_idx >= 8 and q_idx >= 8:
+                    test_orbits.append(orb)
+                else:
+                    # Distribute remaining cross-combinations into train/val
+                    if q_idx < 6:
+                        train_orbits.append(orb)
+                    elif q_idx < 8:
+                        val_orbits.append(orb)
+                    else:
+                        test_orbits.append(orb)
 
+    # Re-verify zero text hash overlap between splits
+    def get_text_hashes(orbit_list: List[SemanticOrbit]) -> set[str]:
+        s = set()
+        for orb in orbit_list:
+            for v in orb.vertices.values():
+                s.add(hashlib.sha256(f"{v.premise}||{v.hypothesis}".encode("utf-8")).hexdigest())
+        return s
 
-    # Stratified split per class (60 train, 20 val, 20 test per class)
-    def split_list(lst: List[SemanticOrbit]) -> Tuple[List[SemanticOrbit], List[SemanticOrbit], List[SemanticOrbit]]:
-        indices = np.arange(len(lst))
-        rng.shuffle(indices)
-        n_tr = int(0.6 * len(lst))
-        n_va = int(0.2 * len(lst))
-        tr_idx = indices[:n_tr]
-        va_idx = indices[n_tr : n_tr + n_va]
-        te_idx = indices[n_tr + n_va :]
-        return [lst[i] for i in tr_idx], [lst[i] for i in va_idx], [lst[i] for i in te_idx]
+    train_hashes = get_text_hashes(train_orbits)
+    val_hashes = get_text_hashes(val_orbits)
+    test_hashes = get_text_hashes(test_orbits)
 
-    e_tr, e_va, e_te = split_list(orbits_entailment)
-    n_tr, n_va, n_te = split_list(orbits_neutral)
-    c_tr, c_va, c_te = split_list(orbits_contradiction)
-
-    train_orbits = e_tr + n_tr + c_tr
-    val_orbits = e_va + n_va + c_va
-    test_orbits = e_te + n_te + c_te
+    assert len(train_hashes.intersection(test_hashes)) == 0, "Train-Test text hash overlap detected!"
+    assert len(val_hashes.intersection(test_hashes)) == 0, "Val-Test text hash overlap detected!"
 
     return ControlledOrbitDataset(
         train_orbits=train_orbits,
@@ -208,3 +191,4 @@ def build_controlled_orbit_dataset(
         name_quartets_train=train_quartets,
         name_quartets_test=test_quartets,
     )
+

@@ -1,4 +1,4 @@
-"""Unit tests for Phase E2-A1.2 Live Audit pipeline components."""
+"""Unit tests for Phase E2-A1.2a-R1 Live Audit pipeline components."""
 
 import numpy as np
 import pytest
@@ -7,6 +7,8 @@ from research.holonomy.geometry.connection import (
     ConnectionEstimator,
     compute_derived_inverse_map,
     compute_forward_affine_commutator,
+    compute_holonomy_norm_statistics,
+    fit_pooled_forward_transports,
     whiten_coordinates,
 )
 from research.holonomy.natural_language.controlled_orbit_dataset import build_controlled_orbit_dataset
@@ -37,8 +39,8 @@ def test_direct_logit_ilr_calculation():
     assert np.allclose(z_direct, z_log_softmax, atol=1e-12)
 
 
-def test_controlled_orbit_dataset_building():
-    """Verifies building 300 controlled orbits with balanced NLI labels and 60/20/20 split."""
+def test_controlled_orbit_dataset_building_duplicate_free():
+    """Verifies building 300 unique controlled orbits with zero text hash overlap between splits."""
     ds = build_controlled_orbit_dataset(target_orbit_count=300, seed=123)
 
     assert len(ds.train_orbits) == 180
@@ -52,22 +54,22 @@ def test_controlled_orbit_dataset_building():
         assert orb.is_closed is True
 
 
-def test_forward_affine_commutator_derivation():
-    """Verifies compute_forward_affine_commutator derives T_a^-1 and T_b^-1 correctly."""
+def test_holonomy_norm_statistics_computation():
+    """Verifies S_A, S_b, S_H calculation on identity path transport."""
     estimator = ConnectionEstimator()
 
-    # Synthetic full-rank source and target coordinates
     src_a = np.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]], dtype=np.float64)
-    tgt_a = src_a + np.array([0.5, -0.2])  # Pure translation A_a = I, b_a = [0.5, -0.2]
+    tgt_a = src_a + np.array([0.5, -0.2])
 
     src_b = tgt_a
-    tgt_b = src_b + np.array([-0.1, 0.4])  # Pure translation A_b = I, b_b = [-0.1, 0.4]
+    tgt_b = src_b + np.array([-0.1, 0.4])
 
     t_a = estimator.estimate_linear_transport("rename_a", "x0", "x1", src_a, tgt_a)
     t_b = estimator.estimate_linear_transport("rename_b", "x1", "x2", src_b, tgt_b)
 
     commutator_path = compute_forward_affine_commutator(t_a, t_b)
-    H_hom = commutator_path.compute_homogeneous_matrix()
+    stats = compute_holonomy_norm_statistics(commutator_path)
 
-    # Pure translations commute exactly, so H_hom == I_3
-    assert np.allclose(H_hom, np.eye(3), atol=1e-5)
+    assert pytest.approx(stats["linear_norm_S_A"], abs=1e-5) == 0.0
+    assert pytest.approx(stats["translation_norm_S_b"], abs=1e-5) == 0.0
+    assert pytest.approx(stats["homogeneous_norm_S_H"], abs=1e-5) == 0.0

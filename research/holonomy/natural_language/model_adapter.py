@@ -27,14 +27,15 @@ class LiveNLIConfig:
     """Configuration for pinned live HuggingFace NLI model inference."""
 
     model_id: str = "FacebookAI/roberta-large-mnli"
-    revision: str | None = None
+    revision: str | None = "2a8f12d27941090092df78e4ba6f0928eb5eac98"
     device: str = "cpu"
     dtype: str = "float32"
-    batch_size: int = 8
+    batch_size: int = 16
     max_length: int = 128
     truncation: bool = True
     local_files_only: bool = False
     use_mock_fallback: bool = False
+
 
 
 @dataclass(frozen=True)
@@ -260,28 +261,47 @@ class HuggingFaceNLIAdapter:
         import torch
 
         device = next(self.model.parameters()).device
-        premises = [p for p, h in pairs]
-        hypotheses = [h for p, h in pairs]
+        bs = self.config.batch_size
 
-        inputs = self.tokenizer(
-            premises,
-            hypotheses,
-            return_tensors="pt",
-            padding=True,
-            truncation=self.config.truncation,
-            max_length=self.config.max_length,
-        )
+        all_raw_logits = []
+        all_probs = []
+        all_token_counts = []
+        all_truncated = []
 
-        input_ids = inputs["input_ids"]
-        token_counts = (input_ids != self.tokenizer.pad_token_id).sum(dim=1).cpu().numpy()
-        truncated = (token_counts >= self.config.max_length)
+        for i in range(0, len(pairs), bs):
+            chunk = pairs[i : i + bs]
+            premises = [p for p, h in chunk]
+            hypotheses = [h for p, h in chunk]
 
-        inputs_dev = {k: v.to(device) for k, v in inputs.items()}
+            inputs = self.tokenizer(
+                premises,
+                hypotheses,
+                return_tensors="pt",
+                padding=True,
+                truncation=self.config.truncation,
+                max_length=self.config.max_length,
+            )
 
-        with torch.inference_mode():
-            outputs = self.model(**inputs_dev)
-            raw_logits = outputs.logits.cpu().numpy()
-            probs = torch.softmax(outputs.logits, dim=-1).cpu().numpy()
+            input_ids = inputs["input_ids"]
+            counts = (input_ids != self.tokenizer.pad_token_id).sum(dim=1).cpu().numpy()
+            trunc = (counts >= self.config.max_length)
+
+            inputs_dev = {k: v.to(device) for k, v in inputs.items()}
+
+            with torch.inference_mode():
+                outputs = self.model(**inputs_dev)
+                logits = outputs.logits.cpu().numpy()
+                probs = torch.softmax(outputs.logits, dim=-1).cpu().numpy()
+
+            all_raw_logits.append(logits)
+            all_probs.append(probs)
+            all_token_counts.append(counts)
+            all_truncated.append(trunc)
+
+        raw_logits = np.vstack(all_raw_logits)
+        probs = np.vstack(all_probs)
+        token_counts = np.concatenate(all_token_counts)
+        truncated = np.concatenate(all_truncated)
 
         aligned_logits = self.adapter.align_logits(raw_logits)
         aligned_probs = self.adapter.align_probabilities(probs)
@@ -295,5 +315,6 @@ class HuggingFaceNLIAdapter:
             token_counts=token_counts,
             truncated=truncated,
         )
+
 
 
