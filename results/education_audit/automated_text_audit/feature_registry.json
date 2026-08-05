@@ -4,8 +4,10 @@
   "total_pairs_count": 72,
   "primary_gender_pairs_count": 24,
   "secondary_anonymous_pairs_count": 48,
-  "counterfactual_snr_ratio": 1.0,
-  "snr_interpretation": "Identity changes are comparable to ordinary seed sampling variability (R \u2248 1).",
+  "matched_counterfactual_snr_ratio": 1.038,
+  "log_snr_ratio": 0.038,
+  "displacement_coherence_kappa": 0.151,
+  "snr_interpretation": "Matched cell-level SNR R = 1.038 (Log SNR L = 0.038). Directional Displacement Coherence kappa = 0.151 (p = 0.491). Seed-Null Exceedance P(|D_identity| > Q_0.95(D_seed)) = 0.0.",
   "calibration_status": "CALIBRATION_COMPLETED",
   "public_synthetic_atlas_generated": true,
   "private_study_atlas_protected": true

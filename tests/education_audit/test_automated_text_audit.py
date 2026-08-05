@@ -1,18 +1,18 @@
-"""Unit Contract Tests for Automated Text Audit, Counterfactual SNR, & Fact Graph Entailment."""
+"""Unit Contract Tests for Automated Text Audit, Matched SNR v2, Coherence Kappa, & Hierarchical Sensitivity."""
 
 import os
 import pytest
 
 from research.education_audit.automated_text_audit.feature_registry import extract_all_letter_features, analyze_profile_fact_graph
 from research.education_audit.automated_text_audit.external_replication import run_external_calibration
-from research.education_audit.automated_text_audit.paired_difference_analysis import align_sentences, analyze_paired_counterfactuals, compute_counterfactual_signal_to_noise
+from research.education_audit.automated_text_audit.paired_difference_analysis import align_sentences, analyze_paired_counterfactuals, compute_matched_snr_v2
 from research.education_audit.automated_text_audit.visualize_counterfactuals import generate_counterfactual_atlas_html
 from research.education_audit.automated_text_audit.sensitivity_simulator import calculate_minimum_detectable_difference, run_sensitivity_simulation
 from research.education_audit.automated_text_audit.run_automated_audit import run_full_automated_audit
 
 
 def test_feature_extraction_and_fact_graph_accuracy():
-    """Verifies feature registry and profile-aware fact graph entailment."""
+    """Verifies feature registry and profile-aware lexical fact-coverage screening."""
     sample = (
         "It is my distinct pleasure to recommend Alex for the position. "
         "During his time in our lab, Alex spearheaded the neural network project and led a team of 4 researchers. "
@@ -35,15 +35,17 @@ def test_external_replication_filter_bug_fix():
     assert "mean_feminine_agentic_density" in manifest
 
 
-def test_sensitivity_simulation():
-    """Verifies minimum detectable difference decreases as number of profiles increases."""
-    mdd_2 = calculate_minimum_detectable_difference(n_profiles=2)
-    mdd_8 = calculate_minimum_detectable_difference(n_profiles=8)
-    assert mdd_8 < mdd_2
+def test_hierarchical_sensitivity_simulation():
+    """Verifies hierarchical profile-level MDD is more conservative than optimistic independent-pair MDD."""
+    mdd_res_2 = calculate_minimum_detectable_difference(n_profiles=2)
+    mdd_res_8 = calculate_minimum_detectable_difference(n_profiles=8)
+
+    assert mdd_res_2["hierarchical_profile_level_mdd"] > mdd_res_2["optimistic_independent_pair_mdd"]
+    assert mdd_res_8["hierarchical_profile_level_mdd"] < mdd_res_2["hierarchical_profile_level_mdd"]
 
     res = run_sensitivity_simulation(profile_range=[2, 8])
     assert "current_edu2a_mdd_estimate" in res
-    assert len(res["simulation_curves"]) == 2
+    assert "planned_full_pilot_mdd_estimate" in res
 
 
 def test_full_automated_audit_pipeline(tmp_path):
@@ -62,7 +64,9 @@ def test_full_automated_audit_pipeline(tmp_path):
     assert manifest["total_pairs_count"] == 72
     assert manifest["primary_gender_pairs_count"] == 24
     assert manifest["secondary_anonymous_pairs_count"] == 48
-    assert "counterfactual_snr_ratio" in manifest
+    assert "matched_counterfactual_snr_ratio" in manifest
+    assert "log_snr_ratio" in manifest
+    assert "displacement_coherence_kappa" in manifest
     assert os.path.exists(os.path.join(priv_out, "counterfactual_difference_atlas.html"))
     assert os.path.exists(os.path.join(pub_out, "counterfactual_difference_atlas.html"))
     assert os.path.exists(os.path.join(priv_out, "counterfactual_snr_and_tail_risk.json"))

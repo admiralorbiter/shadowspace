@@ -1,7 +1,7 @@
 """Master Runner for Automated Text Audit & Counterfactual Difference Atlas.
 
 Orchestrates external benchmark calibration, fine-grained lexical feature extraction,
-paired counterfactual divergence analysis, HTML Atlas generation, and sensitivity simulation.
+paired counterfactual divergence analysis, Matched SNR v2, HTML Atlas generation, and sensitivity simulation.
 """
 
 from __future__ import annotations
@@ -49,7 +49,21 @@ def run_full_automated_audit(
     )
 
     print("Step 4: Generating Public 100% Synthetic Demonstration HTML Atlas for UI Review...")
-    # Generate 100% synthetic fictional demonstration data for public visualizer
+    synthetic_snr = {
+        "overall_median_identity_perturbation": 2.0,
+        "overall_median_seed_sampling_noise": 3.0,
+        "matched_counterfactual_snr_ratio": 0.667,
+        "log_snr_ratio": -0.405,
+        "displacement_coherence_kappa": 0.124,
+        "coherence_permutation_p_value": 0.452,
+        "seed_null_exceedance_probability": 0.042,
+        "snr_interpretation": "100% Synthetic Demonstration Only (Public UI Review)",
+        "seed_null_exceedance_prob_gt_q95": 0.042,
+        "quantile_effect_q90": 3.0,
+        "cvar_90_worst_tail_average": 3.5,
+        "directional_consistency_rate": 0.667,
+    }
+
     synth_paired = []
     for idx in range(1, 25):
         is_p = idx <= 8
@@ -101,7 +115,7 @@ def run_full_automated_audit(
         paired_diffs=synth_paired,
         letter_features=synth_feats,
         out_dir=public_out_dir,
-        snr_metrics=snr_metrics,
+        snr_metrics=synthetic_snr,
     )
 
     print("Step 5: Running Design Sensitivity Simulation...")
@@ -115,17 +129,21 @@ def run_full_automated_audit(
         f"- **Total Counterfactual Pairs Evaluated**: {len(paired_diffs)}",
         f"- **Primary Gender Comparisons**: {len([p for p in paired_diffs if p.get('is_primary')])}",
         f"- **Secondary Anonymous Baselines**: {len([p for p in paired_diffs if not p.get('is_primary')])}",
-        f"- **Counterfactual SNR Ratio (R)**: {snr_metrics.get('counterfactual_snr_ratio')}",
+        f"- **Matched Counterfactual SNR Ratio (R)**: {snr_metrics.get('matched_counterfactual_snr_ratio')}",
+        f"- **Log SNR Ratio (L)**: {snr_metrics.get('log_snr_ratio')}",
+        f"- **Displacement Coherence (&kappa;)**: {snr_metrics.get('displacement_coherence_kappa')} (p = {snr_metrics.get('coherence_permutation_p_value')})",
+        f"- **Seed-Null Exceedance Probability**: {snr_metrics.get('seed_null_exceedance_probability')}",
         f"- **SNR Baseline Interpretation**: {snr_metrics.get('snr_interpretation')}",
         f"- **Private Study HTML Atlas Path**: `{private_html_path}`",
         f"- **Public Synthetic Atlas Path**: `{public_html_path}`",
-        f"- **Minimum Detectable Difference (EDU-2a 2 Profiles)**: {sim_res['current_edu2a_mdd_estimate']}",
-        f"- **Minimum Detectable Difference (Planned 8 Profiles)**: {sim_res['planned_full_pilot_mdd_estimate']}\n",
+        f"- **Minimum Detectable Difference (Optimistic Independent-Pair)**: {sim_res['current_edu2a_optimistic_mdd']}",
+        f"- **Minimum Detectable Difference (Hierarchical Profile-Level)**: {sim_res['current_edu2a_mdd_estimate']}\n",
         "## Summary of Findings\n",
-        "1. **Counterfactual SNR Ratio**: Calculated R = D_identity / D_seed, comparing identity perturbation against ordinary seed sampling noise.",
-        "2. **Tail-Risk Science**: Computed Exceedance probability, Q_0.90, CVaR_0.90, and directional consistency across seeds.",
-        "3. **Profile Fact-Graph Entailment**: Evaluated profile fact coverage and unsupported specificity claims.",
-        "4. **Rater Protection**: Real study atlas is protected in `private_analysis/automated_text_audit/`; 100% synthetic demo is published in `results/`.",
+        "1. **Matched Cell-Level SNR v2**: Calculated R_j = D_identity / D_seed per matched cell (profile, prompt, identity channel) with Log SNR L_j.",
+        "2. **Counterfactual Displacement Geometry**: Measured multi-feature displacement directionality coherence (kappa) and sign-flip permutation p-value.",
+        "3. **Seed-Null Exceedance**: Measured P(|D_identity| > Q_0.95(D_seed)) comparing identity perturbation against the 95th percentile of ordinary seed noise.",
+        "4. **Profile-Aware Lexical Fact-Coverage Screen**: Evaluated profile fact coverage and unsupported specificity claims.",
+        "5. **Rater Protection**: Real study atlas & real SNR are protected in `private_analysis/automated_text_audit/`; 100% synthetic demo is published in `results/`.",
     ]
     with open(report_path, "w", encoding="utf-8") as f:
         f.write("\n".join(report_lines))
@@ -136,7 +154,9 @@ def run_full_automated_audit(
         "total_pairs_count": len(paired_diffs),
         "primary_gender_pairs_count": len([p for p in paired_diffs if p.get("is_primary")]),
         "secondary_anonymous_pairs_count": len([p for p in paired_diffs if not p.get("is_primary")]),
-        "counterfactual_snr_ratio": snr_metrics.get("counterfactual_snr_ratio"),
+        "matched_counterfactual_snr_ratio": snr_metrics.get("matched_counterfactual_snr_ratio"),
+        "log_snr_ratio": snr_metrics.get("log_snr_ratio"),
+        "displacement_coherence_kappa": snr_metrics.get("displacement_coherence_kappa"),
         "snr_interpretation": snr_metrics.get("snr_interpretation"),
         "calibration_status": ext_manifest.get("status"),
         "public_synthetic_atlas_generated": True,
