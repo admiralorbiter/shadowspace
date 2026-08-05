@@ -1,6 +1,7 @@
 name: CI Test Suite
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main, research/ambiguity-holonomy, research/education-counterfactual-audit ]
     paths:
@@ -21,6 +22,7 @@ on:
       - "tests/education_audit/**"
       - "pyproject.toml"
       - ".github/workflows/pytest_holonomy.yml"
+
 
 jobs:
   test:
