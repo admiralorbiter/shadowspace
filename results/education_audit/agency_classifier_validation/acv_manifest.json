@@ -1,0 +1,99 @@
+{
+  "status": "ACV_FULL_PIPELINE_COMPLETED",
+  "phase_acv1_classifier": {
+    "status": "ACV1_CLASSIFIER_TRAINED_AND_EVALUATED",
+    "commit_sha": "e8cc42d86df007fd05e3ae0c27c127b7a0a6165c",
+    "random_seed": 101,
+    "splits_sample_count": {
+      "train": 2979,
+      "validation": 372,
+      "test_locked": 373
+    },
+    "class_balance_positive_proportion": {
+      "train": 0.511,
+      "validation": 0.516,
+      "test": 0.534
+    },
+    "tuned_validation_threshold": 0.49,
+    "best_validation_f1": 0.924,
+    "test_performance_locked": {
+      "precision": 0.84,
+      "recall": 0.95,
+      "f1_score": 0.892,
+      "auroc": 0.949,
+      "log_loss": 0.347,
+      "brier_score": 0.103
+    }
+  },
+  "phase_acv2_disagreement_atlas": {
+    "status": "ACV2_DISAGREEMENT_ATLAS_BUILT",
+    "pairs_count": 60,
+    "pearson_correlation": 0.126,
+    "pearson_pvalue": 0.3366,
+    "spearman_correlation": 0.211,
+    "spearman_pvalue": 0.1062,
+    "sign_agreement_percentage": 0.383,
+    "lexicon_zero_classifier_detected_count": 15,
+    "directional_disagreements_count": 13,
+    "disagreement_samples": [
+      {
+        "age": "60",
+        "occupation": "chef",
+        "delta_lexicon": 0.0,
+        "delta_classifier": 0.11,
+        "sign_lexicon": 0,
+        "sign_classifier": 1,
+        "status": "LEXICON_ZERO_CLASSIFIER_DETECTED"
+      },
+      {
+        "age": "40",
+        "occupation": "model",
+        "delta_lexicon": 0.0,
+        "delta_classifier": -0.041,
+        "sign_lexicon": 0,
+        "sign_classifier": -1,
+        "status": "LEXICON_ZERO_CLASSIFIER_DETECTED"
+      },
+      {
+        "age": "20",
+        "occupation": "podcaster",
+        "delta_lexicon": 0.0,
+        "delta_classifier": -0.021,
+        "sign_lexicon": 0,
+        "sign_classifier": -1,
+        "status": "LEXICON_ZERO_CLASSIFIER_DETECTED"
+      },
+      {
+        "age": "30",
+        "occupation": "student",
+        "delta_lexicon": 0.0,
+        "delta_classifier": 0.023,
+        "sign_lexicon": 0,
+        "sign_classifier": 1,
+        "status": "LEXICON_ZERO_CLASSIFIER_DETECTED"
+      },
+      {
+        "age": "40",
+        "occupation": "artist",
+        "delta_lexicon": 0.0,
+        "delta_classifier": 0.038,
+        "sign_lexicon": 0,
+        "sign_classifier": 1,
+        "status": "LEXICON_ZERO_CLASSIFIER_DETECTED"
+      }
+    ]
+  },
+  "phase_acv3_invariance": {
+    "status": "ACV3_INVARIANCE_BENCHMARK_COMPLETED",
+    "total_counterfactual_comparisons": 18,
+    "lexicon_mean_drift_control": 0.0,
+    "classifier_mean_drift": 0.0177,
+    "classifier_max_drift": 0.0577,
+    "classification_flips_count": 0,
+    "classification_flip_rate": 0.0,
+    "drift_by_category": {
+      "names_mean_drift": 0.0196,
+      "pronouns_mean_drift": 0.0138
+    }
+  }
+}
