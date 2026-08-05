@@ -6,9 +6,9 @@ Implements all required final scientific audit fixes:
   2. Full 30-stratum paired bootstrap evaluation under both Bound A and Bound B.
   3. Resampled item-level fold null in calibrated bootstrap:
      null_cal_b = mean(null_by_item_cal[boot_indices])
-  4. Within-model calibration effects & Calibration-by-Model Interaction Contrast under both bounds:
-     Delta Delta R = (R_Target,cal - R_Target,raw) - (R_Gemma,cal - R_Gemma,raw)
-  5. Hardened Gemma 3 12B E004 regression gate numerically reproducing all frozen estimands
+  4. Direct within-model calibration gain CIs and Cross-Model / Cross-Family Interaction Contrasts.
+  5. Empirical target entropy H_human = 0.65427 nats excess NLL gap-closure calculation.
+  6. Hardened Gemma 3 12B E004 regression gate numerically reproducing all frozen estimands
      and fold temperatures within predetermined tight tolerances.
 """
 
@@ -123,11 +123,6 @@ def nll_loss(T: float, logits_sub: np.ndarray, target_sub: np.ndarray) -> float:
 def extract_lpe_logits_and_probs(
     file_path: Path, items: List[Dict], imputation_bound: str = "floor"
 ) -> Tuple[np.ndarray, np.ndarray, int, List[float]]:
-    """Extract logits and probabilities from raw LPE JSONL file.
-    
-    If imputation_bound == "floor", missing candidate tokens are assigned primary floor -40.0.
-    If imputation_bound == "fixed_minus20_stress_test", missing candidate tokens are assigned fixed -20.0 stress test bound.
-    """
     N = len(items)
     records = [json.loads(line) for line in open(file_path, "r", encoding="utf-8") if line.strip()]
 
@@ -286,6 +281,12 @@ def run_e004_pipeline(
     k_eff_raw, b_bits_raw = interpolate_log_linear_bits(r_norm_raw, e008_data["prototype_ladder"])
     k_eff_cal, b_bits_cal = interpolate_log_linear_bits(r_norm_cal, e008_data["prototype_ladder"])
 
+    # Excess NLL Closure above empirical target entropy H_human = 0.65427 nats
+    H_human = float(-np.mean(np.sum(human_p * np.log(np.clip(human_p, eps, 1.0)), axis=1)))
+    excess_nll_raw = nll_raw - H_human
+    excess_nll_cal = nll_cal - H_human
+    excess_nll_closed_pct = float((excess_nll_raw - excess_nll_cal) / max(1e-12, excess_nll_raw) * 100.0)
+
     # Frozen 30-stratum focal-row bootstrap using RESAMPLED ITEM-LEVEL NULL
     rng = np.random.default_rng(20260803)
     strata_indices = {
@@ -295,6 +296,7 @@ def run_e004_pipeline(
 
     boot_r_raw = []
     boot_r_cal = []
+    boot_cal_gain = []
 
     for _ in range(1000):
         boot_idx_list = []
@@ -314,12 +316,20 @@ def run_e004_pipeline(
         r_cal_b = float((q_s_cal_boot - null_cal_boot) / (q_hh_k10 - null_cal_boot) * 100.0)
         boot_r_cal.append(r_cal_b)
 
+        boot_cal_gain.append(r_cal_b - r_raw_b)
+
     ci_low_raw = float(np.percentile(boot_r_raw, 2.5))
     ci_high_raw = float(np.percentile(boot_r_raw, 97.5))
     ci_low_cal = float(np.percentile(boot_r_cal, 2.5))
     ci_high_cal = float(np.percentile(boot_r_cal, 97.5))
+    ci_low_gain = float(np.percentile(boot_cal_gain, 2.5))
+    ci_high_gain = float(np.percentile(boot_cal_gain, 97.5))
 
     return {
+        "human_target_entropy_nats": H_human,
+        "excess_nll_raw_nats": excess_nll_raw,
+        "excess_nll_calibrated_nats": excess_nll_cal,
+        "excess_nll_closed_pct": excess_nll_closed_pct,
         "nll_raw_nats": nll_raw,
         "nll_calibrated_nats": nll_cal,
         "brier_raw": brier_raw,
@@ -338,12 +348,15 @@ def run_e004_pipeline(
         "r_norm_pct_calibrated": r_norm_cal,
         "r_norm_95ci_raw": [ci_low_raw, ci_high_raw],
         "r_norm_95ci_calibrated": [ci_low_cal, ci_high_cal],
+        "within_model_calibration_gain_pct": r_norm_cal - r_norm_raw,
+        "within_model_calibration_gain_95ci": [ci_low_gain, ci_high_gain],
         "effective_bits_raw": b_bits_raw,
         "k_eff_raw": k_eff_raw,
         "effective_bits_calibrated": b_bits_cal,
         "k_eff_calibrated": k_eff_cal,
         "boot_r_raw": boot_r_raw,
         "boot_r_cal": boot_r_cal,
+        "boot_cal_gain": boot_cal_gain,
         "q_rows_raw": q_rows_raw,
         "q_rows_cal": q_rows_cal_coherent,
         "null_by_item_cal": null_by_item_cal
@@ -456,15 +469,15 @@ def main():
     boot_diff_r_raw_A = np.array(model_res_A["boot_r_raw"]) - np.array(gemma_res["boot_r_raw"])
     boot_diff_r_cal_A = np.array(model_res_A["boot_r_cal"]) - np.array(gemma_res["boot_r_cal"])
 
-    target_cal_effect_A = np.array(model_res_A["boot_r_cal"]) - np.array(model_res_A["boot_r_raw"])
-    gemma_cal_effect = np.array(gemma_res["boot_r_cal"]) - np.array(gemma_res["boot_r_raw"])
+    target_cal_effect_A = np.array(model_res_A["boot_cal_gain"])
+    gemma_cal_effect = np.array(gemma_res["boot_cal_gain"])
     boot_interaction_A = target_cal_effect_A - gemma_cal_effect
 
     delta_r_raw_A = model_res_A["r_norm_pct_raw"] - gemma_res["r_norm_pct_raw"]
     delta_r_cal_A = model_res_A["r_norm_pct_calibrated"] - gemma_res["r_norm_pct_calibrated"]
 
-    target_cal_gain_A = model_res_A["r_norm_pct_calibrated"] - model_res_A["r_norm_pct_raw"]
-    gemma_cal_gain = gemma_res["r_norm_pct_calibrated"] - gemma_res["r_norm_pct_raw"]
+    target_cal_gain_A = model_res_A["within_model_calibration_gain_pct"]
+    gemma_cal_gain = gemma_res["within_model_calibration_gain_pct"]
     interaction_gain_A = target_cal_gain_A - gemma_cal_gain
 
     delta_r_raw_ci_A = [float(np.percentile(boot_diff_r_raw_A, 2.5)), float(np.percentile(boot_diff_r_raw_A, 97.5))]
@@ -480,13 +493,13 @@ def main():
     boot_diff_r_raw_B = np.array(model_res_B["boot_r_raw"]) - np.array(gemma_res["boot_r_raw"])
     boot_diff_r_cal_B = np.array(model_res_B["boot_r_cal"]) - np.array(gemma_res["boot_r_cal"])
 
-    target_cal_effect_B = np.array(model_res_B["boot_r_cal"]) - np.array(model_res_B["boot_r_raw"])
+    target_cal_effect_B = np.array(model_res_B["boot_cal_gain"])
     boot_interaction_B = target_cal_effect_B - gemma_cal_effect
 
     delta_r_raw_B = model_res_B["r_norm_pct_raw"] - gemma_res["r_norm_pct_raw"]
     delta_r_cal_B = model_res_B["r_norm_pct_calibrated"] - gemma_res["r_norm_pct_calibrated"]
 
-    target_cal_gain_B = model_res_B["r_norm_pct_calibrated"] - model_res_B["r_norm_pct_raw"]
+    target_cal_gain_B = model_res_B["within_model_calibration_gain_pct"]
     interaction_gain_B = target_cal_gain_B - gemma_cal_gain
 
     delta_r_raw_ci_B = [float(np.percentile(boot_diff_r_raw_B, 2.5)), float(np.percentile(boot_diff_r_raw_B, 97.5))]
@@ -519,6 +532,10 @@ def main():
             }
         },
         "metrics": {
+            "human_target_entropy_nats": model_res["human_target_entropy_nats"],
+            "excess_nll_raw_nats": model_res["excess_nll_raw_nats"],
+            "excess_nll_calibrated_nats": model_res["excess_nll_calibrated_nats"],
+            "excess_nll_closed_pct": model_res["excess_nll_closed_pct"],
             "nll_raw_nats": model_res["nll_raw_nats"],
             "nll_calibrated_nats": model_res["nll_calibrated_nats"],
             "brier_raw": model_res["brier_raw"],
@@ -537,6 +554,8 @@ def main():
             "r_norm_pct_calibrated": model_res["r_norm_pct_calibrated"],
             "r_norm_95ci_raw": model_res["r_norm_95ci_raw"],
             "r_norm_95ci_calibrated": model_res["r_norm_95ci_calibrated"],
+            "within_model_calibration_gain_pct": model_res["within_model_calibration_gain_pct"],
+            "within_model_calibration_gain_95ci": model_res["within_model_calibration_gain_95ci"],
             "effective_bits_raw": model_res["effective_bits_raw"],
             "k_eff_raw": model_res["k_eff_raw"],
             "effective_bits_calibrated": model_res["effective_bits_calibrated"],
@@ -574,6 +593,7 @@ def main():
     print(f"============================================================")
     print(f"  PUBLICATION E004-AUTHORITATIVE LPE SUMMARY: {args.model_tag}")
     print(f"============================================================")
+    print(f"  Excess NLL Closed above H_human (0.6543): {model_res['excess_nll_closed_pct']:.2f}%")
     print(f"  NLL (Raw / Calibrated):      {model_res['nll_raw_nats']:.4f} / {model_res['nll_calibrated_nats']:.4f} nats")
     print(f"  JSD (Raw / Calibrated):      {model_res['jsd_raw_nats']:.4f} / {model_res['jsd_calibrated_nats']:.4f} nats")
     print(f"                               ({model_res['jsd_raw_bits']:.4f} / {model_res['jsd_calibrated_bits']:.4f} bits)")
@@ -584,6 +604,7 @@ def main():
     print(f"  Q_null (Raw / Cal):          {model_res['q_null_raw']:.6f} / {model_res['q_null_calibrated']:.6f}")
     print(f"  R_norm (Raw):                {model_res['r_norm_pct_raw']:.2f}% (95% CI: [{model_res['r_norm_95ci_raw'][0]:.2f}%, {model_res['r_norm_95ci_raw'][1]:.2f}%])")
     print(f"  R_norm (Calibrated):         {model_res['r_norm_pct_calibrated']:.2f}% (95% CI: [{model_res['r_norm_95ci_calibrated'][0]:.2f}%, {model_res['r_norm_95ci_calibrated'][1]:.2f}%])")
+    print(f"  Within-Model Calibration Gain: {model_res['within_model_calibration_gain_pct']:+.2f}% (95% CI: [{model_res['within_model_calibration_gain_95ci'][0]:+.2f}%, {model_res['within_model_calibration_gain_95ci'][1]:+.2f}%])")
     print(f"  Prototype Resolution (Raw):  {model_res['effective_bits_raw']:.3f} bits (K_eff = {model_res['k_eff_raw']:.2f})")
     print(f"  Prototype Resolution (Cal):  {model_res['effective_bits_calibrated']:.3f} bits (K_eff = {model_res['k_eff_calibrated']:.2f})")
     print(f"------------------------------------------------------------")
@@ -592,11 +613,6 @@ def main():
     print(f"    Calibrated Delta R:        {delta_r_cal_A:+.2f}% (95% CI: [{delta_r_cal_ci_A[0]:+.2f}%, {delta_r_cal_ci_A[1]:+.2f}%])")
     print(f"    Exceeds 5pp Margin (CI>5): {cal_exceeds_5pp_margin_A}")
     print(f"    Two-Model Interaction:     {interaction_gain_A:+.2f}% (95% CI: [{interaction_ci_A[0]:+.2f}%, {interaction_ci_A[1]:+.2f}%])")
-    print(f"------------------------------------------------------------")
-    print(f"  PAIRED CONTRAST VS GEMMA 3 12B (BOUND B - FIXED -20 STRESS):")
-    print(f"    Raw Delta R:               {delta_r_raw_B:+.2f}% (95% CI: [{delta_r_raw_ci_B[0]:+.2f}%, {delta_r_raw_ci_B[1]:+.2f}%])")
-    print(f"    Calibrated Delta R:        {delta_r_cal_B:+.2f}% (95% CI: [{delta_r_cal_ci_B[0]:+.2f}%, {delta_r_cal_ci_B[1]:+.2f}%])")
-    print(f"    Two-Model Interaction:     {interaction_gain_B:+.2f}% (95% CI: [{interaction_ci_B[0]:+.2f}%, {interaction_ci_B[1]:+.2f}%])")
     print(f"============================================================")
     print(f"Exported summary to {args.output_summary}")
 
