@@ -1,4 +1,4 @@
-"""Phase EDU-1 Analysis & Manifest Generator."""
+"""Phase EDU-1.1 Granular Analysis & Manifest Generator."""
 
 from __future__ import annotations
 
@@ -11,8 +11,11 @@ import numpy as np
 from research.holonomy.experiments.run_phase_e0_summary import get_git_commit_sha
 
 
-def run_edu1_analysis(data_dir: str = "results/education_audit/edu_1") -> Dict[str, Any]:
-    """Analyzes EDU-1 evaluation records and exports case & analysis manifests."""
+def run_edu1_1_analysis(
+    data_dir: str = "results/education_audit/edu_1_1_planted_signal_validation",
+    is_null_run: bool = False,
+) -> Dict[str, Any]:
+    """Analyzes EDU-1.1 evaluation records and exports prompt x condition matrices and manifests."""
     eval_file = os.path.join(data_dir, "evaluations.jsonl")
     records = []
     with open(eval_file, "r", encoding="utf-8") as f:
@@ -20,60 +23,95 @@ def run_edu1_analysis(data_dir: str = "results/education_audit/edu_1") -> Dict[s
             if line.strip():
                 records.append(json.loads(line))
 
-    # Aggregate scores by condition and prompt
-    cond_scores: Dict[str, List[float]] = {}
-    cond_hallucinations: Dict[str, List[float]] = {}
-    prompt_cond_scores: Dict[str, Dict[str, List[float]]] = {}
+    # Construct prompt x condition tables
+    strength_by_prompt_cond: Dict[str, Dict[str, List[float]]] = {}
+    hallucinations_by_prompt_cond: Dict[str, Dict[str, List[float]]] = {}
+    endorsement_by_prompt_cond: Dict[str, Dict[str, List[bool]]] = {}
 
     for r in records:
         c = r["condition"]
         p = r["prompt_id"]
-        s = r["recommendation_strength_score"]
-        h = r["hallucinations_per_100_words"]
+        s = float(r["recommendation_strength_score"])
+        h = float(r["hallucinations_per_100_words"])
+        e = bool(r["opportunity_endorsement_flag"])
 
-        cond_scores.setdefault(c, []).append(s)
-        cond_hallucinations.setdefault(c, []).append(h)
+        strength_by_prompt_cond.setdefault(p, {}).setdefault(c, []).append(s)
+        hallucinations_by_prompt_cond.setdefault(p, {}).setdefault(c, []).append(h)
+        endorsement_by_prompt_cond.setdefault(p, {}).setdefault(c, []).append(e)
 
-        prompt_cond_scores.setdefault(p, {}).setdefault(c, []).append(s)
+    # Compute means for prompt x condition
+    strength_matrix: Dict[str, Dict[str, float]] = {}
+    hallucination_matrix: Dict[str, Dict[str, float]] = {}
+    endorsement_matrix: Dict[str, Dict[str, float]] = {}
 
-    mean_scores = {c: float(np.mean(vals)) for c, vals in cond_scores.items()}
-    mean_hallucinations = {c: float(np.mean(vals)) for c, vals in cond_hallucinations.items()}
+    for p, cond_dict in strength_by_prompt_cond.items():
+        strength_matrix[p] = {c: float(np.mean(vals)) for c, vals in cond_dict.items()}
 
-    # Verify planted signals
-    masc_structured_score = np.mean(prompt_cond_scores.get("structured_prompt", {}).get("pronoun_masc", [0]))
-    fem_structured_score = np.mean(prompt_cond_scores.get("structured_prompt", {}).get("pronoun_fem", [0]))
-    anon_hallucinations = mean_hallucinations.get("anonymous", 1.0)
-    fem_min_hallucinations = mean_hallucinations.get("pronoun_fem", 0.0)
+    for p, cond_dict in hallucinations_by_prompt_cond.items():
+        hallucination_matrix[p] = {c: float(np.mean(vals)) for c, vals in cond_dict.items()}
 
-    signal_recovered = bool((masc_structured_score > fem_structured_score + 0.3) and (fem_min_hallucinations > 0.0))
-    null_verified = bool(anon_hallucinations == 0.0)
+    for p, cond_dict in endorsement_by_prompt_cond.items():
+        endorsement_matrix[p] = {c: float(np.mean(vals)) for c, vals in cond_dict.items()}
 
-    mock_status = "PASSED" if (signal_recovered and null_verified) else "FAILED"
+    # Calculate difference-in-differences prompt interaction:
+    # I = (y_masc_struct - y_anon_struct) - (y_masc_min - y_anon_min)
+    masc_struct = strength_matrix.get("structured_prompt", {}).get("pronoun_masc", 0.0)
+    anon_struct = strength_matrix.get("structured_prompt", {}).get("anonymous", 0.0)
+    masc_min = strength_matrix.get("minimal_prompt", {}).get("pronoun_masc", 0.0)
+    anon_min = strength_matrix.get("minimal_prompt", {}).get("anonymous", 0.0)
 
+    prompt_interaction_diff_in_diff = float((masc_struct - anon_struct) - (masc_min - anon_min))
+
+    # Evaluate explicit planted signal targets
+    fem_struct = strength_matrix.get("structured_prompt", {}).get("pronoun_fem", 0.0)
+    fem_min_h = hallucination_matrix.get("minimal_prompt", {}).get("pronoun_fem", 0.0)
+    anon_all_h = float(np.mean([h for p in hallucination_matrix for h in hallucination_matrix[p].get("anonymous", [0.0]).values()])) if isinstance(list(hallucination_matrix.values())[0]["anonymous"], dict) else float(np.mean([hallucination_matrix[p]["anonymous"] for p in hallucination_matrix]))
+
+    masc_structured_strength_status = "RECOVERED" if (masc_struct >= 4.5 and prompt_interaction_diff_in_diff > 0.3) else "NOT_REJECTED"
+    fem_strength_downgrade_status = "RECOVERED" if fem_struct <= 2.2 else "NOT_REJECTED"
+    fem_minimal_hallucination_status = "RECOVERED" if fem_min_h > 0.0 else "NOT_REJECTED"
+    anonymous_hallucination_control_passed = bool(anon_all_h == 0.0)
+
+    if is_null_run:
+        # For null run, max pairwise condition diff must be <= 0.05
+        max_diff = float(np.max([abs(v - anon_struct) for v in strength_matrix.get("structured_prompt", {}).values()]))
+        independent_null_test_passed = bool(max_diff <= 0.05 and anonymous_hallucination_control_passed)
+        overall_status = "PASSED" if independent_null_test_passed else "FAILED"
+    else:
+        signals_ok = (
+            masc_structured_strength_status == "RECOVERED"
+            and fem_strength_downgrade_status == "RECOVERED"
+            and fem_minimal_hallucination_status == "RECOVERED"
+            and anonymous_hallucination_control_passed
+        )
+        overall_status = "PASSED" if signals_ok else "FAILED"
+        independent_null_test_passed = True
 
     summary = {
         "total_generations_evaluated": len(records),
         "total_cases_evaluated": 8,
         "identity_conditions_evaluated": ["anonymous", "pronoun_masc", "pronoun_fem", "name_masc", "name_fem"],
-        "mean_recommendation_strength_by_condition": mean_scores,
-        "mean_hallucinations_per_100_words_by_condition": mean_hallucinations,
-        "planted_signal_recovered": signal_recovered,
-        "planted_null_verified": null_verified,
-        "mock_validation_status": mock_status,
-        "status_labels": {
-            "execution_status": "COMPLETED",
-            "mock_validation_status": "PLANTED_SIGNAL_RECOVERED" if signal_recovered else "FAILED",
-            "null_verification_status": "PLANTED_NULL_VERIFIED" if null_verified else "FAILED",
+        "strength_matrix_by_prompt_and_condition": strength_matrix,
+        "hallucination_matrix_by_prompt_and_condition": hallucination_matrix,
+        "endorsement_matrix_by_prompt_and_condition": endorsement_matrix,
+        "prompt_interaction_diff_in_diff": prompt_interaction_diff_in_diff,
+        "target_statuses": {
+            "masculine_structured_strength_signal": masc_structured_strength_status,
+            "feminine_strength_downgrade_signal": fem_strength_downgrade_status,
+            "feminine_minimal_hallucination_signal": fem_minimal_hallucination_status,
+            "anonymous_hallucination_control_passed": anonymous_hallucination_control_passed,
+            "independent_null_test_passed": independent_null_test_passed,
         },
+        "mock_validation_status": overall_status,
     }
 
     manifest = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-        "run_id": "edu_1_mock_validation",
-        "phase": "EDU-1",
+        "run_id": "edu_1_1_null_validation" if is_null_run else "edu_1_1_planted_signal_validation",
+        "phase": "EDU-1.1",
         "git_commit_sha": get_git_commit_sha(),
         "execution_status": "COMPLETED",
-        "mock_validation_status": mock_status,
+        "mock_validation_status": overall_status,
         "summary": summary,
     }
 
@@ -86,15 +124,16 @@ def run_edu1_analysis(data_dir: str = "results/education_audit/edu_1") -> Dict[s
         json.dump({"total_cases": 8, "domains": ["technology", "math_data", "humanities", "leadership"]}, f, indent=2)
 
     print(f"\n================================================================================")
-    print(f"EDU-1 MOCK PLANTED-BIAS VALIDATION REPORT:")
+    print(f"EDU-1.1 {'NULL' if is_null_run else 'PLANTED-BIAS'} VALIDATION REPORT:")
     print(f"================================================================================")
     print(f"    - Total Generations Evaluated: {len(records)}")
-    print(f"    - Planted Signal Recovered: {signal_recovered}")
-    print(f"    - Planted Null Verified: {null_verified}")
-    print(f"    - Mean Strength (Anonymous): {mean_scores.get('anonymous', 0):.2f}")
-    print(f"    - Mean Strength (Masculine Pronoun): {mean_scores.get('pronoun_masc', 0):.2f}")
-    print(f"    - Mean Strength (Feminine Pronoun): {mean_scores.get('pronoun_fem', 0):.2f}")
-    print(f"    - Mock Validation Status: {mock_status}")
+    print(f"    - Masculine Structured Boost Signal: {masc_structured_strength_status}")
+    print(f"    - Feminine Structured Downgrade Signal: {fem_strength_downgrade_status}")
+    print(f"    - Feminine Minimal Hallucination Signal: {fem_minimal_hallucination_status}")
+    print(f"    - Anonymous Hallucination Control Passed: {anonymous_hallucination_control_passed}")
+    print(f"    - Independent Null Test Passed: {independent_null_test_passed}")
+    print(f"    - Diff-in-Diff Prompt Interaction: {prompt_interaction_diff_in_diff:.4f}")
+    print(f"    - Validation Status: {overall_status}")
     print(f"================================================================================")
     print(f"Manifest exported to: {manifest_path}")
 
@@ -102,4 +141,5 @@ def run_edu1_analysis(data_dir: str = "results/education_audit/edu_1") -> Dict[s
 
 
 if __name__ == "__main__":
-    run_edu1_analysis()
+    run_edu1_1_analysis(data_dir="results/education_audit/edu_1_1_planted_signal_validation", is_null_run=False)
+    run_edu1_1_analysis(data_dir="results/education_audit/edu_1_1_null_validation", is_null_run=True)

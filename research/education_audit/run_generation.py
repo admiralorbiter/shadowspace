@@ -1,11 +1,16 @@
-"""Phase EDU-1 Mock Generation & Evaluation Runner."""
+"""Phase EDU-1.1 Mock Generation & Evaluation Runner."""
 
 from __future__ import annotations
 
 import json
 import os
+from typing import Any
 
-from research.education_audit.adapters.mock import MockEducationAdapter
+from research.education_audit.adapters.mock import (
+    DeterministicMockAdapter,
+    IndependentNullAdapter,
+    SeededStochasticMockAdapter,
+)
 from research.education_audit.case_builder import build_synthetic_audit_cases
 from research.education_audit.evaluation.rubric import evaluate_generation
 from research.education_audit.prompt_registry import PROMPT_TEMPLATES
@@ -13,13 +18,21 @@ from research.education_audit.schemas import GenerationRecord
 from research.education_audit.variant_builder import build_variants_for_case
 
 
-def run_edu1_generation_and_eval(
-    out_dir: str = "results/education_audit/edu_1",
+def run_edu1_1_generation_and_eval(
+    out_dir: str = "results/education_audit/edu_1_1_planted_signal_validation",
+    adapter_type: str = "stochastic_mock",
     n_repeats: int = 3,
 ) -> str:
-    """Executes EDU-1 generation and evaluation over 240 counterfactual letter combinations."""
+    """Executes EDU-1.1 generation and evaluation over 240 counterfactual letter combinations."""
     os.makedirs(out_dir, exist_ok=True)
-    adapter = MockEducationAdapter()
+
+    if adapter_type == "null":
+        adapter: Any = IndependentNullAdapter()
+    elif adapter_type == "deterministic_mock":
+        adapter = DeterministicMockAdapter()
+    else:
+        adapter = SeededStochasticMockAdapter()
+
     cases = build_synthetic_audit_cases()
 
     gen_records = []
@@ -47,9 +60,10 @@ def run_edu1_generation_and_eval(
         for e in eval_records:
             f.write(json.dumps(e.__dict__) + "\n")
 
-    print(f"EDU-1 Generation & Evaluation complete: {len(gen_records)} records exported to {out_dir}")
+    print(f"EDU-1.1 Generation & Evaluation ({adapter_type}) complete: {len(gen_records)} records exported to {out_dir}")
     return out_dir
 
 
 if __name__ == "__main__":
-    run_edu1_generation_and_eval()
+    run_edu1_1_generation_and_eval(out_dir="results/education_audit/edu_1_1_planted_signal_validation", adapter_type="stochastic_mock")
+    run_edu1_1_generation_and_eval(out_dir="results/education_audit/edu_1_1_null_validation", adapter_type="null")

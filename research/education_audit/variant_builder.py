@@ -32,17 +32,18 @@ IDENTITY_CONDITIONS = [
     {
         "condition": "name_masc",
         "student_name": "Alexander",
-        "pronoun_subject": "he",
-        "pronoun_object": "him",
-        "pronoun_possessive": "his",
+        "pronoun_subject": "they",
+        "pronoun_object": "them",
+        "pronoun_possessive": "their",
     },
     {
         "condition": "name_fem",
         "student_name": "Elizabeth",
-        "pronoun_subject": "she",
-        "pronoun_object": "her",
-        "pronoun_possessive": "her",
+        "pronoun_subject": "they",
+        "pronoun_object": "them",
+        "pronoun_possessive": "their",
     },
+
 ]
 
 
