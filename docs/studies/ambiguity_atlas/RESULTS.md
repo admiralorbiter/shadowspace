@@ -1,8 +1,8 @@
-# Ambiguity Doppelgänger Atlas: Empirical Results & Findings
+# Ambiguity Doppelgänger Atlas: Empirical Results & Findings (v1.1 Audit Corrected)
 
 ## Executive Summary
 
-This document presents the empirical findings of the **Ambiguity Doppelgänger Atlas** study. We prove mathematically and demonstrate empirically that standard 1D scalar evaluation summaries (majority label, maximum probability / confidence, and Shannon entropy) suffer from a fundamental **2-to-1 degenerate information collision** in 3-class probability space.
+This document presents the audit-corrected empirical findings of the **Ambiguity Doppelgänger Atlas** study. We prove mathematically and demonstrate empirically that standard 1D scalar evaluation summaries (majority label, maximum probability / confidence, and Shannon entropy) suffer from a fundamental **2-to-1 degenerate information collision** in 3-class probability space.
 
 ---
 
@@ -31,10 +31,11 @@ Using Polars vote count permutation grouping on 3,113 ChaosNLI item vote distrib
 - **Entailment Majority**: 181 pairs (13.2%)
 - **Contradiction Majority**: 38 pairs (2.7%)
 
-### Dataset Source Breakdown
-- **Within SNLI**: 1,375 pairs
-- **Within MNLI**: 181 pairs
-- **Cross-Source (SNLI $\times$ MNLI)**: 595 pairs
+### Dataset Source Breakdown (Mutually Exclusive)
+- **Within SNLI**: **780 pairs** (56.7%)
+- **Within MNLI**: **181 pairs** (13.2%)
+- **Cross-Source (SNLI $\times$ MNLI)**: **414 pairs** (30.1%)
+- **Total**: **1,375 pairs** (100.0%)
 
 ---
 
@@ -45,32 +46,32 @@ Evaluating pair candidate distances across continuous probability space:
 - **Loose Tolerance** ($\Delta\text{conf} \le 0.02, \Delta H \le 0.05$ bits): **10,449 candidate pairs**
 - **Standard Tolerance** ($\Delta\text{conf} \le 0.01, \Delta H \le 0.02$ bits): **2,022 candidate pairs**
 - **Tight Tolerance** ($\Delta\text{conf} \le 0.005, \Delta H \le 0.01$ bits): **1,505 candidate pairs**
+- **Pareto Non-dominated Frontier**: Extracted nondominated candidate pairs balancing minimum summary discrepancy with maximum full-space Hellinger separation.
 
 ---
 
-## 4. Dirichlet Posterior Uncertainty Audit
+## 4. Dirichlet Posterior Uncertainty Audit (Joint Estimand)
 
-To verify that exact doppelgänger collisions are not artifacts of finite annotation count quantization, we conducted 2,000 Dirichlet posterior draws per item ($\theta \sim \text{Dirichlet}(c + 0.5)$):
+To test whether exact doppelgänger collisions persist under annotation uncertainty, we conducted 2,000 Dirichlet posterior draws per item ($\theta \sim \text{Dirichlet}(c + 0.5)$) using a **fixed original majority coordinate system** ($M_0$) and simultaneous joint collision event calculation:
 
 | Stability Category | Pair Count | Percentage |
 | :--- | :--- | :--- |
-| **PROBABLE_COLLISION** ($\ge 80\%$ prob) | **1,039 pairs** | **75.6%** |
-| **UNCERTAIN_COLLISION** ($\ge 60\%$ prob) | **227 pairs** | **16.5%** |
-| **POINT_ESTIMATE_ONLY** | **109 pairs** | **7.9%** |
+| **UNCERTAIN_COLLISION** | **1,305 pairs** | **94.9%** |
+| **POINT_ESTIMATE_ONLY** | **70 pairs** | **5.1%** |
+| **ROBUST_COLLISION** / **PROBABLE_COLLISION** | **0 pairs** | **0.0%** |
 
-Over **92% of exact human doppelgänger pairs (1,266 / 1,375)** remain statistically robust or probable under posterior uncertainty!
+### Key Insight
+While point vote counts yield 1,375 exact empirical summary collisions, finite human vote sample sizes (e.g. 10 or 100 votes) introduce posterior variance around point estimates. Under the strict simultaneous joint estimand (retaining original majority $M_0$ AND retaining opposite minority orientation AND staying within tight summary tolerance simultaneously), pairs are properly classified as **UNCERTAIN_COLLISION** (94.9%).
 
 ---
 
 ## 5. Frozen Model Retention Audit
 
-We evaluated held-out predictions across 3 models (`roberta-large`, `bart-large`, `albert-xxlarge`) and 5 calibration tiers (raw, T1 scalar, T2 diagonal ILR, T3 affine ILR, T4 nonlinear ILR) across 20,625 pair-model-tier evaluation records (`results/ambiguity_atlas/model_retention.parquet`):
+Across 3 models (`roberta-large`, `bart-large`, `albert-xxlarge`) $\times$ 5 calibration tiers (raw, T1-T4) across 20,625 pair-model-tier evaluation records (`results/ambiguity_atlas/model_retention.parquet`):
 
-### Model Contrast Summary
 - **Collapse Rate**: **10.3% – 15.2%** of pairs have their human minority disagreement contrast collapsed to 0 ($|R| \le 0.10$).
 - **Inversion Rate**: **4.5% – 6.5%** of pairs have their human minority disagreement orientation reversed ($R < -0.10$).
-- **Preservation Rate**: **55% – 72%** of pairs preserve human disagreement directions.
-- **Pointwise Calibration Effect**: Advanced ILR calibration tiers (T3, T4) adjust confidence scaling but **do not restore the lost 2D orientation bit $\delta$**, proving that scalar summary degeneration cannot be repaired downstream by pointwise calibration alone.
+- **Descriptive Conclusion**: Across the 3 frozen models and 4 tested post-hoc calibration families, pointwise calibration did not consistently or completely recover minority orientation structure. Collapse and inversion persisted non-monotonically across calibration tiers.
 
 ---
 
@@ -82,3 +83,4 @@ We evaluated held-out predictions across 3 models (`roberta-large`, `bart-large`
 - **Posterior Audit Table**: `results/ambiguity_atlas/posterior_stability.parquet`
 - **Model Retention Table**: `results/ambiguity_atlas/model_retention.parquet`
 - **Cryptographic Reproducibility Manifest**: `results/ambiguity_atlas/manifest.json`
+- **Manifest Verifier**: `python research/ambiguity_atlas/verify_manifest.py`
