@@ -1,6 +1,7 @@
 run_id: edu_2a_canary
 phase: EDU-2a
-model_name: gemma:12b
+model_name: gemma3:12b
+
 cases:
   - tech_qual_001
   - hum_excep_002

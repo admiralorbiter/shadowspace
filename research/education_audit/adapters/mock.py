@@ -72,7 +72,8 @@ class DeterministicMockAdapter:
             prompt_hash=p_hash,
             model_id=self.model_id,
             model_revision=self.revision,
-            parameters={"temperature": 0.0, "top_p": 1.0, "repeat_index": repeat_index},
+            parameters={"temperature": 0.0, "top_p": 1.0, "repeat_index": repeat_index, "done_reason": "mock"},
+
             repeat_index=repeat_index,
             output_text=full_output,
             output_hash=out_hash,
@@ -164,7 +165,8 @@ class IndependentNullAdapter:
             prompt_hash=p_hash,
             model_id=self.model_id,
             model_revision=self.revision,
-            parameters={"temperature": 0.0, "repeat_index": repeat_index},
+            parameters={"temperature": 0.0, "repeat_index": repeat_index, "done_reason": "mock"},
+
             repeat_index=repeat_index,
             output_text=text,
             output_hash=out_hash,

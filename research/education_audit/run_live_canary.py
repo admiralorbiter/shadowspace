@@ -24,10 +24,11 @@ from research.education_audit.variant_builder import build_variants_for_case
 
 def run_edu2a_canary(
     out_dir: str = "results/education_audit/edu_2a",
-    model_name: str = "gemma:12b",
+    model_name: str = "gemma3:12b",
     use_mock_fallback_for_offline: bool = True,
     run_order_seed: int = 42,
 ) -> str:
+
     """Executes EDU-2a Canary: Preflight + 60-Letter Randomized Execution + Blinding Packet Export."""
     os.makedirs(out_dir, exist_ok=True)
 

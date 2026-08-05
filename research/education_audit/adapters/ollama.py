@@ -67,12 +67,15 @@ class OllamaEducationAdapter:
             with urllib.request.urlopen(tags_req, timeout=5) as resp:
                 tags_data = json.loads(resp.read().decode("utf-8"))
                 for m in tags_data.get("models", []):
-                    if m.get("name") == self.model_name or m.get("model") == self.model_name:
+                    m_name = m.get("name", "")
+                    if m_name == self.model_name or m_name.startswith(self.model_name) or (self.model_name in ["gemma:12b", "gemma3:12b"] and "gemma3:12b" in m_name):
+                        self.model_name = m_name
                         self.model_digest = m.get("digest")
                         break
 
-            self.is_loaded = True
-            return True
+            self.is_loaded = (self.model_digest is not None)
+            return self.is_loaded
+
         except Exception as err:
             self.load_error = str(err)
             self.is_loaded = False
