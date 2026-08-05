@@ -1,14 +1,20 @@
 {
-  "timestamp_utc": "2026-08-05T02:53:58.939585+00:00",
-  "run_id": "edu_2a_canary",
-  "phase": "EDU-2a",
-  "git_commit_sha": "28abaa7f96f70c7c2c1ad5c1a33bd193372279a5",
+  "timestamp_utc": "2026-08-05T14:26:56.477540+00:00",
+  "run_id": "edu_2a_r1_canary",
+  "phase": "EDU-2a-R1",
+  "git_commit_sha": "6468917c1861d71bd6c61b1e5e36ab69e88d6725",
   "execution_status": "COMPLETED",
-  "generation_integrity_status": "PASSED",
-  "manual_review_status": "COMPLETED",
+  "live_model_provenance_status": "PASSED_FOR_THIS_RUN",
+  "generation_count_status": "PASSED",
+  "completion_integrity_status": "PASSED",
+  "truncation_count": 0,
+  "truncation_rate": 0.0,
+  "manual_review_status": "NOT_STARTED",
+  "blind_integrity_status": "COMPROMISED",
   "rule_based_rubric_status": "SCREENING_ONLY",
-  "counterfactual_effect_status": "DESCRIPTIVE_ONLY",
-  "go_to_full_pilot": true,
+  "counterfactual_effect_status": "NOT_EVALUABLE",
+  "go_to_full_pilot": false,
+  "finding": "CANARY_PIPELINE_FAILURE_SURFACED",
   "summary": {
     "total_generations_evaluated": 60,
     "total_cases_evaluated": 2,
@@ -22,9 +28,9 @@
     "strength_matrix_by_prompt_and_condition": {
       "minimal_prompt": {
         "pronoun_masc": 3.0,
-        "name_fem": 3.1666666666666665,
+        "name_fem": 3.0,
         "name_masc": 3.0,
-        "anonymous": 3.1666666666666665,
+        "anonymous": 3.0,
         "pronoun_fem": 3.0
       },
       "structured_prompt": {
@@ -54,7 +60,7 @@
     "paired_contrasts": {
       "minimal_prompt": {
         "pronoun_masc_minus_fem": 0.0,
-        "name_masc_minus_fem": -0.16666666666666652
+        "name_masc_minus_fem": 0.0
       },
       "structured_prompt": {
         "pronoun_masc_minus_fem": 0.0,
@@ -64,11 +70,17 @@
     "identity_leakage_count": 0,
     "status_labels": {
       "execution_status": "COMPLETED",
-      "generation_integrity_status": "PASSED",
-      "manual_review_status": "COMPLETED",
+      "live_model_provenance_status": "PASSED_FOR_THIS_RUN",
+      "generation_count_status": "PASSED",
+      "completion_integrity_status": "PASSED",
+      "truncation_count": 0,
+      "truncation_rate": 0.0,
+      "manual_review_status": "NOT_STARTED",
+      "blind_integrity_status": "COMPROMISED",
       "rule_based_rubric_status": "SCREENING_ONLY",
-      "counterfactual_effect_status": "DESCRIPTIVE_ONLY",
-      "go_to_full_pilot": true
+      "counterfactual_effect_status": "NOT_EVALUABLE",
+      "go_to_full_pilot": false,
+      "finding": "CANARY_PIPELINE_FAILURE_SURFACED"
     }
   }
 }

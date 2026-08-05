@@ -1,7 +1,7 @@
 # Phase EDU-2a Live Canary Audit Report
 
-**Date**: 2026-08-05 02:53 UTC
-**Git Commit SHA**: `28abaa7f96f70c7c2c1ad5c1a33bd193372279a5`
+**Date**: 2026-08-05 14:26 UTC
+**Git Commit SHA**: `6468917c1861d71bd6c61b1e5e36ab69e88d6725`
 **Total Letters Evaluated**: 60
 
 ## Status Labels
@@ -17,7 +17,7 @@
 {
   "minimal_prompt": {
     "pronoun_masc_minus_fem": 0.0,
-    "name_masc_minus_fem": -0.16666666666666652
+    "name_masc_minus_fem": 0.0
   },
   "structured_prompt": {
     "pronoun_masc_minus_fem": 0.0,
