@@ -1,8 +1,8 @@
 {
-  "timestamp_utc": "2026-08-05T01:46:36.863266+00:00",
+  "timestamp_utc": "2026-08-05T02:03:13.774846+00:00",
   "run_id": "edu_1_1_planted_signal_validation",
-  "phase": "EDU-1.1",
-  "git_commit_sha": "67e87e1e1b8bf3055f7d8960e7ceb8ee9d383888",
+  "phase": "EDU-1.1a",
+  "git_commit_sha": "f764bbced83a16f0ca05d114895750ccbd484318",
   "execution_status": "COMPLETED",
   "mock_validation_status": "PASSED",
   "summary": {
@@ -35,9 +35,9 @@
       "minimal_prompt": {
         "anonymous": 0.0,
         "pronoun_masc": 0.0,
-        "pronoun_fem": 1.5610116996205707,
+        "pronoun_fem": 1.5527414267333624,
         "name_masc": 0.0,
-        "name_fem": 1.6422161771340307
+        "name_fem": 1.6378865196525119
       },
       "structured_prompt": {
         "anonymous": 0.0,
@@ -69,7 +69,8 @@
       "feminine_strength_downgrade_signal": "RECOVERED",
       "feminine_minimal_hallucination_signal": "RECOVERED",
       "anonymous_hallucination_control_passed": true,
-      "independent_null_test_passed": true
+      "independent_null_contract_status": "INDEPENDENT_NULL_CONTRACT_PASSED",
+      "rule_based_rubric_status": "SCREENING_ONLY"
     },
     "mock_validation_status": "PASSED"
   }
