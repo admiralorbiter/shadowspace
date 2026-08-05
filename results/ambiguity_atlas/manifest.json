@@ -1,7 +1,10 @@
 {
+  "manifest_schema": "1.1.0",
   "study_id": "ambiguity_doppelganger_atlas_v1",
   "evidence_level": "exploratory_census",
   "seed": 20260804,
+  "source_commit_sha": "68be211c9359e601d21885780173552fa0cf8884",
+  "python_version": "3.13.7",
   "files": {
     "data/chaosnli/processed/canonical_items.parquet": {
       "size_bytes": 261274,
@@ -24,20 +27,20 @@
       "sha256": "c05f900edad517dce81d7870468eed6958b27db297f5aed0abb94d8d5afa1608"
     },
     "src/shadowspace/ambiguity_atlas/pair_index.py": {
-      "size_bytes": 9993,
-      "sha256": "d920761bfb575f3e14af4738f24877264fc0544f20d14795b1763e471a816d87"
+      "size_bytes": 11752,
+      "sha256": "d045f82d3866e74c7c785a47f4f0996e337b3c48f6957050b75adf3c712c9d5b"
     },
     "src/shadowspace/ambiguity_atlas/posterior.py": {
-      "size_bytes": 2939,
-      "sha256": "348fba6796fd06f15c61daa86932f4939841908aab7aa2d980901f89a5f8956c"
+      "size_bytes": 4799,
+      "sha256": "e1e6f32006de931e42210090f2047e9cf48ea6478b4007fdb3e14150483b095a"
     },
     "src/shadowspace/ambiguity_atlas/retention.py": {
       "size_bytes": 5401,
       "sha256": "ab94e7b6a5cc8a46d6574583293c064d69a58bc31f796fed039a0aef3897e826"
     },
     "src/shadowspace/ambiguity_atlas/schemas.py": {
-      "size_bytes": 2841,
-      "sha256": "9ec290c098e3650148dc6dcf3c2d24be0dc3a8e416177dfd1f05b30549c151d9"
+      "size_bytes": 5063,
+      "sha256": "3fb082f6a2b7924a49bb4ac338c92de441bd81bec52e3b0adb6a16059d7d33f0"
     },
     "results/ambiguity_atlas/preflight_report.json": {
       "size_bytes": 604,
@@ -48,44 +51,36 @@
       "sha256": "3cfa70596a65dde1b8fcc9d4543864a97880a4628f7db7b50ac0642573b2d5dc"
     },
     "results/ambiguity_atlas/strict_pairs.parquet": {
-      "size_bytes": 144632,
-      "sha256": "2d698af9ce0ae9b90d39a018140e222d748b9a6943eb9739f59e8eede5295f52"
+      "size_bytes": 144541,
+      "sha256": "7dc7355f27d317a955215887b703ce65a06f7ffebec264a920cc9ee6d231e234"
     },
     "results/ambiguity_atlas/strict_summary.json": {
-      "size_bytes": 620,
-      "sha256": "b9061460774ae91558ed6522b6d2804b85c02503788d9bd3654b4f571872c967"
+      "size_bytes": 618,
+      "sha256": "8439fe115387deba38d7d79da121e4bb2f9552c95a13aae6ad12b88e8f75babc"
     },
     "results/ambiguity_atlas/approximate_pairs.parquet": {
-      "size_bytes": 659998,
-      "sha256": "1822f529fa34a3cc90898fe84d61bff0be3f48f04682fbf2afe1e5c932a0716d"
+      "size_bytes": 664524,
+      "sha256": "ecc3b311e57b332b916e3f4fd34e870ad43bc54639621ffd615c5f96fd541d2b"
     },
     "results/ambiguity_atlas/posterior_stability.parquet": {
-      "size_bytes": 185297,
-      "sha256": "0a343dc258e66fe05b05fce8c50c4574b46c053880c15330c6bc3ddebb570710"
+      "size_bytes": 196830,
+      "sha256": "74b7d8a13b3cb29244c52cfeb77560e56e606aabcd3a031b5c868cfe13478654"
     },
     "results/ambiguity_atlas/model_retention.parquet": {
-      "size_bytes": 671014,
-      "sha256": "2e9c72180f0dadb6de0095a8953feb34954645c910ab44c1b8e9e3f45cbfb7b6"
+      "size_bytes": 671452,
+      "sha256": "7461907015067810980872ff52d34f0bfc212c01f6481204493262c34e183abd"
     },
     "results/ambiguity_atlas/model_retention_summary.json": {
       "size_bytes": 7506,
-      "sha256": "a822be4ec76f691572cb205421ea7ee53c20725088f3cca81e9238cc2188e6b9"
+      "sha256": "ba487e5d26477abb56e5f6cae54bcf95c4eb687482e542ca396f67c1285326f1"
     },
     "results/ambiguity_atlas/atlas_payload.json": {
-      "size_bytes": 4610325,
-      "sha256": "0df84f843cfda436d2d06dc266d33caa9e8f6f9c9e2081a95e1c7e60dd696dfe"
-    },
-    "results/ambiguity_atlas/atlas_payload.js": {
-      "size_bytes": 4610349,
-      "sha256": "4a98bb472d5268d37739c112c5a65919eac8f67a18d8e8aee19825620e36bfe5"
-    },
-    "docs/viz/ambiguity_atlas/atlas_payload.js": {
-      "size_bytes": 4610349,
-      "sha256": "4a98bb472d5268d37739c112c5a65919eac8f67a18d8e8aee19825620e36bfe5"
+      "size_bytes": 4610275,
+      "sha256": "f1fc038e06e81c13c8b068065e63fcd1cfccb47e1aa7f013852e46a35f249525"
     },
     "docs/viz/ambiguity_atlas/index.html": {
-      "size_bytes": 4641958,
-      "sha256": "3fb5aaaf6e67f19a2b2f6e82867979afddd493932c31c85611dd6644a08cfc42"
+      "size_bytes": 4641908,
+      "sha256": "cdc8b3663ccd6405ca1f80d2ea4696858edf1a843f6dd8847db49c687d525b2c"
     }
   }
 }
