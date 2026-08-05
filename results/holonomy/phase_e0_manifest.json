@@ -1,13 +1,17 @@
 {
-  "timestamp_utc": "2026-08-04T23:57:26.651462+00:00",
-  "phase": "E2-A1.1",
-  "git_commit_sha": "894fc25bfc60080e0fdb3d645b71c2f346b0bade",
+  "timestamp_utc": "2026-08-05T00:04:43.973535+00:00",
+  "phase": "E2-A1.1a",
+  "git_commit_sha": "93d082994dc889f84c028a3731fbdb647017a61a",
   "environment": {
     "python_version": "3.12.0",
     "numpy_version": "2.2.6",
     "scipy_version": "1.13.1"
   },
   "status": "PASSED",
+  "hardening_status": "PASSED",
+  "orbit_pipeline_status": "PASSED",
+  "transport_status": "NOT_ESTIMABLE",
+  "model_audit_status": "NOT_RUN",
   "gates": {
     "flat_world": true,
     "planted_curvature_4corner": true,
@@ -49,6 +53,7 @@
         "reason": "rank_deficient",
         "design_rank": 1,
         "required_rank": 2,
+        "required_observations": null,
         "condition_number": null,
         "condition_threshold": 1000000.0,
         "v22_condition_number": null,
@@ -57,7 +62,67 @@
         "singular_values": [
           0.01411337928727101,
           2.6981765490634904e-16
-        ]
+        ],
+        "status": "not_estimable",
+        "relative_rank_tolerance": 1e-07,
+        "absolute_singular_value_floor": 1e-15
+      },
+      "rename_b": {
+        "generator_name": "rename_b",
+        "reason": "rank_deficient",
+        "design_rank": 1,
+        "required_rank": 2,
+        "required_observations": null,
+        "condition_number": null,
+        "condition_threshold": 1000000.0,
+        "v22_condition_number": null,
+        "matrix_norm": null,
+        "bias_norm": null,
+        "singular_values": [
+          0.014234121140956485,
+          3.2341150635799357e-16
+        ],
+        "status": "not_estimable",
+        "relative_rank_tolerance": 1e-07,
+        "absolute_singular_value_floor": 1e-15
+      },
+      "rename_a_inv": {
+        "generator_name": "rename_a_inv",
+        "reason": "rank_deficient",
+        "design_rank": 1,
+        "required_rank": 2,
+        "required_observations": null,
+        "condition_number": null,
+        "condition_threshold": 1000000.0,
+        "v22_condition_number": null,
+        "matrix_norm": null,
+        "bias_norm": null,
+        "singular_values": [
+          0.008559985375166347,
+          2.7940265871782067e-16
+        ],
+        "status": "not_estimable",
+        "relative_rank_tolerance": 1e-07,
+        "absolute_singular_value_floor": 1e-15
+      },
+      "rename_b_inv": {
+        "generator_name": "rename_b_inv",
+        "reason": "rank_deficient",
+        "design_rank": 1,
+        "required_rank": 2,
+        "required_observations": null,
+        "condition_number": null,
+        "condition_threshold": 1000000.0,
+        "v22_condition_number": null,
+        "matrix_norm": null,
+        "bias_norm": null,
+        "singular_values": [
+          0.007529157677184654,
+          3.0808013832107576e-16
+        ],
+        "status": "not_estimable",
+        "relative_rank_tolerance": 1e-07,
+        "absolute_singular_value_floor": 1e-15
       }
     },
     "provenance": {
@@ -66,21 +131,7 @@
       "adapter_mode": "deterministic_sha256_mock",
       "is_loaded": false,
       "use_mock_fallback": true,
-      "identifiability_error": {
-        "generator_name": "rename_a",
-        "reason": "rank_deficient",
-        "design_rank": 1,
-        "required_rank": 2,
-        "condition_number": null,
-        "condition_threshold": 1000000.0,
-        "v22_condition_number": null,
-        "matrix_norm": null,
-        "bias_norm": null,
-        "singular_values": [
-          0.01411337928727101,
-          2.6981765490634904e-16
-        ]
-      }
+      "identifiability_summary": "One or more edge designs are rank-deficient or ill-conditioned."
     }
   },
   "monte_carlo_sweeps": [
