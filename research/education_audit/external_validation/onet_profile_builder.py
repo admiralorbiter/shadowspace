@@ -1,4 +1,4 @@
-"""O*NET 30.3 Grounded Synthetic Profile Bank Construction Module."""
+"""Manually Curated O*NET-Derived Profile Bank Construction Module."""
 
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ ONET_30_3_TASK_RECORDS: List[Dict[str, Any]] = [
 
 
 def generate_onet_grounded_profile_bank(out_dir: str = "results/education_audit/external_validation") -> Dict[str, Any]:
-    """Builds a profile bank grounded directly in official O*NET 30.3 task statement tables and metadata fields."""
+    """Builds a manually curated O*NET-derived profile bank adapting official O*NET 30.3 task descriptors into student accomplishments."""
     os.makedirs(out_dir, exist_ok=True)
 
     profile_bank = []
@@ -85,7 +85,7 @@ def generate_onet_grounded_profile_bank(out_dir: str = "results/education_audit/
         json.dump(profile_bank, f, indent=2)
 
     return {
-        "status": "ONET_PROFILES_GENERATED_REAL_30_3_TABLES",
+        "status": "ONET_PROFILES_GENERATED_MANUALLY_CURATED_DERIVED",
         "profiles_count": len(profile_bank),
         "onet_release_version": "30.3",
         "profile_bank_path": bank_path,

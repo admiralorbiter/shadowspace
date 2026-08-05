@@ -1,5 +1,5 @@
 # Data Registry for External Validation Suite
-version: "3.0.0"
+version: "3.1.0"
 
 public_datasets:
   wan2023_reference_letters:
@@ -18,15 +18,17 @@ public_datasets:
     commit_sha: "e8cc42d86df007fd05e3ae0c27c127b7a0a6165c"
     file_urls:
       train.csv: "https://raw.githubusercontent.com/elainew728/labe-agency/e8cc42d86df007fd05e3ae0c27c127b7a0a6165c/lac_dataset_construction/lac_dataset/train.csv"
-      val.csv: "https://raw.githubusercontent.com/elainew728/labe-agency/e8cc42d86df007fd05e3ae0c27c127b7a0a6165c/lac_dataset_construction/lac_dataset/val.csv"
+      validation.csv: "https://raw.githubusercontent.com/elainew728/labe-agency/e8cc42d86df007fd05e3ae0c27c127b7a0a6165c/lac_dataset_construction/lac_dataset/validation.csv"
       test.csv: "https://raw.githubusercontent.com/elainew728/labe-agency/e8cc42d86df007fd05e3ae0c27c127b7a0a6165c/lac_dataset_construction/lac_dataset/test.csv"
     expected_sha256:
       train.csv: "abcc3ec6032e3b265cbf15c6d8a3da668a2a030675b00f0425b96698c8cd5b56"
-      val.csv: "492067756f742f5341258d4a6f7b308e7c1eb7a07c132890529d3326ebc7f212"
-      test.csv: "030bd45c6130cb0bdc2dceb28a9b71e16d47b0e359050d24e16ef9c15ffcce71"
+      validation.csv: "b72ea51c5f723db24c25013ca22c9155eb4a3a0622ebcffb706436bbb11e8f5e"
+      test.csv: "3fd3d732c8c41a1479c69c73714814181c2224a4fcf593ca500f152e29d287e6"
+
+
 
   onet_occupations:
-    name: "O*NET 30.3 Production Release"
+    name: "Manually Curated O*NET 30.3 Derived Profile Bank"
     version: "30.3"
     soc_codes_grounded: ["15-1252.00", "15-2051.00", "19-1021.00", "25-1121.00"]
-    occupations_count: 1016
+    occupations_count: 4

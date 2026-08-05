@@ -1,7 +1,7 @@
-"""Milestone EV-1: Exact-Lexicon External Benchmark on LABE LAC & Wan 2023 Uncertainty Analysis.
+"""Milestone EV-1: Exact-Lexicon External Benchmark on LABE LAC & Wan 2023 Analysis.
 
 Computes:
-1. Exact-Lexicon Benchmark on LABE LAC across Train, Val, Test (Primary), and All (Exploratory) splits.
+1. Exact-Lexicon Benchmark on LABE LAC across Train, Validation, and Test (Primary) splits (No training-slice fallbacks).
 2. Wan et al. 2023 Paired Uncertainty: Mean, Median, SD, IQR, 95% Bootstrap CI, and Directional Counts.
 3. Joint Agency-Communality Shift records.
 """
@@ -21,6 +21,9 @@ from research.education_audit.external_validation.labe_loader import load_labe_d
 
 def _compute_split_metrics(sentences: List[Dict[str, Any]]) -> Dict[str, float]:
     """Computes precision, recall, and F1 score for a specific dataset split."""
+    if not sentences:
+        raise FileNotFoundError("Empty or missing dataset split encountered. Cannot compute benchmark metrics.")
+
     tp, fp, tn, fn = 0, 0, 0, 0
     for s in sentences:
         feats = extract_lexical_features(s["text"])
@@ -49,7 +52,7 @@ def _compute_split_metrics(sentences: List[Dict[str, Any]]) -> Dict[str, float]:
 
 
 def run_agency_metric_replication(out_dir: str = "results/education_audit/external_validation") -> Dict[str, Any]:
-    """Runs Milestone EV-1 Exact-Lexicon External Benchmark & Wan Uncertainty Analysis."""
+    """Runs Milestone EV-1 Exact-Lexicon External Benchmark & Wan Uncertainty Analysis (Fails Closed)."""
     os.makedirs(out_dir, exist_ok=True)
 
     # 1. Ingest Real Wan et al. 2023 Dataset & Paired Uncertainty
@@ -114,14 +117,16 @@ def run_agency_metric_replication(out_dir: str = "results/education_audit/extern
     favors_joseph_count = int(np.sum(deltas_arr > 0))
     zero_diff_count = int(np.sum(deltas_arr == 0))
 
-    # 2. Ingest Real LABE 2023 Dataset Across Train, Val, Test Splits
+    # 2. Ingest Real LABE 2023 Dataset Across Train, Validation, and Test Splits (Strict Fail-Closed)
     labe_data = load_labe_dataset()
     by_split = labe_data["sentences_by_split"]
 
-    metrics_train = _compute_split_metrics(by_split["train"])
-    metrics_val = _compute_split_metrics(by_split.get("validation", [])) if by_split.get("validation") else _compute_split_metrics(by_split["train"][:100])
-    metrics_test = _compute_split_metrics(by_split["test"]) if by_split.get("test") else _compute_split_metrics(by_split["train"][100:200])
+    if not by_split.get("train") or not by_split.get("validation") or not by_split.get("test"):
+        raise FileNotFoundError("One or more required LABE splits (train, validation, test) are missing or empty.")
 
+    metrics_train = _compute_split_metrics(by_split["train"])
+    metrics_val = _compute_split_metrics(by_split["validation"])
+    metrics_test = _compute_split_metrics(by_split["test"])
     metrics_all = _compute_split_metrics(labe_data["all_sentences"])
 
     report = {

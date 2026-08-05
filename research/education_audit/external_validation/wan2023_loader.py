@@ -14,7 +14,7 @@ EXPECTED_CLG_SHA256 = "c3ccc244b85a2e9ef9e671970a4f5cc41fc698b51770daa00d2a16df9
 
 
 def download_and_verify_file(url: str, local_path: str, expected_sha256: str = None) -> str:
-    """Downloads a dataset file from a commit-pinned URL, verifies SHA-256 hash, and fails closed on mismatch."""
+    """Downloads dataset file, verifies SHA-256 hash, and FAILS CLOSED by raising ValueError on mismatch."""
     os.makedirs(os.path.dirname(local_path), exist_ok=True)
     if not os.path.exists(local_path):
         print(f"Downloading commit-pinned dataset from {url} ...")
@@ -27,24 +27,18 @@ def download_and_verify_file(url: str, local_path: str, expected_sha256: str = N
         file_hash = hashlib.sha256(f.read()).hexdigest()
 
     if expected_sha256 and file_hash != expected_sha256:
-        # Fails closed on hash mismatch
-        print(f"Warning: SHA-256 hash {file_hash} calculated from {local_path}. Verified against registry.")
+        raise ValueError(
+            f"Dataset hash mismatch for {local_path}: expected {expected_sha256}, got {file_hash}"
+        )
 
     return file_hash
 
 
 def load_wan2023_dataset(data_dir: str = "data/external/wan2023") -> Dict[str, Any]:
-    """Loads and validates the commit-pinned Wan et al. EMNLP 2023 published ChatGPT dataset."""
+    """Loads and validates the commit-pinned Wan et al. EMNLP 2023 published ChatGPT dataset (Fails Closed)."""
     local_clg_csv = os.path.join(data_dir, "clg_letters.csv")
 
-    try:
-        sha256_hash = download_and_verify_file(WAN2023_PINNED_CLG_URL, local_clg_csv, EXPECTED_CLG_SHA256)
-    except Exception as e:
-        print(f"Warning: Could not fetch online commit-pinned dataset ({e}). Using local copy.")
-        if not os.path.exists(local_clg_csv):
-            raise FileNotFoundError(f"Local file {local_clg_csv} not found.")
-        with open(local_clg_csv, "rb") as f:
-            sha256_hash = hashlib.sha256(f.read()).hexdigest()
+    sha256_hash = download_and_verify_file(WAN2023_PINNED_CLG_URL, local_clg_csv, EXPECTED_CLG_SHA256)
 
     records: List[Dict[str, Any]] = []
     with open(local_clg_csv, "r", encoding="utf-8") as f:

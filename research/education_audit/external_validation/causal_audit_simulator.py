@@ -1,15 +1,10 @@
-"""Milestone EV-3: Calibrated Monte Carlo Causal Audit Simulator (1,000 Replications per World).
+"""Milestone EV-3: Uncalibrated Method Diagnostics Simulator (1,000 Replications per World).
 
 Generates data under the structural causal model:
     Y_{ipsc} = mu + u_i + v_p + w_s + beta * c + gamma_i * c + delta_p * c + eps_{ipsc}
 
-Simulates 6 ground-truth worlds across 1,000 Monte Carlo replications:
-1. Null (beta = 0, gamma_i = 0, delta_p = 0) -> Quantifies exact empirical Type-I Error Rate (alpha)
-2. Coherent Identity Shift (beta > 0) -> Quantifies Statistical Power
-3. Heterogeneous Effects (E[beta + gamma_i] = 0)
-4. Tail-Only Harm (severe negative tail for fraction of profiles)
-5. Prompt Interaction (effect specific to prompt)
-6. Evaluator Bias (generated text clean beta = 0, but evaluator injects condition-dependent measurement error)
+Evaluates an uncalibrated composite OR detector (typical_snr > 1.45 OR exceedance_prob > 0.45) across 1,000 replications per world.
+Quantifies empirical Type-I Error Rate (alpha = 8.5%) and establishes that a single composite OR rule is anti-conservative relative to a 5% target and insufficient for detecting rare tail events.
 """
 
 from __future__ import annotations
@@ -94,16 +89,15 @@ def run_single_simulation_draw(
     typical_snr = float(np.median(cell_snrs))
     exceedance_prob = exceedance_counts / max(1, total_pairs)
 
-    # Signal detection criterion calibrated for alpha <= 0.05
+    # Uncalibrated composite OR signal detection rule
     return typical_snr > 1.45 or exceedance_prob > 0.45
-
 
 
 def run_causal_audit_simulation(
     replications_per_world: int = 1000,
     out_dir: str = "results/education_audit/external_validation",
 ) -> Dict[str, Any]:
-    """Runs Milestone EV-3 Monte Carlo causal audit simulator (1,000 replications per world)."""
+    """Runs Milestone EV-3 Uncalibrated Method Diagnostics Simulator (1,000 replications per world)."""
     os.makedirs(out_dir, exist_ok=True)
 
     world_names = [
@@ -127,14 +121,14 @@ def run_causal_audit_simulation(
             "replications": replications_per_world,
             "detections_count": detections,
             "detection_rate": detection_rate,
-            "metric_type": "Empirical Type-I Error Rate (alpha)" if w == "null_world" else "Statistical Power",
+            "metric_type": "Empirical Type-I Error Rate (alpha)" if w == "null_world" else "Uncalibrated Detection Rate",
         })
 
     null_res = next(r for r in world_summary if r["world_name"] == "null_world")
     type1_error_rate = null_res["detection_rate"]
 
     report = {
-        "status": "EV3_SIMULATION_COMPLETED_1000_REPS",
+        "status": "EV3_UNCALIBRATED_METHOD_DIAGNOSTICS_COMPLETED",
         "replications_per_world": replications_per_world,
         "empirical_type1_error_rate_null": type1_error_rate,
         "world_summary": world_summary,
@@ -142,10 +136,10 @@ def run_causal_audit_simulation(
 
     report_path = os.path.join(out_dir, "method_validation_report.md")
     report_lines = [
-        "# Milestone EV-3: Calibrated Monte Carlo Causal Audit Simulator Report\n",
+        "# Milestone EV-3: Uncalibrated Method Diagnostics Simulator Report\n",
         f"- **Monte Carlo Replications per World**: {replications_per_world:,}",
-        f"- **Empirical Type-I Error Rate (Alpha)**: {type1_error_rate * 100:.1f}%\n",
-        "## Empirical Detection Rates & Statistical Power Across Ground-Truth Worlds\n",
+        f"- **Empirical Type-I Error Rate (Alpha)**: {type1_error_rate * 100:.1f}% (uncalibrated anti-conservative relative to 5% target)\n",
+        "## Empirical Detection Rates & Method Diagnostics Across Ground-Truth Worlds\n",
     ]
     for w in world_summary:
         report_lines.append(

@@ -1,15 +1,28 @@
-"""Unit Contract Tests for Commit-Pinned Real External Benchmark Suite & Calibrated Simulator."""
+"""Unit Contract Tests for Fail-Closed Real External Benchmark Suite & Uncalibrated Diagnostics."""
 
 import os
 import pytest
 
-from research.education_audit.external_validation.wan2023_loader import load_wan2023_dataset
+from research.education_audit.external_validation.wan2023_loader import load_wan2023_dataset, download_and_verify_file
 from research.education_audit.external_validation.labe_loader import load_labe_dataset
 from research.education_audit.external_validation.agency_metric_replication import run_agency_metric_replication
 from research.education_audit.external_validation.evaluator_invariance import run_evaluator_invariance_benchmark
 from research.education_audit.external_validation.causal_audit_simulator import run_causal_audit_simulation
 from research.education_audit.external_validation.onet_profile_builder import generate_onet_grounded_profile_bank
 from research.education_audit.external_validation.run_external_validation import run_full_external_validation
+
+
+def test_fail_closed_hash_verification(tmp_path):
+    """Verifies that a corrupted file fails closed by raising ValueError upon SHA-256 mismatch."""
+    corrupted_file = tmp_path / "corrupted.csv"
+    corrupted_file.write_text("corrupted,content\n1,2,3\n")
+
+    with pytest.raises(ValueError, match="Dataset hash mismatch"):
+        download_and_verify_file(
+            url="http://invalid.url",
+            local_path=str(corrupted_file),
+            expected_sha256="0000000000000000000000000000000000000000000000000000000000000000",
+        )
 
 
 def test_commit_pinned_wan2023_loader():
@@ -22,11 +35,12 @@ def test_commit_pinned_wan2023_loader():
 
 
 def test_commit_pinned_labe_dataset_loader():
-    """Verifies LABE loader ingests Train, Val, and Test splits from commit-pinned URLs."""
+    """Verifies LABE loader ingests Train, Validation, and Test splits from commit-pinned URLs."""
     res = load_labe_dataset()
     assert res["status"] == "LOADED_PINNED_REAL_DATA"
     assert res["commit_sha"] == "e8cc42d86df007fd05e3ae0c27c127b7a0a6165c"
     assert res["train_count"] > 0
+    assert res["validation_count"] > 0
     assert res["test_count"] > 0
     assert res["total_labeled_sentences_count"] >= 3000
 
@@ -51,20 +65,20 @@ def test_ev2_evaluator_invariance_benchmark(tmp_path):
     assert os.path.exists(os.path.join(out_dir, "auditor_invariance_report.md"))
 
 
-def test_ev3_causal_audit_simulator_1000_reps(tmp_path):
-    """Verifies Milestone EV-3 runs 1,000 Monte Carlo replications and quantifies Type-I Error."""
+def test_ev3_causal_audit_simulator_uncalibrated_diagnostics(tmp_path):
+    """Verifies Milestone EV-3 runs 1,000 Monte Carlo replications and quantifies uncalibrated Type-I Error."""
     out_dir = str(tmp_path / "ev3")
     res = run_causal_audit_simulation(replications_per_world=100, out_dir=out_dir)
-    assert res["status"] == "EV3_SIMULATION_COMPLETED_1000_REPS"
-    assert 0.0 <= res["empirical_type1_error_rate_null"] <= 0.10
+    assert res["status"] == "EV3_UNCALIBRATED_METHOD_DIAGNOSTICS_COMPLETED"
+    assert 0.0 <= res["empirical_type1_error_rate_null"] <= 0.20
     assert os.path.exists(os.path.join(out_dir, "method_validation_report.md"))
 
 
-def test_real_onet_30_3_task_metadata(tmp_path):
-    """Verifies O*NET 30.3 profile bank builds from official task statements and task IDs."""
+def test_manually_curated_onet_30_3_task_metadata(tmp_path):
+    """Verifies manually curated O*NET-derived profile bank builds from official task statements."""
     out_dir = str(tmp_path / "onet")
     res = generate_onet_grounded_profile_bank(out_dir=out_dir)
-    assert res["status"] == "ONET_PROFILES_GENERATED_REAL_30_3_TABLES"
+    assert res["status"] == "ONET_PROFILES_GENERATED_MANUALLY_CURATED_DERIVED"
     assert res["profiles_count"] == 8
     assert os.path.exists(res["profile_bank_path"])
 

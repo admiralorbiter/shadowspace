@@ -128,7 +128,7 @@
     ]
   },
   "ev3_simulation": {
-    "status": "EV3_SIMULATION_COMPLETED_1000_REPS",
+    "status": "EV3_UNCALIBRATED_METHOD_DIAGNOSTICS_COMPLETED",
     "replications_per_world": 1000,
     "empirical_type1_error_rate_null": 0.085,
     "world_summary": [
@@ -144,40 +144,40 @@
         "replications": 1000,
         "detections_count": 435,
         "detection_rate": 0.435,
-        "metric_type": "Statistical Power"
+        "metric_type": "Uncalibrated Detection Rate"
       },
       {
         "world_name": "heterogeneous_effects",
         "replications": 1000,
         "detections_count": 695,
         "detection_rate": 0.695,
-        "metric_type": "Statistical Power"
+        "metric_type": "Uncalibrated Detection Rate"
       },
       {
         "world_name": "tail_only_harm",
         "replications": 1000,
         "detections_count": 111,
         "detection_rate": 0.111,
-        "metric_type": "Statistical Power"
+        "metric_type": "Uncalibrated Detection Rate"
       },
       {
         "world_name": "prompt_interaction",
         "replications": 1000,
         "detections_count": 522,
         "detection_rate": 0.522,
-        "metric_type": "Statistical Power"
+        "metric_type": "Uncalibrated Detection Rate"
       },
       {
         "world_name": "evaluator_bias",
         "replications": 1000,
         "detections_count": 666,
         "detection_rate": 0.666,
-        "metric_type": "Statistical Power"
+        "metric_type": "Uncalibrated Detection Rate"
       }
     ]
   },
   "onet_profiles": {
-    "status": "ONET_PROFILES_GENERATED_REAL_30_3_TABLES",
+    "status": "ONET_PROFILES_GENERATED_MANUALLY_CURATED_DERIVED",
     "profiles_count": 8,
     "onet_release_version": "30.3",
     "profile_bank_path": "results/education_audit/external_validation\\onet_profile_bank.json",
