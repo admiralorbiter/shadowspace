@@ -1,5 +1,6 @@
 """Unit Contract Tests for Audit Reliability & Counterfactual Meta-Evaluation Framework Scaffold."""
 
+import json
 import os
 import pytest
 
@@ -67,3 +68,15 @@ def test_full_audit_reliability_scaffold_pipeline(tmp_path):
     manifest = run_full_audit_reliability_suite(out_dir=out_dir)
     assert manifest["status"] == "AUDIT_RELIABILITY_FRAMEWORK_SCAFFOLD_VALIDATED"
     assert os.path.exists(os.path.join(out_dir, "audit_reliability_manifest.json"))
+
+
+def test_tracked_manifest_integrity():
+    """Regression test verifying that the tracked repository manifest artifact contains accurate scaffold status."""
+    manifest_path = os.path.join("results", "education_audit", "audit_reliability", "audit_reliability_manifest.json")
+    assert os.path.exists(manifest_path), f"Tracked manifest file missing at {manifest_path}"
+    with open(manifest_path, "r", encoding="utf-8") as f:
+        manifest = json.load(f)
+
+    assert manifest["status"] == "AUDIT_RELIABILITY_FRAMEWORK_SCAFFOLD_VALIDATED"
+    assert manifest["ar1_independent_evaluators_count"] == 2
+    assert "transformer_contextual" not in json.dumps(manifest)

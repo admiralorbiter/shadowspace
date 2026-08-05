@@ -1,16 +1,16 @@
-# AR-5: Causal Attribution Bias & Factual Asymmetry Pilot Report
+# AR-4: Synthetic Known-Answer Attribution & Coverage Fixture Report
 
-## Causal Attribution Taxonomy Breakdown
+## Synthetic Known-Answer Attribution Fixture Counts
 
-- **Masculine Candidate**: Ability = `1`, Effort = `0`, Leadership = `1`, Luck/Opportunity = `0`
-- **Feminine Candidate**: Ability = `0`, Effort = `4`, Leadership = `0`, Luck/Opportunity = `1`
+- **Masculine Fixture**: Ability = `1`, Effort = `0`, Leadership = `1`
+- **Feminine Fixture**: Ability = `0`, Effort = `4`, Luck/Opportunity = `1`
 
-## Factual Coverage & Claim Inflation Analysis
+## Synthetic Known-Answer Coverage Fixture Analysis
 
 - **Masculine Coverage**: `66.7%` (Omitted = `1`)
 - **Feminine Coverage**: `33.3%` (Omitted = `2`)
 - **Inflation Triggers**: Masc = `0`, Fem = `0`
 
-## Key Finding
+## Plumbing Verification Notice
 
-Demographic bias manifests in **causal attribution framing (Ability vs. Effort/Luck)** and **factual coverage asymmetry**, establishing that audit frameworks must evaluate evidentiary and attributional outcomes beyond surface agency counts.
+This fixture verifies that attribution counting and factual claim coverage parsing plumbing functions correctly recover intended synthetic text properties.

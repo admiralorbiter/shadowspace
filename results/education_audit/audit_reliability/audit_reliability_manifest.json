@@ -1,12 +1,14 @@
 {
-  "status": "AUDIT_RELIABILITY_SUITE_COMPLETED",
-  "ar1_panel_initialized": 3,
-  "ar2_reliability_cards": {
+  "status": "AUDIT_RELIABILITY_FRAMEWORK_SCAFFOLD_VALIDATED",
+  "ar1_panel_evaluators_count": 3,
+  "ar1_independent_evaluators_count": 2,
+  "ar2_smoke_test": {
     "exact_lexicon": {
       "evaluator_id": "eval_exact_lexicon",
       "evaluator_name": "Exact Lexicon Density",
       "evaluator_type": "exact_lexicon",
-      "total_comparisons": 16,
+      "is_independent": true,
+      "smoke_test_comparisons_count": 16,
       "masd_mean_absolute_score_difference": 0.0,
       "cfr_counterfactual_flip_rate": 0.0,
       "mean_signed_drift_masc_minus_fem": 0.0,
@@ -22,7 +24,8 @@
       "evaluator_id": "eval_sparse_ngram_ensemble",
       "evaluator_name": "Sparse N-Gram Baseline Ensemble",
       "evaluator_type": "sparse_ngram_ensemble",
-      "total_comparisons": 16,
+      "is_independent": true,
+      "smoke_test_comparisons_count": 16,
       "masd_mean_absolute_score_difference": 0.0135,
       "cfr_counterfactual_flip_rate": 0.0,
       "mean_signed_drift_masc_minus_fem": 0.0019,
@@ -34,11 +37,12 @@
         "pronoun_mean_signed": 0.0263
       }
     },
-    "transformer_contextual": {
-      "evaluator_id": "eval_transformer_contextual",
-      "evaluator_name": "Transformer Contextual Classifier",
-      "evaluator_type": "transformer_contextual",
-      "total_comparisons": 16,
+    "length_adjusted_ngram_proxy": {
+      "evaluator_id": "eval_length_adjusted_ngram_proxy",
+      "evaluator_name": "Length-Adjusted N-Gram Proxy (Non-Independent)",
+      "evaluator_type": "length_adjusted_ngram_proxy",
+      "is_independent": false,
+      "smoke_test_comparisons_count": 16,
       "masd_mean_absolute_score_difference": 0.0128,
       "cfr_counterfactual_flip_rate": 0.0,
       "mean_signed_drift_masc_minus_fem": 0.0018,
@@ -51,22 +55,22 @@
       }
     }
   },
-  "ar3_cross_domain_transfer": {
-    "status": "AR3_CROSS_DOMAIN_TRANSFER_COMPLETED",
-    "indomain_labe_sentences": {
+  "ar3_cross_context_contrast": {
+    "status": "AR3_CROSS_CONTEXT_CONTRAST_COMPLETED",
+    "labe_sentences_score_correlation": {
       "sample_count": 100,
       "pearson_r": 0.42,
       "spearman_rho": 0.439
     },
-    "crossdomain_wan_letters": {
+    "wan_letters_delta_correlation": {
       "sample_count": 60,
       "pearson_r": 0.17,
       "spearman_rho": 0.306
     },
-    "domain_transfer_degradation_delta_r": 0.25
+    "correlation_contrast_delta_r": 0.25
   },
-  "ar5_attribution_and_factuality": {
-    "status": "AR5_ATTRIBUTION_AND_FACTUALITY_COMPLETED",
+  "ar4_synthetic_attribution_fixture": {
+    "status": "AR4_SYNTHETIC_ATTRIBUTION_FIXTURE_VERIFIED",
     "attribution_taxonomy_counts": {
       "masculine_candidate": {
         "ability": 1,
