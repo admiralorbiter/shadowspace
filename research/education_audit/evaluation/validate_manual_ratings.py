@@ -1,7 +1,7 @@
-"""Strict Manual Ratings & Submission Integrity Validator for Phase EDU-2a-R1.2b.
+"""Strict Manual Ratings & Submission Integrity Validator for Phase EDU-2a-R1.2c.
 
 Enforces fail-closed design manifest verification, packet hash verification,
-strict field typing, and exact 170-record two-pass quotas.
+strict field typing, distinct duplicate pairs, and exact 170-record two-pass quotas.
 """
 
 from __future__ import annotations
@@ -32,7 +32,8 @@ def validate_manual_ratings_file(
     FAIL CLOSED:
     - Rejects if design_manifest_path does not exist.
     - Rejects if packet SHA-256 hashes fail validation.
-    - Rejects if record types are invalid (string booleans, boolean integers, non-unique rating_ids).
+    - Rejects if record types are invalid (string booleans, boolean integers, boolean scores, non-unique rating_ids).
+    - Rejects duplicate self-pairs in design manifest.
     - Requires exactly 170 records across (R1, Pass 1), (R1, Pass 2), (R2, Pass 1), (R2, Pass 2).
     """
     errors: List[str] = []
@@ -47,7 +48,7 @@ def validate_manual_ratings_file(
     except Exception as err:
         return False, [f"Failed to parse review-design manifest ({err})"]
 
-    # 2. Validate Design Manifest Structure
+    # 2. Validate Design Manifest Structure & Distinct Duplicate Pairs
     r2_allowed: Set[str] = set(d_man.get("reviewer2_allowed_letter_ids", []))
     dup_pairs: List[List[str]] = d_man.get("intra_rater_duplicate_pairs", [])
 
@@ -56,7 +57,6 @@ def validate_manual_ratings_file(
 
     if len(dup_pairs) != min(5, len(valid_letter_ids)):
         errors.append(f"Design manifest invalid duplicate pair count: expected {min(5, len(valid_letter_ids))}, got {len(dup_pairs)}")
-
 
     all_valid_set = set(valid_letter_ids)
     for lid in r2_allowed:
@@ -67,6 +67,8 @@ def validate_manual_ratings_file(
     for pair in dup_pairs:
         if len(pair) != 2 or pair[0] not in all_valid_set or pair[1] not in all_valid_set:
             errors.append(f"Invalid duplicate pair in design manifest: {pair}")
+        if pair[0] == pair[1]:
+            errors.append(f"Duplicate pair must contain two distinct letter IDs, got {pair}")
         if pair[0] in seen_dup_sides or pair[1] in seen_dup_sides:
             errors.append(f"Duplicate letter ID used in multiple pairs: {pair}")
         seen_dup_sides.add(pair[0])
@@ -137,7 +139,6 @@ def validate_manual_ratings_file(
         l_id = r.get("letter_id")
         r_pass = r.get("review_pass")
 
-        # Global unique rating_id
         if not rating_id or not isinstance(rating_id, str):
             errors.append(f"Rating record missing valid string 'rating_id': {rating_id}")
         elif rating_id in seen_rating_ids:
@@ -180,13 +181,13 @@ def validate_manual_ratings_file(
                 if bf in r and type(r[bf]) is not bool:
                     errors.append(f"Rating {l_id} field '{bf}' must be JSON boolean, got {type(r[bf]).__name__}")
 
-        # Strict Score Bounds (1 to 5)
+        # Strict Score Bounds (1 to 5) & Rejection of Booleans as Scores!
         score_fields = ["recommendation_strength_score", "opportunity_strength_score", "leadership_language_score", "competence_language_score", "warmth_language_score"] if r_pass == 1 else ["factual_fidelity_score"]
         for sf in score_fields:
             if sf in r:
                 val = r[sf]
-                if not isinstance(val, (int, float)) or not (1.0 <= val <= 5.0):
-                    errors.append(f"Rating {l_id} field '{sf}' out of bounds (1-5): {val}")
+                if type(val) is bool or type(val) not in {int, float} or not (1.0 <= float(val) <= 5.0):
+                    errors.append(f"Rating {l_id} field '{sf}' out of bounds (1-5) or boolean type: {val}")
 
         # Strict Integer Type Checks for Claim Counts (type(x) is int, excluding bool!)
         if r_pass == 2:
