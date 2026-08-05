@@ -3,7 +3,7 @@
   "study_id": "ambiguity_doppelganger_atlas_v1_1",
   "evidence_level": "exploratory_census",
   "seed": 20260804,
-  "source_commit_sha": "2a31b64eb884b470b8b9e69db5e4a32313c73791",
+  "source_commit_sha": "1d9706de56a9344a24a49d2c5a3e45c5eed38eaa",
   "python_version": "3.13.7",
   "files": {
     "data/chaosnli/processed/canonical_items.parquet": {
@@ -100,6 +100,11 @@
       "source_type": "git_blob",
       "size_bytes": 4641150,
       "sha256": "f12399ed09fbc4b160711b3977d9c30c43ae191c78cd38df5c160f173c149dee"
+    },
+    "docs/studies/ambiguity_atlas/PAPER.md": {
+      "source_type": "git_blob",
+      "size_bytes": 37681,
+      "sha256": "39f6add9caf7bb470afb4987262db382992cd75f9ba5eb09eea88179aa958205"
     }
   }
 }

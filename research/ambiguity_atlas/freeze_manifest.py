@@ -29,7 +29,9 @@ FILES_TO_MANIFEST = [
     ("results/ambiguity_atlas/model_retention_summary.json", "git_blob"),
     ("results/ambiguity_atlas/atlas_payload.json", "git_blob"),
     ("docs/viz/ambiguity_atlas/index.html", "git_blob"),
+    ("docs/studies/ambiguity_atlas/PAPER.md", "git_blob"),
 ]
+
 
 
 def compute_bytes_sha256(data: bytes) -> str:
