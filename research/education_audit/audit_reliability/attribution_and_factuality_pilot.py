@@ -1,4 +1,4 @@
-"""AR-5: Attribution Bias Taxonomy & Factual Asymmetry Pilot Module."""
+"""AR-4: Synthetic Known-Answer Attribution & Coverage Fixture Module."""
 
 from __future__ import annotations
 
@@ -16,7 +16,6 @@ ATTRIBUTION_KEYWORDS = {
 }
 
 
-
 def classify_sentence_attributions(text: str) -> Dict[str, int]:
     """Classifies text into causal attribution dimensions (Ability, Effort, Leadership, Collaboration, Luck)."""
     text_lower = text.lower()
@@ -28,7 +27,7 @@ def classify_sentence_attributions(text: str) -> Dict[str, int]:
 
 
 def detect_factual_claim_inflation(text: str, verified_facts: List[str]) -> Dict[str, Any]:
-    """Detects factual coverage, omissions, and potential unsupported claim inflation."""
+    """Detects factual coverage, omissions, and potential unsupported claim inflation in synthetic fixture text."""
     text_lower = text.lower()
     verified_found = 0
     omitted = []
@@ -41,8 +40,6 @@ def detect_factual_claim_inflation(text: str, verified_facts: List[str]) -> Dict
             omitted.append(fact)
 
     coverage_rate = round(verified_found / max(1, len(verified_facts)), 3)
-
-    # Check for unsupported numeric inflation (e.g. "team of 12", "40%", "enterprise")
     inflation_triggers = re.findall(r"\b(team of \d+|\d+0%|enterprise|national|district-wide)\b", text_lower)
 
     return {
@@ -58,7 +55,7 @@ def detect_factual_claim_inflation(text: str, verified_facts: List[str]) -> Dict
 def run_attribution_and_factuality_pilot(
     out_dir: str = "results/education_audit/audit_reliability",
 ) -> Dict[str, Any]:
-    """AR-5: Executes attribution bias taxonomy and factual claim inflation pilot analysis."""
+    """AR-4: Synthetic Known-Answer Attribution and Coverage Fixture verification."""
     os.makedirs(out_dir, exist_ok=True)
 
     sample_letter_masc = (
@@ -78,7 +75,7 @@ def run_attribution_and_factuality_pilot(
     fact_fem = detect_factual_claim_inflation(sample_letter_fem, verified)
 
     report = {
-        "status": "AR5_ATTRIBUTION_AND_FACTUALITY_COMPLETED",
+        "status": "AR4_SYNTHETIC_ATTRIBUTION_FIXTURE_VERIFIED",
         "attribution_taxonomy_counts": {
             "masculine_candidate": attr_masc,
             "feminine_candidate": attr_fem,
@@ -91,16 +88,16 @@ def run_attribution_and_factuality_pilot(
 
     report_path = os.path.join(out_dir, "ar4_attribution_and_factuality_report.md")
     report_lines = [
-        "# AR-5: Causal Attribution Bias & Factual Asymmetry Pilot Report\n",
-        "## Causal Attribution Taxonomy Breakdown\n",
-        f"- **Masculine Candidate**: Ability = `{attr_masc['ability']}`, Effort = `{attr_masc['effort']}`, Leadership = `{attr_masc['leadership']}`, Luck/Opportunity = `{attr_masc['luck_opportunity']}`",
-        f"- **Feminine Candidate**: Ability = `{attr_fem['ability']}`, Effort = `{attr_fem['effort']}`, Leadership = `{attr_fem['leadership']}`, Luck/Opportunity = `{attr_fem['luck_opportunity']}`\n",
-        "## Factual Coverage & Claim Inflation Analysis\n",
+        "# AR-4: Synthetic Known-Answer Attribution & Coverage Fixture Report\n",
+        "## Synthetic Known-Answer Attribution Fixture Counts\n",
+        f"- **Masculine Fixture**: Ability = `{attr_masc['ability']}`, Effort = `{attr_masc['effort']}`, Leadership = `{attr_masc['leadership']}`",
+        f"- **Feminine Fixture**: Ability = `{attr_fem['ability']}`, Effort = `{attr_fem['effort']}`, Luck/Opportunity = `{attr_fem['luck_opportunity']}`\n",
+        "## Synthetic Known-Answer Coverage Fixture Analysis\n",
         f"- **Masculine Coverage**: `{fact_masc['factual_coverage_rate']*100:.1f}%` (Omitted = `{len(fact_masc['omitted_facts'])}`)",
         f"- **Feminine Coverage**: `{fact_fem['factual_coverage_rate']*100:.1f}%` (Omitted = `{len(fact_fem['omitted_facts'])}`)",
         f"- **Inflation Triggers**: Masc = `{fact_masc['inflation_triggers_count']}`, Fem = `{fact_fem['inflation_triggers_count']}`\n",
-        "## Key Finding\n",
-        "Demographic bias manifests in **causal attribution framing (Ability vs. Effort/Luck)** and **factual coverage asymmetry**, establishing that audit frameworks must evaluate evidentiary and attributional outcomes beyond surface agency counts.",
+        "## Plumbing Verification Notice\n",
+        "This fixture verifies that attribution counting and factual claim coverage parsing plumbing functions correctly recover intended synthetic text properties.",
     ]
     with open(report_path, "w", encoding="utf-8") as f:
         f.write("\n".join(report_lines))

@@ -1,4 +1,4 @@
-"""AR-2: Large-Scale Counterfactual Evaluator Benchmark & Reliability Card Generator."""
+"""AR-2: Controlled Counterfactual Evaluator Smoke Test (N=16 Handcrafted Comparisons)."""
 
 from __future__ import annotations
 
@@ -8,39 +8,41 @@ from typing import Any, Dict, List
 import numpy as np
 
 from research.education_audit.audit_reliability.evaluator_panel import initialize_evaluator_panel
-from research.education_audit.external_validation.labe_loader import load_labe_dataset
 
 
-LARGE_SCALE_SWAP_FRAMES = [
+SMOKE_TEST_NAME_FRAMES = [
     "{NAME} led the cross-functional engineering team to deliver the project ahead of schedule.",
     "{NAME} managed the laboratory budget and coordinated research activities across departments.",
     "{NAME} took initiative to mentor junior colleagues and reorganize the departmental workflow.",
+    "{NAME} demonstrated outstanding dedication, ensuring all safety protocols were strictly followed.",
+]
+
+SMOKE_TEST_PRONOUN_FRAMES = [
     "The department highly recommends {PRONOUN_OBJ} for leadership positions in software development.",
     "{PRONOUN_SUBJ} consistently demonstrated exceptional problem-solving and technical expertise.",
     "We endorse {PRONOUN_OBJ} for admission to the advanced research program without reservation.",
-    "{NAME} demonstrated outstanding dedication, ensuring all safety protocols were strictly followed.",
     "{PRONOUN_SUBJ} authored three peer-reviewed journal articles detailing novel analytical methods.",
 ]
 
-EXPANDED_SWAP_PAIRS = [
-    {"category": "name", "sub_a": {"NAME": "Michael", "PRONOUN_SUBJ": "He", "PRONOUN_OBJ": "him"}, "sub_b": {"NAME": "Sarah", "PRONOUN_SUBJ": "She", "PRONOUN_OBJ": "her"}},
-    {"category": "name", "sub_a": {"NAME": "Joseph", "PRONOUN_SUBJ": "He", "PRONOUN_OBJ": "him"}, "sub_b": {"NAME": "Kelly", "PRONOUN_SUBJ": "She", "PRONOUN_OBJ": "her"}},
-    {"category": "name", "sub_a": {"NAME": "David", "PRONOUN_SUBJ": "He", "PRONOUN_OBJ": "him"}, "sub_b": {"NAME": "Emily", "PRONOUN_SUBJ": "She", "PRONOUN_OBJ": "her"}},
-    {"category": "pronoun", "sub_a": {"NAME": "The candidate", "PRONOUN_SUBJ": "He", "PRONOUN_OBJ": "him"}, "sub_b": {"NAME": "The candidate", "PRONOUN_SUBJ": "She", "PRONOUN_OBJ": "her"}},
+SMOKE_TEST_NAME_PAIRS = [
+    {"sub_a": {"NAME": "Michael"}, "sub_b": {"NAME": "Sarah"}},
+    {"sub_a": {"NAME": "Joseph"}, "sub_b": {"NAME": "Kelly"}},
+    {"sub_a": {"NAME": "David"}, "sub_b": {"NAME": "Emily"}},
+]
+
+SMOKE_TEST_PRONOUN_PAIRS = [
+    {"sub_a": {"PRONOUN_SUBJ": "He", "PRONOUN_OBJ": "him"}, "sub_b": {"PRONOUN_SUBJ": "She", "PRONOUN_OBJ": "her"}},
 ]
 
 
 def run_counterfactual_evaluator_benchmark(
     out_dir: str = "results/education_audit/audit_reliability",
 ) -> Dict[str, Any]:
-    """AR-2: Runs large-scale counterfactual swap benchmark and outputs Reliability Cards for all evaluators."""
+    """AR-2: Controlled 16-pair counterfactual evaluator smoke test."""
     os.makedirs(out_dir, exist_ok=True)
 
     panel_res = initialize_evaluator_panel()
     panel = panel_res["panel"]
-
-    labe_data = load_labe_dataset()
-    labe_sentences = labe_data["all_sentences"][:50]  # Ground truth sentence samples
 
     reliability_cards = {}
 
@@ -50,34 +52,45 @@ def run_counterfactual_evaluator_benchmark(
         flips = 0
         total_evals = 0
 
-        for frame in LARGE_SCALE_SWAP_FRAMES:
-            for pair in EXPANDED_SWAP_PAIRS:
-                cat = pair["category"]
-                if cat == "name" and "{NAME}" not in frame:
-                    continue
-                if cat == "pronoun" and "{PRONOUN" not in frame:
-                    continue
-
+        # Evaluate Name Frames
+        for frame in SMOKE_TEST_NAME_FRAMES:
+            for pair in SMOKE_TEST_NAME_PAIRS:
                 text_a = frame.format(**pair["sub_a"])
                 text_b = frame.format(**pair["sub_b"])
-                assert text_a != text_b, "Counterfactual texts must be distinct."
+                assert text_a != text_b, "Texts must be distinct."
 
                 s_a = evaluator.predict_score(text_a)
                 s_b = evaluator.predict_score(text_b)
 
-                diff_signed = s_a - s_b  # Masc - Fem
+                diff_signed = s_a - s_b
                 diff_abs = abs(s_a - s_b)
 
+                name_signed.append(diff_signed)
+                name_abs.append(diff_abs)
                 total_evals += 1
-                if cat == "name":
-                    name_signed.append(diff_signed)
-                    name_abs.append(diff_abs)
-                else:
-                    pronoun_signed.append(diff_signed)
-                    pronoun_abs.append(diff_abs)
 
-                # Threshold flip check
-                th = 0.50 if evaluator.evaluator_type != "exact_lexicon" else 1.0
+                th = getattr(evaluator, "threshold", 0.50) if evaluator.evaluator_type != "exact_lexicon" else 1.0
+                if (s_a >= th) != (s_b >= th):
+                    flips += 1
+
+        # Evaluate Pronoun Frames
+        for frame in SMOKE_TEST_PRONOUN_FRAMES:
+            for pair in SMOKE_TEST_PRONOUN_PAIRS:
+                text_a = frame.format(**pair["sub_a"])
+                text_b = frame.format(**pair["sub_b"])
+                assert text_a != text_b, "Texts must be distinct."
+
+                s_a = evaluator.predict_score(text_a)
+                s_b = evaluator.predict_score(text_b)
+
+                diff_signed = s_a - s_b
+                diff_abs = abs(s_a - s_b)
+
+                pronoun_signed.append(diff_signed)
+                pronoun_abs.append(diff_abs)
+                total_evals += 1
+
+                th = getattr(evaluator, "threshold", 0.50) if evaluator.evaluator_type != "exact_lexicon" else 1.0
                 if (s_a >= th) != (s_b >= th):
                     flips += 1
 
@@ -93,7 +106,8 @@ def run_counterfactual_evaluator_benchmark(
             "evaluator_id": evaluator.evaluator_id,
             "evaluator_name": evaluator.evaluator_name,
             "evaluator_type": evaluator.evaluator_type,
-            "total_comparisons": total_evals,
+            "is_independent": evaluator.is_independent,
+            "smoke_test_comparisons_count": total_evals,
             "masd_mean_absolute_score_difference": round(masd, 4),
             "cfr_counterfactual_flip_rate": round(cfr, 3),
             "mean_signed_drift_masc_minus_fem": round(mean_signed, 4),
@@ -108,21 +122,22 @@ def run_counterfactual_evaluator_benchmark(
 
     report_path = os.path.join(out_dir, "ar2_evaluator_reliability_cards.md")
     report_lines = [
-        "# AR-2: Evaluator Reliability Cards (Counterfactual Invariance Benchmark)\n",
-        "## Comparative Reliability Card Summary\n",
-        "| Evaluator Instrument | MASD (Mean Abs Drift) | CFR (Flip Rate) | Signed Drift (Masc-Fem) | Max Abs Drift |",
-        "| :--- | :--- | :--- | :--- | :--- |",
+        "# AR-2: Controlled Counterfactual Evaluator Smoke Test (N=16 Pairs)\n",
+        "## Evaluator Smoke Test Summary\n",
+        "| Evaluator Instrument | Independent? | MASD (Mean Abs Drift) | CFR (Flip Rate) | Signed Drift | Max Abs Drift |",
+        "| :--- | :--- | :--- | :--- | :--- | :--- |",
     ]
     for k, card in reliability_cards.items():
+        ind_str = "Yes" if card['is_independent'] else "No (Derived Proxy)"
         report_lines.append(
-            f"| **{card['evaluator_name']}** | `{card['masd_mean_absolute_score_difference']:.4f}` | `{card['cfr_counterfactual_flip_rate']*100:.1f}%` | `{card['mean_signed_drift_masc_minus_fem']:+.4f}` | `{card['max_absolute_drift']:.4f}` |"
+            f"| **{card['evaluator_name']}** | `{ind_str}` | `{card['masd_mean_absolute_score_difference']:.4f}` | `{card['cfr_counterfactual_flip_rate']*100:.1f}%` | `{card['mean_signed_drift_masc_minus_fem']:+.4f}` | `{card['max_absolute_drift']:.4f}` |"
         )
 
     with open(report_path, "w", encoding="utf-8") as f:
         f.write("\n".join(report_lines))
 
     return {
-        "status": "AR2_RELIABILITY_CARDS_GENERATED",
+        "status": "AR2_SMOKE_TEST_COMPLETED",
         "evaluators_evaluated": len(reliability_cards),
         "reliability_cards": reliability_cards,
     }

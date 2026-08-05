@@ -1,4 +1,4 @@
-"""AR-3: Cross-Domain Evaluator Transfer & Generalization Benchmark."""
+"""AR-3: Cross-Context Score Agreement Contrast Module."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from research.education_audit.external_validation.labe_loader import load_labe_d
 def run_cross_domain_transfer_benchmark(
     out_dir: str = "results/education_audit/audit_reliability",
 ) -> Dict[str, Any]:
-    """AR-3: Benchmarks cross-domain metric agreement between LABE sentences and Wan full recommendation letters."""
+    """AR-3: Cross-context score agreement contrast between single LABE sentences and Wan recommendation letters."""
     os.makedirs(out_dir, exist_ok=True)
 
     panel_res = initialize_evaluator_panel()
@@ -63,28 +63,28 @@ def run_cross_domain_transfer_benchmark(
     rho_labe, p_rho_labe = stats.spearmanr(lex_labe_scores, ngram_labe_scores)
 
     report = {
-        "status": "AR3_CROSS_DOMAIN_TRANSFER_COMPLETED",
-        "indomain_labe_sentences": {
+        "status": "AR3_CROSS_CONTEXT_CONTRAST_COMPLETED",
+        "labe_sentences_score_correlation": {
             "sample_count": 100,
             "pearson_r": round(float(r_labe), 3),
             "spearman_rho": round(float(rho_labe), 3),
         },
-        "crossdomain_wan_letters": {
+        "wan_letters_delta_correlation": {
             "sample_count": 60,
             "pearson_r": round(float(r_wan), 3),
             "spearman_rho": round(float(rho_wan), 3),
         },
-        "domain_transfer_degradation_delta_r": round(float(r_labe - r_wan), 3),
+        "correlation_contrast_delta_r": round(float(r_labe - r_wan), 3),
     }
 
     report_path = os.path.join(out_dir, "ar3_cross_domain_transfer.md")
     report_lines = [
-        "# AR-3: Cross-Domain Evaluator Transfer Report\n",
-        f"- **In-Domain LABE Sentences (N=100)**: Pearson r = `{r_labe:+.3f}`, Spearman rho = `{rho_labe:+.3f}`",
-        f"- **Cross-Domain Wan Recommendation Letters (N=60)**: Pearson r = `{r_wan:+.3f}`, Spearman rho = `{rho_wan:+.3f}`",
-        f"- **Transfer Degradation Delta (r_in_domain - r_cross_domain)**: `{r_labe - r_wan:+.3f}`\n",
-        "## Key Conclusion\n",
-        f"Evaluator agreement drops by **{abs(r_labe - r_wan):.3f}** when transferring from isolated in-domain sentences to full recommendation letters, confirming that in-domain evaluation accuracy does not guarantee cross-domain audit agreement.",
+        "# AR-3: Cross-Context Score Agreement Contrast Report\n",
+        f"- **LABE Sentences Score Correlation (N=100)**: Pearson r = `{r_labe:+.3f}`, Spearman rho = `{rho_labe:+.3f}`",
+        f"- **Wan Letter Delta Correlation (N=60)**: Pearson r = `{r_wan:+.3f}`, Spearman rho = `{rho_wan:+.3f}`",
+        f"- **Correlation Contrast Delta (r_sentences - r_letter_deltas)**: `{r_labe - r_wan:+.3f}`\n",
+        "## Descriptive Observation\n",
+        f"Lexicon-to-n-gram correlation on isolated LABE sentences was **{r_labe:+.3f}**, whereas correlation between counterfactual deltas on full Wan letters was **{r_wan:+.3f}** (contrast delta = `{r_labe - r_wan:+.3f}`).",
     ]
     with open(report_path, "w", encoding="utf-8") as f:
         f.write("\n".join(report_lines))

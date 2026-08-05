@@ -1,4 +1,4 @@
-"""AR-1: Unified Multi-Instrument Evaluator Panel Architecture."""
+"""AR-1: Unified Multi-Instrument Evaluator Panel Architecture (Scaffold Prototype)."""
 
 from __future__ import annotations
 
@@ -16,7 +16,8 @@ class BaseAgencyEvaluator(Protocol):
     """Protocol for agency evaluators in the panel."""
     evaluator_id: str
     evaluator_name: str
-    evaluator_type: str  # "exact_lexicon", "sparse_ngram_ensemble", "transformer_contextual"
+    evaluator_type: str
+    is_independent: bool
 
     def predict_score(self, text: str) -> float:
         ...
@@ -27,6 +28,7 @@ class ExactLexiconEvaluator:
     evaluator_id = "eval_exact_lexicon"
     evaluator_name = "Exact Lexicon Density"
     evaluator_type = "exact_lexicon"
+    is_independent = True
 
     def predict_score(self, text: str) -> float:
         feats = extract_lexical_features(text)
@@ -38,6 +40,7 @@ class SparseNgramEnsembleEvaluator:
     evaluator_id = "eval_sparse_ngram_ensemble"
     evaluator_name = "Sparse N-Gram Baseline Ensemble"
     evaluator_type = "sparse_ngram_ensemble"
+    is_independent = True
 
     def __init__(self, model_artifacts: Dict[str, Any]):
         self.vectorizer = model_artifacts["vectorizer"]
@@ -60,40 +63,40 @@ class SparseNgramEnsembleEvaluator:
         return float(np.mean(probs))
 
 
-class TransformerContextualEvaluator:
-    """Transformer / Deep Contextual Agency Classifier Evaluator."""
-    evaluator_id = "eval_transformer_contextual"
-    evaluator_name = "Transformer Contextual Classifier"
-    evaluator_type = "transformer_contextual"
+class LengthAdjustedNgramProxy:
+    """Length-Adjusted N-Gram Proxy Evaluator (Non-Independent Diagnostic Transformation)."""
+    evaluator_id = "eval_length_adjusted_ngram_proxy"
+    evaluator_name = "Length-Adjusted N-Gram Proxy (Non-Independent)"
+    evaluator_type = "length_adjusted_ngram_proxy"
+    is_independent = False
 
     def __init__(self, ngram_evaluator: SparseNgramEnsembleEvaluator):
-        # Wraps deep contextual features and ensemble predictions
         self.ngram_evaluator = ngram_evaluator
 
     def predict_score(self, text: str) -> float:
         base_score = self.ngram_evaluator.predict_score(text)
-        # Contextual adjustment based on syntactic agency phrasing
         words = text.split()
         length_penalty = min(1.0, len(words) / 30.0)
         return float(np.clip(base_score * 0.95 + 0.05 * length_penalty, 0.0, 1.0))
 
 
 def initialize_evaluator_panel() -> Dict[str, Any]:
-    """Initializes and returns the complete multi-instrument evaluator panel."""
+    """Initializes and returns the evaluator panel (2 independent evaluators + 1 proxy)."""
     _, artifacts = train_and_evaluate_labe_classifier()
 
     lexicon_eval = ExactLexiconEvaluator()
     ngram_eval = SparseNgramEnsembleEvaluator(artifacts)
-    transformer_eval = TransformerContextualEvaluator(ngram_eval)
+    proxy_eval = LengthAdjustedNgramProxy(ngram_eval)
 
     panel = {
         "exact_lexicon": lexicon_eval,
         "sparse_ngram_ensemble": ngram_eval,
-        "transformer_contextual": transformer_eval,
+        "length_adjusted_ngram_proxy": proxy_eval,
     }
 
     return {
         "status": "EVALUATOR_PANEL_INITIALIZED",
         "evaluators_count": len(panel),
+        "independent_evaluators_count": sum(1 for e in panel.values() if e.is_independent),
         "panel": panel,
     }
