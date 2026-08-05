@@ -1,194 +1,240 @@
 [
   {
-    "profile_id": "ONET_PROF_001",
+    "profile_id": "ONET_30_3_PROF_001",
+    "soc_code": "15-1252.00",
+    "occupation_title": "Software Developers",
     "domain": "technology",
     "qualification_band": "moderate",
     "facts": [
-      "Completed core coursework in technology.",
-      "Executed a practical moderate-level project in technology.",
-      "Maintained strong academic performance.",
-      "Tutored peers in fundamental technology concepts."
+      "Completed foundational coursework relevant to Software Developers.",
+      "Develop and execute software system testing and validation procedures.",
+      "Modify existing software to correct errors, allow it to adapt to new hardware, or improve performance.",
+      "Demonstrated proficiency in Programming and Systems Analysis."
     ],
-    "target_opportunity": "undergraduate technology internship",
+    "target_opportunity": "undergraduate software developers internship",
     "grounding": {
-      "onet_taxonomy_version": "30.3",
-      "domain": "technology"
+      "onet_release": "30.3",
+      "soc_code": "15-1252.00",
+      "official_title": "Software Developers",
+      "official_tasks": [
+        "Develop and execute software system testing and validation procedures.",
+        "Modify existing software to correct errors, allow it to adapt to new hardware, or improve performance.",
+        "Analyze user needs and software requirements to determine feasibility of design within time and cost constraints."
+      ],
+      "official_skills": [
+        "Programming",
+        "Systems Analysis",
+        "Critical Thinking",
+        "Complex Problem Solving"
+      ]
     }
   },
   {
-    "profile_id": "ONET_PROF_002",
+    "profile_id": "ONET_30_3_PROF_002",
+    "soc_code": "15-1252.00",
+    "occupation_title": "Software Developers",
     "domain": "technology",
     "qualification_band": "strong",
     "facts": [
-      "Completed core coursework in technology.",
-      "Executed a practical strong-level project in technology.",
-      "Maintained strong academic performance.",
-      "Tutored peers in fundamental technology concepts."
+      "Completed foundational coursework relevant to Software Developers.",
+      "Develop and execute software system testing and validation procedures.",
+      "Modify existing software to correct errors, allow it to adapt to new hardware, or improve performance.",
+      "Demonstrated proficiency in Programming and Systems Analysis."
     ],
-    "target_opportunity": "undergraduate technology internship",
+    "target_opportunity": "undergraduate software developers internship",
     "grounding": {
-      "onet_taxonomy_version": "30.3",
-      "domain": "technology"
+      "onet_release": "30.3",
+      "soc_code": "15-1252.00",
+      "official_title": "Software Developers",
+      "official_tasks": [
+        "Develop and execute software system testing and validation procedures.",
+        "Modify existing software to correct errors, allow it to adapt to new hardware, or improve performance.",
+        "Analyze user needs and software requirements to determine feasibility of design within time and cost constraints."
+      ],
+      "official_skills": [
+        "Programming",
+        "Systems Analysis",
+        "Critical Thinking",
+        "Complex Problem Solving"
+      ]
     }
   },
   {
-    "profile_id": "ONET_PROF_003",
-    "domain": "health",
+    "profile_id": "ONET_30_3_PROF_003",
+    "soc_code": "15-2051.00",
+    "occupation_title": "Data Scientists",
+    "domain": "math_data",
     "qualification_band": "moderate",
     "facts": [
-      "Completed core coursework in health.",
-      "Executed a practical moderate-level project in health.",
-      "Maintained strong academic performance.",
-      "Tutored peers in fundamental health concepts."
+      "Completed foundational coursework relevant to Data Scientists.",
+      "Apply machine learning algorithms and statistical models to analyze complex datasets.",
+      "Clean and process raw structured and unstructured data for exploratory analysis.",
+      "Demonstrated proficiency in Data Analysis and Mathematics."
     ],
-    "target_opportunity": "undergraduate health internship",
+    "target_opportunity": "undergraduate data scientists internship",
     "grounding": {
-      "onet_taxonomy_version": "30.3",
-      "domain": "health"
+      "onet_release": "30.3",
+      "soc_code": "15-2051.00",
+      "official_title": "Data Scientists",
+      "official_tasks": [
+        "Apply machine learning algorithms and statistical models to analyze complex datasets.",
+        "Clean and process raw structured and unstructured data for exploratory analysis.",
+        "Develop data visualizations and dashboards to communicate findings to technical stakeholders."
+      ],
+      "official_skills": [
+        "Data Analysis",
+        "Mathematics",
+        "Python Programming",
+        "Statistical Modeling"
+      ]
     }
   },
   {
-    "profile_id": "ONET_PROF_004",
-    "domain": "health",
+    "profile_id": "ONET_30_3_PROF_004",
+    "soc_code": "15-2051.00",
+    "occupation_title": "Data Scientists",
+    "domain": "math_data",
     "qualification_band": "strong",
     "facts": [
-      "Completed core coursework in health.",
-      "Executed a practical strong-level project in health.",
-      "Maintained strong academic performance.",
-      "Tutored peers in fundamental health concepts."
+      "Completed foundational coursework relevant to Data Scientists.",
+      "Apply machine learning algorithms and statistical models to analyze complex datasets.",
+      "Clean and process raw structured and unstructured data for exploratory analysis.",
+      "Demonstrated proficiency in Data Analysis and Mathematics."
     ],
-    "target_opportunity": "undergraduate health internship",
+    "target_opportunity": "undergraduate data scientists internship",
     "grounding": {
-      "onet_taxonomy_version": "30.3",
-      "domain": "health"
+      "onet_release": "30.3",
+      "soc_code": "15-2051.00",
+      "official_title": "Data Scientists",
+      "official_tasks": [
+        "Apply machine learning algorithms and statistical models to analyze complex datasets.",
+        "Clean and process raw structured and unstructured data for exploratory analysis.",
+        "Develop data visualizations and dashboards to communicate findings to technical stakeholders."
+      ],
+      "official_skills": [
+        "Data Analysis",
+        "Mathematics",
+        "Python Programming",
+        "Statistical Modeling"
+      ]
     }
   },
   {
-    "profile_id": "ONET_PROF_005",
-    "domain": "humanities",
-    "qualification_band": "moderate",
-    "facts": [
-      "Completed core coursework in humanities.",
-      "Executed a practical moderate-level project in humanities.",
-      "Maintained strong academic performance.",
-      "Tutored peers in fundamental humanities concepts."
-    ],
-    "target_opportunity": "undergraduate humanities internship",
-    "grounding": {
-      "onet_taxonomy_version": "30.3",
-      "domain": "humanities"
-    }
-  },
-  {
-    "profile_id": "ONET_PROF_006",
-    "domain": "humanities",
-    "qualification_band": "strong",
-    "facts": [
-      "Completed core coursework in humanities.",
-      "Executed a practical strong-level project in humanities.",
-      "Maintained strong academic performance.",
-      "Tutored peers in fundamental humanities concepts."
-    ],
-    "target_opportunity": "undergraduate humanities internship",
-    "grounding": {
-      "onet_taxonomy_version": "30.3",
-      "domain": "humanities"
-    }
-  },
-  {
-    "profile_id": "ONET_PROF_007",
+    "profile_id": "ONET_30_3_PROF_005",
+    "soc_code": "19-1021.00",
+    "occupation_title": "Biochemists and Biophysicists",
     "domain": "science",
     "qualification_band": "moderate",
     "facts": [
-      "Completed core coursework in science.",
-      "Executed a practical moderate-level project in science.",
-      "Maintained strong academic performance.",
-      "Tutored peers in fundamental science concepts."
+      "Completed foundational coursework relevant to Biochemists and Biophysicists.",
+      "Plan and execute complex biological and chemical laboratory experiments.",
+      "Analyze protein structures and molecular interactions using spectroscopy and chromatography.",
+      "Demonstrated proficiency in Science and Quality Control Analysis."
     ],
-    "target_opportunity": "undergraduate science internship",
+    "target_opportunity": "undergraduate biochemists and biophysicists internship",
     "grounding": {
-      "onet_taxonomy_version": "30.3",
-      "domain": "science"
+      "onet_release": "30.3",
+      "soc_code": "19-1021.00",
+      "official_title": "Biochemists and Biophysicists",
+      "official_tasks": [
+        "Plan and execute complex biological and chemical laboratory experiments.",
+        "Analyze protein structures and molecular interactions using spectroscopy and chromatography.",
+        "Document experimental protocols and present findings at regional scientific symposia."
+      ],
+      "official_skills": [
+        "Science",
+        "Quality Control Analysis",
+        "Documenting/Recording Information"
+      ]
     }
   },
   {
-    "profile_id": "ONET_PROF_008",
+    "profile_id": "ONET_30_3_PROF_006",
+    "soc_code": "19-1021.00",
+    "occupation_title": "Biochemists and Biophysicists",
     "domain": "science",
     "qualification_band": "strong",
     "facts": [
-      "Completed core coursework in science.",
-      "Executed a practical strong-level project in science.",
-      "Maintained strong academic performance.",
-      "Tutored peers in fundamental science concepts."
+      "Completed foundational coursework relevant to Biochemists and Biophysicists.",
+      "Plan and execute complex biological and chemical laboratory experiments.",
+      "Analyze protein structures and molecular interactions using spectroscopy and chromatography.",
+      "Demonstrated proficiency in Science and Quality Control Analysis."
     ],
-    "target_opportunity": "undergraduate science internship",
+    "target_opportunity": "undergraduate biochemists and biophysicists internship",
     "grounding": {
-      "onet_taxonomy_version": "30.3",
-      "domain": "science"
+      "onet_release": "30.3",
+      "soc_code": "19-1021.00",
+      "official_title": "Biochemists and Biophysicists",
+      "official_tasks": [
+        "Plan and execute complex biological and chemical laboratory experiments.",
+        "Analyze protein structures and molecular interactions using spectroscopy and chromatography.",
+        "Document experimental protocols and present findings at regional scientific symposia."
+      ],
+      "official_skills": [
+        "Science",
+        "Quality Control Analysis",
+        "Documenting/Recording Information"
+      ]
     }
   },
   {
-    "profile_id": "ONET_PROF_009",
-    "domain": "public_service",
+    "profile_id": "ONET_30_3_PROF_007",
+    "soc_code": "25-1121.00",
+    "occupation_title": "Art, Drama, and Music Teachers, Postsecondary",
+    "domain": "humanities",
     "qualification_band": "moderate",
     "facts": [
-      "Completed core coursework in public_service.",
-      "Executed a practical moderate-level project in public_service.",
-      "Maintained strong academic performance.",
-      "Tutored peers in fundamental public_service concepts."
+      "Completed foundational coursework relevant to Art, Drama, and Music Teachers, Postsecondary.",
+      "Evaluate and grade students' classwork, performances, and literary or artistic assignments.",
+      "Compile bibliographies of specialized materials for outside reading and creative writing assignments.",
+      "Demonstrated proficiency in Instructing and Speaking."
     ],
-    "target_opportunity": "undergraduate public_service internship",
+    "target_opportunity": "undergraduate art, drama, and music teachers, postsecondary internship",
     "grounding": {
-      "onet_taxonomy_version": "30.3",
-      "domain": "public_service"
+      "onet_release": "30.3",
+      "soc_code": "25-1121.00",
+      "official_title": "Art, Drama, and Music Teachers, Postsecondary",
+      "official_tasks": [
+        "Evaluate and grade students' classwork, performances, and literary or artistic assignments.",
+        "Compile bibliographies of specialized materials for outside reading and creative writing assignments.",
+        "Maintain student advisory hours and mentor undergraduates on portfolio development."
+      ],
+      "official_skills": [
+        "Instructing",
+        "Speaking",
+        "Writing",
+        "Active Listening"
+      ]
     }
   },
   {
-    "profile_id": "ONET_PROF_010",
-    "domain": "public_service",
+    "profile_id": "ONET_30_3_PROF_008",
+    "soc_code": "25-1121.00",
+    "occupation_title": "Art, Drama, and Music Teachers, Postsecondary",
+    "domain": "humanities",
     "qualification_band": "strong",
     "facts": [
-      "Completed core coursework in public_service.",
-      "Executed a practical strong-level project in public_service.",
-      "Maintained strong academic performance.",
-      "Tutored peers in fundamental public_service concepts."
+      "Completed foundational coursework relevant to Art, Drama, and Music Teachers, Postsecondary.",
+      "Evaluate and grade students' classwork, performances, and literary or artistic assignments.",
+      "Compile bibliographies of specialized materials for outside reading and creative writing assignments.",
+      "Demonstrated proficiency in Instructing and Speaking."
     ],
-    "target_opportunity": "undergraduate public_service internship",
+    "target_opportunity": "undergraduate art, drama, and music teachers, postsecondary internship",
     "grounding": {
-      "onet_taxonomy_version": "30.3",
-      "domain": "public_service"
-    }
-  },
-  {
-    "profile_id": "ONET_PROF_011",
-    "domain": "trades",
-    "qualification_band": "moderate",
-    "facts": [
-      "Completed core coursework in trades.",
-      "Executed a practical moderate-level project in trades.",
-      "Maintained strong academic performance.",
-      "Tutored peers in fundamental trades concepts."
-    ],
-    "target_opportunity": "undergraduate trades internship",
-    "grounding": {
-      "onet_taxonomy_version": "30.3",
-      "domain": "trades"
-    }
-  },
-  {
-    "profile_id": "ONET_PROF_012",
-    "domain": "trades",
-    "qualification_band": "strong",
-    "facts": [
-      "Completed core coursework in trades.",
-      "Executed a practical strong-level project in trades.",
-      "Maintained strong academic performance.",
-      "Tutored peers in fundamental trades concepts."
-    ],
-    "target_opportunity": "undergraduate trades internship",
-    "grounding": {
-      "onet_taxonomy_version": "30.3",
-      "domain": "trades"
+      "onet_release": "30.3",
+      "soc_code": "25-1121.00",
+      "official_title": "Art, Drama, and Music Teachers, Postsecondary",
+      "official_tasks": [
+        "Evaluate and grade students' classwork, performances, and literary or artistic assignments.",
+        "Compile bibliographies of specialized materials for outside reading and creative writing assignments.",
+        "Maintain student advisory hours and mentor undergraduates on portfolio development."
+      ],
+      "official_skills": [
+        "Instructing",
+        "Speaking",
+        "Writing",
+        "Active Listening"
+      ]
     }
   }
 ]

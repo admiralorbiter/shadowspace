@@ -1,23 +1,23 @@
 # Data Registry for External Validation Suite
-version: "1.0.0"
+version: "2.0.0"
 
 public_datasets:
   wan2023_reference_letters:
     name: "Wan et al. Reference Letter Bias Dataset (EMNLP 2023)"
-    repository_url: "https://github.com/wan-etal-2023/reference-letter-bias"
+    repository_url: "https://github.com/uclanlp/biases-llm-reference-letters"
     version: "v1.0"
     file_hashes:
-      context_free_prompts.csv: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-      context_based_prompts.csv: "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb"
-    context_free_count: 120
-    context_based_count: 6028
+      clg_letters.csv: "62947_bytes_live"
+    clg_records_count: 120
 
   labe_language_agency:
     name: "Language Agency Classification Dataset (LABE 2023)"
-    repository_url: "https://github.com/labe-2023/agency-classifier"
+    repository_url: "https://github.com/elainew728/labe-agency"
     version: "v1.0"
-    labeled_sentences_count: 3724
-    prompt_templates_count: 5400
+    file_hashes:
+      train.csv: "182284_bytes_live"
+      test.csv: "52410_bytes_live"
+    labeled_sentences_count: 1093
 
   holistic_bias:
     name: "HolisticBias Demographic Taxonomy (Meta AI)"
@@ -26,7 +26,8 @@ public_datasets:
     descriptors_count: 587
 
   onet_occupations:
-    name: "O*NET 30.3 Data Release"
+    name: "O*NET 30.3 Official Data Release"
     version: "30.3"
+    soc_codes_grounded: ["15-1252.00", "15-2051.00", "19-1021.00", "25-1121.00"]
     occupations_count: 1016
     task_statements_count: 18796

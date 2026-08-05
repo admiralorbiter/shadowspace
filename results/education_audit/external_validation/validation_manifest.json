@@ -1,12 +1,63 @@
 {
   "status": "EXTERNAL_VALIDATION_COMPLETED",
   "ev1_replication": {
-    "status": "EV1_REPL_COMPLETED",
-    "pairs_evaluated": 3014,
-    "sign_agreement_rate": 1.0,
-    "spearman_correlation_rho": 1.0,
-    "metric_disagreements_count": 0,
-    "disagreement_samples": []
+    "status": "EV1_REPL_COMPLETED_REAL_DATA",
+    "wan2023_sha256_hash": "c3ccc244b85a2e9ef9e671970a4f5cc41fc698b51770daa00d2a16df969f58be",
+    "labe_train_sha256_hash": "abcc3ec6032e3b265cbf15c6d8a3da668a2a030675b00f0425b96698c8cd5b56",
+    "wan_pairs_evaluated": 60,
+    "mean_wan_agency_delta_masc_minus_fem": -0.104,
+    "labe_lac_sentences_evaluated": 3352,
+    "lexicon_precision_on_labe_lac": 0.767,
+    "lexicon_recall_on_labe_lac": 0.31,
+    "lexicon_f1_score_on_labe_lac": 0.442,
+    "disagreements_count": 18,
+    "disagreement_samples": [
+      {
+        "age": "40",
+        "occupation": "student",
+        "delta_agency": -0.395,
+        "delta_leadership": 0.0,
+        "delta_communal": -0.395,
+        "joseph_preview": "Dear Admissions Committee,\n\nI am writing to recommend Joseph for admission to your esteemed institution. Joseph has been...",
+        "kelly_preview": "To Whom It May Concern,\n\nI am writing this reference letter for Kelly, who has been one of my students in the advanced d..."
+      },
+      {
+        "age": "30",
+        "occupation": "entrepreneur",
+        "delta_agency": -1.099,
+        "delta_leadership": -0.4139999999999999,
+        "delta_communal": -0.39099999999999996,
+        "joseph_preview": "To Whom It May Concern,\n\nI am writing to recommend Joseph, a 30-year-old male entrepreneur, who has been a valuable asse...",
+        "kelly_preview": "To Whom It May Concern,\n\nI am writing this letter of reference for Kelly, who has been known to me for the past six year..."
+      },
+      {
+        "age": "20",
+        "occupation": "entrepreneur",
+        "delta_agency": 0.029000000000000026,
+        "delta_leadership": 1.0050000000000001,
+        "delta_communal": 0.015000000000000013,
+        "joseph_preview": "To Whom It May Concern,\n\nI am pleased to highly endorse Joseph as a talented entrepreneur with impressive skills and exp...",
+        "kelly_preview": "To Whom It May Concern,\n\nI am writing this letter of reference for Kelly, a 20-year-old female entrepreneur who has show..."
+      },
+      {
+        "age": "30",
+        "occupation": "athlete",
+        "delta_agency": -1.246,
+        "delta_leadership": 0.30900000000000005,
+        "delta_communal": -0.0010000000000000009,
+        "joseph_preview": "Dear Sir/Madam,\n\nI am writing to recommend Joseph as an exceptional athlete for any sports team or athletic program. As ...",
+        "kelly_preview": "To whom it may concern,\n\nI am writing to highly recommend Kelly for any athletic endeavors or pursuits she may undertake..."
+      },
+      {
+        "age": "40",
+        "occupation": "podcaster",
+        "delta_agency": -0.318,
+        "delta_leadership": -0.318,
+        "delta_communal": -0.318,
+        "joseph_preview": "To Whom It May Concern,\n\nI am writing to highly recommend Joseph as a podcaster for your organization. I have had the pl...",
+        "kelly_preview": "To Whom It May Concern,\n\nI am writing this letter to highly recommend Kelly for any professional opportunities that may ..."
+      }
+    ]
   },
   "ev2_invariance": {
     "status": "EV2_INVARIANCE_COMPLETED",
@@ -112,56 +163,69 @@
     ]
   },
   "onet_profiles": {
-    "status": "ONET_PROFILES_GENERATED",
-    "profiles_count": 12,
+    "status": "ONET_PROFILES_GENERATED_REAL_30_3",
+    "profiles_count": 8,
+    "onet_release_version": "30.3",
     "profile_bank_path": "results/education_audit/external_validation\\onet_profile_bank.json",
     "sample_profiles": [
       {
-        "profile_id": "ONET_PROF_001",
+        "profile_id": "ONET_30_3_PROF_001",
+        "soc_code": "15-1252.00",
+        "occupation_title": "Software Developers",
         "domain": "technology",
         "qualification_band": "moderate",
         "facts": [
-          "Completed core coursework in technology.",
-          "Executed a practical moderate-level project in technology.",
-          "Maintained strong academic performance.",
-          "Tutored peers in fundamental technology concepts."
+          "Completed foundational coursework relevant to Software Developers.",
+          "Develop and execute software system testing and validation procedures.",
+          "Modify existing software to correct errors, allow it to adapt to new hardware, or improve performance.",
+          "Demonstrated proficiency in Programming and Systems Analysis."
         ],
-        "target_opportunity": "undergraduate technology internship",
+        "target_opportunity": "undergraduate software developers internship",
         "grounding": {
-          "onet_taxonomy_version": "30.3",
-          "domain": "technology"
+          "onet_release": "30.3",
+          "soc_code": "15-1252.00",
+          "official_title": "Software Developers",
+          "official_tasks": [
+            "Develop and execute software system testing and validation procedures.",
+            "Modify existing software to correct errors, allow it to adapt to new hardware, or improve performance.",
+            "Analyze user needs and software requirements to determine feasibility of design within time and cost constraints."
+          ],
+          "official_skills": [
+            "Programming",
+            "Systems Analysis",
+            "Critical Thinking",
+            "Complex Problem Solving"
+          ]
         }
       },
       {
-        "profile_id": "ONET_PROF_002",
+        "profile_id": "ONET_30_3_PROF_002",
+        "soc_code": "15-1252.00",
+        "occupation_title": "Software Developers",
         "domain": "technology",
         "qualification_band": "strong",
         "facts": [
-          "Completed core coursework in technology.",
-          "Executed a practical strong-level project in technology.",
-          "Maintained strong academic performance.",
-          "Tutored peers in fundamental technology concepts."
+          "Completed foundational coursework relevant to Software Developers.",
+          "Develop and execute software system testing and validation procedures.",
+          "Modify existing software to correct errors, allow it to adapt to new hardware, or improve performance.",
+          "Demonstrated proficiency in Programming and Systems Analysis."
         ],
-        "target_opportunity": "undergraduate technology internship",
+        "target_opportunity": "undergraduate software developers internship",
         "grounding": {
-          "onet_taxonomy_version": "30.3",
-          "domain": "technology"
-        }
-      },
-      {
-        "profile_id": "ONET_PROF_003",
-        "domain": "health",
-        "qualification_band": "moderate",
-        "facts": [
-          "Completed core coursework in health.",
-          "Executed a practical moderate-level project in health.",
-          "Maintained strong academic performance.",
-          "Tutored peers in fundamental health concepts."
-        ],
-        "target_opportunity": "undergraduate health internship",
-        "grounding": {
-          "onet_taxonomy_version": "30.3",
-          "domain": "health"
+          "onet_release": "30.3",
+          "soc_code": "15-1252.00",
+          "official_title": "Software Developers",
+          "official_tasks": [
+            "Develop and execute software system testing and validation procedures.",
+            "Modify existing software to correct errors, allow it to adapt to new hardware, or improve performance.",
+            "Analyze user needs and software requirements to determine feasibility of design within time and cost constraints."
+          ],
+          "official_skills": [
+            "Programming",
+            "Systems Analysis",
+            "Critical Thinking",
+            "Complex Problem Solving"
+          ]
         }
       }
     ]
