@@ -1,33 +1,32 @@
 # Data Registry for External Validation Suite
-version: "2.0.0"
+version: "3.0.0"
 
 public_datasets:
   wan2023_reference_letters:
     name: "Wan et al. Reference Letter Bias Dataset (EMNLP 2023)"
     repository_url: "https://github.com/uclanlp/biases-llm-reference-letters"
-    version: "v1.0"
-    file_hashes:
-      clg_letters.csv: "62947_bytes_live"
+    commit_sha: "1264990e5f55e46cb8b83d8bfe2749946008b4a8"
+    file_urls:
+      clg_letters.csv: "https://raw.githubusercontent.com/uclanlp/biases-llm-reference-letters/1264990e5f55e46cb8b83d8bfe2749946008b4a8/generated_letters/chatgpt/clg/clg_letters.csv"
+    expected_sha256:
+      clg_letters.csv: "c3ccc244b85a2e9ef9e671970a4f5cc41fc698b51770daa00d2a16df969f58be"
     clg_records_count: 120
 
   labe_language_agency:
     name: "Language Agency Classification Dataset (LABE 2023)"
     repository_url: "https://github.com/elainew728/labe-agency"
-    version: "v1.0"
-    file_hashes:
-      train.csv: "182284_bytes_live"
-      test.csv: "52410_bytes_live"
-    labeled_sentences_count: 1093
-
-  holistic_bias:
-    name: "HolisticBias Demographic Taxonomy (Meta AI)"
-    version: "v1.1"
-    demographic_axes_count: 13
-    descriptors_count: 587
+    commit_sha: "e8cc42d86df007fd05e3ae0c27c127b7a0a6165c"
+    file_urls:
+      train.csv: "https://raw.githubusercontent.com/elainew728/labe-agency/e8cc42d86df007fd05e3ae0c27c127b7a0a6165c/lac_dataset_construction/lac_dataset/train.csv"
+      val.csv: "https://raw.githubusercontent.com/elainew728/labe-agency/e8cc42d86df007fd05e3ae0c27c127b7a0a6165c/lac_dataset_construction/lac_dataset/val.csv"
+      test.csv: "https://raw.githubusercontent.com/elainew728/labe-agency/e8cc42d86df007fd05e3ae0c27c127b7a0a6165c/lac_dataset_construction/lac_dataset/test.csv"
+    expected_sha256:
+      train.csv: "abcc3ec6032e3b265cbf15c6d8a3da668a2a030675b00f0425b96698c8cd5b56"
+      val.csv: "492067756f742f5341258d4a6f7b308e7c1eb7a07c132890529d3326ebc7f212"
+      test.csv: "030bd45c6130cb0bdc2dceb28a9b71e16d47b0e359050d24e16ef9c15ffcce71"
 
   onet_occupations:
-    name: "O*NET 30.3 Official Data Release"
+    name: "O*NET 30.3 Production Release"
     version: "30.3"
     soc_codes_grounded: ["15-1252.00", "15-2051.00", "19-1021.00", "25-1121.00"]
     occupations_count: 1016
-    task_statements_count: 18796

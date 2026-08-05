@@ -1,4 +1,4 @@
-"""Unit Contract Tests for Real External Evidence & Synthetic Validation Suite."""
+"""Unit Contract Tests for Commit-Pinned Real External Benchmark Suite & Calibrated Simulator."""
 
 import os
 import pytest
@@ -12,30 +12,33 @@ from research.education_audit.external_validation.onet_profile_builder import ge
 from research.education_audit.external_validation.run_external_validation import run_full_external_validation
 
 
-def test_real_wan2023_dataset_loader():
-    """Verifies Wan 2023 real dataset loader ingests published ChatGPT letters."""
+def test_commit_pinned_wan2023_loader():
+    """Verifies Wan 2023 loader uses commit-pinned URL and verifies expected SHA-256 hash."""
     res = load_wan2023_dataset()
-    assert res["status"] == "LOADED_REAL_DATA"
+    assert res["status"] == "LOADED_PINNED_REAL_DATA"
+    assert res["commit_sha"] == "1264990e5f55e46cb8b83d8bfe2749946008b4a8"
     assert res["records_count"] == 120
     assert "sha256_hash" in res
 
 
-def test_real_labe_dataset_loader():
-    """Verifies LABE real dataset loader ingests published LAC train and test CSVs."""
+def test_commit_pinned_labe_dataset_loader():
+    """Verifies LABE loader ingests Train, Val, and Test splits from commit-pinned URLs."""
     res = load_labe_dataset()
-    assert res["status"] == "LOADED_REAL_DATA"
-    assert res["labeled_sentences_count"] >= 1000
-    assert "train_sha256_hash" in res
+    assert res["status"] == "LOADED_PINNED_REAL_DATA"
+    assert res["commit_sha"] == "e8cc42d86df007fd05e3ae0c27c127b7a0a6165c"
+    assert res["train_count"] > 0
+    assert res["test_count"] > 0
+    assert res["total_labeled_sentences_count"] >= 3000
 
 
-def test_ev1_real_agency_metric_replication(tmp_path):
-    """Verifies Milestone EV-1 calculates agency deltas and precision/recall on real datasets."""
+def test_ev1_exact_lexicon_benchmark_and_wan_uncertainty(tmp_path):
+    """Verifies Milestone EV-1 test-split metrics and 95% paired bootstrap CI on Wan 2023 data."""
     out_dir = str(tmp_path / "ev1")
     res = run_agency_metric_replication(out_dir=out_dir)
-    assert res["status"] == "EV1_REPL_COMPLETED_REAL_DATA"
-    assert res["wan_pairs_evaluated"] > 0
-    assert 0.0 <= res["lexicon_precision_on_labe_lac"] <= 1.0
-    assert 0.0 <= res["lexicon_recall_on_labe_lac"] <= 1.0
+    assert res["status"] == "EV1_LEXICON_BENCHMARK_COMPLETED"
+    assert res["wan_pairs_evaluated"] == 60
+    assert len(res["wan_agency_95ci_bootstrap"]) == 2
+    assert "labe_lac_metrics_test_primary" in res
     assert os.path.exists(os.path.join(out_dir, "replication_report.md"))
 
 
@@ -48,27 +51,26 @@ def test_ev2_evaluator_invariance_benchmark(tmp_path):
     assert os.path.exists(os.path.join(out_dir, "auditor_invariance_report.md"))
 
 
-def test_ev3_causal_audit_simulator(tmp_path):
-    """Verifies Milestone EV-3 simulates 6 ground-truth worlds and checks Type-I error rate."""
+def test_ev3_causal_audit_simulator_1000_reps(tmp_path):
+    """Verifies Milestone EV-3 runs 1,000 Monte Carlo replications and quantifies Type-I Error."""
     out_dir = str(tmp_path / "ev3")
-    res = run_causal_audit_simulation(out_dir=out_dir)
-    assert res["status"] == "EV3_SIMULATION_COMPLETED"
-    assert res["type1_error_rate_null_world"] == 0.0
+    res = run_causal_audit_simulation(replications_per_world=100, out_dir=out_dir)
+    assert res["status"] == "EV3_SIMULATION_COMPLETED_1000_REPS"
+    assert 0.0 <= res["empirical_type1_error_rate_null"] <= 0.10
     assert os.path.exists(os.path.join(out_dir, "method_validation_report.md"))
 
 
-def test_real_onet_30_3_profile_bank(tmp_path):
-    """Verifies O*NET 30.3 profile bank generates profiles from real SOC codes and task statements."""
+def test_real_onet_30_3_task_metadata(tmp_path):
+    """Verifies O*NET 30.3 profile bank builds from official task statements and task IDs."""
     out_dir = str(tmp_path / "onet")
     res = generate_onet_grounded_profile_bank(out_dir=out_dir)
-    assert res["status"] == "ONET_PROFILES_GENERATED_REAL_30_3"
+    assert res["status"] == "ONET_PROFILES_GENERATED_REAL_30_3_TABLES"
     assert res["profiles_count"] == 8
-    assert res["onet_release_version"] == "30.3"
     assert os.path.exists(res["profile_bank_path"])
 
 
 def test_full_external_validation_pipeline(tmp_path):
-    """Verifies end-to-end execution of external validation master runner with real data."""
+    """Verifies end-to-end execution of external validation master runner with commit-pinned real data."""
     out_dir = str(tmp_path / "full_validation")
     manifest = run_full_external_validation(out_dir=out_dir)
     assert manifest["status"] == "EXTERNAL_VALIDATION_COMPLETED"

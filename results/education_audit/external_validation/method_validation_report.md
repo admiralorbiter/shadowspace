@@ -1,13 +1,13 @@
-# Milestone EV-3: Synthetic Causal Audit Laboratory Report
+# Milestone EV-3: Calibrated Monte Carlo Causal Audit Simulator Report
 
-- **Worlds Evaluated**: 6
-- **Type-I Error Rate (Null World)**: 0.00
+- **Monte Carlo Replications per World**: 1,000
+- **Empirical Type-I Error Rate (Alpha)**: 8.5%
 
-## Summary of Ground-Truth World Simulation Results
+## Empirical Detection Rates & Statistical Power Across Ground-Truth Worlds
 
-- **null_world**: True Beta = 0.0, Matched SNR = 0.779, Exceedance Prob = 0.042, Signal Detected = False
-- **coherent_shift**: True Beta = 1.5, Matched SNR = 1.47, Exceedance Prob = 0.083, Signal Detected = True
-- **heterogeneous_effects**: True Beta = 0.0, Matched SNR = 1.888, Exceedance Prob = 0.312, Signal Detected = True
-- **tail_only_harm**: True Beta = 0.0, Matched SNR = 0.841, Exceedance Prob = 0.083, Signal Detected = False
-- **prompt_interaction**: True Beta = 0.0, Matched SNR = 0.922, Exceedance Prob = 0.188, Signal Detected = False
-- **evaluator_bias**: True Beta = 0.0, Matched SNR = 0.779, Exceedance Prob = 0.042, Signal Detected = False
+- **null_world**: Empirical Type-I Error Rate (alpha) = 8.5% (85/1000 detections)
+- **coherent_shift**: Statistical Power = 43.5% (435/1000 detections)
+- **heterogeneous_effects**: Statistical Power = 69.5% (695/1000 detections)
+- **tail_only_harm**: Statistical Power = 11.1% (111/1000 detections)
+- **prompt_interaction**: Statistical Power = 52.2% (522/1000 detections)
+- **evaluator_bias**: Statistical Power = 66.6% (666/1000 detections)

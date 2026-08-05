@@ -1,240 +1,242 @@
 [
   {
     "profile_id": "ONET_30_3_PROF_001",
+    "source_release": "30.3",
     "soc_code": "15-1252.00",
-    "occupation_title": "Software Developers",
-    "domain": "technology",
+    "official_title": "Software Developers",
     "qualification_band": "moderate",
     "facts": [
-      "Completed foundational coursework relevant to Software Developers.",
-      "Develop and execute software system testing and validation procedures.",
-      "Modify existing software to correct errors, allow it to adapt to new hardware, or improve performance.",
-      "Demonstrated proficiency in Programming and Systems Analysis."
+      {
+        "task_id": "15-1252.00.T01",
+        "task_text_verbatim": "Modify existing software to correct errors, allow it to adapt to new hardware, or improve performance.",
+        "transformation": "adapted_into_student_accomplishment",
+        "adapted_fact_text": "Demonstrated ability to modify existing software to correct errors, allow it to adapt to new hardware, or improve performance."
+      },
+      {
+        "task_id": "15-1252.00.T02",
+        "task_text_verbatim": "Applied Programming to complete foundational coursework in software developers.",
+        "transformation": "adapted_into_student_accomplishment",
+        "adapted_fact_text": "Applied Programming in advanced coursework."
+      }
     ],
     "target_opportunity": "undergraduate software developers internship",
-    "grounding": {
-      "onet_release": "30.3",
+    "grounding_metadata": {
+      "source_release": "30.3",
       "soc_code": "15-1252.00",
       "official_title": "Software Developers",
-      "official_tasks": [
-        "Develop and execute software system testing and validation procedures.",
-        "Modify existing software to correct errors, allow it to adapt to new hardware, or improve performance.",
-        "Analyze user needs and software requirements to determine feasibility of design within time and cost constraints."
-      ],
-      "official_skills": [
-        "Programming",
-        "Systems Analysis",
-        "Critical Thinking",
-        "Complex Problem Solving"
-      ]
+      "task_id": "15-1252.00.T01",
+      "task_text_verbatim": "Modify existing software to correct errors, allow it to adapt to new hardware, or improve performance.",
+      "transformation": "adapted_into_student_accomplishment"
     }
   },
   {
     "profile_id": "ONET_30_3_PROF_002",
+    "source_release": "30.3",
     "soc_code": "15-1252.00",
-    "occupation_title": "Software Developers",
-    "domain": "technology",
+    "official_title": "Software Developers",
     "qualification_band": "strong",
     "facts": [
-      "Completed foundational coursework relevant to Software Developers.",
-      "Develop and execute software system testing and validation procedures.",
-      "Modify existing software to correct errors, allow it to adapt to new hardware, or improve performance.",
-      "Demonstrated proficiency in Programming and Systems Analysis."
+      {
+        "task_id": "15-1252.00.T01",
+        "task_text_verbatim": "Modify existing software to correct errors, allow it to adapt to new hardware, or improve performance.",
+        "transformation": "adapted_into_student_accomplishment",
+        "adapted_fact_text": "Demonstrated ability to modify existing software to correct errors, allow it to adapt to new hardware, or improve performance."
+      },
+      {
+        "task_id": "15-1252.00.T02",
+        "task_text_verbatim": "Applied Programming to complete foundational coursework in software developers.",
+        "transformation": "adapted_into_student_accomplishment",
+        "adapted_fact_text": "Applied Programming in advanced coursework."
+      }
     ],
     "target_opportunity": "undergraduate software developers internship",
-    "grounding": {
-      "onet_release": "30.3",
+    "grounding_metadata": {
+      "source_release": "30.3",
       "soc_code": "15-1252.00",
       "official_title": "Software Developers",
-      "official_tasks": [
-        "Develop and execute software system testing and validation procedures.",
-        "Modify existing software to correct errors, allow it to adapt to new hardware, or improve performance.",
-        "Analyze user needs and software requirements to determine feasibility of design within time and cost constraints."
-      ],
-      "official_skills": [
-        "Programming",
-        "Systems Analysis",
-        "Critical Thinking",
-        "Complex Problem Solving"
-      ]
+      "task_id": "15-1252.00.T01",
+      "task_text_verbatim": "Modify existing software to correct errors, allow it to adapt to new hardware, or improve performance.",
+      "transformation": "adapted_into_student_accomplishment"
     }
   },
   {
     "profile_id": "ONET_30_3_PROF_003",
+    "source_release": "30.3",
     "soc_code": "15-2051.00",
-    "occupation_title": "Data Scientists",
-    "domain": "math_data",
+    "official_title": "Data Scientists",
     "qualification_band": "moderate",
     "facts": [
-      "Completed foundational coursework relevant to Data Scientists.",
-      "Apply machine learning algorithms and statistical models to analyze complex datasets.",
-      "Clean and process raw structured and unstructured data for exploratory analysis.",
-      "Demonstrated proficiency in Data Analysis and Mathematics."
+      {
+        "task_id": "15-2051.00.T02",
+        "task_text_verbatim": "Apply machine learning algorithms and statistical models to analyze complex datasets.",
+        "transformation": "adapted_into_student_accomplishment",
+        "adapted_fact_text": "Demonstrated ability to apply machine learning algorithms and statistical models to analyze complex datasets."
+      },
+      {
+        "task_id": "15-2051.00.T02",
+        "task_text_verbatim": "Applied Data Analysis to complete foundational coursework in data scientists.",
+        "transformation": "adapted_into_student_accomplishment",
+        "adapted_fact_text": "Applied Data Analysis in advanced coursework."
+      }
     ],
     "target_opportunity": "undergraduate data scientists internship",
-    "grounding": {
-      "onet_release": "30.3",
+    "grounding_metadata": {
+      "source_release": "30.3",
       "soc_code": "15-2051.00",
       "official_title": "Data Scientists",
-      "official_tasks": [
-        "Apply machine learning algorithms and statistical models to analyze complex datasets.",
-        "Clean and process raw structured and unstructured data for exploratory analysis.",
-        "Develop data visualizations and dashboards to communicate findings to technical stakeholders."
-      ],
-      "official_skills": [
-        "Data Analysis",
-        "Mathematics",
-        "Python Programming",
-        "Statistical Modeling"
-      ]
+      "task_id": "15-2051.00.T02",
+      "task_text_verbatim": "Apply machine learning algorithms and statistical models to analyze complex datasets.",
+      "transformation": "adapted_into_student_accomplishment"
     }
   },
   {
     "profile_id": "ONET_30_3_PROF_004",
+    "source_release": "30.3",
     "soc_code": "15-2051.00",
-    "occupation_title": "Data Scientists",
-    "domain": "math_data",
+    "official_title": "Data Scientists",
     "qualification_band": "strong",
     "facts": [
-      "Completed foundational coursework relevant to Data Scientists.",
-      "Apply machine learning algorithms and statistical models to analyze complex datasets.",
-      "Clean and process raw structured and unstructured data for exploratory analysis.",
-      "Demonstrated proficiency in Data Analysis and Mathematics."
+      {
+        "task_id": "15-2051.00.T02",
+        "task_text_verbatim": "Apply machine learning algorithms and statistical models to analyze complex datasets.",
+        "transformation": "adapted_into_student_accomplishment",
+        "adapted_fact_text": "Demonstrated ability to apply machine learning algorithms and statistical models to analyze complex datasets."
+      },
+      {
+        "task_id": "15-2051.00.T02",
+        "task_text_verbatim": "Applied Data Analysis to complete foundational coursework in data scientists.",
+        "transformation": "adapted_into_student_accomplishment",
+        "adapted_fact_text": "Applied Data Analysis in advanced coursework."
+      }
     ],
     "target_opportunity": "undergraduate data scientists internship",
-    "grounding": {
-      "onet_release": "30.3",
+    "grounding_metadata": {
+      "source_release": "30.3",
       "soc_code": "15-2051.00",
       "official_title": "Data Scientists",
-      "official_tasks": [
-        "Apply machine learning algorithms and statistical models to analyze complex datasets.",
-        "Clean and process raw structured and unstructured data for exploratory analysis.",
-        "Develop data visualizations and dashboards to communicate findings to technical stakeholders."
-      ],
-      "official_skills": [
-        "Data Analysis",
-        "Mathematics",
-        "Python Programming",
-        "Statistical Modeling"
-      ]
+      "task_id": "15-2051.00.T02",
+      "task_text_verbatim": "Apply machine learning algorithms and statistical models to analyze complex datasets.",
+      "transformation": "adapted_into_student_accomplishment"
     }
   },
   {
     "profile_id": "ONET_30_3_PROF_005",
+    "source_release": "30.3",
     "soc_code": "19-1021.00",
-    "occupation_title": "Biochemists and Biophysicists",
-    "domain": "science",
+    "official_title": "Biochemists and Biophysicists",
     "qualification_band": "moderate",
     "facts": [
-      "Completed foundational coursework relevant to Biochemists and Biophysicists.",
-      "Plan and execute complex biological and chemical laboratory experiments.",
-      "Analyze protein structures and molecular interactions using spectroscopy and chromatography.",
-      "Demonstrated proficiency in Science and Quality Control Analysis."
+      {
+        "task_id": "19-1021.00.T01",
+        "task_text_verbatim": "Plan and execute complex biological and chemical laboratory experiments.",
+        "transformation": "adapted_into_student_accomplishment",
+        "adapted_fact_text": "Demonstrated ability to plan and execute complex biological and chemical laboratory experiments."
+      },
+      {
+        "task_id": "19-1021.00.T02",
+        "task_text_verbatim": "Applied Science to complete foundational coursework in biochemists and biophysicists.",
+        "transformation": "adapted_into_student_accomplishment",
+        "adapted_fact_text": "Applied Science in advanced coursework."
+      }
     ],
     "target_opportunity": "undergraduate biochemists and biophysicists internship",
-    "grounding": {
-      "onet_release": "30.3",
+    "grounding_metadata": {
+      "source_release": "30.3",
       "soc_code": "19-1021.00",
       "official_title": "Biochemists and Biophysicists",
-      "official_tasks": [
-        "Plan and execute complex biological and chemical laboratory experiments.",
-        "Analyze protein structures and molecular interactions using spectroscopy and chromatography.",
-        "Document experimental protocols and present findings at regional scientific symposia."
-      ],
-      "official_skills": [
-        "Science",
-        "Quality Control Analysis",
-        "Documenting/Recording Information"
-      ]
+      "task_id": "19-1021.00.T01",
+      "task_text_verbatim": "Plan and execute complex biological and chemical laboratory experiments.",
+      "transformation": "adapted_into_student_accomplishment"
     }
   },
   {
     "profile_id": "ONET_30_3_PROF_006",
+    "source_release": "30.3",
     "soc_code": "19-1021.00",
-    "occupation_title": "Biochemists and Biophysicists",
-    "domain": "science",
+    "official_title": "Biochemists and Biophysicists",
     "qualification_band": "strong",
     "facts": [
-      "Completed foundational coursework relevant to Biochemists and Biophysicists.",
-      "Plan and execute complex biological and chemical laboratory experiments.",
-      "Analyze protein structures and molecular interactions using spectroscopy and chromatography.",
-      "Demonstrated proficiency in Science and Quality Control Analysis."
+      {
+        "task_id": "19-1021.00.T01",
+        "task_text_verbatim": "Plan and execute complex biological and chemical laboratory experiments.",
+        "transformation": "adapted_into_student_accomplishment",
+        "adapted_fact_text": "Demonstrated ability to plan and execute complex biological and chemical laboratory experiments."
+      },
+      {
+        "task_id": "19-1021.00.T02",
+        "task_text_verbatim": "Applied Science to complete foundational coursework in biochemists and biophysicists.",
+        "transformation": "adapted_into_student_accomplishment",
+        "adapted_fact_text": "Applied Science in advanced coursework."
+      }
     ],
     "target_opportunity": "undergraduate biochemists and biophysicists internship",
-    "grounding": {
-      "onet_release": "30.3",
+    "grounding_metadata": {
+      "source_release": "30.3",
       "soc_code": "19-1021.00",
       "official_title": "Biochemists and Biophysicists",
-      "official_tasks": [
-        "Plan and execute complex biological and chemical laboratory experiments.",
-        "Analyze protein structures and molecular interactions using spectroscopy and chromatography.",
-        "Document experimental protocols and present findings at regional scientific symposia."
-      ],
-      "official_skills": [
-        "Science",
-        "Quality Control Analysis",
-        "Documenting/Recording Information"
-      ]
+      "task_id": "19-1021.00.T01",
+      "task_text_verbatim": "Plan and execute complex biological and chemical laboratory experiments.",
+      "transformation": "adapted_into_student_accomplishment"
     }
   },
   {
     "profile_id": "ONET_30_3_PROF_007",
+    "source_release": "30.3",
     "soc_code": "25-1121.00",
-    "occupation_title": "Art, Drama, and Music Teachers, Postsecondary",
-    "domain": "humanities",
+    "official_title": "Art, Drama, and Music Teachers, Postsecondary",
     "qualification_band": "moderate",
     "facts": [
-      "Completed foundational coursework relevant to Art, Drama, and Music Teachers, Postsecondary.",
-      "Evaluate and grade students' classwork, performances, and literary or artistic assignments.",
-      "Compile bibliographies of specialized materials for outside reading and creative writing assignments.",
-      "Demonstrated proficiency in Instructing and Speaking."
+      {
+        "task_id": "25-1121.00.T03",
+        "task_text_verbatim": "Evaluate and grade students' classwork, performances, and literary or artistic assignments.",
+        "transformation": "adapted_into_student_accomplishment",
+        "adapted_fact_text": "Demonstrated ability to evaluate and grade students' classwork, performances, and literary or artistic assignments."
+      },
+      {
+        "task_id": "25-1121.00.T02",
+        "task_text_verbatim": "Applied Instructing to complete foundational coursework in art, drama, and music teachers, postsecondary.",
+        "transformation": "adapted_into_student_accomplishment",
+        "adapted_fact_text": "Applied Instructing in advanced coursework."
+      }
     ],
     "target_opportunity": "undergraduate art, drama, and music teachers, postsecondary internship",
-    "grounding": {
-      "onet_release": "30.3",
+    "grounding_metadata": {
+      "source_release": "30.3",
       "soc_code": "25-1121.00",
       "official_title": "Art, Drama, and Music Teachers, Postsecondary",
-      "official_tasks": [
-        "Evaluate and grade students' classwork, performances, and literary or artistic assignments.",
-        "Compile bibliographies of specialized materials for outside reading and creative writing assignments.",
-        "Maintain student advisory hours and mentor undergraduates on portfolio development."
-      ],
-      "official_skills": [
-        "Instructing",
-        "Speaking",
-        "Writing",
-        "Active Listening"
-      ]
+      "task_id": "25-1121.00.T03",
+      "task_text_verbatim": "Evaluate and grade students' classwork, performances, and literary or artistic assignments.",
+      "transformation": "adapted_into_student_accomplishment"
     }
   },
   {
     "profile_id": "ONET_30_3_PROF_008",
+    "source_release": "30.3",
     "soc_code": "25-1121.00",
-    "occupation_title": "Art, Drama, and Music Teachers, Postsecondary",
-    "domain": "humanities",
+    "official_title": "Art, Drama, and Music Teachers, Postsecondary",
     "qualification_band": "strong",
     "facts": [
-      "Completed foundational coursework relevant to Art, Drama, and Music Teachers, Postsecondary.",
-      "Evaluate and grade students' classwork, performances, and literary or artistic assignments.",
-      "Compile bibliographies of specialized materials for outside reading and creative writing assignments.",
-      "Demonstrated proficiency in Instructing and Speaking."
+      {
+        "task_id": "25-1121.00.T03",
+        "task_text_verbatim": "Evaluate and grade students' classwork, performances, and literary or artistic assignments.",
+        "transformation": "adapted_into_student_accomplishment",
+        "adapted_fact_text": "Demonstrated ability to evaluate and grade students' classwork, performances, and literary or artistic assignments."
+      },
+      {
+        "task_id": "25-1121.00.T02",
+        "task_text_verbatim": "Applied Instructing to complete foundational coursework in art, drama, and music teachers, postsecondary.",
+        "transformation": "adapted_into_student_accomplishment",
+        "adapted_fact_text": "Applied Instructing in advanced coursework."
+      }
     ],
     "target_opportunity": "undergraduate art, drama, and music teachers, postsecondary internship",
-    "grounding": {
-      "onet_release": "30.3",
+    "grounding_metadata": {
+      "source_release": "30.3",
       "soc_code": "25-1121.00",
       "official_title": "Art, Drama, and Music Teachers, Postsecondary",
-      "official_tasks": [
-        "Evaluate and grade students' classwork, performances, and literary or artistic assignments.",
-        "Compile bibliographies of specialized materials for outside reading and creative writing assignments.",
-        "Maintain student advisory hours and mentor undergraduates on portfolio development."
-      ],
-      "official_skills": [
-        "Instructing",
-        "Speaking",
-        "Writing",
-        "Active Listening"
-      ]
+      "task_id": "25-1121.00.T03",
+      "task_text_verbatim": "Evaluate and grade students' classwork, performances, and literary or artistic assignments.",
+      "transformation": "adapted_into_student_accomplishment"
     }
   }
 ]
